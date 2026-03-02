@@ -6,9 +6,9 @@ const features = [
         <path d="M14 3v22M3 8.5l11 5.5 11-5.5" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
-    title: "Registro de Equipos",
+    title: "Perfil de Jugador",
     description:
-      "Crea el perfil oficial de tu equipo con logo, integrantes, roles y sede. Tu equipo, centralizado.",
+      "Tu alias, equipo, ciudad y rol en un solo lugar. Sin presentarte de nuevo en cada partida.",
   },
   {
     icon: (
@@ -21,7 +21,7 @@ const features = [
     ),
     title: "Credencial Digital",
     description:
-      "Cada integrante obtiene su credencial con QR verificable. Foto, equipo, rol — listo para enseñar.",
+      "Tu identificación con QR verificable. Descárgala una vez, úsala siempre.",
   },
   {
     icon: (
@@ -32,7 +32,7 @@ const features = [
     ),
     title: "Documentos Oficiales",
     description:
-      "GN, SSP, Policía Municipal, SCT — todos los documentos para transportar réplicas en un solo lugar.",
+      "Sube y accede a la documentación que necesitas por autoridad. Todo organizado, nada perdido.",
   },
   {
     icon: (
@@ -44,7 +44,7 @@ const features = [
     ),
     title: "Registro de Réplicas",
     description:
-      "Número de serie, historial de propietarios, transferencia entre usuarios. Tu réplica, rastreable — como el REPUVE.",
+      "Número de serie, historial y transferencias. Si alguna vez la pierdes, ya tienes cómo demostrar que era tuya.",
   },
 ];
 
@@ -60,9 +60,9 @@ export default function Features() {
             <div className="h-px flex-1 bg-air-border" />
           </div>
           <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] text-center text-air-text tracking-wider leading-none">
-            TODO LO QUE NECESITAS
+            LO QUE LE
             <br />
-            <span className="text-gradient-green">EN UN SOLO LUGAR</span>
+            <span className="text-gradient-green">FALTABA A LA ESCENA</span>
           </h2>
         </div>
 
