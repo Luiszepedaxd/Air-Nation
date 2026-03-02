@@ -79,19 +79,6 @@ export default function Features() {
               />
 
               <div className="relative">
-                {/* Tag */}
-                {f.tag && (
-                  <span
-                    className={`inline-block mb-4 px-2 py-0.5 rounded text-xs font-mono ${
-                      f.tag === "MVP"
-                        ? "bg-air-green/10 text-air-green border border-air-green/20"
-                        : "bg-air-orange/10 text-air-orange border border-air-orange/20"
-                    }`}
-                  >
-                    {f.tag}
-                  </span>
-                )}
-
                 <div className="mb-4">{f.icon}</div>
                 <h3 className="font-display text-2xl tracking-wider text-air-text mb-2">{f.title}</h3>
                 <p className="font-body text-air-text-dim text-sm leading-relaxed">{f.description}</p>
