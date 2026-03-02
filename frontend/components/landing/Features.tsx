@@ -1,3 +1,6 @@
+"use client";
+import { useRef, useState, useEffect } from "react";
+
 const features = [
   {
     icon: (
@@ -49,8 +52,32 @@ const features = [
 ];
 
 export default function Features() {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+
+  const scrollTo = (i: number) => {
+    const next = Math.max(0, Math.min(i, features.length - 1));
+    setIndex(next);
+    scrollRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const cards = el.children;
+      if (cards.length === 0) return;
+      const scrollLeft = el.scrollLeft;
+      const cardWidth = (cards[0] as HTMLElement).offsetWidth + 16;
+      const i = Math.round(scrollLeft / cardWidth);
+      setIndex(Math.min(i, features.length - 1));
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <section id="funciones" className="py-20 sm:py-28 px-4 sm:px-6">
+    <section id="funciones" className="py-20 sm:py-28 px-4 sm:px-6 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-12 sm:mb-16">
@@ -62,29 +89,72 @@ export default function Features() {
           <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] text-center text-air-text tracking-wider leading-none">
             LO QUE LE
             <br />
-            <span className="text-gradient-green">FALTABA A LA ESCENA</span>
+            <span className="text-gradient-green">FALTABA A LA COMUNIDAD</span>
           </h2>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map((f, i) => (
-            <div
-              key={i}
-              className="group relative p-6 rounded-xl border border-air-border bg-air-surface hover:border-air-green/30 transition-all duration-300 hover:bg-air-surface/80"
-            >
-              {/* Glow on hover */}
-              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ background: "radial-gradient(ellipse at 30% 30%, rgba(46,204,113,0.04), transparent 60%)" }}
-              />
+        {/* Carrusel */}
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {features.map((f, i) => (
+              <div
+                key={i}
+                className="flex-shrink-0 w-[min(100%,340px)] sm:w-[min(calc(50%-0.5rem),380px)] lg:w-[min(calc(33.333%-0.5rem),400px)] snap-center"
+              >
+                <div className="group relative p-6 rounded-xl border border-air-border bg-air-surface hover:border-air-green/30 transition-all duration-300 hover:bg-air-surface/80 h-full">
+                  {/* Glow on hover */}
+                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    style={{ background: "radial-gradient(ellipse at 30% 30%, rgba(46,204,113,0.04), transparent 60%)" }}
+                  />
 
-              <div className="relative">
-                <div className="mb-4">{f.icon}</div>
-                <h3 className="font-display text-2xl tracking-wider text-air-text mb-2">{f.title}</h3>
-                <p className="font-body text-air-text-dim text-sm leading-relaxed">{f.description}</p>
+                  <div className="relative">
+                    <div className="mb-4">{f.icon}</div>
+                    <h3 className="font-display text-2xl tracking-wider text-air-text mb-2">{f.title}</h3>
+                    <p className="font-body text-air-text-dim text-sm leading-relaxed">{f.description}</p>
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
+
+          {/* Flechas */}
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <button
+              onClick={() => scrollTo(index - 1)}
+              disabled={index === 0}
+              className="w-10 h-10 rounded-full border border-air-border flex items-center justify-center text-air-text hover:border-air-green/50 hover:text-air-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Anterior"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div className="flex gap-1.5">
+              {features.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => scrollTo(i)}
+                  className={`w-2 h-2 rounded-full transition-colors ${
+                    i === index ? "bg-air-green" : "bg-air-border hover:bg-air-green/50"
+                  }`}
+                  aria-label={`Ir a tarjeta ${i + 1}`}
+                />
+              ))}
             </div>
-          ))}
+            <button
+              onClick={() => scrollTo(index + 1)}
+              disabled={index === features.length - 1}
+              className="w-10 h-10 rounded-full border border-air-border flex items-center justify-center text-air-text hover:border-air-green/50 hover:text-air-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Siguiente"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </section>
