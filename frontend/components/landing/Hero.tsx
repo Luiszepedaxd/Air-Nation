@@ -51,7 +51,7 @@ export default function Hero() {
       <div className="mb-6 flex items-center gap-2 px-3 py-1.5 border border-air-green/30 rounded-full bg-air-green/5">
         <span className="w-1.5 h-1.5 rounded-full bg-air-green animate-pulse" />
         <span className="text-air-green text-xs font-mono tracking-widest uppercase">
-          Primera plataforma de Airsoft en México
+          Hecho para jugadores de airsoft en México
         </span>
       </div>
 
@@ -61,19 +61,19 @@ export default function Hero() {
           className="block text-[clamp(3.5rem,12vw,9rem)] text-air-text"
           style={{ textShadow: "0 0 80px rgba(46,204,113,0.15)" }}
         >
-          LA BASE DEL
+          TU IDENTIDAD
         </span>
         <span
           className="block text-[clamp(3.5rem,12vw,9rem)] text-gradient-green"
           style={{ filter: "drop-shadow(0 0 30px rgba(46,204,113,0.3))" }}
         >
-          AIRSOFT MX
+          EN EL CAMPO
         </span>
       </h1>
 
       {/* Subtitle */}
       <p className="font-body text-air-text-dim text-center max-w-xl text-base sm:text-lg mt-4 mb-10 leading-relaxed">
-        Centraliza tu equipo de airsoft, credenciales y documentos en una sola plataforma pensada para el campo.
+        Tu credencial, tus réplicas y los documentos que necesitas — siempre en el cel, siempre listos para el campo.
       </p>
 
       {/* CTAs */}
@@ -82,7 +82,7 @@ export default function Hero() {
           href="#unete"
           className="flex items-center justify-center gap-2 px-6 py-3.5 bg-air-green text-air-bg font-body font-semibold rounded transition-all hover:brightness-110 hover:shadow-lg hover:shadow-air-green/20 text-sm sm:text-base"
         >
-          Registrar mi equipo
+          Registrarme gratis →
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
