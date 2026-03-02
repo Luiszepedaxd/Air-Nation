@@ -5,12 +5,13 @@
 @tailwind utilities;
 
 :root {
-  --air-bg: #080C0A;
-  --air-surface: #0F1612;
-  --air-border: #1C2A20;
-  --air-green: #2ECC71;
-  --air-orange: #F97316;
-  --air-text: #E8F0EA;
+  --air-bg: #0D0F0E;
+  --air-surface: #181C1A;
+  --air-border: #252E29;
+  --air-green: #4ADE80;
+  --air-orange: #F59E0B;
+  --air-text: #ECFDF5;
+  --air-text-dim: #86EFAC;
   --air-muted: #4A6350;
 }
 
