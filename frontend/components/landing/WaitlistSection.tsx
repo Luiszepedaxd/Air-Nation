@@ -37,11 +37,11 @@ export default function WaitlistSection() {
               Early Access
             </span>
             <h2 className="font-display text-[clamp(2rem,6vw,4rem)] text-air-text tracking-wider leading-none mb-4">
-              REGISTRA TU<br />
-              <span className="text-gradient-green">EQUIPO AHORA</span>
+              SÉ DE LOS<br />
+              <span className="text-gradient-green">PRIMEROS</span>
             </h2>
             <p className="font-body text-air-text-dim text-sm leading-relaxed">
-              Sé de los primeros equipos en AirNation. Acceso anticipado, sin costo.
+              Acceso anticipado para los primeros jugadores. Sin costo, sin compromiso.
             </p>
           </div>
 
@@ -61,7 +61,7 @@ export default function WaitlistSection() {
             <div className="flex flex-col gap-3">
               <input
                 type="text"
-                placeholder="Nombre del equipo"
+                placeholder="Tu nombre o alias"
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 className="w-full px-4 py-3 bg-air-bg border border-air-border rounded-lg text-air-text placeholder-air-muted text-sm font-body focus:outline-none focus:border-air-green/50 transition-colors"
@@ -85,7 +85,7 @@ export default function WaitlistSection() {
                 disabled={status === "loading" || !email || !teamName}
                 className="w-full py-3.5 bg-air-green text-air-bg font-body font-semibold rounded-lg transition-all hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
-                {status === "loading" ? "Enviando..." : "Quiero acceso anticipado →"}
+                {status === "loading" ? "Enviando..." : "Quiero mi lugar →"}
               </button>
               {status === "error" && (
                 <p className="text-red-400 text-xs text-center font-body">
