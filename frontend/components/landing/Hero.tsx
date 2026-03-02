@@ -73,8 +73,7 @@ export default function Hero() {
 
       {/* Subtitle */}
       <p className="font-body text-air-text-dim text-center max-w-xl text-base sm:text-lg mt-4 mb-10 leading-relaxed">
-        Registra tu equipo, genera credenciales digitales, documenta tus réplicas
-        y lleva tus documentos oficiales siempre contigo.
+        Centraliza tu equipo de airsoft, credenciales y documentos en una sola plataforma pensada para el campo.
       </p>
 
       {/* CTAs */}
@@ -100,8 +99,8 @@ export default function Hero() {
       <div className="mt-16 sm:mt-20 grid grid-cols-3 gap-4 sm:gap-12 w-full max-w-lg">
         {[
           { num: "100%", label: "Gratis para empezar" },
-          { num: "iOS + Android", label: "App próximamente" },
-          { num: "Gotcha & Paint", label: "También cubiertos" },
+          { num: "Airsoft", label: "Hecho para equipos" },
+          { num: "MX", label: "Pensado para la escena local" },
         ].map(({ num, label }) => (
           <div key={label} className="flex flex-col items-center gap-1 text-center">
             <span className="font-display text-lg sm:text-2xl text-air-green tracking-wider">{num}</span>

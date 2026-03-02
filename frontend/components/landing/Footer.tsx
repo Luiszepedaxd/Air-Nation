@@ -21,7 +21,7 @@ export default function Footer() {
 
         {/* Right */}
         <p className="font-mono text-air-muted text-xs">
-          v0.1.0 — Early Access
+          Early Access
         </p>
       </div>
     </footer>

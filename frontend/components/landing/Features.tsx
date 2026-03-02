@@ -9,7 +9,6 @@ const features = [
     title: "Registro de Equipos",
     description:
       "Crea el perfil oficial de tu equipo con logo, integrantes, roles y sede. Tu equipo, centralizado.",
-    tag: "MVP",
   },
   {
     icon: (
@@ -23,7 +22,6 @@ const features = [
     title: "Credencial Digital",
     description:
       "Cada integrante obtiene su credencial con QR verificable. Foto, equipo, rol — listo para enseñar.",
-    tag: "MVP",
   },
   {
     icon: (
@@ -35,7 +33,6 @@ const features = [
     title: "Documentos Oficiales",
     description:
       "GN, SSP, Policía Municipal, SCT — todos los documentos para transportar réplicas en un solo lugar.",
-    tag: "MVP",
   },
   {
     icon: (
@@ -48,31 +45,6 @@ const features = [
     title: "Registro de Réplicas",
     description:
       "Número de serie, historial de propietarios, transferencia entre usuarios. Tu réplica, rastreable — como el REPUVE.",
-    tag: "MVP",
-  },
-  {
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <circle cx="14" cy="14" r="10" stroke="#F97316" strokeWidth="1.5"/>
-        <path d="M14 9v5l3 3" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    title: "Tienda AirNation",
-    description:
-      "Equipo táctico, réplicas y accesorios de la marca directamente en la plataforma que ya usas.",
-    tag: "Próximamente",
-  },
-  {
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M4 20l5-5 4 4 5-6 6 7" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M4 8h4M4 12h6M4 16h3" stroke="#F97316" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
-    title: "Eventos y Partidas",
-    description:
-      "Publica y encuentra partidas en tu ciudad. Big games, domingos y MilSim — toda la agenda aquí.",
-    tag: "Próximamente",
   },
 ];
 
@@ -108,13 +80,17 @@ export default function Features() {
 
               <div className="relative">
                 {/* Tag */}
-                <span className={`inline-block mb-4 px-2 py-0.5 rounded text-xs font-mono ${
-                  f.tag === "MVP"
-                    ? "bg-air-green/10 text-air-green border border-air-green/20"
-                    : "bg-air-orange/10 text-air-orange border border-air-orange/20"
-                }`}>
-                  {f.tag}
-                </span>
+                {f.tag && (
+                  <span
+                    className={`inline-block mb-4 px-2 py-0.5 rounded text-xs font-mono ${
+                      f.tag === "MVP"
+                        ? "bg-air-green/10 text-air-green border border-air-green/20"
+                        : "bg-air-orange/10 text-air-orange border border-air-orange/20"
+                    }`}
+                  >
+                    {f.tag}
+                  </span>
+                )}
 
                 <div className="mb-4">{f.icon}</div>
                 <h3 className="font-display text-2xl tracking-wider text-air-text mb-2">{f.title}</h3>

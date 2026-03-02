@@ -71,11 +71,8 @@ export default function HowItWorks() {
         {/* Bottom tagline */}
         <div className="mt-16 text-center">
           <p className="font-body text-air-text-dim text-sm">
-            Compatible con{" "}
-            <span className="text-air-green">Airsoft</span>,{" "}
-            <span className="text-air-green">Gotcha</span>,{" "}
-            <span className="text-air-green">Paintball</span> y{" "}
-            <span className="text-air-green">Tiro Deportivo</span>
+            Enfocado 100% en{" "}
+            <span className="text-air-green">Airsoft</span> para la comunidad en México.
           </p>
         </div>
       </div>
