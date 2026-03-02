@@ -67,10 +67,11 @@ export default function Features() {
     const onScroll = () => {
       const cards = el.children;
       if (cards.length === 0) return;
+      const card = cards[0] as HTMLElement;
+      const cardWidth = card.offsetWidth + 16;
       const scrollLeft = el.scrollLeft;
-      const cardWidth = (cards[0] as HTMLElement).offsetWidth + 16;
       const i = Math.round(scrollLeft / cardWidth);
-      setIndex(Math.min(i, features.length - 1));
+      setIndex(Math.max(0, Math.min(i, features.length - 1)));
     };
     el.addEventListener("scroll", onScroll);
     return () => el.removeEventListener("scroll", onScroll);
@@ -93,18 +94,19 @@ export default function Features() {
           </h2>
         </div>
 
-        {/* Carrusel */}
+        {/* Carrusel: una card grande centrada + asomo de vecinas */}
         <div className="relative">
           <div
             ref={scrollRef}
-            className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth pb-4 touch-pan-x -mx-4 pl-[9%] pr-[9%] sm:pl-[9%] sm:pr-[9%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ WebkitOverflowScrolling: "touch" }}
           >
             {features.map((f, i) => (
               <div
                 key={i}
-                className="flex-shrink-0 w-[min(100%,340px)] sm:w-[min(calc(50%-0.5rem),380px)] lg:w-[min(calc(33.333%-0.5rem),400px)] snap-center"
+                className="flex-shrink-0 w-[82%] min-w-[260px] max-w-[420px] snap-center"
               >
-                <div className="group relative p-6 rounded-xl border border-air-border bg-air-surface hover:border-air-green/30 transition-all duration-300 hover:bg-air-surface/80 h-full">
+                <div className="group relative p-6 sm:p-8 rounded-xl border border-air-border bg-air-surface hover:border-air-green/30 transition-all duration-300 hover:bg-air-surface/80 h-full min-h-[220px]">
                   {/* Glow on hover */}
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                     style={{ background: "radial-gradient(ellipse at 30% 30%, rgba(46,204,113,0.04), transparent 60%)" }}
@@ -112,16 +114,16 @@ export default function Features() {
 
                   <div className="relative">
                     <div className="mb-4">{f.icon}</div>
-                    <h3 className="font-display text-2xl tracking-wider text-air-text mb-2">{f.title}</h3>
-                    <p className="font-body text-air-text-dim text-sm leading-relaxed">{f.description}</p>
+                    <h3 className="font-display text-2xl sm:text-3xl tracking-wider text-air-text mb-2">{f.title}</h3>
+                    <p className="font-body text-air-text-dim text-sm sm:text-base leading-relaxed">{f.description}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Flechas */}
-          <div className="flex items-center justify-center gap-4 mt-6">
+          {/* Solo flechas */}
+          <div className="flex items-center justify-center gap-6 mt-6">
             <button
               onClick={() => scrollTo(index - 1)}
               disabled={index === 0}
@@ -132,18 +134,6 @@ export default function Features() {
                 <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
-            <div className="flex gap-1.5">
-              {features.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => scrollTo(i)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    i === index ? "bg-air-green" : "bg-air-border hover:bg-air-green/50"
-                  }`}
-                  aria-label={`Ir a tarjeta ${i + 1}`}
-                />
-              ))}
-            </div>
             <button
               onClick={() => scrollTo(index + 1)}
               disabled={index === features.length - 1}
