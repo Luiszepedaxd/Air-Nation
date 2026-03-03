@@ -4,6 +4,7 @@
 @tailwind components;
 @tailwind utilities;
 
+/* palette 2025 — evita cache de builds */
 :root {
   --air-bg: #0D0F0E;
   --air-surface: #181C1A;
