@@ -5,8 +5,8 @@ const features = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M14 3L25 8.5v11L14 25 3 19.5v-11L14 3Z" stroke="#2ECC71" strokeWidth="1.5" strokeLinejoin="round"/>
-        <path d="M14 3v22M3 8.5l11 5.5 11-5.5" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M14 3L25 8.5v11L14 25 3 19.5v-11L14 3Z" stroke="#4ADE80" strokeWidth="1.5" strokeLinejoin="round"/>
+        <path d="M14 3v22M3 8.5l11 5.5 11-5.5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
     title: "Perfil de Jugador",
@@ -16,10 +16,10 @@ const features = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <rect x="4" y="5" width="20" height="18" rx="2" stroke="#2ECC71" strokeWidth="1.5"/>
-        <circle cx="10" cy="12" r="2.5" stroke="#2ECC71" strokeWidth="1.5"/>
-        <path d="M16 10h5M16 14h4" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M5 20c0-2 5-3 5-3s5 1 5 3" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round"/>
+        <rect x="4" y="5" width="20" height="18" rx="2" stroke="#4ADE80" strokeWidth="1.5"/>
+        <circle cx="10" cy="12" r="2.5" stroke="#4ADE80" strokeWidth="1.5"/>
+        <path d="M16 10h5M16 14h4" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M5 20c0-2 5-3 5-3s5 1 5 3" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
     title: "Credencial Digital",
@@ -29,8 +29,8 @@ const features = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M8 4h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="#2ECC71" strokeWidth="1.5"/>
-        <path d="M10 10h8M10 14h8M10 18h5" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M8 4h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="#4ADE80" strokeWidth="1.5"/>
+        <path d="M10 10h8M10 14h8M10 18h5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
     title: "Documentos Oficiales",
@@ -40,9 +40,9 @@ const features = [
   {
     icon: (
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M6 10c0-2 1.5-4 4-4h8c2.5 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8v-4Z" stroke="#2ECC71" strokeWidth="1.5"/>
-        <path d="M10 14l2 2 4-4" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M14 4v2M10 5l1 1.5M18 5l-1 1.5" stroke="#2ECC71" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M6 10c0-2 1.5-4 4-4h8c2.5 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8v-4Z" stroke="#4ADE80" strokeWidth="1.5"/>
+        <path d="M10 14l2 2 4-4" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M14 4v2M10 5l1 1.5M18 5l-1 1.5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
     title: "Registro de Réplicas",
@@ -109,7 +109,7 @@ export default function Features() {
                 <div className="group relative p-6 sm:p-8 rounded-xl border border-air-border bg-air-surface hover:border-air-green/30 transition-all duration-300 hover:bg-air-surface/80 h-full min-h-[220px]">
                   {/* Glow on hover */}
                   <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: "radial-gradient(ellipse at 30% 30%, rgba(46,204,113,0.04), transparent 60%)" }}
+                    style={{ background: "radial-gradient(ellipse at 30% 30%, rgba(74,222,128,0.04), transparent 60%)" }}
                   />
 
                   <div className="relative">

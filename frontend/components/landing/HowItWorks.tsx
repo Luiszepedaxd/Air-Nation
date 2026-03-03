@@ -29,7 +29,7 @@ export default function HowItWorks() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(46,204,113,0.04) 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(74,222,128,0.04) 0%, transparent 70%)",
         }}
       />
 

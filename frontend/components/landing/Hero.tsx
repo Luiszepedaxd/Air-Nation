@@ -21,7 +21,7 @@ export default function Hero() {
     <section
       className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 pb-16 overflow-hidden"
       style={{
-        background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(46,204,113,0.08) 0%, transparent 70%)",
+        background: "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,222,128,0.08) 0%, transparent 70%)",
       }}
     >
       {/* Tactical grid background */}
@@ -59,13 +59,13 @@ export default function Hero() {
       <h1 className="font-display text-center leading-none tracking-wider mb-4">
         <span
           className="block text-[clamp(3.5rem,12vw,9rem)] text-air-text"
-          style={{ textShadow: "0 0 80px rgba(46,204,113,0.15)" }}
+          style={{ textShadow: "0 0 80px rgba(74,222,128,0.15)" }}
         >
           TU IDENTIDAD
         </span>
         <span
           className="block text-[clamp(3.5rem,12vw,9rem)] text-gradient-green"
-          style={{ filter: "drop-shadow(0 0 30px rgba(46,204,113,0.3))" }}
+          style={{ filter: "drop-shadow(0 0 30px rgba(74,222,128,0.3))" }}
         >
           EN EL CAMPO
         </span>
@@ -113,7 +113,7 @@ export default function Hero() {
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce opacity-50">
         <span className="text-air-text-dim text-xs font-mono">scroll</span>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M2 4l4 4 4-4" stroke="#7A9980" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M2 4l4 4 4-4" stroke="#86EFAC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </div>
     </section>

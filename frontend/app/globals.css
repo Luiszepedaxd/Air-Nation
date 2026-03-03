@@ -48,17 +48,17 @@ body::before {
 
 @layer utilities {
   .text-gradient-green {
-    background: linear-gradient(135deg, #2ECC71, #1A7A42);
+    background: linear-gradient(135deg, #4ADE80, #22C55E);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .glow-green {
-    box-shadow: 0 0 30px rgba(46, 204, 113, 0.15);
+    box-shadow: 0 0 30px rgba(74, 222, 128, 0.15);
   }
 
   .border-glow {
-    border: 1px solid rgba(46, 204, 113, 0.2);
+    border: 1px solid rgba(74, 222, 128, 0.2);
   }
 }

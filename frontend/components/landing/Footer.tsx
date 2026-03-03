@@ -6,7 +6,7 @@ export default function Footer() {
         <div className="flex items-center gap-2">
           <span className="w-6 h-6 rounded bg-air-green flex items-center justify-center">
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="#080C0A"/>
+              <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="#0D0F0E"/>
             </svg>
           </span>
           <span className="font-display text-xl tracking-widest text-air-text">

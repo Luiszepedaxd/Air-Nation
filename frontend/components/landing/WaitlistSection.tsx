@@ -25,7 +25,7 @@ export default function WaitlistSection() {
         <div
           className="relative rounded-2xl border border-air-green/20 p-8 sm:p-12 overflow-hidden"
           style={{
-            background: "radial-gradient(ellipse at 50% 0%, rgba(46,204,113,0.08) 0%, rgba(15,22,18,0.9) 60%)",
+            background: "radial-gradient(ellipse at 50% 0%, rgba(74,222,128,0.08) 0%, rgba(24,28,26,0.9) 60%)",
           }}
         >
           {/* Corner accents */}
@@ -49,7 +49,7 @@ export default function WaitlistSection() {
             <div className="text-center py-6">
               <div className="w-12 h-12 rounded-full bg-air-green/10 border border-air-green/30 flex items-center justify-center mx-auto mb-4">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M4 10l4 4 8-8" stroke="#2ECC71" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4 10l4 4 8-8" stroke="#4ADE80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
               <p className="font-display text-2xl text-air-green tracking-wider">CONFIRMADO</p>

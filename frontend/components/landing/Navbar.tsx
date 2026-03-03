@@ -24,7 +24,7 @@ export default function Navbar() {
         <a href="#" className="flex items-center gap-2">
           <span className="w-7 h-7 rounded bg-air-green flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="#080C0A" strokeWidth="0"/>
+              <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="#0D0F0E" strokeWidth="0"/>
             </svg>
           </span>
           <span className="font-display text-2xl tracking-widest text-air-text">
