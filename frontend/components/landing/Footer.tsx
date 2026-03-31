@@ -1,7 +1,7 @@
 const LINKS = {
   Plataforma: [
     { label: "Funciones",     href: "#funciones"     },
-    { label: "Cómo funciona", href: "#como-funciona" },
+    { label: "Preview", href: "#preview" },
     { label: "Comunidad",     href: "#comunidad"     },
   ],
   Cuenta: [

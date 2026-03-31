@@ -73,6 +73,33 @@ const FEATURES = [
   },
 ];
 
+const STEPS = [
+  {
+    num: "01",
+    title: "Crea tu cuenta",
+    description:
+      "Regístrate gratis con tu correo. En menos de dos minutos ya tienes perfil.",
+  },
+  {
+    num: "02",
+    title: "Completa tu perfil",
+    description:
+      "Agrega alias, foto, ciudad y rol. Únete o crea tu equipo.",
+  },
+  {
+    num: "03",
+    title: "Genera tu credencial",
+    description:
+      "Tu ID digital con QR se genera automáticamente. Descárgala o guárdala en el cel.",
+  },
+  {
+    num: "04",
+    title: "Registra tus réplicas",
+    description:
+      "Ingresa número de serie y fotos. Historial permanente, transferencia en un tap.",
+  },
+];
+
 export default function Features() {
   return (
     <section id="funciones" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8">
@@ -132,6 +159,25 @@ export default function Features() {
               </p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-16 border-t border-[#EEEEEE] pt-12">
+          <p className="mb-8 font-body text-sm text-[#444444]">En 4 pasos —</p>
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            {STEPS.map((step) => (
+              <div key={step.num}>
+                <p className="font-display text-2xl font-black leading-none text-[#CC4B37] sm:text-[1.75rem]">
+                  {step.num}
+                </p>
+                <h3 className="font-ui mt-4 text-sm font-semibold leading-snug text-[#111111] sm:text-base">
+                  {step.title}
+                </h3>
+                <p className="font-body mt-2 text-sm font-normal leading-[1.75] text-[#444444]">
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

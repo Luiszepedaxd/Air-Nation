@@ -1,7 +1,7 @@
 import Navbar           from "@/components/landing/Navbar";
 import Hero             from "@/components/landing/Hero";
 import Features         from "@/components/landing/Features";
-import HowItWorks       from "@/components/landing/HowItWorks";
+import ProductPreview   from "@/components/landing/ProductPreview";
 import CommunitySection from "@/components/landing/CommunitySection";
 import Footer           from "@/components/landing/Footer";
 
@@ -11,7 +11,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <Features />
-      <HowItWorks />
+      <ProductPreview />
       <CommunitySection />
       <Footer />
     </main>
