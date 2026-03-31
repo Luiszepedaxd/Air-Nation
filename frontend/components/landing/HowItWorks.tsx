@@ -27,18 +27,9 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section id="como-funciona" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8 relative">
+    <section id="como-funciona" className="bg-[#FFFFFF] py-24 sm:py-32 px-5 sm:px-8">
 
-      {/* Subtle center glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 55% 40% at 50% 50%, rgba(204,75,55,0.05) 0%, transparent 70%)",
-        }}
-      />
-
-      <div className="max-w-7xl mx-auto relative">
+      <div className="max-w-7xl mx-auto">
 
         {/* ── Header ── */}
         <div className="mb-16 sm:mb-20">

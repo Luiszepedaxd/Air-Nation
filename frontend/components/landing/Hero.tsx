@@ -1,11 +1,6 @@
 // No "use client" needed — no hooks
 import Link from "next/link";
 
-// Replace with a proper Next.js <Image> in production.
-// These are Unsplash photos via their CDN — great for development.
-const HERO_IMG =
-  "https://images.unsplash.com/photo-1563456372-c1e059ba5ddc?auto=format&fit=crop&w=1920&q=80";
-
 const STATS = [
   { num: "100%",  label: "Gratis para empezar"            },
   { num: "5",     label: "Herramientas en una plataforma" },
@@ -14,27 +9,30 @@ const STATS = [
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-[#111111]">
 
-      {/* ── Background photo + overlays ── */}
-      <div className="absolute inset-0 select-none pointer-events-none">
-        <img
-          src={HERO_IMG}
-          alt="Jugadores de airsoft en acción"
-          className="w-full h-full object-cover object-center"
-          loading="eager"
-          decoding="async"
-        />
-        {/* Left-to-right dark gradient (text side stays readable) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#111111] via-[#111111]/80 to-transparent" />
-        {/* Top vignette for nav readability */}
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#111111]/70 to-transparent" />
-        {/* Bottom fade into light sections */}
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-an-bg to-transparent" />
-      </div>
+      {/* 1. Foto — fondo */}
+      <img
+        src="https://images.unsplash.com/photo-1563456372-c1e059ba5ddc?auto=format&fit=crop&w=1920&q=80"
+        alt="Jugadores de airsoft en acción"
+        className="absolute inset-0 z-0 w-full h-full object-cover object-center"
+        loading="eager"
+      />
 
-      {/* ── Content ── */}
-      <div className="relative max-w-7xl mx-auto px-5 sm:px-8 w-full pt-28 pb-40 sm:pt-36 sm:pb-48">
+      {/* 2. Overlay oscuro */}
+      <div
+        className="absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/85 to-[#111111]/40 pointer-events-none"
+        aria-hidden
+      />
+
+      {/* 3. Fade inferior hacia blanco */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-[2] h-48 bg-gradient-to-t from-white to-transparent pointer-events-none"
+        aria-hidden
+      />
+
+      {/* 4. Contenido */}
+      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full pt-28 pb-40 sm:pt-36 sm:pb-48">
         <div className="max-w-[600px] lg:max-w-[680px]">
 
           {/* Eyebrow */}
@@ -83,8 +81,8 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* ── Stats bar ── */}
-      <div className="absolute bottom-0 inset-x-0 border-t border-an-border bg-an-bg">
+      {/* Stats bar */}
+      <div className="absolute bottom-0 inset-x-0 z-10 border-t border-an-border bg-an-bg">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="grid grid-cols-3 divide-x divide-an-border">
             {STATS.map(({ num, label }) => (

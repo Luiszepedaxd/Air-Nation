@@ -1,9 +1,5 @@
 import Link from "next/link";
 
-// Unsplash team/community photo — dark, tactical, outdoor
-const SECTION_IMG =
-  "https://images.unsplash.com/photo-1598550476439-6847785fcea6?auto=format&fit=crop&w=1200&q=75";
-
 const STATS = [
   { num: "200k+",  label: "Réplicas esperando ser registradas"  },
   { num: "N.º 1",  label: "Plataforma diseñada por jugadores",  accent: true },
@@ -15,21 +11,20 @@ export default function CommunitySection() {
     <section id="comunidad" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8">
       <div className="max-w-7xl mx-auto">
 
-        {/* ── Main block ── */}
-        <div className="relative overflow-hidden bg-an-surface border border-an-border">
+        <div className="relative overflow-hidden bg-[#F4F4F4] border border-an-border">
 
-          {/* Background photo (right half) */}
-          <div className="absolute inset-y-0 right-0 w-1/2 hidden lg:block select-none pointer-events-none">
+          {/* Mitad derecha: foto + velo */}
+          <div className="absolute inset-y-0 right-0 z-0 hidden w-1/2 overflow-hidden lg:block">
             <img
-              src={SECTION_IMG}
+              src="https://images.unsplash.com/photo-1542744094-24638eff58bb?auto=format&fit=crop&w=900&q=75"
               alt="Comunidad de airsoft"
-              className="w-full h-full object-cover object-center opacity-25"
+              className="absolute inset-0 w-full h-full object-cover object-center"
+              loading="lazy"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-an-surface via-an-surface/80 to-transparent" />
+            <div className="absolute inset-0 bg-[#F4F4F4]/90" aria-hidden />
           </div>
 
-          {/* Content */}
-          <div className="relative px-8 sm:px-12 lg:px-16 py-14 sm:py-20 max-w-2xl">
+          <div className="relative z-10 max-w-2xl px-8 sm:px-12 lg:px-16 py-14 sm:py-20">
 
             <div className="flex items-center gap-3 mb-6">
               <span className="block w-7 h-[2px] bg-an-accent" />
@@ -51,7 +46,6 @@ export default function CommunitySection() {
               AirNation nació de la comunidad. Cada perfil, cada credencial y cada réplica registrada construye la plataforma que todos queríamos.
             </p>
 
-            {/* Stats row */}
             <div className="grid grid-cols-3 gap-px bg-an-border mb-10">
               {STATS.map(({ num, label, accent }) => (
                 <div
@@ -74,7 +68,6 @@ export default function CommunitySection() {
               ))}
             </div>
 
-            {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
                 href="/signup"
