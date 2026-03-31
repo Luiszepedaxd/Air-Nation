@@ -131,13 +131,13 @@ export default function Features() {
           {FEATURES.map((f, i) => (
             <div
               key={i}
-              className={`group relative border border-an-border bg-an-bg p-8 sm:p-10 transition-colors duration-300 hover:bg-an-surface hover:shadow-[inset_2px_0_0_0_#CC4B37] ${
+              className={`group relative bg-white border border-[#EEEEEE] p-8 sm:p-10 hover:border-[#CC4B37] hover:shadow-sm transition-all duration-200 ${
                 i === 4 ? "lg:col-start-2" : ""
               }`}
             >
               {/* Number + tag row */}
               <div className="flex items-center justify-between mb-6">
-                <span className="font-display font-black text-[2.8rem] leading-none text-[#EEEEEE] select-none">
+                <span className="font-display font-black text-[2.8rem] leading-none text-[#CC4B37]/20 group-hover:text-[#CC4B37]/40 transition-colors duration-200 select-none">
                   {f.num}
                 </span>
                 <span className="font-body font-bold text-[0.6rem] uppercase tracking-[0.22em] text-an-muted border border-an-border px-2.5 py-1">
