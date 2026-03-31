@@ -9,14 +9,15 @@ const STATS = [
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-[#111111]">
+    <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[#111111]">
 
-      {/* 1. Foto — fondo */}
+      {/* 1. Foto — fondo (estática en /public) */}
       <img
-        src="https://images.unsplash.com/photo-1563456372-c1e059ba5ddc?auto=format&fit=crop&w=1920&q=80"
-        alt="Jugadores de airsoft en acción"
-        className="absolute inset-0 z-0 w-full h-full object-cover object-center"
+        src="/franco-hero1.jpg"
+        alt="Airsoft — jugadores en acción"
+        className="absolute inset-0 z-0 h-full w-full min-h-full min-w-full object-cover object-center"
         loading="eager"
+        decoding="async"
       />
 
       {/* 2. Overlay oscuro */}
