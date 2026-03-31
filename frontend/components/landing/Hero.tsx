@@ -13,7 +13,7 @@ export default function Hero() {
 
       {/* 1. Foto — fondo (estática en /public) */}
       <img
-        src="/franco-hero1.jpg"
+        src="/herofoto1.jpg"
         alt="Airsoft — jugadores en acción"
         className="absolute inset-0 z-0 h-full w-full min-h-full min-w-full object-cover object-center"
         loading="eager"

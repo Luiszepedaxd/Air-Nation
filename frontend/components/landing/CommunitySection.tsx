@@ -16,7 +16,7 @@ export default function CommunitySection() {
           {/* Mitad derecha: foto + velo */}
           <div className="absolute inset-y-0 right-0 z-0 hidden w-1/2 overflow-hidden lg:block">
             <img
-              src="https://images.unsplash.com/photo-1542744094-24638eff58bb?auto=format&fit=crop&w=900&q=75"
+              src="/comunidad-foto-1.jpg"
               alt="Comunidad de airsoft"
               className="absolute inset-0 w-full h-full object-cover object-center"
               loading="lazy"
