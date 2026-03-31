@@ -121,6 +121,54 @@ function CredentialCard() {
   );
 }
 
+function ReplicaCards() {
+  return (
+    <>
+      <div className="flex gap-3">
+        <span
+          className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#65B32E]"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1 border border-[#EEEEEE] bg-white px-4 py-3">
+          <p className="font-body text-xs font-bold text-[#111111]">
+            HK416 · #MX-2024-00312
+          </p>
+          <p className="font-body mt-1 text-[10px] font-normal uppercase tracking-wide text-[#767676]">
+            ACTIVA · PROPIETARIO VERIFICADO
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
+        <span
+          className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#F59E0B]"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1 border border-[#EEEEEE] bg-white px-4 py-3">
+          <p className="font-body text-xs font-bold text-[#111111]">
+            SSP18 · #MX-2024-00456
+          </p>
+          <p className="font-body mt-1 text-[10px] font-normal uppercase tracking-wide text-[#767676]">
+            TRANSFERIDA · 2 PROPIETARIOS
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Credencial + réplicas dentro del área scrollable del dispositivo */
+function DeviceScrollContent() {
+  return (
+    <>
+      <CredentialCard />
+      <div className="flex flex-col gap-3 px-3 pb-3 pt-3 md:px-5 md:pb-4 md:pt-4">
+        <ReplicaCards />
+      </div>
+    </>
+  );
+}
+
 function PhoneMockup() {
   return (
     <div className="mx-auto w-full max-w-[320px] md:hidden">
@@ -129,8 +177,10 @@ function PhoneMockup() {
           <div className="h-4 w-20 rounded-full bg-[#1A1A1A]" />
         </div>
         <div className="overflow-hidden rounded-b-[2rem] bg-white">
-          <CredentialCard />
-          <div className="flex h-6 items-center justify-center bg-white">
+          <div className="max-h-[min(520px,70vh)] overflow-y-auto">
+            <DeviceScrollContent />
+          </div>
+          <div className="flex h-6 shrink-0 items-center justify-center bg-white">
             <div className="h-1 w-16 rounded-full bg-[#EEEEEE]" />
           </div>
         </div>
@@ -152,7 +202,7 @@ function TabletMockup() {
             <span className="h-2 w-2 rounded-full bg-[#2A2A2A]" />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto rounded-b-[1.2rem] bg-white">
-            <CredentialCard />
+            <DeviceScrollContent />
           </div>
         </div>
       </div>
@@ -180,7 +230,7 @@ export default function ProductPreview() {
             TU PERFIL.
           </h2>
           <p className="font-body mt-6 max-w-md text-base leading-[1.7] text-an-text-dim">
-            Sin registrarte, sin esperar. Esto es lo que te espera cuando entres.
+            Tu perfil. Tu credencial. Tus réplicas. Todo en un solo lugar.
           </p>
           <Link
             href="/signup"
@@ -194,36 +244,6 @@ export default function ProductPreview() {
         <div className="flex flex-col gap-3">
           <PhoneMockup />
           <TabletMockup />
-
-          <div className="flex gap-3">
-            <span
-              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#65B32E]"
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1 border border-[#EEEEEE] bg-white px-4 py-3">
-              <p className="font-body text-xs font-bold text-[#111111]">
-                HK416 · #MX-2024-00312
-              </p>
-              <p className="font-body mt-1 text-[10px] font-normal uppercase tracking-wide text-[#767676]">
-                ACTIVA · PROPIETARIO VERIFICADO
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <span
-              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#F59E0B]"
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1 border border-[#EEEEEE] bg-white px-4 py-3">
-              <p className="font-body text-xs font-bold text-[#111111]">
-                SSP18 · #MX-2024-00456
-              </p>
-              <p className="font-body mt-1 text-[10px] font-normal uppercase tracking-wide text-[#767676]">
-                TRANSFERIDA · 2 PROPIETARIOS
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </section>
