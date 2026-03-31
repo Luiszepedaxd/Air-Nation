@@ -1,28 +1,78 @@
+const LINKS = {
+  Plataforma: [
+    { label: "Funciones",     href: "#funciones"     },
+    { label: "Cómo funciona", href: "#como-funciona" },
+    { label: "Comunidad",     href: "#comunidad"     },
+  ],
+  Cuenta: [
+    { label: "Registrarse",   href: "/signup" },
+    { label: "Iniciar sesión",href: "/login"    },
+  ],
+  Legal: [
+    { label: "Privacidad",    href: "/privacidad" },
+    { label: "Términos",      href: "/terminos"   },
+  ],
+};
+
 export default function Footer() {
   return (
-    <footer className="border-t border-air-border px-4 sm:px-6 py-10">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded bg-air-green flex items-center justify-center">
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" fill="#0D0F0E"/>
-            </svg>
-          </span>
-          <span className="font-display text-xl tracking-widest text-air-text">
-            AIR<span className="text-air-green">NATION</span>
-          </span>
+    <footer className="border-t border-an-border bg-an-bg">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
+
+        {/* ── Top row ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-14">
+
+          {/* Brand col */}
+          <div className="lg:col-span-1">
+            <div className="flex items-center gap-2.5 mb-4">
+              <span className="w-7 h-7 bg-an-accent flex items-center justify-center shrink-0">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                  <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff"/>
+                </svg>
+              </span>
+              <span className="font-display font-black text-lg tracking-[0.18em] text-an-text uppercase leading-none">
+                AIR<span className="text-an-accent">NATION</span>
+              </span>
+            </div>
+            <p className="font-body text-an-text-dim text-sm leading-[1.7] max-w-[240px]">
+              La plataforma central del airsoft. Comunidad, identidad y documentación en un solo lugar.
+            </p>
+            <p className="font-body font-bold text-an-accent text-[0.65rem] uppercase tracking-[0.2em] mt-4 italic">
+              Para jugadores · Por jugadores
+            </p>
+          </div>
+
+          {/* Link columns */}
+          {Object.entries(LINKS).map(([group, items]) => (
+            <div key={group}>
+              <h4 className="font-ui font-semibold text-an-text text-[0.72rem] uppercase tracking-[0.2em] mb-5 pb-2.5 border-b border-an-border">
+                {group}
+              </h4>
+              <ul className="flex flex-col gap-3">
+                {items.map((item) => (
+                  <li key={item.href}>
+                    <a
+                      href={item.href}
+                      className="font-body text-an-text-dim text-sm hover:text-an-text transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        {/* Center tagline */}
-        <p className="font-body text-air-text-dim text-xs text-center">
-          La base del Airsoft en México · <span className="text-air-green">airnation.online</span>
-        </p>
-
-        {/* Right */}
-        <p className="font-mono text-air-muted text-xs">
-          Early Access
-        </p>
+        {/* ── Bottom row ── */}
+        <div className="pt-8 border-t border-an-border flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="font-body text-an-muted text-xs">
+            © {new Date().getFullYear()} AirNation · airnation.online
+          </p>
+          <p className="font-body text-an-muted text-xs">
+            Early Access — México
+          </p>
+        </div>
       </div>
     </footer>
   );

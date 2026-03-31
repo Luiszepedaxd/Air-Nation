@@ -1,24 +1,18 @@
-"use client";
-import { useState, useEffect } from "react";
-import Navbar from "@/components/landing/Navbar";
-import Hero from "@/components/landing/Hero";
-import Features from "@/components/landing/Features";
-import HowItWorks from "@/components/landing/HowItWorks";
-import WaitlistSection from "@/components/landing/WaitlistSection";
-import Footer from "@/components/landing/Footer";
+import Navbar           from "@/components/landing/Navbar";
+import Hero             from "@/components/landing/Hero";
+import Features         from "@/components/landing/Features";
+import HowItWorks       from "@/components/landing/HowItWorks";
+import CommunitySection from "@/components/landing/CommunitySection";
+import Footer           from "@/components/landing/Footer";
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return null;
-
   return (
-    <main className="min-h-screen overflow-x-hidden">
+    <main className="min-h-screen overflow-x-hidden bg-an-bg">
       <Navbar />
       <Hero />
       <Features />
       <HowItWorks />
-      <WaitlistSection />
+      <CommunitySection />
       <Footer />
     </main>
   );

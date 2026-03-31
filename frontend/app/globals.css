@@ -1,65 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;800;900&family=Lato:ital,wght@0,400;0,700;0,900;1,400&family=Poppins:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* palette 2025 — evita cache de builds */
+/* ── Design tokens ──────────────────────────────────────────────────────────── */
 :root {
-  --air-bg: #0D0F0E;
-  --air-surface: #181C1A;
-  --air-border: #252E29;
-  --air-green: #4ADE80;
-  --air-orange: #F59E0B;
-  --air-text: #ECFDF5;
-  --air-text-dim: #86EFAC;
-  --air-muted: #4A6350;
+  --an-bg:       #0B0C0D;
+  --an-surface:  #111315;
+  --an-border:   #1E2226;
+  --an-accent:   #CC4B37;
+  --an-text:     #EDEDEB;
+  --an-text-dim: #8A8A88;
+  --an-muted:    #4A4A48;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* ── Base ───────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
-  background-color: var(--air-bg);
-  color: var(--air-text);
-  font-family: 'DM Sans', sans-serif;
+  background-color: var(--an-bg);
+  color: var(--an-text);
+  font-family: 'Lato', sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-/* Noise texture overlay */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.4;
-}
+/* ── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 4px; }
+::-webkit-scrollbar-track        { background: var(--an-bg); }
+::-webkit-scrollbar-thumb        { background: #28292B; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--an-accent); }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--air-bg); }
-::-webkit-scrollbar-thumb { background: var(--air-muted); border-radius: 2px; }
-
+/* ── Utilities ──────────────────────────────────────────────────────────────── */
 @layer utilities {
-  .text-gradient-green {
-    background: linear-gradient(135deg, #4ADE80, #22C55E);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+  .font-black-900 { font-weight: 900; }
 
-  .glow-green {
-    box-shadow: 0 0 30px rgba(74, 222, 128, 0.15);
+  /* Subtle noise texture for surface cards */
+  .noise-surface {
+    position: relative;
   }
-
-  .border-glow {
-    border: 1px solid rgba(74, 222, 128, 0.2);
+  .noise-surface::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: inherit;
   }
 }

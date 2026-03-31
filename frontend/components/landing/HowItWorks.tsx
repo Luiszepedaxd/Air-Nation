@@ -1,79 +1,108 @@
-const steps = [
+const STEPS = [
   {
     num: "01",
-    title: "Registra tu equipo",
-    description: "Crea el perfil de tu equipo con nombre, sede y logo. Invita a tus integrantes y asígnales roles.",
+    title: "Crea tu cuenta",
+    description:
+      "Regístrate gratis con tu correo. En menos de dos minutos ya tienes perfil.",
   },
   {
     num: "02",
-    title: "Genera credenciales",
-    description: "Cada integrante recibe su credencial digital con QR verificable. Descárgala y úsala en el campo.",
+    title: "Completa tu perfil",
+    description:
+      "Agrega alias, foto, ciudad y rol. Únete o crea tu equipo.",
   },
   {
     num: "03",
-    title: "Registra tus réplicas",
-    description: "Ingresa el número de serie de cada réplica. Transfiérela, repórtala o consulta su historial.",
+    title: "Genera tu credencial",
+    description:
+      "Tu ID digital con QR se genera automáticamente. Descárgala o guárdala en el cel.",
   },
   {
     num: "04",
-    title: "Lleva tus documentos",
-    description: "Accede a documentación oficial organizada por autoridad. Siempre lista cuando la necesites.",
+    title: "Registra tus réplicas",
+    description:
+      "Ingresa número de serie y fotos. Historial permanente, transferencia en un tap.",
   },
 ];
 
 export default function HowItWorks() {
   return (
-    <section id="como-funciona" className="py-20 sm:py-28 px-4 sm:px-6 relative">
-      {/* Background accent */}
+    <section id="como-funciona" className="py-24 sm:py-32 px-5 sm:px-8 relative">
+
+      {/* Subtle center glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(74,222,128,0.04) 0%, transparent 70%)",
+            "radial-gradient(ellipse 55% 40% at 50% 50%, rgba(204,75,55,0.04) 0%, transparent 70%)",
         }}
       />
 
-      <div className="max-w-6xl mx-auto relative">
-        {/* Header */}
-        <div className="mb-12 sm:mb-16 text-center">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-px flex-1 bg-air-border" />
-            <span className="font-mono text-xs text-air-muted tracking-widest uppercase">Cómo funciona</span>
-            <div className="h-px flex-1 bg-air-border" />
+      <div className="max-w-7xl mx-auto relative">
+
+        {/* ── Header ── */}
+        <div className="mb-16 sm:mb-20">
+          <div className="flex items-center gap-4 mb-5">
+            <span className="block w-7 h-[2px] bg-an-accent" />
+            <p className="font-body font-bold text-an-accent text-[0.65rem] uppercase tracking-[0.28em]">
+              Cómo funciona
+            </p>
           </div>
-          <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] text-air-text tracking-wider leading-none">
-            SIMPLE.<br />
-            <span className="text-gradient-green">ASÍ DE SIMPLE.</span>
+          <h2
+            className="font-display font-black uppercase text-an-text leading-[0.9]"
+            style={{ fontSize: "clamp(2.6rem, 6vw, 5.2rem)" }}
+          >
+            SIMPLE.
+            <br />
+            ASÍ DE SIMPLE.
           </h2>
         </div>
 
-        {/* Steps */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
-          {steps.map((step, i) => (
-            <div key={i} className="relative flex flex-col">
-              {/* Connector line (desktop) */}
-              {i < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-8 left-[calc(100%-1rem)] w-8 h-px bg-air-border z-10" />
+        {/* ── Steps ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+          {STEPS.map((step, i) => (
+            <div key={i} className="relative">
+
+              {/* Connector line between steps (desktop) */}
+              {i < STEPS.length - 1 && (
+                <div className="hidden lg:block absolute top-[1.65rem] left-[calc(100%+0.75rem)] right-0 w-6 h-[1px] bg-an-border" />
               )}
 
-              <div className="p-6 rounded-xl border border-air-border bg-air-surface hover:border-air-green/20 transition-colors">
-                {/* Step number */}
-                <span className="font-display text-5xl text-air-green/20 leading-none block mb-4">
+              {/* Step num */}
+              <div className="flex items-center gap-3 mb-5">
+                <span className="font-display font-black text-an-accent text-[2.2rem] leading-none">
                   {step.num}
                 </span>
-                <h3 className="font-display text-xl tracking-wider text-air-text mb-2">{step.title}</h3>
-                <p className="font-body text-air-text-dim text-sm leading-relaxed">{step.description}</p>
+                <span className="flex-1 h-[1px] bg-an-border" />
               </div>
+
+              {/* Title */}
+              <h3 className="font-ui font-semibold text-an-text text-[1rem] mb-2.5 leading-snug">
+                {step.title}
+              </h3>
+
+              {/* Description */}
+              <p className="font-body text-an-text-dim text-sm leading-[1.75]">
+                {step.description}
+              </p>
             </div>
           ))}
         </div>
 
-        {/* Bottom tagline */}
-        <div className="mt-16 text-center">
-          <p className="font-body text-air-text-dim text-sm">
-            Enfocado 100% en{" "}
-            <span className="text-air-green">Airsoft</span> para la comunidad en México.
+        {/* ── Bottom note ── */}
+        <div className="mt-16 pt-10 border-t border-an-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <p className="font-body text-an-text-dim text-sm">
+            Pensado para <span className="text-an-text font-bold">Airsoft</span> — funciona para toda la comunidad en México y más allá.
           </p>
+          <a
+            href="/signup"
+            className="font-body font-bold text-an-accent text-[0.75rem] uppercase tracking-[0.18em] hover:underline underline-offset-4 shrink-0 flex items-center gap-2"
+          >
+            Empezar ahora
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+              <path d="M2 6h8M7 3l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
         </div>
       </div>
     </section>

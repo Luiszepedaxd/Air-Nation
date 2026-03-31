@@ -7,22 +7,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        air: {
-          bg: "#0D0F0E",
-          surface: "#181C1A",
-          border: "#252E29",
-          green: "#4ADE80",
-          "green-dim": "#1A7A42",
-          orange: "#F59E0B",
-          muted: "#4A6350",
-          text: "#ECFDF5",
-          "text-dim": "#86EFAC",
+        an: {
+          bg:          "#0B0C0D",
+          surface:     "#111315",
+          "surface-2": "#181A1C",
+          border:      "#1E2226",
+          "border-2":  "#282E34",
+          accent:      "#CC4B37",
+          "accent-h":  "#D95540",
+          text:        "#EDEDEB",
+          "text-dim":  "#8A8A88",
+          muted:       "#4A4A48",
         },
       },
       fontFamily: {
-        display: ["'Bebas Neue'", "sans-serif"],
-        body: ["'DM Sans'", "sans-serif"],
-        mono: ["'JetBrains Mono'", "monospace"],
+        display: ["'Jost'",    "sans-serif"],
+        body:    ["'Lato'",    "sans-serif"],
+        ui:      ["'Poppins'", "sans-serif"],
       },
     },
   },

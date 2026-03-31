@@ -1,150 +1,141 @@
-"use client";
-import { useRef, useState, useEffect } from "react";
-
-const features = [
+// No hooks needed
+const FEATURES = [
   {
-    icon: (
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M14 3L25 8.5v11L14 25 3 19.5v-11L14 3Z" stroke="#4ADE80" strokeWidth="1.5" strokeLinejoin="round"/>
-        <path d="M14 3v22M3 8.5l11 5.5 11-5.5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
+    num: "01",
+    tag: "Identidad",
     title: "Perfil de Jugador",
     description:
-      "Tu alias, equipo, ciudad y rol en un solo lugar. Sin presentarte de nuevo en cada partida.",
-  },
-  {
+      "Tu alias, foto, ciudad y rol en un solo lugar. Una página que te representa en toda la comunidad — sin repetirte en cada campo.",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <rect x="4" y="5" width="20" height="18" rx="2" stroke="#4ADE80" strokeWidth="1.5"/>
-        <circle cx="10" cy="12" r="2.5" stroke="#4ADE80" strokeWidth="1.5"/>
-        <path d="M16 10h5M16 14h4" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M5 20c0-2 5-3 5-3s5 1 5 3" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <circle cx="11" cy="7" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M3.5 19c0-4 3.36-6 7.5-6s7.5 2 7.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
+  },
+  {
+    num: "02",
+    tag: "ID",
     title: "Credencial Digital",
     description:
-      "Tu identificación con QR verificable. Descárgala una vez, úsala siempre.",
-  },
-  {
+      "Tu identificación con QR verificable. Descárgala una vez, úsala en cualquier campo. Sin impresiones, sin papel.",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M8 4h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" stroke="#4ADE80" strokeWidth="1.5"/>
-        <path d="M10 10h8M10 14h8M10 18h5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <rect x="2" y="5" width="18" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="8" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M12.5 9h5M12.5 12h3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
+  },
+  {
+    num: "03",
+    tag: "Equipos",
+    title: "Registro de Equipos",
+    description:
+      "Crea el perfil de tu equipo, invita integrantes y asígnales roles. Perfil público visible para toda la comunidad.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <circle cx="8" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="14" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+        <path d="M1.5 18c0-3 2.9-4.5 6.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M8.5 18c0-3 2.46-4.5 5.5-4.5S19.5 15 19.5 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    num: "04",
+    tag: "Legal",
     title: "Documentos Oficiales",
     description:
-      "Sube y accede a la documentación que necesitas por autoridad. Todo organizado, nada perdido.",
-  },
-  {
+      "PDFs de GN, SSP, SCT y Policía Municipal organizados y siempre disponibles. Transporte legal de réplicas sin complicaciones.",
     icon: (
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-        <path d="M6 10c0-2 1.5-4 4-4h8c2.5 0 4 2 4 4v4c0 4-3 8-8 8s-8-4-8-8v-4Z" stroke="#4ADE80" strokeWidth="1.5"/>
-        <path d="M10 14l2 2 4-4" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M14 4v2M10 5l1 1.5M18 5l-1 1.5" stroke="#4ADE80" strokeWidth="1.5" strokeLinecap="round"/>
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <path d="M7 2h8l4 4v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+        <path d="M15 2v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+        <path d="M7 10h8M7 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
       </svg>
     ),
+  },
+  {
+    num: "05",
+    tag: "Réplicas",
     title: "Registro de Réplicas",
     description:
-      "Número de serie, historial y transferencias. Si alguna vez la pierdes, ya tienes cómo demostrar que era tuya.",
+      "Número de serie, historial de propietarios y transferencias verificables. El REPUVE del airsoft — si la pierdes, ya tienes cómo demostrar que era tuya.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <path d="M3 13.5V9a1 1 0 0 1 1-1h11l3 3.5-1 4H4a1 1 0 0 1-1-1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+        <path d="M6 8V6.5C6 5.1 7.1 4 8.5 4H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <circle cx="7.5" cy="16.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+        <circle cx="15.5" cy="16.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+      </svg>
+    ),
   },
 ];
 
 export default function Features() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(0);
-
-  const scrollTo = (i: number) => {
-    const next = Math.max(0, Math.min(i, features.length - 1));
-    setIndex(next);
-    scrollRef.current?.children[next]?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  };
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const cards = el.children;
-      if (cards.length === 0) return;
-      const card = cards[0] as HTMLElement;
-      const cardWidth = card.offsetWidth + 16;
-      const scrollLeft = el.scrollLeft;
-      const i = Math.round(scrollLeft / cardWidth);
-      setIndex(Math.max(0, Math.min(i, features.length - 1)));
-    };
-    el.addEventListener("scroll", onScroll);
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <section id="funciones" className="py-20 sm:py-28 px-4 sm:px-6 overflow-hidden">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-12 sm:mb-16">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-px flex-1 bg-air-border" />
-            <span className="font-mono text-xs text-air-muted tracking-widest uppercase">Funciones</span>
-            <div className="h-px flex-1 bg-air-border" />
+    <section id="funciones" className="py-24 sm:py-32 px-5 sm:px-8">
+      <div className="max-w-7xl mx-auto">
+
+        {/* ── Header ── */}
+        <div className="mb-16 sm:mb-20">
+          <div className="flex items-center gap-4 mb-5">
+            <span className="block w-7 h-[2px] bg-an-accent" />
+            <p className="font-body font-bold text-an-accent text-[0.65rem] uppercase tracking-[0.28em]">
+              Funciones
+            </p>
           </div>
-          <h2 className="font-display text-[clamp(2.5rem,6vw,5rem)] text-center text-air-text tracking-wider leading-none">
-            LO QUE LE
+          <h2
+            className="font-display font-black uppercase text-an-text leading-[0.9]"
+            style={{ fontSize: "clamp(2.6rem, 6vw, 5.2rem)" }}
+          >
+            5 HERRAMIENTAS.
             <br />
-            <span className="text-gradient-green">FALTABA A LA COMUNIDAD</span>
+            UNA PLATAFORMA.
           </h2>
+          <p className="font-body text-an-text-dim text-base sm:text-[1.05rem] leading-[1.7] mt-6 max-w-lg">
+            Todo lo que la comunidad de airsoft necesitaba — reunido en un solo lugar.
+          </p>
         </div>
 
-        {/* Carrusel: una card grande centrada + asomo de vecinas */}
-        <div className="relative">
-          <div
-            ref={scrollRef}
-            className="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory scroll-smooth pb-4 touch-pan-x -mx-4 pl-[9%] pr-[9%] sm:pl-[9%] sm:pr-[9%] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className="flex-shrink-0 w-[82%] min-w-[260px] max-w-[420px] snap-center"
-              >
-                <div className="group relative p-6 sm:p-8 rounded-xl border border-air-border bg-air-surface hover:border-air-green/30 transition-all duration-300 hover:bg-air-surface/80 h-full min-h-[220px]">
-                  {/* Glow on hover */}
-                  <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: "radial-gradient(ellipse at 30% 30%, rgba(74,222,128,0.04), transparent 60%)" }}
-                  />
+        {/* ── Grid: 3 + 2 ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-an-border">
+          {FEATURES.map((f, i) => (
+            <div
+              key={i}
+              className={`group relative bg-an-bg hover:bg-an-surface transition-colors duration-300 p-8 sm:p-10 ${
+                /* Last card on desktop spans 1 col, starts at col 2 */
+                i === 4 ? "lg:col-start-2" : ""
+              }`}
+            >
+              {/* Accent left bar on hover */}
+              <span className="absolute left-0 top-8 bottom-8 w-[2px] bg-an-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  <div className="relative">
-                    <div className="mb-4">{f.icon}</div>
-                    <h3 className="font-display text-2xl sm:text-3xl tracking-wider text-air-text mb-2">{f.title}</h3>
-                    <p className="font-body text-air-text-dim text-sm sm:text-base leading-relaxed">{f.description}</p>
-                  </div>
-                </div>
+              {/* Number + tag row */}
+              <div className="flex items-center justify-between mb-6">
+                <span className="font-display font-black text-[2.8rem] leading-none text-an-border group-hover:text-an-accent/20 transition-colors duration-300 select-none">
+                  {f.num}
+                </span>
+                <span className="font-body font-bold text-[0.6rem] uppercase tracking-[0.22em] text-an-muted border border-an-border px-2.5 py-1">
+                  {f.tag}
+                </span>
               </div>
-            ))}
-          </div>
 
-          {/* Solo flechas */}
-          <div className="flex items-center justify-center gap-6 mt-6">
-            <button
-              onClick={() => scrollTo(index - 1)}
-              disabled={index === 0}
-              className="w-10 h-10 rounded-full border border-air-border flex items-center justify-center text-air-text hover:border-air-green/50 hover:text-air-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Anterior"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <button
-              onClick={() => scrollTo(index + 1)}
-              disabled={index === features.length - 1}
-              className="w-10 h-10 rounded-full border border-air-border flex items-center justify-center text-air-text hover:border-air-green/50 hover:text-air-green disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              aria-label="Siguiente"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </div>
+              {/* Icon */}
+              <div className="text-an-accent mb-4">{f.icon}</div>
+
+              {/* Title */}
+              <h3 className="font-ui font-semibold text-an-text text-[1.05rem] mb-3 leading-snug">
+                {f.title}
+              </h3>
+
+              {/* Description */}
+              <p className="font-body text-an-text-dim text-sm leading-[1.75]">
+                {f.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
