@@ -14,7 +14,11 @@ function QrPlaceholder() {
   const gap = 2;
   const pad = 1;
   return (
-    <svg viewBox="0 0 50 50" className="h-14 w-14 shrink-0" aria-hidden>
+    <svg
+      viewBox="0 0 50 50"
+      className="h-10 w-10 shrink-0 md:h-14 md:w-14"
+      aria-hidden
+    >
       {QR_PATTERN.map((row, r) =>
         row.map((on, c) =>
           on ? (
@@ -33,11 +37,133 @@ function QrPlaceholder() {
   );
 }
 
+/** Contenido del card de credencial; tipografía más compacta en móvil */
+function CredentialCard() {
+  return (
+    <div className="overflow-hidden rounded-none border border-[#EEEEEE] bg-white shadow-sm">
+      <div className="bg-[#CC4B37] px-3 py-2 md:px-5 md:py-3">
+        <p className="font-display text-xs font-black uppercase tracking-[0.2em] text-white md:text-sm">
+          AIRNATION
+        </p>
+        <p className="font-body mt-0.5 text-[10px] font-normal uppercase tracking-wider text-white/70 md:mt-1 md:text-xs">
+          CREDENCIAL DE JUGADOR
+        </p>
+      </div>
+
+      <div className="bg-white px-3 py-3 md:px-5 md:py-4">
+        <div className="flex gap-3 md:gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] md:h-16 md:w-16">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="md:h-7 md:w-7"
+              aria-hidden
+            >
+              <path
+                d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20a8 8 0 0 1 16 0"
+                stroke="#CCCCCC"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display text-base font-black text-[#111111] md:text-lg">
+              GHOST_MX
+            </p>
+            <p className="font-body mt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#CC4B37] md:mt-1 md:text-xs">
+              FRANCOTIRADOR
+            </p>
+            <p className="font-body mt-1 text-[10px] font-normal text-[#444444] md:mt-2 md:text-xs">
+              EQUIPO SOMBRA · CDMX
+            </p>
+          </div>
+        </div>
+
+        <div className="my-3 border-t border-[#EEEEEE] md:my-4" />
+
+        <div>
+          <p className="font-body text-[9px] font-normal uppercase tracking-wider text-[#767676] md:text-[10px]">
+            RÉPLICA REGISTRADA
+          </p>
+          <p className="font-body mt-0.5 text-[10px] font-bold text-[#111111] md:mt-1 md:text-xs">
+            SSG-10 · #MX-2024-00847
+          </p>
+        </div>
+
+        <div className="mt-3 md:mt-4">
+          <p className="font-body text-[9px] font-normal uppercase tracking-wider text-[#767676] md:text-[10px]">
+            DOCUMENTOS
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5 md:mt-2 md:gap-2">
+            <span className="border border-[#EEEEEE] bg-[#F4F4F4] px-1.5 py-0.5 font-body text-[10px] text-[#111111] md:px-2 md:py-1 md:text-xs">
+              GN ✓
+            </span>
+            <span className="border border-[#EEEEEE] bg-[#F4F4F4] px-1.5 py-0.5 font-body text-[10px] text-[#111111] md:px-2 md:py-1 md:text-xs">
+              SSP ✓
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-3 flex justify-end md:mt-4">
+          <QrPlaceholder />
+        </div>
+      </div>
+
+      <div className="bg-[#F4F4F4] px-3 py-2 md:px-5 md:py-2.5">
+        <p className="font-body text-[10px] font-normal text-[#767676] md:text-xs">
+          airnation.online
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PhoneMockup() {
+  return (
+    <div className="mx-auto w-full max-w-[320px] md:hidden">
+      <div className="rounded-[2.5rem] border-4 border-[#2A2A2A] bg-[#1A1A1A] p-2.5 shadow-2xl">
+        <div className="flex h-7 items-center justify-center rounded-t-[2rem] bg-[#111111]">
+          <div className="h-4 w-20 rounded-full bg-[#1A1A1A]" />
+        </div>
+        <div className="overflow-hidden rounded-b-[2rem] bg-white">
+          <CredentialCard />
+          <div className="flex h-6 items-center justify-center bg-white">
+            <div className="h-1 w-16 rounded-full bg-[#EEEEEE]" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabletMockup() {
+  return (
+    <div className="relative mx-auto hidden w-full max-w-[620px] md:block">
+      <div className="relative aspect-[4/3] w-full overflow-visible rounded-[2rem] border-4 border-[#2A2A2A] bg-[#1A1A1A] p-3 shadow-2xl">
+        <div
+          className="absolute right-[-6px] top-16 z-10 h-10 w-[4px] rounded-full bg-[#2A2A2A]"
+          aria-hidden
+        />
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="flex h-6 shrink-0 items-center justify-center rounded-t-[1.2rem] bg-[#111111]">
+            <span className="h-2 w-2 rounded-full bg-[#2A2A2A]" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto rounded-b-[1.2rem] bg-white">
+            <CredentialCard />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductPreview() {
   return (
     <section id="preview" className="bg-white px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
-        {/* ── Izquierda ── */}
         <div>
           <div className="mb-5 flex items-center gap-4">
             <span className="block h-[2px] w-7 bg-an-accent" />
@@ -65,87 +191,19 @@ export default function ProductPreview() {
           </Link>
         </div>
 
-        {/* ── Derecha: UI estático ── */}
         <div className="flex flex-col gap-3">
-          <div className="overflow-hidden rounded-none border border-[#EEEEEE] bg-white shadow-sm">
-            {/* Header card */}
-            <div className="bg-[#CC4B37] px-5 py-3">
-              <p className="font-display text-sm font-black uppercase tracking-[0.2em] text-white">
-                AIRNATION
-              </p>
-              <p className="font-body mt-1 text-xs font-normal uppercase tracking-wider text-white/70">
-                CREDENCIAL DE JUGADOR
-              </p>
-            </div>
+          <PhoneMockup />
+          <TabletMockup />
 
-            {/* Body */}
-            <div className="bg-white px-5 py-4">
-              <div className="flex gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4]">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <path
-                      d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20a8 8 0 0 1 16 0"
-                      stroke="#CCCCCC"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg font-black text-[#111111]">GHOST_MX</p>
-                  <p className="font-body mt-1 text-xs font-bold uppercase tracking-wide text-[#CC4B37]">
-                    FRANCOTIRADOR
-                  </p>
-                  <p className="font-body mt-2 text-xs font-normal text-[#444444]">
-                    EQUIPO SOMBRA · CDMX
-                  </p>
-                </div>
-              </div>
-
-              <div className="my-4 border-t border-[#EEEEEE]" />
-
-              <div>
-                <p className="font-body text-[10px] font-normal uppercase tracking-wider text-[#767676]">
-                  RÉPLICA REGISTRADA
-                </p>
-                <p className="font-body mt-1 text-xs font-bold text-[#111111]">
-                  SSG-10 · #MX-2024-00847
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <p className="font-body text-[10px] font-normal uppercase tracking-wider text-[#767676]">
-                  DOCUMENTOS
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="border border-[#EEEEEE] bg-[#F4F4F4] px-2 py-1 font-body text-xs text-[#111111]">
-                    GN ✓
-                  </span>
-                  <span className="border border-[#EEEEEE] bg-[#F4F4F4] px-2 py-1 font-body text-xs text-[#111111]">
-                    SSP ✓
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <QrPlaceholder />
-              </div>
-            </div>
-
-            {/* Footer card */}
-            <div className="bg-[#F4F4F4] px-5 py-2.5">
-              <p className="font-body text-xs font-normal text-[#767676]">airnation.online</p>
-            </div>
-          </div>
-
-          {/* Mini réplicas */}
           <div className="flex gap-3">
             <span
               className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#65B32E]"
               aria-hidden
             />
             <div className="min-w-0 flex-1 border border-[#EEEEEE] bg-white px-4 py-3">
-              <p className="font-body text-xs font-bold text-[#111111]">HK416 · #MX-2024-00312</p>
+              <p className="font-body text-xs font-bold text-[#111111]">
+                HK416 · #MX-2024-00312
+              </p>
               <p className="font-body mt-1 text-[10px] font-normal uppercase tracking-wide text-[#767676]">
                 ACTIVA · PROPIETARIO VERIFICADO
               </p>
@@ -158,7 +216,9 @@ export default function ProductPreview() {
               aria-hidden
             />
             <div className="min-w-0 flex-1 border border-[#EEEEEE] bg-white px-4 py-3">
-              <p className="font-body text-xs font-bold text-[#111111]">SSP18 · #MX-2024-00456</p>
+              <p className="font-body text-xs font-bold text-[#111111]">
+                SSP18 · #MX-2024-00456
+              </p>
               <p className="font-body mt-1 text-[10px] font-normal uppercase tracking-wide text-[#767676]">
                 TRANSFERIDA · 2 PROPIETARIOS
               </p>
