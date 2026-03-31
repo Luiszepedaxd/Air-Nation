@@ -27,14 +27,14 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section id="como-funciona" className="py-24 sm:py-32 px-5 sm:px-8 relative">
+    <section id="como-funciona" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8 relative">
 
       {/* Subtle center glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 55% 40% at 50% 50%, rgba(204,75,55,0.04) 0%, transparent 70%)",
+            "radial-gradient(ellipse 55% 40% at 50% 50%, rgba(204,75,55,0.05) 0%, transparent 70%)",
         }}
       />
 

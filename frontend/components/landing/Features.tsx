@@ -75,7 +75,7 @@ const FEATURES = [
 
 export default function Features() {
   return (
-    <section id="funciones" className="py-24 sm:py-32 px-5 sm:px-8">
+    <section id="funciones" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8">
       <div className="max-w-7xl mx-auto">
 
         {/* ── Header ── */}
@@ -100,21 +100,17 @@ export default function Features() {
         </div>
 
         {/* ── Grid: 3 + 2 ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-an-border">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {FEATURES.map((f, i) => (
             <div
               key={i}
-              className={`group relative bg-an-bg hover:bg-an-surface transition-colors duration-300 p-8 sm:p-10 ${
-                /* Last card on desktop spans 1 col, starts at col 2 */
+              className={`group relative border border-an-border bg-an-bg p-8 sm:p-10 transition-colors duration-300 hover:bg-an-surface hover:shadow-[inset_2px_0_0_0_#CC4B37] ${
                 i === 4 ? "lg:col-start-2" : ""
               }`}
             >
-              {/* Accent left bar on hover */}
-              <span className="absolute left-0 top-8 bottom-8 w-[2px] bg-an-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
               {/* Number + tag row */}
               <div className="flex items-center justify-between mb-6">
-                <span className="font-display font-black text-[2.8rem] leading-none text-an-border group-hover:text-an-accent/20 transition-colors duration-300 select-none">
+                <span className="font-display font-black text-[2.8rem] leading-none text-[#EEEEEE] select-none">
                   {f.num}
                 </span>
                 <span className="font-body font-bold text-[0.6rem] uppercase tracking-[0.22em] text-an-muted border border-an-border px-2.5 py-1">

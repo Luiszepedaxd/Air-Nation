@@ -26,11 +26,11 @@ export default function Hero() {
           decoding="async"
         />
         {/* Left-to-right dark gradient (text side stays readable) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0B0C0D] via-[#0B0C0D]/85 to-[#0B0C0D]/25" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#111111] via-[#111111]/80 to-transparent" />
         {/* Top vignette for nav readability */}
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#0B0C0D]/70 to-transparent" />
-        {/* Bottom fade into next section */}
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#0B0C0D] to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-[#111111]/70 to-transparent" />
+        {/* Bottom fade into light sections */}
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-an-bg to-transparent" />
       </div>
 
       {/* ── Content ── */}
@@ -46,7 +46,7 @@ export default function Hero() {
           </div>
 
           {/* H1 */}
-          <h1 className="font-display font-black uppercase leading-[0.88] text-an-text mb-8"
+          <h1 className="font-display font-black uppercase leading-[0.88] text-white mb-8"
               style={{ fontSize: "clamp(3rem, 9.5vw, 7.5rem)" }}>
             TU IDENTIDAD.
             <br />
@@ -56,7 +56,7 @@ export default function Hero() {
           </h1>
 
           {/* Subtitle */}
-          <p className="font-body text-an-text-dim text-base sm:text-[1.1rem] leading-[1.7] mb-11 max-w-[460px]">
+          <p className="font-body text-white/80 text-base sm:text-[1.1rem] leading-[1.7] mb-11 max-w-[460px]">
             La plataforma central del airsoft — credenciales digitales, registro de réplicas, documentación oficial y tu perfil de jugador. Todo en el cel.
           </p>
 
@@ -75,7 +75,7 @@ export default function Hero() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center justify-center px-8 py-[1.1rem] border border-an-border text-an-text-dim font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:border-an-text-dim hover:text-an-text transition-colors"
+              className="inline-flex items-center justify-center px-8 py-[1.1rem] border border-white/35 text-white/90 font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:border-white hover:text-white transition-colors"
             >
               Ya tengo cuenta
             </Link>
@@ -84,7 +84,7 @@ export default function Hero() {
       </div>
 
       {/* ── Stats bar ── */}
-      <div className="absolute bottom-0 inset-x-0 border-t border-an-border bg-an-bg/75 backdrop-blur-sm">
+      <div className="absolute bottom-0 inset-x-0 border-t border-an-border bg-an-bg">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="grid grid-cols-3 divide-x divide-an-border">
             {STATS.map(({ num, label }) => (

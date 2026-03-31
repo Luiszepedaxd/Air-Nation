@@ -12,7 +12,7 @@ const STATS = [
 
 export default function CommunitySection() {
   return (
-    <section id="comunidad" className="py-24 sm:py-32 px-5 sm:px-8">
+    <section id="comunidad" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8">
       <div className="max-w-7xl mx-auto">
 
         {/* ── Main block ── */}
@@ -57,7 +57,7 @@ export default function CommunitySection() {
                 <div
                   key={label}
                   className={`flex flex-col items-center text-center py-5 px-3 ${
-                    accent ? "bg-an-accent" : "bg-an-surface"
+                    accent ? "bg-an-accent" : "bg-an-surface2"
                   }`}
                 >
                   <span className={`font-display font-black text-xl sm:text-2xl uppercase leading-none ${

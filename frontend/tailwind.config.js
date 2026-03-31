@@ -8,16 +8,16 @@ module.exports = {
     extend: {
       colors: {
         an: {
-          bg:          "#0B0C0D",
-          surface:     "#111315",
-          "surface-2": "#181A1C",
-          border:      "#1E2226",
-          "border-2":  "#282E34",
-          accent:      "#CC4B37",
-          "accent-h":  "#D95540",
-          text:        "#EDEDEB",
-          "text-dim":  "#8A8A88",
-          muted:       "#4A4A48",
+          bg:         "#FFFFFF",
+          surface:    "#F4F4F4",
+          surface2:   "#F0F0F0",
+          border:     "#EEEEEE",
+          border2:    "#E0E0E0",
+          accent:     "#CC4B37",
+          "accent-h": "#D95540",
+          text:       "#111111",
+          "text-dim": "#444444",
+          muted:      "#767676",
         },
       },
       fontFamily: {
