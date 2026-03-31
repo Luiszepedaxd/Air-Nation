@@ -102,7 +102,7 @@ const STEPS = [
 
 export default function Features() {
   return (
-    <section id="funciones" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8">
+    <section id="funciones" className="bg-[#F4F4F4] py-24 sm:py-32 px-5 sm:px-8">
       <div className="max-w-7xl mx-auto">
 
         {/* ── Header ── */}

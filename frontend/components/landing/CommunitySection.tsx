@@ -8,7 +8,7 @@ const STATS = [
 
 export default function CommunitySection() {
   return (
-    <section id="comunidad" className="bg-an-bg py-24 sm:py-32 px-5 sm:px-8">
+    <section id="comunidad" className="bg-[#F4F4F4] py-24 sm:py-32 px-5 sm:px-8">
       <div className="max-w-7xl mx-auto">
 
         <div className="relative overflow-hidden bg-[#F4F4F4] border border-an-border">

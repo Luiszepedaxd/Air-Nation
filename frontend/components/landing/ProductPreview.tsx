@@ -35,7 +35,7 @@ function QrPlaceholder() {
 
 export default function ProductPreview() {
   return (
-    <section id="preview" className="bg-an-bg px-5 py-24 sm:px-8 sm:py-32">
+    <section id="preview" className="bg-white px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
         {/* ── Izquierda ── */}
         <div>
