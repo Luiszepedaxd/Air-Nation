@@ -33,23 +33,20 @@ export default function Hero() {
       />
 
       {/* 4. Contenido */}
-      <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full pt-28 pb-40 sm:pt-36 sm:pb-48">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-40 pt-24 sm:px-8 sm:pb-48 sm:pt-28">
         <div className="max-w-[600px] lg:max-w-[680px]">
 
           {/* H1 */}
-          <h1 className="font-display font-black uppercase leading-[0.88] text-white mb-8"
-              style={{ fontSize: "clamp(3rem, 9.5vw, 7.5rem)" }}>
+          <h1
+            className="mb-6 font-display font-black uppercase leading-[0.88] text-white"
+            style={{ fontSize: "clamp(3rem, 9.5vw, 7.5rem)" }}
+          >
             TU IDENTIDAD.
             <br />
             TU EQUIPO.
             <br />
             <span className="text-an-accent">TU CAMPO.</span>
           </h1>
-
-          {/* Subtitle */}
-          <p className="font-body text-white/80 text-base sm:text-[1.1rem] leading-[1.7] mb-11 max-w-[460px]">
-            La plataforma central del airsoft — credenciales digitales, registro de réplicas, documentación oficial y tu perfil de jugador. Todo en el cel.
-          </p>
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row gap-3">
