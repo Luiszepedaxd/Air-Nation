@@ -1,7 +1,8 @@
 "use client"
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
   {
@@ -84,23 +85,40 @@ const NAV_ITEMS = [
 
 export default function BottomNav() {
   const pathname = usePathname()
+  const router = useRouter()
   const [panicModal, setPanicModal] = useState(false)
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/')
+  }
 
   return (
     <>
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
-           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-6 h-16">
-          
-          {/* Nav items normales */}
+      {/* Desktop top nav */}
+      <nav className="hidden md:flex fixed top-0 inset-x-0 z-50 bg-white border-b border-[#EEEEEE] h-16 items-center justify-between px-8">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <span className="w-7 h-7 bg-[#CC4B37] flex items-center justify-center">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff"/>
+            </svg>
+          </span>
+          <span style={{fontFamily:'Jost,sans-serif'}}
+                className="font-black text-[1.1rem] tracking-[0.18em] text-[#111111] uppercase">
+            AIR<span className="text-[#CC4B37]">NATION</span>
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href
             return (
               <Link key={item.href} href={item.href}
-                    className="flex flex-col items-center justify-center gap-1">
+                    className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
+                      active ? 'border-b-2 border-[#CC4B37]' : 'border-b-2 border-transparent'
+                    }`}>
                 {item.icon(active)}
-                <span className={`text-[9px] font-bold uppercase tracking-wider leading-none ${
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${
                   active ? 'text-[#CC4B37]' : 'text-[#767676]'
                 }`}>
                   {item.label}
@@ -109,10 +127,46 @@ export default function BottomNav() {
             )
           })}
 
-          {/* Botón pánico — SOS */}
+          <button onClick={() => setPanicModal(true)}
+                  className="flex flex-col items-center gap-1 px-4 py-2 relative">
+            <span className="absolute top-1 right-3 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse"/>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="#CCCCCC" strokeWidth="1.8"/>
+              <path d="M12 8v4M12 16h.01" stroke="#CCCCCC" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-[#CCCCCC]">SOS</span>
+          </button>
+
+          <div className="w-px h-8 bg-[#EEEEEE] mx-2"/>
+
+          <button onClick={handleLogout}
+                  className="text-[#767676] text-[0.7rem] font-bold uppercase tracking-[0.15em] hover:text-[#CC4B37] transition-colors px-3">
+            Cerrar sesión
+          </button>
+        </div>
+      </nav>
+
+      {/* Bottom Nav — mobile */}
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
+           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="grid grid-cols-6 h-14">
+          {NAV_ITEMS.map((item) => {
+            const active = pathname === item.href
+            return (
+              <Link key={item.href} href={item.href}
+                    className="flex flex-col items-center justify-center gap-1">
+                {item.icon(active)}
+                <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
+                  active ? 'text-[#CC4B37]' : 'text-[#767676]'
+                }`}>
+                  {item.label}
+                </span>
+              </Link>
+            )
+          })}
+
           <button onClick={() => setPanicModal(true)}
                   className="flex flex-col items-center justify-center gap-1 relative">
-            {/* Punto pulsante de "próximamente" */}
             <span className="absolute top-2 right-3 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse"/>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="9" stroke="#CCCCCC" strokeWidth="1.8"/>
@@ -120,25 +174,21 @@ export default function BottomNav() {
                 stroke="#CCCCCC" strokeWidth="1.8"
                 strokeLinecap="round"/>
             </svg>
-            <span className="text-[9px] font-bold uppercase tracking-wider leading-none text-[#CCCCCC]">
+            <span className="text-[8px] font-bold uppercase tracking-wider leading-none text-[#CCCCCC]">
               SOS
             </span>
           </button>
         </div>
       </nav>
 
-      {/* Panic Modal — Próximamente */}
       {panicModal && (
         <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center"
              onClick={() => setPanicModal(false)}>
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-          
-          {/* Sheet */}
+
           <div className="relative w-full max-w-lg bg-white z-10 p-8 pb-12"
                onClick={(e) => e.stopPropagation()}>
-            
-            {/* Header rojo */}
+
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-[#CC4B37] flex items-center justify-center shrink-0">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -157,7 +207,6 @@ export default function BottomNav() {
               </div>
             </div>
 
-            {/* Features list */}
             <div className="flex flex-col gap-4 mb-8">
               {[
                 {
