@@ -221,7 +221,7 @@ export default function ProductPreview() {
             Tu perfil. Tu credencial. Tus réplicas. Todo en un solo lugar.
           </p>
           <Link
-            href="/signup"
+            href="/register"
             className="font-body mt-8 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-an-accent hover:underline hover:underline-offset-4"
           >
             Crear mi perfil

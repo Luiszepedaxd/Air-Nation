@@ -70,7 +70,7 @@ export default function CommunitySection() {
 
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
-                href="/signup"
+                href="/register"
                 className="inline-flex items-center justify-center gap-2.5 px-8 py-[1.1rem] bg-an-accent text-white font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:bg-an-accent-h transition-colors"
               >
                 Únete gratis

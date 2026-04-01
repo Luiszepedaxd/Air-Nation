@@ -5,7 +5,7 @@ const LINKS = {
     { label: "Comunidad",     href: "#comunidad"     },
   ],
   Cuenta: [
-    { label: "Registrarse",   href: "/signup" },
+    { label: "Registrarse",   href: "/register" },
     { label: "Iniciar sesión",href: "/login"    },
   ],
   Legal: [

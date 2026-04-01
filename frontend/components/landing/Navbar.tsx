@@ -74,7 +74,7 @@ export default function Navbar() {
             Iniciar sesión
           </Link>
           <Link
-            href="/signup"
+            href="/register"
             className="font-body font-bold text-[0.7rem] text-white bg-an-accent hover:bg-an-accent-h transition-colors uppercase tracking-[0.15em] px-5 py-2.5"
           >
             Registrarse
@@ -127,7 +127,7 @@ export default function Navbar() {
                 Iniciar sesión
               </Link>
               <Link
-                href="/signup"
+                href="/register"
                 className="font-body font-bold text-sm text-white bg-an-accent text-center py-3 uppercase tracking-wider hover:bg-an-accent-h transition-colors"
               >
                 Registrarse gratis
