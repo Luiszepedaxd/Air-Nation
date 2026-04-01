@@ -11,9 +11,18 @@ export default function Dashboard() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { router.push('/login'); return }
-      const { data } = await supabase
-        .from('users').select('alias').eq('id', user.id).single()
-      if (data?.alias) setAlias(data.alias)
+      const { data: profile } = await supabase
+        .from('users')
+        .select('alias')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.alias) {
+        router.push('/onboarding')
+        return
+      }
+
+      setAlias(profile.alias)
     })
   }, [])
 
