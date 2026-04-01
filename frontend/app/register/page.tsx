@@ -85,7 +85,7 @@ export default function Register() {
       </div>
 
       <div className="hidden lg:block w-[45%] relative bg-[#111111]">
-        <img src="https://images.unsplash.com/photo-1563456372-c1e059ba5ddc?auto=format&fit=crop&w=900&q=80"
+        <img src="/images/register_foto.jpg"
           alt="" className="w-full h-full object-cover opacity-60"/>
         <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent"/>
         <div className="absolute bottom-12 left-10 right-10">
