@@ -4,14 +4,14 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function Login() {
+export default function Register() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (!email || !password) return
     if (password.length < 6) {
       setError('Mínimo 6 caracteres')
@@ -19,9 +19,9 @@ export default function Login() {
     }
     setLoading(true)
     setError('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signUp({ email, password })
     if (error) { setError(error.message); setLoading(false); return }
-    router.push('/dashboard')
+    router.push('/onboarding')
   }
 
   return (
@@ -41,11 +41,11 @@ export default function Login() {
 
         <div className="max-w-[400px]">
           <p className="text-[#CC4B37] text-[0.65rem] font-bold uppercase tracking-[0.28em] mb-3">
-            Iniciar sesión
+            Crear cuenta
           </p>
           <h1 style={{fontFamily:'Jost,sans-serif'}}
               className="font-black text-[2.8rem] uppercase leading-[0.9] text-[#111111] mb-10">
-            BIENVENIDO<br/>DE VUELTA.
+            EMPIEZA<br/>GRATIS.
           </h1>
 
           <div className="flex flex-col gap-4">
@@ -68,17 +68,17 @@ export default function Login() {
                 className="w-full px-4 py-3 border border-[#EEEEEE] bg-[#F4F4F4] text-[#111111] text-sm placeholder-[#AAAAAA] focus:outline-none focus:border-[#CC4B37] transition-colors"/>
             </div>
             {error && <p className="text-[#CC4B37] text-xs">{error}</p>}
-            <button onClick={handleLogin}
+            <button onClick={handleRegister}
               disabled={loading || !email || !password}
               className="w-full py-3.5 bg-[#CC4B37] text-white font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:bg-[#D95540] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2">
-              {loading ? 'Entrando...' : 'Entrar →'}
+              {loading ? 'Creando cuenta...' : 'Crear cuenta →'}
             </button>
           </div>
 
           <p className="text-[#767676] text-sm mt-8">
-            ¿No tienes cuenta?{' '}
-            <Link href="/register" className="text-[#CC4B37] font-bold hover:underline">
-              Crear cuenta
+            ¿Ya tienes cuenta?{' '}
+            <Link href="/login" className="text-[#CC4B37] font-bold hover:underline">
+              Iniciar sesión
             </Link>
           </p>
         </div>
