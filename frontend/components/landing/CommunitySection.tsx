@@ -18,10 +18,10 @@ export default function CommunitySection() {
             <img
               src="/comunidad-foto-1.jpg"
               alt="Comunidad de airsoft"
-              className="absolute inset-0 w-full h-full object-cover object-center"
+              className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
               loading="lazy"
             />
-            <div className="absolute inset-0 bg-[#F4F4F4]/90" aria-hidden />
+            <div className="absolute inset-0 bg-[#F4F4F4]/40" aria-hidden />
           </div>
 
           <div className="relative z-10 max-w-2xl px-8 sm:px-12 lg:px-16 py-14 sm:py-20">

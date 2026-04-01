@@ -36,14 +36,6 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto px-5 sm:px-8 w-full pt-28 pb-40 sm:pt-36 sm:pb-48">
         <div className="max-w-[600px] lg:max-w-[680px]">
 
-          {/* Eyebrow */}
-          <div className="flex items-center gap-3 mb-7">
-            <span className="block w-7 h-[2px] bg-an-accent shrink-0" />
-            <p className="font-body font-bold text-an-accent text-[0.65rem] uppercase tracking-[0.32em]">
-              Para jugadores · Por jugadores
-            </p>
-          </div>
-
           {/* H1 */}
           <h1 className="font-display font-black uppercase leading-[0.88] text-white mb-8"
               style={{ fontSize: "clamp(3rem, 9.5vw, 7.5rem)" }}>

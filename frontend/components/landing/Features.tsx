@@ -137,7 +137,7 @@ export default function Features() {
             >
               {/* Number + tag row */}
               <div className="flex items-center justify-between mb-6">
-                <span className="font-display font-black text-[2.8rem] leading-none text-[#CC4B37]/20 group-hover:text-[#CC4B37]/40 transition-colors duration-200 select-none">
+                <span className="font-display font-black text-[2.8rem] leading-none text-[#CC4B37]/50 group-hover:text-[#CC4B37]/70 transition-colors duration-200 select-none">
                   {f.num}
                 </span>
                 <span className="font-body font-bold text-[0.6rem] uppercase tracking-[0.22em] text-an-muted border border-an-border px-2.5 py-1">
