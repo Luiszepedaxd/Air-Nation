@@ -52,18 +52,9 @@ const NAV_ITEMS = [
     href: '/dashboard/replicas',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M3 15V10a1 1 0 011-1h12l3 3.5-1 4.5H4a1 1 0 01-1-1Z"
+        <path d="M4 12h16M4 12c0-1 .5-2 1.5-2.5L14 5M4 12c0 1 .5 2 1.5 2.5L14 19M20 12l-3-4M20 12l-3 4"
           stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinejoin="round"/>
-        <path d="M6 9V7.5C6 6.1 7.1 5 8.5 5H10"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="7.5" cy="18.5" r="1.5"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8"/>
-        <circle cx="15.5" cy="18.5" r="1.5"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8"/>
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     )
   },
