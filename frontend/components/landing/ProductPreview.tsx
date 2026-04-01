@@ -52,23 +52,11 @@ function CredentialCard() {
 
       <div className="bg-white px-3 py-3 md:px-5 md:py-4">
         <div className="flex gap-3 md:gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] md:h-16 md:w-16">
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              className="md:h-7 md:w-7"
-              aria-hidden
-            >
-              <path
-                d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 20a8 8 0 0 1 16 0"
-                stroke="#CCCCCC"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
+          <img
+            src="/profilepic.jpg"
+            alt="Foto de perfil"
+            className="w-16 h-16 object-cover object-center"
+          />
           <div className="min-w-0 flex-1">
             <p className="font-display text-base font-black text-[#111111] md:text-lg">
               GHOST_MX
