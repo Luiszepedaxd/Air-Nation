@@ -33,19 +33,53 @@ export async function middleware(request: NextRequest) {
   )
   const { data: { session } } = await supabase.auth.getSession()
 
+  const pathname = request.nextUrl.pathname
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
+
   if (!session && (
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/onboarding')
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/onboarding') ||
+    isAdminRoute ||
+    pathname === '/campos/nuevo'
   )) return NextResponse.redirect(new URL('/login', request.url))
 
   if (session && (
-    request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname === '/register'
+    pathname === '/login' ||
+    pathname === '/register'
   )) return NextResponse.redirect(new URL('/dashboard', request.url))
+
+  if (session && (isAdminRoute || pathname === '/campos/nuevo')) {
+    const { data: profile, error } = await supabase
+      .from('users')
+      .select('app_role')
+      .eq('id', session.user.id)
+      .single()
+
+    const appRole =
+      !error && profile?.app_role != null ? profile.app_role : 'player'
+
+    if (isAdminRoute && appRole !== 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    if (
+      pathname === '/campos/nuevo' &&
+      appRole !== 'admin' &&
+      appRole !== 'field_owner'
+    ) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
 
   return response
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/onboarding/:path*', '/login', '/register']
+  matcher: [
+    '/dashboard/:path*',
+    '/onboarding/:path*',
+    '/admin/:path*',
+    '/campos/nuevo',
+    '/login',
+    '/register',
+  ],
 }
