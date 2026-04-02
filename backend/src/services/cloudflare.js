@@ -1,12 +1,3 @@
-const FormData = require("form-data");
-
-/**
- * Sube un buffer a Cloudflare Images y devuelve la URL de la primera variante.
- * @param {Buffer} fileBuffer
- * @param {string} filename
- * @param {string} mimeType
- * @returns {Promise<string>}
- */
 async function uploadToCloudflare(fileBuffer, filename, mimeType) {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
   const token = process.env.CLOUDFLARE_API_TOKEN;
@@ -15,14 +6,14 @@ async function uploadToCloudflare(fileBuffer, filename, mimeType) {
   }
 
   const form = new FormData();
-  form.append("file", fileBuffer, { filename, contentType: mimeType });
+  const blob = new Blob([fileBuffer], { type: mimeType });
+  form.append("file", blob, filename);
 
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v1`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      ...form.getHeaders(),
     },
     body: form,
   });
@@ -31,8 +22,7 @@ async function uploadToCloudflare(fileBuffer, filename, mimeType) {
   if (result.success === true) {
     return result.result.variants[0];
   }
-  const message =
-    result.errors?.[0]?.message || "Error al subir la imagen a Cloudflare";
+  const message = result.errors?.[0]?.message || "Error al subir imagen a Cloudflare";
   throw new Error(message);
 }
 
