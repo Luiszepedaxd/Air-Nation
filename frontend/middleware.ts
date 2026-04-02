@@ -77,6 +77,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/onboarding/:path*',
+    '/admin',
     '/admin/:path*',
     '/campos/nuevo',
     '/login',
