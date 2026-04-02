@@ -165,21 +165,16 @@ function parseStoredState(raw: string): OnboardingState | null {
 }
 
 /**
- * Icono de rol — SVG 20×20, stroke según selección.
+ * Icono de rol — SVG 20×20; color vía currentColor en el contenedor (text-[#111111] / text-[#CC4B37]).
  */
 function RoleIcon({
   role,
-  selected,
 }: {
   role: NonNullable<Exclude<OnboardingState["rol"], "">>;
-  selected: boolean;
 }) {
-  const stroke = selected ? "#CC4B37" : "#111111";
-  const common = {
+  const svgProps = {
+    viewBox: "0 0 20 20" as const,
     fill: "none" as const,
-    stroke,
-    strokeWidth: 1.5,
-    viewBox: "0 0 20 20",
     width: 20,
     height: 20,
     "aria-hidden": true as const,
@@ -188,68 +183,103 @@ function RoleIcon({
   switch (role) {
     case "rifleman":
       return (
-        <svg {...common}>
-          <line x1="2" y1="10" x2="14" y2="10" strokeLinecap="round" />
-          <line x1="14" y1="10" x2="17" y2="8" strokeLinecap="round" />
-          <line x1="2" y1="10" x2="4" y2="7" strokeLinecap="round" />
+        <svg {...svgProps}>
+          <path
+            d="M10 18c-3.3 0-6-2.7-6-6 0-2 1-3.5 2-4.5 0 1.5 1 2.5 1 2.5 0-3 2-6 4-7.5-.5 2 .5 3.5 1.5 4.5.5-1 .5-2 .5-2 1.5 1.5 3 3.5 3 7 0 3.3-2.7 6-6 6z"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "sniper":
       return (
-        <svg {...common}>
-          <circle cx="10" cy="10" r="6" />
-          <line x1="10" y1="6" x2="10" y2="14" />
-          <line x1="6" y1="10" x2="14" y2="10" />
+        <svg {...svgProps}>
+          <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth={1.5} />
+          <path
+            d="M10 3v4M10 13v4M3 10h4M13 10h4"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
         </svg>
       );
     case "support":
       return (
-        <svg {...common}>
-          <path d="M10 3 L16 6 V11 C16 14.5 10 17 10 17 C10 17 4 14.5 4 11 V6 Z" />
+        <svg {...svgProps}>
+          <path
+            d="M10 17s-7-4-7-9a4 4 0 0 1 7-2.65A4 4 0 0 1 17 8c0 5-7 9-7 9z"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "medic":
       return (
-        <svg {...common}>
-          <rect x="8" y="5" width="4" height="10" rx="0.5" />
-          <rect x="5" y="8" width="10" height="4" rx="0.5" />
+        <svg {...svgProps}>
+          <rect
+            x="8"
+            y="3"
+            width="4"
+            height="14"
+            rx="1"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          />
+          <rect
+            x="3"
+            y="8"
+            width="14"
+            height="4"
+            rx="1"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          />
+        </svg>
+      );
+    case "scout":
+      return (
+        <svg {...svgProps}>
+          <circle cx="5.5" cy="12" r="3.5" stroke="currentColor" strokeWidth={1.5} />
+          <circle cx="14.5" cy="12" r="3.5" stroke="currentColor" strokeWidth={1.5} />
+          <path
+            d="M9 12h2"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
         </svg>
       );
     case "team_leader":
       return (
-        <svg {...common}>
-          <path d="M10 2 L12.5 8 L19 8.5 L14 12.5 L15.5 19 L10 15.5 L4.5 19 L6 12.5 L1 8.5 L7.5 8 Z" />
+        <svg {...svgProps}>
+          <path
+            d="M10 2l2.4 5 5.6.8-4 3.9.9 5.5L10 14.5l-4.9 2.7.9-5.5L2 7.8l5.6-.8L10 2z"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       );
     case "rookie":
       return (
-        <svg {...common}>
-          <circle cx="10" cy="7" r="2.5" />
-          <path d="M5 16 Q10 11 15 16" strokeLinecap="round" />
+        <svg {...svgProps}>
+          <circle cx="10" cy="6" r="3" stroke="currentColor" strokeWidth={1.5} />
+          <path
+            d="M4 18c0-3.3 2.7-6 6-6s6 2.7 6 6"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
         </svg>
       );
     default:
       return null;
   }
-}
-
-function RoleIconScoutFixed({ selected }: { selected: boolean }) {
-  const stroke = selected ? "#CC4B37" : "#111111";
-  return (
-    <svg
-      width={20}
-      height={20}
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden
-      stroke={stroke}
-      strokeWidth={1.5}
-    >
-      <circle cx="7" cy="10" r="3" />
-      <circle cx="13" cy="10" r="3" />
-      <line x1="9.2" y1="8" x2="10.8" y2="8" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 export default function OnboardingPage() {
@@ -662,12 +692,12 @@ export default function OnboardingPage() {
                           : "border-[#EEEEEE]"
                       }`}
                     >
-                      <div className="mb-2 flex items-center justify-center">
-                        {id === "scout" ? (
-                          <RoleIconScoutFixed selected={selected} />
-                        ) : (
-                          <RoleIcon role={id} selected={selected} />
-                        )}
+                      <div
+                        className={`mb-2 flex items-center justify-center ${
+                          selected ? "text-[#CC4B37]" : "text-[#111111]"
+                        }`}
+                      >
+                        <RoleIcon role={id} />
                       </div>
                       <span className="text-xs font-medium text-[#111111] leading-snug block">
                         {label}
