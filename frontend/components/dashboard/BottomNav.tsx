@@ -1,7 +1,7 @@
 "use client"
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
@@ -74,15 +74,52 @@ const NAV_ITEMS = [
   },
 ]
 
+function AdminShieldIcon({ active }: { active: boolean }) {
+  const stroke = active ? '#CC4B37' : '#767676'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3L4 7v5c0 4.418 3.358 8.193 8 9 4.642-.807 8-4.582 8-9V7L12 3Z"
+        stroke={stroke}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9 12l2 2 4-4"
+        stroke={stroke}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [panicModal, setPanicModal] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      const { data } = await supabase
+        .from('users')
+        .select('app_role')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (data?.app_role === 'admin') setIsAdmin(true)
+    })
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
+
+  const adminNavActive = pathname === '/admin'
 
   return (
     <>
@@ -128,6 +165,25 @@ export default function BottomNav() {
             <span className="text-[9px] font-bold uppercase tracking-wider text-[#CCCCCC]">SOS</span>
           </button>
 
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={`flex flex-col items-center gap-1 px-4 py-2 relative transition-colors ${
+                adminNavActive ? 'border-b-2 border-[#CC4B37]' : 'border-b-2 border-transparent'
+              }`}
+            >
+              <span className="absolute top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse" />
+              <AdminShieldIcon active={adminNavActive} />
+              <span
+                className={`text-[9px] font-bold uppercase tracking-wider ${
+                  adminNavActive ? 'text-[#CC4B37]' : 'text-[#767676]'
+                }`}
+              >
+                Admin
+              </span>
+            </Link>
+          )}
+
           <div className="w-px h-8 bg-[#EEEEEE] mx-2"/>
 
           <button onClick={handleLogout}
@@ -140,7 +196,7 @@ export default function BottomNav() {
       {/* Bottom Nav — mobile */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid grid-cols-6 h-14">
+        <div className={`grid h-14 ${isAdmin ? 'grid-cols-7' : 'grid-cols-6'}`}>
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href
             return (
@@ -169,6 +225,23 @@ export default function BottomNav() {
               SOS
             </span>
           </button>
+
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="flex flex-col items-center justify-center gap-1 relative"
+            >
+              <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse" />
+              <AdminShieldIcon active={adminNavActive} />
+              <span
+                className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
+                  adminNavActive ? 'text-[#CC4B37]' : 'text-[#767676]'
+                }`}
+              >
+                Admin
+              </span>
+            </Link>
+          )}
         </div>
       </nav>
 
