@@ -64,20 +64,6 @@ const NAV_ITEMS = [
       </svg>
     )
   },
-  {
-    label: 'Docs',
-    href: '/dashboard/docs',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M7 3h10l4 4v14a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1h3Z"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinejoin="round"/>
-        <path d="M17 3v4h4M8 11h8M8 15h5"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-    )
-  },
 ]
 
 function sosNavIcon(active: boolean) {
