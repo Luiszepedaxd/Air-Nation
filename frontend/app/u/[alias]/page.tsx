@@ -58,6 +58,10 @@ async function fetchPublicProfile(alias: string): Promise<{
     .eq('alias', alias)
     .maybeSingle()
 
+  console.log('alias buscado:', alias)
+  console.log('row:', JSON.stringify(row))
+  console.log('error:', JSON.stringify(error))
+
   if (error || !row || !row.alias) return null
 
   const user = row as PublicUser
