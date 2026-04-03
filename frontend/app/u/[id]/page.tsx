@@ -47,7 +47,7 @@ function formatDMY(iso: string) {
   }
 }
 
-async function fetchPublicProfile(alias: string): Promise<{
+async function fetchPublicProfile(id: string): Promise<{
   user: PublicUser
   teamNombre: string | null
 } | null> {
@@ -55,7 +55,7 @@ async function fetchPublicProfile(alias: string): Promise<{
   const { data: row, error } = await supabase
     .from('users')
     .select('alias, ciudad, rol, avatar_url, member_number, created_at, team_id')
-    .eq('alias', alias)
+    .eq('id', id)
     .maybeSingle()
 
   if (error || !row || !row.alias) return null
@@ -77,10 +77,9 @@ async function fetchPublicProfile(alias: string): Promise<{
 export async function generateMetadata({
   params,
 }: {
-  params: { alias: string }
+  params: { id: string }
 }): Promise<Metadata> {
-  const decoded = decodeURIComponent(params.alias)
-  const result = await fetchPublicProfile(decoded)
+  const result = await fetchPublicProfile(params.id)
   if (!result) {
     return { title: 'AirNation' }
   }
@@ -111,10 +110,9 @@ function CheckIcon() {
 export default async function PublicProfilePage({
   params,
 }: {
-  params: { alias: string }
+  params: { id: string }
 }) {
-  const decoded = decodeURIComponent(params.alias)
-  const result = await fetchPublicProfile(decoded)
+  const result = await fetchPublicProfile(params.id)
   if (!result) notFound()
 
   const { user, teamNombre } = result
