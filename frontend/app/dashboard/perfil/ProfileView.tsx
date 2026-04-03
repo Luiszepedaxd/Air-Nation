@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -68,6 +68,8 @@ function formatDMY(iso: string) {
   }
 }
 
+type TeamSearchRow = { id: string; nombre: string }
+
 function initialFromUser(u: ProfileUserRow) {
   const rolOk = u.rol && ROLE_OPTIONS.some((o) => o.value === u.rol)
   return {
@@ -110,13 +112,72 @@ type Props = {
 
 export function ProfileView({ user: initialUser, teamNombre }: Props) {
   const [user, setUser] = useState<ProfileUserRow>(initialUser)
+  const [readTeamNombre, setReadTeamNombre] = useState(teamNombre ?? '')
   const [editMode, setEditMode] = useState(false)
   const [form, setForm] = useState(() => initialFromUser(initialUser))
+  const [teamIdDraft, setTeamIdDraft] = useState<string | null>(null)
+  const [teamSearchText, setTeamSearchText] = useState('')
+  const [teamLockedName, setTeamLockedName] = useState<string | null>(null)
+  const [teamResults, setTeamResults] = useState<TeamSearchRow[]>([])
+  const [teamSearchLoading, setTeamSearchLoading] = useState(false)
+  const [teamMenuOpen, setTeamMenuOpen] = useState(false)
+  const teamWrapRef = useRef<HTMLDivElement>(null)
+  const teamSearchAbortRef = useRef<AbortController | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [saveLoading, setSaveLoading] = useState(false)
   const [avatarError, setAvatarError] = useState('')
   const [formError, setFormError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setReadTeamNombre(teamNombre ?? '')
+  }, [teamNombre])
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!teamWrapRef.current?.contains(e.target as Node)) setTeamMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  useEffect(() => {
+    if (!editMode) return
+    const q = teamSearchText.trim()
+    if (q.length < 2) {
+      teamSearchAbortRef.current?.abort()
+      setTeamResults([])
+      setTeamSearchLoading(false)
+      setTeamMenuOpen(false)
+      return
+    }
+
+    const t = window.setTimeout(() => {
+      teamSearchAbortRef.current?.abort()
+      const ac = new AbortController()
+      teamSearchAbortRef.current = ac
+      setTeamSearchLoading(true)
+      const params = new URLSearchParams({ search: q })
+      void fetch(`${API_URL}/teams?${params.toString()}`, { signal: ac.signal })
+        .then(async (res) => {
+          if (!res.ok) throw new Error('bad')
+          const json = (await res.json()) as { teams?: TeamSearchRow[] }
+          const list = Array.isArray(json.teams) ? json.teams : []
+          setTeamResults(list.slice(0, 5))
+          setTeamMenuOpen(true)
+        })
+        .catch(() => {
+          if (ac.signal.aborted) return
+          setTeamResults([])
+          setTeamMenuOpen(false)
+        })
+        .finally(() => {
+          if (!ac.signal.aborted) setTeamSearchLoading(false)
+        })
+    }, 280)
+
+    return () => window.clearTimeout(t)
+  }, [editMode, teamSearchText])
 
   const openFile = () => fileRef.current?.click()
 
@@ -177,12 +238,31 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
   const startEdit = () => {
     setFormError('')
     setForm(initialFromUser(user))
+    setTeamIdDraft(user.team_id)
+    setTeamSearchText(user.team_id ? readTeamNombre : '')
+    setTeamLockedName(user.team_id ? readTeamNombre : null)
+    setTeamResults([])
+    setTeamMenuOpen(false)
+    setTeamSearchLoading(false)
+    teamSearchAbortRef.current?.abort()
     setEditMode(true)
   }
 
   const cancelEdit = () => {
     setFormError('')
+    teamSearchAbortRef.current?.abort()
+    setTeamResults([])
+    setTeamMenuOpen(false)
+    setTeamSearchLoading(false)
     setEditMode(false)
+  }
+
+  const clearTeamSelection = () => {
+    setTeamIdDraft(null)
+    setTeamSearchText('')
+    setTeamLockedName(null)
+    setTeamResults([])
+    setTeamMenuOpen(false)
   }
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -198,6 +278,7 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
           alias: form.alias.trim(),
           ciudad: form.ciudad.trim(),
           rol: form.rol,
+          team_id: teamIdDraft,
         }),
       })
       if (!res.ok) {
@@ -214,7 +295,9 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
           alias: form.alias.trim(),
           ciudad: form.ciudad.trim(),
           rol: form.rol,
+          team_id: teamIdDraft,
         }))
+      setReadTeamNombre(teamIdDraft ? teamSearchText.trim() : '')
       setEditMode(false)
     } catch {
       setFormError('Error de red. Intenta de nuevo.')
@@ -338,10 +421,10 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
                 EQUIPO
               </p>
               <p
-                className={`mt-1 text-[15px] ${teamNombre ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}
+                className={`mt-1 text-[15px] ${readTeamNombre ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}
                 style={lato}
               >
-                {teamNombre || 'Sin equipo'}
+                {readTeamNombre || 'Sin equipo'}
               </p>
             </div>
             <div className={`${fieldShell} md:col-span-2`}>
@@ -414,6 +497,84 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              EQUIPO
+            </label>
+            <div ref={teamWrapRef} className="relative mt-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  className={`${inputClass} pr-10`}
+                  style={lato}
+                  placeholder="Buscar equipo por nombre..."
+                  value={teamSearchText}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setTeamSearchText(v)
+                    if (teamLockedName !== null && v !== teamLockedName) {
+                      setTeamIdDraft(null)
+                      setTeamLockedName(null)
+                    }
+                  }}
+                  onFocus={() => {
+                    if (teamSearchText.trim().length >= 2 && teamResults.length > 0) {
+                      setTeamMenuOpen(true)
+                    }
+                  }}
+                  autoComplete="off"
+                />
+                {(teamIdDraft || teamSearchText.length > 0) && (
+                  <button
+                    type="button"
+                    aria-label="Quitar equipo"
+                    onClick={clearTeamSelection}
+                    className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[2px] border border-solid border-[#EEEEEE] bg-[#F4F4F4]"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                      <path
+                        d="M2.5 2.5l7 7M9.5 2.5l-7 7"
+                        stroke="#111111"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {teamMenuOpen && teamSearchText.trim().length >= 2 ? (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-[220px] overflow-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF]">
+                  {teamSearchLoading ? (
+                    <div className="flex justify-center py-3">
+                      <Spinner className="text-[#111111]" />
+                    </div>
+                  ) : teamResults.length === 0 ? (
+                    <p className="px-3 py-2 text-[13px] text-[#666666]" style={lato}>
+                      Sin resultados
+                    </p>
+                  ) : (
+                    teamResults.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          setTeamIdDraft(t.id)
+                          setTeamSearchText(t.nombre)
+                          setTeamLockedName(t.nombre)
+                          setTeamMenuOpen(false)
+                        }}
+                        className="block w-full border-0 bg-transparent px-3 py-2 text-left text-[14px] text-[#111111] hover:bg-[#F4F4F4]"
+                        style={lato}
+                      >
+                        {t.nombre}
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
 
           {formError ? (

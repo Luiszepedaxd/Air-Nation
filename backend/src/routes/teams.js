@@ -52,6 +52,27 @@ router.get("/search", async (req, res) => {
  */
 router.get("/", async (req, res) => {
   try {
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
+    if (search.length >= 2) {
+      const { data, error } = await supabase
+        .from("teams")
+        .select("id, nombre")
+        .ilike("nombre", `%${search}%`)
+        .limit(5);
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      return res.json({
+        teams: data || [],
+        page: 1,
+        limit: 5,
+        total: (data || []).length,
+      });
+    }
+
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 10));
     const from = (page - 1) * limit;
