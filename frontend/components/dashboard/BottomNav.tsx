@@ -6,15 +6,21 @@ import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
   {
-    label: 'Inicio',
+    label: 'Home',
     href: '/dashboard',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    )
+    icon: (active: boolean) => {
+      const color = active ? '#CC4B37' : '#767676'
+      return (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M3 12L12 3L21 12V21H15V15H9V21H3V12Z"
+            stroke={color}
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )
+    },
   },
   {
     label: 'Perfil',
@@ -196,24 +202,26 @@ export default function BottomNav() {
       {/* Bottom Nav — mobile */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className={`grid h-14 ${isAdmin ? 'grid-cols-7' : 'grid-cols-6'}`}>
-          {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href
-            return (
-              <Link key={item.href} href={item.href}
-                    className="flex flex-col items-center justify-center gap-1">
-                {item.icon(active)}
-                <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
-                  active ? 'text-[#CC4B37]' : 'text-[#767676]'
-                }`}>
-                  {item.label}
-                </span>
-              </Link>
-            )
-          })}
+        <div className="flex h-14 items-stretch">
+          <div className="grid grid-cols-5 flex-1 min-w-0">
+            {NAV_ITEMS.map((item) => {
+              const active = pathname === item.href
+              return (
+                <Link key={item.href} href={item.href}
+                      className="flex flex-col items-center justify-center gap-1">
+                  {item.icon(active)}
+                  <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
+                    active ? 'text-[#CC4B37]' : 'text-[#767676]'
+                  }`}>
+                    {item.label}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
 
           <button onClick={() => setPanicModal(true)}
-                  className="flex flex-col items-center justify-center gap-1 relative">
+                  className="flex flex-col items-center justify-center gap-1 relative shrink-0">
             <span className="absolute top-2 right-3 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse"/>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="9" stroke="#CCCCCC" strokeWidth="1.8"/>
@@ -229,7 +237,7 @@ export default function BottomNav() {
           {isAdmin && (
             <Link
               href="/admin"
-              className="flex flex-col items-center justify-center gap-1 relative"
+              className="flex flex-col items-center justify-center gap-1 relative shrink-0"
             >
               <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse" />
               <AdminShieldIcon active={adminNavActive} />
