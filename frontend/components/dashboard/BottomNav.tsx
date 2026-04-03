@@ -121,8 +121,9 @@ export default function BottomNav() {
   }, [])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
+    await supabase.auth.signOut({ scope: 'local' })
+    router.push('/login')
+    router.refresh()
   }
 
   const adminNavActive = pathname === '/admin'
