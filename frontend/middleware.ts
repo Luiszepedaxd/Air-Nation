@@ -36,12 +36,16 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
 
-  if (!session && (
+  // Solo rutas privadas (no /u/*: esa ruta no está en el matcher y es pública)
+  const requiresAuth =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/onboarding') ||
     isAdminRoute ||
     pathname === '/campos/nuevo'
-  )) return NextResponse.redirect(new URL('/login', request.url))
+
+  if (!session && requiresAuth) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 
   if (session && (
     pathname === '/login' ||
