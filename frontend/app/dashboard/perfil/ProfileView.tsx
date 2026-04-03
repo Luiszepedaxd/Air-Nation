@@ -128,6 +128,8 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
   const [avatarError, setAvatarError] = useState('')
   const [formError, setFormError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [shareLabel, setShareLabel] = useState('COMPARTIR PERFIL')
+  const shareCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setReadTeamNombre(teamNombre ?? '')
@@ -180,6 +182,17 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
   }, [editMode, teamSearchText])
 
   const openFile = () => fileRef.current?.click()
+
+  const copyPublicProfileUrl = () => {
+    const url = `https://airnation.online/u/${user.id}`
+    void navigator.clipboard.writeText(url)
+    if (shareCopiedTimeoutRef.current) clearTimeout(shareCopiedTimeoutRef.current)
+    setShareLabel('¡COPIADO!')
+    shareCopiedTimeoutRef.current = setTimeout(() => {
+      setShareLabel('COMPARTIR PERFIL')
+      shareCopiedTimeoutRef.current = null
+    }, 2000)
+  }
 
   const aliasInitial = (user.alias?.trim()?.[0] || user.nombre?.trim()?.[0] || '?').toUpperCase()
 
@@ -333,6 +346,29 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
             </div>
           )}
         </div>
+
+        <button
+          type="button"
+          onClick={copyPublicProfileUrl}
+          style={jost}
+          className="mt-3 inline-flex items-center gap-2 rounded-[2px] border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-[14px] py-[6px] text-[11px] font-extrabold uppercase text-[#666666]"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          {shareLabel}
+        </button>
 
         <input
           ref={fileRef}
