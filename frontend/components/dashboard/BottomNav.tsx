@@ -80,6 +80,33 @@ const NAV_ITEMS = [
   },
 ]
 
+function sosNavIcon(active: boolean) {
+  const stroke = active ? '#CC4B37' : '#767676'
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={stroke} strokeWidth="1.8" />
+      <path
+        d="M12 8v4M12 16h.01"
+        stroke={stroke}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+const NAV_ITEMS_MOBILE = [
+  { ...NAV_ITEMS[0], label: 'HOME' },
+  { ...NAV_ITEMS[1], label: 'PERFIL' },
+  { ...NAV_ITEMS[2], label: 'CREDENCIAL' },
+  { ...NAV_ITEMS[3], label: 'RÉPLICAS' },
+  {
+    label: 'SOS',
+    href: '/dashboard/sos',
+    icon: sosNavIcon,
+  },
+]
+
 function AdminShieldIcon({ active }: { active: boolean }) {
   const stroke = active ? '#CC4B37' : '#767676'
   return (
@@ -200,57 +227,29 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {/* Bottom Nav — mobile */}
+      {/* Bottom Nav — mobile (5 ítems: sin Docs ni Admin; SOS enlaza a /dashboard/sos) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex h-14 items-stretch">
-          <div className="grid grid-cols-5 flex-1 min-w-0">
-            {NAV_ITEMS.map((item) => {
-              const active = pathname === item.href
-              return (
-                <Link key={item.href} href={item.href}
-                      className="flex flex-col items-center justify-center gap-1">
-                  {item.icon(active)}
-                  <span className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
-                    active ? 'text-[#CC4B37]' : 'text-[#767676]'
-                  }`}>
-                    {item.label}
-                  </span>
-                </Link>
-              )
-            })}
-          </div>
-
-          <button onClick={() => setPanicModal(true)}
-                  className="flex flex-col items-center justify-center gap-1 relative shrink-0">
-            <span className="absolute top-2 right-3 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse"/>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="#CCCCCC" strokeWidth="1.8"/>
-              <path d="M12 8v4M12 16h.01"
-                stroke="#CCCCCC" strokeWidth="1.8"
-                strokeLinecap="round"/>
-            </svg>
-            <span className="text-[8px] font-bold uppercase tracking-wider leading-none text-[#CCCCCC]">
-              SOS
-            </span>
-          </button>
-
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="flex flex-col items-center justify-center gap-1 relative shrink-0"
-            >
-              <span className="absolute top-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse" />
-              <AdminShieldIcon active={adminNavActive} />
-              <span
-                className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
-                  adminNavActive ? 'text-[#CC4B37]' : 'text-[#767676]'
-                }`}
+        <div className="grid h-14 w-full grid-cols-5 items-stretch">
+          {NAV_ITEMS_MOBILE.map((item) => {
+            const active = pathname === item.href
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex min-w-0 flex-col items-center justify-center gap-1"
               >
-                Admin
-              </span>
-            </Link>
-          )}
+                {item.icon(active)}
+                <span
+                  className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
+                    active ? 'text-[#CC4B37]' : 'text-[#767676]'
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            )
+          })}
         </div>
       </nav>
 
