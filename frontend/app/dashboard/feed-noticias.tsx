@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createDashboardSupabaseServerClient } from './supabase-server'
+import { Carrusel } from './components/Carrusel'
+import { SectionHeader } from './components/SectionHeader'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -13,21 +15,47 @@ type PostRow = {
   created_at: string
 }
 
+function DocumentoIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M7 3h8l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1Z"
+        stroke="#AAAAAA"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15 3v4h4M9 11h6M9 15h4"
+        stroke="#AAAAAA"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 export function NoticiasSkeleton() {
   return (
-    <section className="space-y-3">
-      <div className="h-4 w-40 animate-pulse bg-[#F4F4F4]" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4">
+    <section>
+      <div className="w-full border-t border-[#EEEEEE]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 md:mx-auto md:max-w-[1200px] md:px-6">
+          <div className="h-4 w-44 animate-pulse bg-[#F4F4F4]" />
+          <div className="h-3 w-24 animate-pulse bg-[#F4F4F4]" />
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-hidden px-4 pt-1 md:px-6">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="border-b border-[#EEEEEE] p-3 md:border-b-0 md:border-r md:border-[#EEEEEE] last:border-b-0 md:last:border-r-0"
+            className="w-[280px] shrink-0 overflow-hidden border border-[#EEEEEE] md:w-[320px]"
           >
             <div className="aspect-video w-full animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-3 w-16 animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-4 w-full animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-3 w-full animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-3 w-24 animate-pulse bg-[#F4F4F4]" />
+            <div className="bg-white p-3">
+              <div className="h-2.5 w-14 animate-pulse bg-[#F4F4F4]" />
+              <div className="mt-2 h-3.5 w-full animate-pulse bg-[#F4F4F4]" />
+              <div className="mt-2 h-3 w-full animate-pulse bg-[#F4F4F4]" />
+              <div className="mt-2 h-2.5 w-20 animate-pulse bg-[#F4F4F4]" />
+            </div>
           </div>
         ))}
       </div>
@@ -61,21 +89,14 @@ export async function NoticiasSection() {
   const posts = data as PostRow[]
 
   return (
-    <section className="space-y-3">
-      <h2
-        style={jost}
-        className="text-[14px] uppercase tracking-widest font-extrabold text-[#666666]"
-      >
-        Últimas noticias
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4">
-        {posts.map((post, idx) => (
+    <section>
+      <SectionHeader title="ÚLTIMAS NOTICIAS" href="/blog" />
+      <Carrusel>
+        {posts.map((post) => (
           <Link
             key={post.id}
             href={`/blog/${post.slug}`}
-            className={`block border-b border-[#EEEEEE] p-3 last:border-b-0 md:border-r md:border-[#EEEEEE] md:border-b-0 ${
-              idx === posts.length - 1 ? 'md:border-r-0' : ''
-            }`}
+            className="w-[280px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[320px]"
           >
             <article>
               <div className="aspect-video w-full overflow-hidden bg-[#F4F4F4]">
@@ -85,39 +106,43 @@ export async function NoticiasSection() {
                     alt=""
                     className="h-full w-full object-cover"
                   />
-                ) : null}
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <DocumentoIcon />
+                  </div>
+                )}
               </div>
-              {post.category ? (
-                <p
+              <div className="p-3">
+                {post.category ? (
+                  <p
+                    style={jost}
+                    className="text-[10px] font-extrabold uppercase text-[#CC4B37]"
+                  >
+                    {post.category}
+                  </p>
+                ) : null}
+                <h3
                   style={jost}
-                  className="mt-2 text-[10px] uppercase font-extrabold text-[#CC4B37]"
+                  className="mt-1 line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]"
                 >
-                  {post.category}
-                </p>
-              ) : null}
-              <h3
-                style={jost}
-                className={`font-extrabold text-sm uppercase text-[#111111] leading-snug ${
-                  post.category ? 'mt-1' : 'mt-2'
-                }`}
-              >
-                {post.title}
-              </h3>
-              {post.excerpt ? (
-                <p className="mt-1 text-[13px] text-[#666666] line-clamp-2 leading-relaxed">
-                  {post.excerpt}
-                </p>
-              ) : null}
-              <time
-                className="mt-2 block text-[11px] text-[#AAAAAA]"
-                dateTime={post.created_at}
-              >
-                {formatPostDate(post.created_at)}
-              </time>
+                  {post.title}
+                </h3>
+                {post.excerpt ? (
+                  <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-[#666666]">
+                    {post.excerpt}
+                  </p>
+                ) : null}
+                <time
+                  className="mt-2 block text-[11px] text-[#AAAAAA]"
+                  dateTime={post.created_at}
+                >
+                  {formatPostDate(post.created_at)}
+                </time>
+              </div>
             </article>
           </Link>
         ))}
-      </div>
+      </Carrusel>
     </section>
   )
 }

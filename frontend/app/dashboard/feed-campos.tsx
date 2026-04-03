@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createDashboardSupabaseServerClient } from './supabase-server'
+import { Carrusel } from './components/Carrusel'
+import { SectionHeader } from './components/SectionHeader'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -20,19 +22,47 @@ function disciplinasToList(value: unknown): string[] {
   return []
 }
 
+function PinMapaIcon() {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5Z"
+        stroke="#AAAAAA"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10Z"
+        stroke="#AAAAAA"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function CamposSkeleton() {
   return (
-    <section className="space-y-3">
-      <div className="h-4 w-48 animate-pulse bg-[#F4F4F4]" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4">
+    <section>
+      <div className="w-full border-t border-[#EEEEEE]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 md:mx-auto md:max-w-[1200px] md:px-6">
+          <div className="h-4 w-52 animate-pulse bg-[#F4F4F4]" />
+          <div className="h-3 w-24 animate-pulse bg-[#F4F4F4]" />
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-hidden px-4 pt-1 md:px-6">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="border-b border-[#EEEEEE] md:border-b-0 pb-4 md:pb-0">
-            <div className="aspect-video w-full animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-4 w-3/4 animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-3 w-1/2 animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 flex gap-1">
-              <div className="h-5 w-14 animate-pulse bg-[#F4F4F4]" />
-              <div className="h-5 w-14 animate-pulse bg-[#F4F4F4]" />
+          <div
+            key={i}
+            className="w-[220px] shrink-0 border border-[#EEEEEE] md:w-[260px]"
+          >
+            <div className="aspect-[4/3] w-full animate-pulse bg-[#F4F4F4]" />
+            <div className="space-y-2 p-2.5">
+              <div className="h-3 w-[80%] animate-pulse bg-[#F4F4F4]" />
+              <div className="h-2.5 w-1/2 animate-pulse bg-[#F4F4F4]" />
+              <div className="flex gap-1">
+                <div className="h-4 w-12 animate-pulse bg-[#F4F4F4]" />
+                <div className="h-4 w-10 animate-pulse bg-[#F4F4F4]" />
+              </div>
             </div>
           </div>
         ))}
@@ -56,60 +86,59 @@ export async function CamposSection() {
   const fields = data as FieldRow[]
 
   return (
-    <section className="space-y-3">
-      <h2
-        style={jost}
-        className="text-[14px] uppercase tracking-widest font-extrabold text-[#666666]"
-      >
-        Campos destacados
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4">
-        {fields.map((field, idx) => {
+    <section>
+      <SectionHeader title="CAMPOS DESTACADOS" href="/campos" />
+      <Carrusel>
+        {fields.map((field) => {
           const tags = disciplinasToList(field.disciplinas)
           return (
             <Link
               key={field.id}
               href={`/campos/${field.slug}`}
-              className={`block border-b border-[#EEEEEE] p-3 last:border-b-0 md:border-r md:border-[#EEEEEE] md:border-b-0 ${
-                idx === fields.length - 1 ? 'md:border-r-0' : ''
-              }`}
+              className="w-[220px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[260px]"
             >
               <article>
-                <div className="aspect-video w-full overflow-hidden bg-[#F4F4F4]">
+                <div className="aspect-[4/3] w-full overflow-hidden bg-[#F4F4F4]">
                   {field.foto_portada_url ? (
                     <img
                       src={field.foto_portada_url}
                       alt=""
                       className="h-full w-full object-cover"
                     />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <PinMapaIcon />
+                    </div>
+                  )}
+                </div>
+                <div className="p-[10px]">
+                  <h3
+                    style={jost}
+                    className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
+                  >
+                    {field.nombre}
+                  </h3>
+                  {field.ciudad ? (
+                    <p className="mt-1 text-[11px] text-[#666666]">{field.ciudad}</p>
+                  ) : null}
+                  {tags.length > 0 ? (
+                    <ul className="mt-1 flex flex-wrap gap-[4px]">
+                      {tags.map((tag) => (
+                        <li
+                          key={tag}
+                          className="border border-[#EEEEEE] bg-[#F4F4F4] px-[6px] py-[2px] text-[9px] text-[#666666] leading-tight"
+                        >
+                          {tag}
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                 </div>
-                <h3
-                  style={jost}
-                  className="mt-2 font-extrabold text-sm uppercase text-[#111111] leading-snug"
-                >
-                  {field.nombre}
-                </h3>
-                {field.ciudad ? (
-                  <p className="mt-1 text-[12px] text-[#666666]">{field.ciudad}</p>
-                ) : null}
-                {tags.length > 0 ? (
-                  <ul className="mt-2 flex flex-wrap gap-1">
-                    {tags.map((tag) => (
-                      <li
-                        key={tag}
-                        className="bg-[#F4F4F4] p-[7px] text-[10px] text-[#666666] leading-tight"
-                      >
-                        {tag}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </article>
             </Link>
           )
         })}
-      </div>
+      </Carrusel>
     </section>
   )
 }

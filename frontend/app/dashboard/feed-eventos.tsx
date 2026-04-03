@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createDashboardSupabaseServerClient } from './supabase-server'
+import { Carrusel } from './components/Carrusel'
+import { SectionHeader } from './components/SectionHeader'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -40,25 +42,53 @@ function formatEventBannerDate(iso: string) {
   }
 }
 
+function CalendarioIcon() {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect
+        x="3"
+        y="5"
+        width="18"
+        height="16"
+        rx="1.5"
+        stroke="#AAAAAA"
+        strokeWidth="1.4"
+      />
+      <path d="M3 9h18M8 5V3M16 5V3" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M8 13h2M12 13h2M8 16h2M12 16h2"
+        stroke="#AAAAAA"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 export function EventosSkeleton() {
   return (
-    <section className="space-y-3">
-      <div className="h-4 w-44 animate-pulse bg-[#F4F4F4]" />
-      <ul className="flex flex-col border-t border-[#EEEEEE]">
+    <section>
+      <div className="w-full border-t border-[#EEEEEE]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 md:mx-auto md:max-w-[1200px] md:px-6">
+          <div className="h-4 w-48 animate-pulse bg-[#F4F4F4]" />
+          <div className="h-3 w-24 animate-pulse bg-[#F4F4F4]" />
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-hidden px-4 pt-1 md:px-6">
         {[0, 1, 2].map((i) => (
-          <li
+          <div
             key={i}
-            className="flex gap-3 border-b border-[#EEEEEE] py-3 animate-pulse"
+            className="w-[200px] shrink-0 border border-[#EEEEEE] md:w-[240px]"
           >
-            <div className="h-20 w-20 shrink-0 bg-[#F4F4F4]" />
-              <div className="flex flex-1 flex-col justify-center gap-2">
-              <div className="h-4 max-w-[200px] w-[80%] bg-[#F4F4F4]" />
-              <div className="h-3 w-24 bg-[#F4F4F4]" />
-              <div className="h-3 w-32 bg-[#F4F4F4]" />
+            <div className="aspect-square w-full animate-pulse bg-[#F4F4F4]" />
+            <div className="space-y-2 p-2.5">
+              <div className="h-2.5 w-16 animate-pulse bg-[#F4F4F4]" />
+              <div className="h-3 w-full animate-pulse bg-[#F4F4F4]" />
+              <div className="h-2.5 w-20 animate-pulse bg-[#F4F4F4]" />
             </div>
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   )
 }
@@ -79,50 +109,50 @@ export async function EventosSection() {
   const events = data as EventRow[]
 
   return (
-    <section className="space-y-3">
-      <h2
-        style={jost}
-        className="text-[14px] uppercase tracking-widest font-extrabold text-[#666666]"
-      >
-        Próximos eventos
-      </h2>
-      <ul className="flex flex-col">
-        {events.map((ev, idx) => (
-          <li
+    <section>
+      <SectionHeader title="PRÓXIMOS EVENTOS" href="/eventos" />
+      <Carrusel>
+        {events.map((ev) => (
+          <Link
             key={ev.id}
-            className={`border-b border-[#EEEEEE] ${idx === 0 ? 'border-t border-[#EEEEEE]' : ''}`}
+            href={`/eventos/${ev.id}`}
+            className="w-[200px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[240px]"
           >
-            <Link
-              href={`/eventos/${ev.id}`}
-              className="flex gap-3 p-3 hover:bg-[#F4F4F4]/50 transition-colors"
-            >
-              <div className="h-20 w-20 shrink-0 overflow-hidden bg-[#F4F4F4]">
+            <article>
+              <div className="aspect-square w-full overflow-hidden bg-[#F4F4F4]">
                 {ev.imagen_url ? (
                   <img
                     src={ev.imagen_url}
                     alt=""
                     className="h-full w-full object-cover"
                   />
-                ) : null}
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <CalendarioIcon />
+                  </div>
+                )}
               </div>
-              <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+              <div className="p-[10px]">
+                <p
+                  style={jost}
+                  className="text-[10px] font-extrabold uppercase text-[#CC4B37]"
+                >
+                  {formatEventBannerDate(ev.fecha)}
+                </p>
                 <h3
                   style={jost}
-                  className="font-extrabold text-sm uppercase text-[#111111] leading-snug"
+                  className="mt-1 line-clamp-2 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
                 >
                   {ev.title}
                 </h3>
-                <p className="text-[12px] font-normal uppercase tracking-wide text-[#CC4B37]">
-                  {formatEventBannerDate(ev.fecha)}
-                </p>
                 {ev.disciplina ? (
-                  <p className="text-[12px] text-[#666666]">{ev.disciplina}</p>
+                  <p className="mt-1 text-[11px] text-[#666666]">{ev.disciplina}</p>
                 ) : null}
               </div>
-            </Link>
-          </li>
+            </article>
+          </Link>
         ))}
-      </ul>
+      </Carrusel>
     </section>
   )
 }

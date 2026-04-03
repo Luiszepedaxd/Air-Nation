@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { createDashboardSupabaseServerClient } from './supabase-server'
+import { Carrusel } from './components/Carrusel'
+import { SectionHeader } from './components/SectionHeader'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -15,15 +17,9 @@ type VideoRow = {
 function PlayOverlay() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/75">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path
-            d="M9 7v10l8-5L9 7Z"
-            fill="#111111"
-            stroke="#111111"
-            strokeWidth="1.2"
-            strokeLinejoin="round"
-          />
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+          <path d="M4 3v8l7-4L4 3Z" fill="#FFFFFF" />
         </svg>
       </div>
     </div>
@@ -32,14 +28,24 @@ function PlayOverlay() {
 
 export function VideosSkeleton() {
   return (
-    <section className="space-y-3">
-      <div className="h-4 w-28 animate-pulse bg-[#F4F4F4]" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4">
+    <section>
+      <div className="w-full border-t border-[#EEEEEE]">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 md:mx-auto md:max-w-[1200px] md:px-6">
+          <div className="h-4 w-24 animate-pulse bg-[#F4F4F4]" />
+          <div className="h-3 w-24 animate-pulse bg-[#F4F4F4]" />
+        </div>
+      </div>
+      <div className="flex gap-3 overflow-hidden px-4 pt-1 md:px-6">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="border-b border-[#EEEEEE] md:border-b-0 pb-4 md:pb-0">
+          <div
+            key={i}
+            className="w-[260px] shrink-0 border border-[#EEEEEE] md:w-[300px]"
+          >
             <div className="relative aspect-video w-full animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-4 w-full animate-pulse bg-[#F4F4F4]" />
-            <div className="mt-2 h-3 w-24 animate-pulse bg-[#F4F4F4]" />
+            <div className="px-2 pb-2 pt-0">
+              <div className="mt-2 h-3.5 w-full animate-pulse bg-[#F4F4F4]" />
+              <div className="mt-1 h-2.5 w-20 animate-pulse bg-[#F4F4F4]" />
+            </div>
           </div>
         ))}
       </div>
@@ -61,23 +67,16 @@ export async function VideosSection() {
   const videos = data as VideoRow[]
 
   return (
-    <section className="space-y-3">
-      <h2
-        style={jost}
-        className="text-[14px] uppercase tracking-widest font-extrabold text-[#666666]"
-      >
-        Videos
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4">
-        {videos.map((video, idx) => (
+    <section>
+      <SectionHeader title="VIDEOS" href="/videos" />
+      <Carrusel>
+        {videos.map((video) => (
           <Link
             key={video.id}
             href={video.youtube_url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`block border-b border-[#EEEEEE] p-3 last:border-b-0 md:border-r md:border-[#EEEEEE] md:border-b-0 ${
-              idx === videos.length - 1 ? 'md:border-r-0' : ''
-            }`}
+            className="w-[260px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[300px]"
           >
             <article>
               <div className="relative aspect-video w-full overflow-hidden bg-[#F4F4F4]">
@@ -90,19 +89,21 @@ export async function VideosSection() {
                 ) : null}
                 <PlayOverlay />
               </div>
-              <h3
-                style={jost}
-                className="mt-2 font-extrabold text-sm uppercase text-[#111111] leading-snug"
-              >
-                {video.title}
-              </h3>
-              {video.category ? (
-                <p className="mt-1 text-[12px] text-[#666666]">{video.category}</p>
-              ) : null}
+              <div className="px-2 pb-2">
+                <h3
+                  style={jost}
+                  className="mt-2 line-clamp-2 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
+                >
+                  {video.title}
+                </h3>
+                {video.category ? (
+                  <p className="mt-1 text-[11px] text-[#666666]">{video.category}</p>
+                ) : null}
+              </div>
             </article>
           </Link>
         ))}
-      </div>
+      </Carrusel>
     </section>
   )
 }

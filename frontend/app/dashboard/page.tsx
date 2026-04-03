@@ -24,10 +24,12 @@ export default async function DashboardHomePage() {
 
   return (
     <main className="min-h-full bg-[#FFFFFF]">
-      <div className="mx-auto flex max-w-[1200px] flex-col gap-8 px-4 py-4 md:px-6 md:py-6">
-        <Suspense fallback={<SaludoSkeleton />}>
-          <SaludoSection />
-        </Suspense>
+      <div className="flex flex-col gap-6 py-4 md:py-6">
+        <div className="w-full px-4 md:mx-auto md:max-w-[1200px] md:px-6">
+          <Suspense fallback={<SaludoSkeleton />}>
+            <SaludoSection />
+          </Suspense>
+        </div>
 
         <Suspense fallback={<NoticiasSkeleton />}>
           <NoticiasSection />
