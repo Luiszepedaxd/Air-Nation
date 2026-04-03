@@ -45,6 +45,7 @@ router.post("/register", (req, res) => {
  * @param {'rifleman'|'sniper'|'support'|'medic'|'scout'|'team_leader'|'rookie'} [req.body.rol]
  * @param {string|null} [req.body.team_id] - UUID o null
  * @param {'instagram'|'facebook'|'amigo'|'google'|'evento'|'otro'} [req.body.como_se_entero]
+ * @param {string|null} [req.body.avatar_url]
  */
 router.patch("/:id", async (req, res) => {
   try {
@@ -71,6 +72,12 @@ router.patch("/:id", async (req, res) => {
         return res.status(400).json({ error: "Valor de como_se_entero no válido" });
       }
       updates.como_se_entero = body.como_se_entero;
+    }
+    if (body.avatar_url !== undefined) {
+      if (body.avatar_url !== null && typeof body.avatar_url !== "string") {
+        return res.status(400).json({ error: "avatar_url debe ser string o null" });
+      }
+      updates.avatar_url = body.avatar_url;
     }
 
     if (Object.keys(updates).length === 0) {
