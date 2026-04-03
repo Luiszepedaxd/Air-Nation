@@ -1,6 +1,14 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { createAdminSupabaseServerClient } from './supabase-server'
+import { createAdminClient } from './supabase-server'
+
+const jostHeading = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+  textTransform: 'uppercase' as const,
+}
+
+const latoBody = { fontFamily: "'Lato', sans-serif" }
 
 function MetricsSkeleton() {
   return (
@@ -8,10 +16,10 @@ function MetricsSkeleton() {
       {[1, 2, 3, 4].map((i) => (
         <div
           key={i}
-          className="border border-[#1E2226] bg-[#111315] p-4 md:p-5"
+          className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-4 md:p-5"
         >
-          <div className="mb-2 h-9 w-20 animate-pulse bg-[#1E2226]" />
-          <div className="h-3 w-28 animate-pulse bg-[#1E2226]" />
+          <div className="mb-2 h-9 w-20 animate-pulse bg-[#EEEEEE]" />
+          <div className="h-3 w-28 animate-pulse bg-[#EEEEEE]" />
         </div>
       ))}
     </div>
@@ -19,7 +27,7 @@ function MetricsSkeleton() {
 }
 
 async function AdminMetrics() {
-  const supabase = createAdminSupabaseServerClient()
+  const supabase = createAdminClient()
 
   const [usersQ, postsQ, fieldsQ, pendingQ] = await Promise.all([
     supabase.from('users').select('*', { count: 'exact', head: true }),
@@ -54,21 +62,26 @@ async function AdminMetrics() {
         return (
           <div
             key={m.label}
-            className={`border bg-[#111315] p-4 md:p-5 ${
+            className={`border border-solid p-4 md:p-5 ${
               highlight
                 ? 'border-[#CC4B37] bg-[rgba(204,75,55,0.08)]'
-                : 'border-[#1E2226]'
+                : 'border-[#EEEEEE] bg-[#F4F4F4]'
             }`}
           >
             <p
-              className={`text-3xl font-black tabular-nums md:text-4xl ${
-                highlight ? 'text-[#CC4B37]' : 'text-[#EDEDEB]'
+              className={`text-3xl tabular-nums md:text-4xl ${
+                highlight ? 'text-[#CC4B37]' : 'text-[#111111]'
               }`}
-              style={{ fontFamily: 'Jost, sans-serif' }}
+              style={jostHeading}
             >
               {m.value}
             </p>
-            <p className="mt-1 text-xs text-[#8A8A88]">{m.label}</p>
+            <p
+              className="mt-1 text-xs text-[#666666]"
+              style={latoBody}
+            >
+              {m.label}
+            </p>
           </div>
         )
       })}
@@ -78,10 +91,10 @@ async function AdminMetrics() {
 
 export default function AdminHomePage() {
   return (
-    <div>
+    <div style={latoBody}>
       <h1
-        className="mb-8 text-2xl font-black uppercase tracking-[0.12em] text-[#EDEDEB] md:text-3xl"
-        style={{ fontFamily: 'Jost, sans-serif' }}
+        className="mb-8 text-2xl tracking-[0.12em] text-[#111111] md:text-3xl"
+        style={jostHeading}
       >
         PANEL ADMIN
       </h1>
@@ -90,32 +103,32 @@ export default function AdminHomePage() {
         <AdminMetrics />
       </Suspense>
 
-      <section className="mt-10 border-t border-[#1E2226] pt-8">
+      <section className="mt-10 border-t border-solid border-[#EEEEEE] pt-8">
         <h2
-          className="mb-4 text-[0.7rem] font-bold uppercase tracking-[0.18em] text-[#8A8A88]"
-          style={{ fontFamily: 'Jost, sans-serif' }}
+          className="mb-4 text-[0.7rem] tracking-[0.18em] text-[#666666]"
+          style={jostHeading}
         >
           Accesos rápidos
         </h2>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/posts/nuevo"
-            className="inline-flex border border-[#1E2226] bg-[#111315] px-4 py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[#EDEDEB] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
-            style={{ borderRadius: 2 }}
+            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Nuevo post
           </Link>
           <Link
             href="/admin/usuarios"
-            className="inline-flex border border-[#1E2226] bg-[#111315] px-4 py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[#EDEDEB] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
-            style={{ borderRadius: 2 }}
+            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Ver usuarios
           </Link>
           <Link
             href="/admin/campos"
-            className="inline-flex border border-[#1E2226] bg-[#111315] px-4 py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[#EDEDEB] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
-            style={{ borderRadius: 2 }}
+            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Aprobar campos
           </Link>
