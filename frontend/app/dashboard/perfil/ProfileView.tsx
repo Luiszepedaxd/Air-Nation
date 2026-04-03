@@ -1,0 +1,449 @@
+'use client'
+
+import { useCallback, useRef, useState } from 'react'
+
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://air-nation-production.up.railway.app/api/v1'
+).replace(/\/$/, '')
+
+const jost = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+  textTransform: 'uppercase' as const,
+} as const
+
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+const inputClass =
+  'w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[#111111] outline-none focus:border-[#CC4B37] rounded-[2px]'
+
+const ROLE_LABELS: Record<string, string> = {
+  rifleman: 'Jugador',
+  sniper: 'Francotirador',
+  support: 'Support',
+  medic: 'Medic',
+  team_leader: 'Líder de equipo',
+  scout: 'Scout',
+  rookie: 'Rookie',
+}
+
+const ROLE_OPTIONS = [
+  { value: 'rifleman', label: 'Jugador' },
+  { value: 'sniper', label: 'Francotirador' },
+  { value: 'support', label: 'Support' },
+  { value: 'medic', label: 'Medic' },
+  { value: 'team_leader', label: 'Líder de equipo' },
+  { value: 'scout', label: 'Scout' },
+  { value: 'rookie', label: 'Rookie' },
+]
+
+const MAX_BYTES = 10 * 1024 * 1024
+const MIME_OK = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
+export type ProfileUserRow = {
+  id: string
+  email: string | null
+  nombre: string | null
+  alias: string | null
+  ciudad: string | null
+  rol: string | null
+  team_id: string | null
+  como_se_entero: string | null
+  app_role: string | null
+  avatar_url: string | null
+  member_number: string | number | null
+  created_at: string
+}
+
+function formatDMY(iso: string) {
+  try {
+    const d = new Date(iso)
+    const dd = String(d.getDate()).padStart(2, '0')
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const yyyy = d.getFullYear()
+    return `${dd}/${mm}/${yyyy}`
+  } catch {
+    return ''
+  }
+}
+
+function initialFromUser(u: ProfileUserRow) {
+  const rolOk = u.rol && ROLE_OPTIONS.some((o) => o.value === u.rol)
+  return {
+    nombre: u.nombre ?? '',
+    alias: u.alias ?? '',
+    ciudad: u.ciudad ?? '',
+    rol: (rolOk ? u.rol : 'rifleman') as string,
+  }
+}
+
+function Spinner({ className = 'text-[#FFFFFF]' }: { className?: string }) {
+  return (
+    <svg
+      className={`h-5 w-5 animate-spin ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  )
+}
+
+type Props = {
+  user: ProfileUserRow
+  teamNombre: string | null
+}
+
+export function ProfileView({ user: initialUser, teamNombre }: Props) {
+  const [user, setUser] = useState<ProfileUserRow>(initialUser)
+  const [editMode, setEditMode] = useState(false)
+  const [form, setForm] = useState(() => initialFromUser(initialUser))
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
+  const [formError, setFormError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const openFile = () => fileRef.current?.click()
+
+  const aliasInitial = (user.alias?.trim()?.[0] || user.nombre?.trim()?.[0] || '?').toUpperCase()
+
+  const onAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      setAvatarError('')
+      if (!MIME_OK.has(file.type)) {
+        setAvatarError('Usa JPEG, PNG o WebP.')
+        return
+      }
+      if (file.size > MAX_BYTES) {
+        setAvatarError('Máximo 10 MB.')
+        return
+      }
+      setAvatarUploading(true)
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        const up = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          body: fd,
+        })
+        if (!up.ok) {
+          setAvatarError('No se pudo subir la imagen.')
+          return
+        }
+        const json = (await up.json()) as { url?: string }
+        if (!json?.url) {
+          setAvatarError('Respuesta inválida del servidor.')
+          return
+        }
+        const patch = await fetch(`${API_URL}/users/${user.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar_url: json.url }),
+        })
+        if (!patch.ok) {
+          setAvatarError('No se pudo guardar la foto.')
+          return
+        }
+        const body = (await patch.json()) as { user?: ProfileUserRow }
+        if (body.user) setUser(body.user)
+        else setUser((s) => ({ ...s, avatar_url: json.url ?? null }))
+      } catch {
+        setAvatarError('Error de red. Intenta de nuevo.')
+      } finally {
+        setAvatarUploading(false)
+      }
+    },
+    [user.id]
+  )
+
+  const startEdit = () => {
+    setFormError('')
+    setForm(initialFromUser(user))
+    setEditMode(true)
+  }
+
+  const cancelEdit = () => {
+    setFormError('')
+    setEditMode(false)
+  }
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFormError('')
+    setSaveLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.nombre.trim(),
+          alias: form.alias.trim(),
+          ciudad: form.ciudad.trim(),
+          rol: form.rol,
+        }),
+      })
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string }
+        setFormError(j.error || 'No se pudo guardar.')
+        return
+      }
+      const body = (await res.json()) as { user?: ProfileUserRow }
+      if (body.user) setUser(body.user)
+      else
+        setUser((s) => ({
+          ...s,
+          nombre: form.nombre.trim(),
+          alias: form.alias.trim(),
+          ciudad: form.ciudad.trim(),
+          rol: form.rol,
+        }))
+      setEditMode(false)
+    } catch {
+      setFormError('Error de red. Intenta de nuevo.')
+    } finally {
+      setSaveLoading(false)
+    }
+  }
+
+  const fieldShell =
+    'border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-3'
+
+  return (
+    <div className="mt-8 max-w-[640px]">
+      <section className="flex flex-col items-center border-b border-solid border-[#EEEEEE] pb-8">
+        <div
+          className="relative shrink-0 overflow-hidden rounded-full bg-[#CC4B37] md:h-[120px] md:w-[120px] h-24 w-24"
+          style={{ borderRadius: '50%' }}
+        >
+          {user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt=""
+              width={120}
+              height={120}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center text-[36px] text-[#FFFFFF]"
+              style={jost}
+            >
+              {aliasInitial}
+            </div>
+          )}
+        </div>
+
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={onAvatarChange}
+        />
+        <button
+          type="button"
+          onClick={openFile}
+          disabled={avatarUploading}
+          style={jost}
+          className="mt-4 flex min-h-[40px] min-w-[140px] items-center justify-center gap-2 rounded-[2px] border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 text-[11px] font-extrabold uppercase text-[#111111] disabled:opacity-60"
+        >
+          {avatarUploading ? (
+            <Spinner className="text-[#111111]" />
+          ) : null}
+          {avatarUploading ? 'SUBIENDO…' : 'CAMBIAR FOTO'}
+        </button>
+        {avatarError ? (
+          <p className="mt-2 text-center text-[13px] text-[#CC4B37]" style={lato}>
+            {avatarError}
+          </p>
+        ) : null}
+      </section>
+
+      {!editMode ? (
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-2">
+            <div className={fieldShell}>
+              <p
+                style={jost}
+                className="text-[10px] font-extrabold uppercase text-[#666666]"
+              >
+                Nº MIEMBRO
+              </p>
+              <p
+                style={jost}
+                className="mt-1 text-[20px] font-extrabold text-[#CC4B37]"
+              >
+                {user.member_number != null && String(user.member_number).trim() !== ''
+                  ? `#${user.member_number}`
+                  : '—'}
+              </p>
+            </div>
+            <div className={fieldShell}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                NOMBRE
+              </p>
+              <p className="mt-1 text-[15px] text-[#111111]" style={lato}>
+                {user.nombre || '—'}
+              </p>
+            </div>
+            <div className={fieldShell}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                ALIAS
+              </p>
+              <p className="mt-1 text-[15px] text-[#111111]" style={lato}>
+                {user.alias || '—'}
+              </p>
+            </div>
+            <div className={fieldShell}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                CIUDAD
+              </p>
+              <p className="mt-1 text-[15px] text-[#111111]" style={lato}>
+                {user.ciudad || '—'}
+              </p>
+            </div>
+            <div className={fieldShell}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                ROL DE JUEGO
+              </p>
+              <p className="mt-1">
+                <span
+                  style={jost}
+                  className="inline-block rounded-[2px] bg-[#F4F4F4] px-2 py-1 text-[12px] font-extrabold uppercase text-[#111111]"
+                >
+                  {user.rol ? ROLE_LABELS[user.rol] || user.rol : '—'}
+                </span>
+              </p>
+            </div>
+            <div className={fieldShell}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                EQUIPO
+              </p>
+              <p
+                className={`mt-1 text-[15px] ${teamNombre ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}
+                style={lato}
+              >
+                {teamNombre || 'Sin equipo'}
+              </p>
+            </div>
+            <div className={`${fieldShell} md:col-span-2`}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                MIEMBRO DESDE
+              </p>
+              <p className="mt-1 text-[15px] text-[#111111]" style={lato}>
+                {formatDMY(user.created_at)}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={startEdit}
+            style={jost}
+            className="mt-8 w-full rounded-[2px] bg-[#111111] py-3 text-[12px] font-extrabold uppercase text-[#FFFFFF] md:w-auto md:min-w-[200px]"
+          >
+            EDITAR PERFIL
+          </button>
+        </>
+      ) : (
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              NOMBRE
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.nombre}
+              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              ALIAS
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.alias}
+              onChange={(e) => setForm((f) => ({ ...f, alias: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              CIUDAD
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.ciudad}
+              onChange={(e) => setForm((f) => ({ ...f, ciudad: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              ROL DE JUEGO
+            </label>
+            <select
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.rol}
+              onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
+            >
+              {ROLE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formError ? (
+            <p className="text-[13px] text-[#CC4B37]" style={lato}>
+              {formError}
+            </p>
+          ) : null}
+
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            <button
+              type="submit"
+              disabled={saveLoading}
+              style={jost}
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-[2px] bg-[#CC4B37] py-2.5 text-[12px] font-extrabold uppercase text-[#FFFFFF] disabled:opacity-70"
+            >
+              {saveLoading ? <Spinner className="text-[#FFFFFF]" /> : null}
+              GUARDAR
+            </button>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              disabled={saveLoading}
+              style={jost}
+              className="min-h-[44px] flex-1 rounded-[2px] border border-solid border-[#EEEEEE] bg-[#F4F4F4] py-2.5 text-[12px] font-extrabold uppercase text-[#111111] disabled:opacity-70"
+            >
+              CANCELAR
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+}
