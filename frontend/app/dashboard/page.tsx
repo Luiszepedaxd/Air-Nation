@@ -1,44 +1,49 @@
-"use client"
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
+import { createDashboardSupabaseServerClient } from './supabase-server'
+import { SaludoSection, SaludoSkeleton } from './feed-saludo'
+import { NoticiasSection, NoticiasSkeleton } from './feed-noticias'
+import { VideosSection, VideosSkeleton } from './feed-videos'
+import { CamposSection, CamposSkeleton } from './feed-campos'
+import { EventosSection, EventosSkeleton } from './feed-eventos'
 
-export default function Dashboard() {
-  const router = useRouter()
-  const [alias, setAlias] = useState('')
+export default async function DashboardHomePage() {
+  const supabase = createDashboardSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { router.push('/login'); return }
-      const { data: profile } = await supabase
-        .from('users')
-        .select('alias')
-        .eq('id', user.id)
-        .single()
+  const { data: access } = await supabase
+    .from('users')
+    .select('alias')
+    .eq('id', user.id)
+    .maybeSingle()
 
-      if (!profile?.alias) {
-        router.push('/onboarding')
-        return
-      }
-
-      setAlias(profile.alias)
-    })
-  }, [])
+  if (!access?.alias) redirect('/onboarding')
 
   return (
-    <main className="h-full flex flex-col bg-[#F4F4F4]">
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 text-center">
-        <p className="text-[#CC4B37] text-[0.65rem] font-bold uppercase tracking-[0.28em] mb-4">
-          Alpha
-        </p>
-        <h1 style={{fontFamily:'Jost,sans-serif'}}
-            className="font-black text-[2.4rem] sm:text-[4rem] uppercase leading-[0.9] text-[#111111] mb-6">
-          {alias ? `BIENVENIDO,\n${alias}.` : 'EN\nCONSTRUCCIÓN.'}
-        </h1>
-        <p className="text-[#767676] text-base max-w-sm mx-auto">
-          Estamos construyendo tu dashboard. Pronto verás tu perfil, 
-          credencial y réplicas aquí.
-        </p>
+    <main className="min-h-full bg-[#FFFFFF]">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-8 px-4 py-4 md:px-6 md:py-6">
+        <Suspense fallback={<SaludoSkeleton />}>
+          <SaludoSection />
+        </Suspense>
+
+        <Suspense fallback={<NoticiasSkeleton />}>
+          <NoticiasSection />
+        </Suspense>
+
+        <Suspense fallback={<VideosSkeleton />}>
+          <VideosSection />
+        </Suspense>
+
+        <Suspense fallback={<CamposSkeleton />}>
+          <CamposSection />
+        </Suspense>
+
+        <Suspense fallback={<EventosSkeleton />}>
+          <EventosSection />
+        </Suspense>
       </div>
     </main>
   )
