@@ -1,30 +1,9 @@
-import Link from 'next/link'
 import { createDashboardSupabaseServerClient } from './supabase-server'
 import { Carrusel } from './components/Carrusel'
 import { SectionHeader } from './components/SectionHeader'
+import { VideosFeedCards, type VideoFeedItem } from './components/VideosFeedCards'
 
-const jost = { fontFamily: "'Jost', sans-serif" } as const
-
-type VideoRow = {
-  id: string
-  title: string
-  youtube_url: string
-  thumbnail_url: string | null
-  category: string | null
-  created_at: string
-}
-
-function PlayOverlay() {
-  return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/60">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M4 3v8l7-4L4 3Z" fill="#FFFFFF" />
-        </svg>
-      </div>
-    </div>
-  )
-}
+type VideoRow = VideoFeedItem
 
 export function VideosSkeleton() {
   return (
@@ -70,39 +49,7 @@ export async function VideosSection() {
     <section>
       <SectionHeader title="VIDEOS" href="/videos" />
       <Carrusel>
-        {videos.map((video) => (
-          <Link
-            key={video.id}
-            href={video.youtube_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-[260px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[300px]"
-          >
-            <article>
-              <div className="relative aspect-video w-full overflow-hidden bg-[#F4F4F4]">
-                {video.thumbnail_url ? (
-                  <img
-                    src={video.thumbnail_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : null}
-                <PlayOverlay />
-              </div>
-              <div className="px-2 pb-2">
-                <h3
-                  style={jost}
-                  className="mt-2 line-clamp-2 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
-                >
-                  {video.title}
-                </h3>
-                {video.category ? (
-                  <p className="mt-1 text-[11px] text-[#666666]">{video.category}</p>
-                ) : null}
-              </div>
-            </article>
-          </Link>
-        ))}
+        <VideosFeedCards videos={videos} />
       </Carrusel>
     </section>
   )
