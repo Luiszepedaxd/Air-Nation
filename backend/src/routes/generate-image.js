@@ -208,39 +208,43 @@ router.post("/", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: e.message || "Error al contactar OpenRouter" });
   }
 
-  let buffer;
-  let mimeType = imageMimeType;
-
-  if (imageUrl) {
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) {
-      return res.status(502).json({ error: "No se pudo descargar la imagen generada" });
-    }
-    const arrayBuf = await imgRes.arrayBuffer();
-    buffer = Buffer.from(arrayBuf);
-    const ct = imgRes.headers.get("content-type");
-    if (ct && ct.startsWith("image/")) {
-      mimeType = ct.split(";")[0].trim();
-    }
-  } else if (imageBase64) {
-    buffer = Buffer.from(imageBase64, "base64");
-  } else {
-    return res.status(500).json({ error: "No se recibió URL ni imagen en base64" });
-  }
-
-  const safeKey =
-    (assetKey && String(assetKey).replace(/[^a-zA-Z0-9_-]/g, "_")) || "asset";
-  const ext =
-    mimeType === "image/jpeg" || mimeType === "image/jpg"
-      ? "jpg"
-      : mimeType === "image/webp"
-        ? "webp"
-        : "png";
-  const filename = `${safeKey}-ai-${Date.now()}.${ext}`;
-
   try {
-    const url = await uploadToCloudflare(buffer, filename, mimeType);
-    return res.json({ url });
+    // Si tenemos base64, detectar el tipo real por los magic bytes
+    if (imageBase64) {
+      const buffer = Buffer.from(imageBase64, "base64");
+
+      // Detectar por magic bytes
+      if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+        imageMimeType = "image/jpeg";
+      } else if (buffer[0] === 0x89 && buffer[1] === 0x50) {
+        imageMimeType = "image/png";
+      } else if (buffer[0] === 0x52 && buffer[1] === 0x49) {
+        imageMimeType = "image/webp";
+      } else if (buffer[0] === 0x47 && buffer[1] === 0x49) {
+        imageMimeType = "image/gif";
+      } else {
+        // fallback: intentar jpeg
+        imageMimeType = "image/jpeg";
+      }
+
+      const filename = `${(assetKey || "asset").replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${imageMimeType.split("/")[1]}`;
+      const cloudflareUrl = await uploadToCloudflare(buffer, filename, imageMimeType);
+      return res.json({ url: cloudflareUrl });
+    }
+
+    if (imageUrl) {
+      // Descargar imagen desde URL y subir a Cloudflare
+      const imgRes = await fetch(imageUrl);
+      const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+      const arrayBuffer = await imgRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const ext = contentType.split("/")[1]?.split(";")[0] || "jpg";
+      const filename = `${(assetKey || "asset").replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${ext}`;
+      const cloudflareUrl = await uploadToCloudflare(buffer, filename, contentType);
+      return res.json({ url: cloudflareUrl });
+    }
+
+    return res.status(500).json({ error: "No se recibió URL ni imagen en base64" });
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
