@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { BlogGrid, type BlogListPost } from './BlogGrid'
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ const jost = {
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 export default async function BlogPage() {
-  const supabase = createDashboardSupabaseServerClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('posts')
     .select('id, title, slug, excerpt, cover_url, category, created_at')

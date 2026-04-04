@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { BlogShareButton } from './BlogShareButton'
 
 const jost = {
@@ -68,7 +68,7 @@ function DocumentoIcon() {
 }
 
 async function fetchPostBySlug(slug: string): Promise<PostFull | null> {
-  const supabase = createDashboardSupabaseServerClient()
+  const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('posts')
     .select(
@@ -115,7 +115,7 @@ export default async function BlogPostPage({
   const post = await fetchPostBySlug(params.slug)
   if (!post) notFound()
 
-  const supabase = createDashboardSupabaseServerClient()
+  const supabase = createPublicSupabaseClient()
   let related: RelatedPost[] = []
 
   if (post.category != null && post.category !== '') {
