@@ -333,7 +333,7 @@ export function MiCampoOwnerClient({
             <Link
               href={`/campos/${encodeURIComponent(field.slug)}/editar`}
               style={jost}
-              className="flex h-12 w-full items-center justify-center bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+              className="flex h-12 w-full items-center justify-center border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
             >
               EDITAR CAMPO
             </Link>
@@ -344,7 +344,7 @@ export function MiCampoOwnerClient({
                 target="_blank"
                 rel="noopener noreferrer"
                 style={jost}
-                className="flex h-12 w-full items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+                className="flex h-12 w-full items-center justify-center bg-[#111111] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
               >
                 VER PERFIL PÚBLICO
               </a>

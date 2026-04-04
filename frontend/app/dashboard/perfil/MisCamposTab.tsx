@@ -153,6 +153,15 @@ export function MisCamposTab({ items }: { items: MisCampoItem[] }) {
           </li>
         )
       })}
+      <li className="list-none">
+        <Link
+          href="/campos/nuevo"
+          style={jost}
+          className="flex min-h-[44px] w-full items-center justify-center border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+        >
+          + Registrar otro campo
+        </Link>
+      </li>
     </ul>
   )
 }

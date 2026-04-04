@@ -29,6 +29,8 @@ export function PerfilTabsClient({
   initialJoinRequests,
   isAdmin,
   pendingJoinPending,
+  initialTab,
+  campoRegistradoNotice,
 }: {
   user: ProfileUserRow
   teamNombre: string | null
@@ -38,8 +40,12 @@ export function PerfilTabsClient({
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
   pendingJoinPending: { id: string; nombre: string }[]
+  initialTab?: TabId
+  campoRegistradoNotice?: boolean
 }) {
-  const [activeTab, setActiveTab] = useState<TabId>('perfil')
+  const [activeTab, setActiveTab] = useState<TabId>(() =>
+    initialTab === 'campos' ? 'campos' : 'perfil'
+  )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
   const pendingCount = joinRequests.length
 
@@ -187,7 +193,19 @@ export function PerfilTabsClient({
           />
         ) : null}
 
-        {activeTab === 'campos' ? <MisCamposTab items={misCampos} /> : null}
+        {activeTab === 'campos' ? (
+          <>
+            {campoRegistradoNotice ? (
+              <div
+                className="mb-4 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-3 text-[13px] leading-relaxed text-[#111111]"
+                style={{ fontFamily: "'Lato', sans-serif" }}
+              >
+                Tu campo quedará visible cuando un administrador lo apruebe.
+              </div>
+            ) : null}
+            <MisCamposTab items={misCampos} />
+          </>
+        ) : null}
 
         {activeTab === 'notificaciones' ? (
           <NotificacionesTab requests={joinRequests} onRemove={removeRequest} />

@@ -4,7 +4,11 @@ import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEquipoItem } from './MisEquiposSection'
 import { PerfilTabsClient } from './PerfilTabsClient'
 
-export default async function PerfilPage() {
+export default async function PerfilPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string; campo_creado?: string }
+}) {
   const supabase = createDashboardSupabaseServerClient()
   const {
     data: { user: authUser },
@@ -126,6 +130,8 @@ export default async function PerfilPage() {
       initialJoinRequests={initialJoinRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
+      initialTab={searchParams.tab === 'campos' ? 'campos' : undefined}
+      campoRegistradoNotice={searchParams.campo_creado === '1'}
     />
   )
 }

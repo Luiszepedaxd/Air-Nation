@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { CIUDADES } from "@/lib/ciudades";
 import { notifyTeamJoinRequest } from "@/lib/notify-team-join-request";
 import { generateTeamSlug } from "@/lib/team-slug";
 
@@ -70,41 +71,6 @@ const VALID_COMO = new Set<string>([
   "evento",
   "otro",
 ]);
-
-const CIUDADES: { value: string; label: string }[] = [
-  { value: "", label: "Selecciona tu ciudad" },
-  { value: "Ciudad de México", label: "Ciudad de México" },
-  { value: "Guadalajara", label: "Guadalajara" },
-  { value: "Monterrey", label: "Monterrey" },
-  { value: "Puebla", label: "Puebla" },
-  { value: "Tijuana", label: "Tijuana" },
-  { value: "León", label: "León" },
-  { value: "Juárez", label: "Juárez" },
-  { value: "Mérida", label: "Mérida" },
-  { value: "San Luis Potosí", label: "San Luis Potosí" },
-  { value: "Querétaro", label: "Querétaro" },
-  { value: "Hermosillo", label: "Hermosillo" },
-  { value: "Culiacán", label: "Culiacán" },
-  { value: "Mexicali", label: "Mexicali" },
-  { value: "Aguascalientes", label: "Aguascalientes" },
-  { value: "Morelia", label: "Morelia" },
-  { value: "Chihuahua", label: "Chihuahua" },
-  { value: "Saltillo", label: "Saltillo" },
-  { value: "Torreón", label: "Torreón" },
-  { value: "Veracruz", label: "Veracruz" },
-  { value: "Toluca", label: "Toluca" },
-  { value: "Tuxtla Gutiérrez", label: "Tuxtla Gutiérrez" },
-  { value: "Cancún", label: "Cancún" },
-  { value: "Mazatlán", label: "Mazatlán" },
-  { value: "Tepic", label: "Tepic" },
-  { value: "Durango", label: "Durango" },
-  { value: "Oaxaca", label: "Oaxaca" },
-  { value: "Zacatecas", label: "Zacatecas" },
-  { value: "Villahermosa", label: "Villahermosa" },
-  { value: "Colima", label: "Colima" },
-  { value: "Ciudad Victoria", label: "Ciudad Victoria" },
-  { value: "Otra", label: "Otra" },
-];
 
 const ROLES_CONFIG: {
   id: NonNullable<Exclude<OnboardingState["rol"], "">>;
