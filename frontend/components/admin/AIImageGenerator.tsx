@@ -20,7 +20,7 @@ type ImageModel = {
   id: string;
   label: string;
   provider: string;
-  quality: string;
+  pricing: string | number;
 };
 
 function SparkIcon() {
@@ -171,7 +171,7 @@ export default function AIImageGenerator({
   };
 
   const optionLabel = (m: ImageModel) =>
-    `${m.label} · ${m.provider} · ${m.quality}`;
+    `${m.label} · ${m.provider} · ${m.pricing}`;
 
   if (phase === "generating") {
     return (
