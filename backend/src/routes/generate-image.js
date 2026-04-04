@@ -130,12 +130,16 @@ router.post("/", requireAdmin, async (req, res) => {
 
       // Si no se encontró en content, buscar en reasoning_details
       if (!imageUrl && !imageBase64) {
+        // Buscar imagen en reasoning_details — tomar el ÚLTIMO elemento con data
+        const imageDetails = reasoningDetails.filter((d) => d?.data);
+        if (imageDetails.length > 0) {
+          const lastImageDetail = imageDetails[imageDetails.length - 1];
+          imageBase64 = lastImageDetail.data;
+          imageMimeType = "image/png";
+        }
+      }
+      if (!imageUrl && !imageBase64) {
         for (const detail of reasoningDetails) {
-          if (detail?.data) {
-            imageBase64 = detail.data;
-            imageMimeType = "image/jpeg";
-            break;
-          }
           if (detail?.image_url?.url) {
             const dataUrl = detail.image_url.url;
             if (dataUrl.startsWith("data:")) {
