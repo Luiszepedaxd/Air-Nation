@@ -50,18 +50,20 @@ router.get("/", requireAdmin, async (req, res) => {
     const { data } = await response.json();
     const list = Array.isArray(data) ? data : [];
 
-    const imageModels = list.filter((model) => {
-      const modality = model.architecture?.modality || "";
-      const inputModalities = model.architecture?.input_modalities || [];
-      const outputModalities = model.architecture?.output_modalities || [];
+    const imageModels = list
+      .filter((model) => {
+        const modality = model.architecture?.modality || "";
+        const inputModalities = model.architecture?.input_modalities || [];
+        const outputModalities = model.architecture?.output_modalities || [];
 
-      return (
-        outputModalities.includes("image") ||
-        modality === "text->image" ||
-        modality === "image->image" ||
-        modality.includes("->image")
-      );
-    });
+        return (
+          outputModalities.includes("image") ||
+          modality === "text->image" ||
+          modality === "image->image" ||
+          modality.includes("->image")
+        );
+      })
+      .filter((m) => m.id !== "openrouter/auto");
 
     const seen = new Set();
     const models = imageModels

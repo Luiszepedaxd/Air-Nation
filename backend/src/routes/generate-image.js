@@ -8,7 +8,8 @@ const SYSTEM_CONTEXT = `Fotografía profesional para plataforma de airsoft en M�
 Estilo: fotografía editorial de acción, iluminación natural, colores vibrantes pero realistas.
 Sin texto, sin logos, sin marcas de agua. Alta resolución, composición profesional.`;
 
-const TIMEOUT_MS = 60_000;
+const TIMEOUT_CHAT_MS = 120_000;
+const TIMEOUT_IMAGES_MS = 60_000;
 
 function getTimeoutSignal(ms) {
   if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
@@ -19,17 +20,24 @@ function getTimeoutSignal(ms) {
   return controller.signal;
 }
 
-function isModelImageUnsupportedMessage(msg) {
-  const lower = String(msg).toLowerCase();
+function useChatCompletionsForModel(model) {
+  if (!model || typeof model !== "string") return false;
   return (
-    lower.includes("does not support") ||
-    lower.includes("image generation") ||
-    lower.includes("no image") ||
-    lower.includes("not support image") ||
-    lower.includes("invalid model") ||
-    lower.includes("unknown model") ||
-    (lower.includes("model") && lower.includes("image") && lower.includes("not"))
+    model.includes("gemini") ||
+    model.includes("gpt-5-image") ||
+    model.includes("gpt-4o") ||
+    model.includes("image-preview") ||
+    model.includes("image-mini")
   );
+}
+
+function openRouterHeaders() {
+  return {
+    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": "https://airnation.online",
+    "X-Title": "AirNation CMS",
+  };
 }
 
 router.post("/", requireAdmin, async (req, res) => {
@@ -44,25 +52,114 @@ router.post("/", requireAdmin, async (req, res) => {
 
   const enrichedPrompt = `${SYSTEM_CONTEXT} ${prompt}`;
 
-  let orRes;
+  const useChatCompletions = useChatCompletionsForModel(model);
+
+  let imageUrl = null;
+  let imageBase64 = null;
+  let imageMimeType = "image/png";
+
   try {
-    orRes = await fetch("https://openrouter.ai/api/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://airnation.online",
-        "X-Title": "AirNation CMS",
-      },
-      body: JSON.stringify({
-        model,
-        prompt: enrichedPrompt,
-        n: 1,
-        size: "1792x1024",
-        response_format: "url",
-      }),
-      signal: getTimeoutSignal(TIMEOUT_MS),
-    });
+    if (useChatCompletions) {
+      const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: openRouterHeaders(),
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: enrichedPrompt }],
+          max_tokens: 4096,
+        }),
+        signal: getTimeoutSignal(TIMEOUT_CHAT_MS),
+      });
+
+      const errBody = orRes.ok ? null : await orRes.json().catch(() => ({}));
+
+      if (!orRes.ok) {
+        if (orRes.status === 402) {
+          return res.status(402).json({ error: "Créditos insuficientes en OpenRouter" });
+        }
+        if (orRes.status === 429) {
+          return res
+            .status(429)
+            .json({ error: "Límite de requests alcanzado. Intenta en unos minutos." });
+        }
+        const msg =
+          errBody?.error?.message ||
+          (typeof errBody?.error === "string" ? errBody.error : null) ||
+          "Este modelo no genera imágenes. Selecciona otro.";
+        return res.status(400).json({ error: msg });
+      }
+
+      const orData = await orRes.json();
+      const content = orData.choices?.[0]?.message?.content;
+
+      if (Array.isArray(content)) {
+        const imageBlock = content.find(
+          (b) => b && (b.type === "image_url" || b.type === "image")
+        );
+        if (imageBlock?.image_url?.url) {
+          const dataUrl = imageBlock.image_url.url;
+          if (dataUrl.startsWith("data:")) {
+            const [meta, b64] = dataUrl.split(",");
+            imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+            imageBase64 = b64;
+          } else {
+            imageUrl = dataUrl;
+          }
+        }
+      } else if (typeof content === "string" && content.startsWith("data:")) {
+        const [meta, b64] = content.split(",");
+        imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+        imageBase64 = b64;
+      }
+
+      if (!imageUrl && !imageBase64) {
+        return res.status(400).json({
+          error: "El modelo no devolvió una imagen. Intenta con otro prompt.",
+        });
+      }
+    } else {
+      const orRes = await fetch("https://openrouter.ai/api/v1/images/generations", {
+        method: "POST",
+        headers: openRouterHeaders(),
+        body: JSON.stringify({
+          model,
+          prompt: enrichedPrompt,
+          n: 1,
+          size: "1792x1024",
+          response_format: "url",
+        }),
+        signal: getTimeoutSignal(TIMEOUT_IMAGES_MS),
+      });
+
+      const errBody = orRes.ok ? null : await orRes.json().catch(() => ({}));
+
+      if (!orRes.ok) {
+        if (orRes.status === 402) {
+          return res.status(402).json({ error: "Créditos insuficientes en OpenRouter" });
+        }
+        if (orRes.status === 429) {
+          return res
+            .status(429)
+            .json({ error: "Límite de requests alcanzado. Intenta en unos minutos." });
+        }
+        const msg =
+          errBody?.error?.message ||
+          (typeof errBody?.error === "string" ? errBody.error : null) ||
+          "Este modelo no genera imágenes. Selecciona otro.";
+        return res.status(400).json({ error: msg });
+      }
+
+      const orData = await orRes.json();
+      const item = orData.data?.[0];
+      if (item?.url) imageUrl = item.url;
+      else if (item?.b64_json) imageBase64 = item.b64_json;
+
+      if (!imageUrl && !imageBase64) {
+        return res.status(400).json({
+          error: "El modelo no devolvió una imagen. Intenta con otro prompt.",
+        });
+      }
+    }
   } catch (e) {
     if (e && (e.name === "AbortError" || e.code === "ABORT_ERR")) {
       return res.status(504).json({
@@ -73,54 +170,11 @@ router.post("/", requireAdmin, async (req, res) => {
     return res.status(500).json({ error: e.message || "Error al contactar OpenRouter" });
   }
 
-  const rawText = await orRes.text();
-  let parsed;
-  try {
-    parsed = rawText ? JSON.parse(rawText) : {};
-  } catch {
-    parsed = {};
-  }
-
-  if (!orRes.ok) {
-    const errObj = parsed.error;
-    const msg =
-      (typeof errObj === "string" ? errObj : errObj?.message) ||
-      (typeof parsed.message === "string" ? parsed.message : null) ||
-      rawText ||
-      "Error en OpenRouter";
-
-    if (orRes.status === 402) {
-      return res.status(402).json({ error: "Créditos insuficientes en OpenRouter" });
-    }
-    if (orRes.status === 429) {
-      return res
-        .status(429)
-        .json({ error: "Límite de requests alcanzado. Intenta en unos minutos." });
-    }
-    if (
-      (orRes.status === 400 || orRes.status === 404 || orRes.status === 422) &&
-      isModelImageUnsupportedMessage(msg)
-    ) {
-      return res
-        .status(400)
-        .json({ error: "Este modelo no genera imágenes. Selecciona otro." });
-    }
-
-    return res.status(orRes.status >= 400 && orRes.status < 600 ? orRes.status : 500).json({
-      error: typeof msg === "string" ? msg : "Error en OpenRouter",
-    });
-  }
-
-  const item = parsed.data?.[0];
-  if (!item) {
-    return res.status(500).json({ error: "Respuesta inválida de OpenRouter" });
-  }
-
   let buffer;
-  let mimeType = "image/png";
+  let mimeType = imageMimeType;
 
-  if (item.url) {
-    const imgRes = await fetch(item.url);
+  if (imageUrl) {
+    const imgRes = await fetch(imageUrl);
     if (!imgRes.ok) {
       return res.status(502).json({ error: "No se pudo descargar la imagen generada" });
     }
@@ -130,8 +184,8 @@ router.post("/", requireAdmin, async (req, res) => {
     if (ct && ct.startsWith("image/")) {
       mimeType = ct.split(";")[0].trim();
     }
-  } else if (item.b64_json) {
-    buffer = Buffer.from(item.b64_json, "base64");
+  } else if (imageBase64) {
+    buffer = Buffer.from(imageBase64, "base64");
   } else {
     return res.status(500).json({ error: "No se recibió URL ni imagen en base64" });
   }
