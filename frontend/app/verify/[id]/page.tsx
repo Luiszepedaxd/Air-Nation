@@ -123,6 +123,33 @@ function XCircleIcon() {
   )
 }
 
+function ShieldIcon16() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3L4 7v5c0 4.418 3.358 8.193 8 9 4.642-.807 8-4.582 8-9V7L12 3Z"
+        stroke="#666666"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function PinIcon14() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z"
+        stroke="#999999"
+        strokeWidth="1.5"
+      />
+      <circle cx="12" cy="11" r="2" stroke="#999999" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -184,10 +211,9 @@ export default async function VerifyPlayerPage({
 
   const teamNombre = teamNombreFromRow(row)
   const aliasDisplay = row.alias?.trim() || row.nombre?.trim() || '—'
+  const nombreReal = row.nombre?.trim() || ''
   const initial = (row.alias?.trim()?.[0] || row.nombre?.trim()?.[0] || '?').toUpperCase()
-  const equipoCiudad = [teamNombre?.trim() || 'SIN EQUIPO', row.ciudad?.trim() || null]
-    .filter(Boolean)
-    .join(' · ')
+  const ciudadTrim = row.ciudad?.trim() || ''
   const memberDisplay = formatMemberNo(row.member_number)
   const desdeText = formatDesde(row.created_at)
 
@@ -237,15 +263,39 @@ export default async function VerifyPlayerPage({
           >
             {aliasDisplay}
           </h2>
+          {nombreReal ? (
+            <p style={lato} className="mt-2 text-[14px] font-normal normal-case text-[#666666]">
+              {nombreReal}
+            </p>
+          ) : null}
           <p
             style={lato}
             className="mt-2 text-[13px] font-normal uppercase tracking-wide text-[#CC4B37]"
           >
             {rolLabel(row.rol)}
           </p>
-          <p style={lato} className="mt-2 text-[13px] leading-relaxed text-[#666666]">
-            {equipoCiudad}
-          </p>
+          {(teamNombre?.trim() || ciudadTrim) ? (
+            <div className="mt-2 flex flex-col gap-2">
+              {teamNombre?.trim() ? (
+                <div
+                  className="inline-flex max-w-full items-center gap-2 self-start border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-1 rounded-[2px]"
+                >
+                  <ShieldIcon16 />
+                  <span style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                    {teamNombre.trim()}
+                  </span>
+                </div>
+              ) : null}
+              {ciudadTrim ? (
+                <div className="flex items-center gap-1">
+                  <PinIcon14 />
+                  <span style={lato} className="text-[12px] font-normal text-[#666666]">
+                    {ciudadTrim}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="my-16 border-t border-solid border-[#EEEEEE]" />
 
