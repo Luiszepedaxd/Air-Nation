@@ -58,6 +58,31 @@ const NAV_ITEMS = [
     )
   },
   {
+    label: 'Campos',
+    href: '/campos',
+    icon: (active: boolean) => {
+      const stroke = active ? '#CC4B37' : '#767676'
+      return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10Z"
+            stroke={stroke}
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <circle
+            cx="12"
+            cy="11"
+            r="2.25"
+            fill={active ? '#CC4B37' : 'none'}
+            stroke={stroke}
+            strokeWidth="1.5"
+          />
+        </svg>
+      )
+    },
+  },
+  {
     label: 'Réplicas',
     href: '/dashboard/replicas',
     icon: (active: boolean) => (
@@ -89,7 +114,8 @@ const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[0], label: 'HOME' },
   { ...NAV_ITEMS[1], label: 'PERFIL' },
   { ...NAV_ITEMS[2], label: 'CREDENCIAL' },
-  { ...NAV_ITEMS[3], label: 'RÉPLICAS' },
+  { ...NAV_ITEMS[3], label: 'CAMPOS' },
+  { ...NAV_ITEMS[4], label: 'RÉPLICAS' },
   {
     label: 'SOS',
     href: '/dashboard/sos',
@@ -120,6 +146,13 @@ function AdminShieldIcon({ active }: { active: boolean }) {
 }
 
 const perfilHref = '/dashboard/perfil'
+
+function isNavItemActive(pathname: string, href: string): boolean {
+  if (href === '/campos') {
+    return pathname === '/campos' || pathname.startsWith('/campos/')
+  }
+  return pathname === href
+}
 
 function ProfileIconWithBadge({
   active,
@@ -226,7 +259,7 @@ export default function BottomNav() {
 
         <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href
+            const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref
             return (
               <Link key={item.href} href={item.href}
@@ -291,9 +324,9 @@ export default function BottomNav() {
       {/* Bottom Nav — mobile (5 ítems: sin Docs ni Admin; SOS enlaza a /dashboard/sos) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="grid h-14 w-full grid-cols-5 items-stretch">
+        <div className="grid h-14 w-full grid-cols-6 items-stretch">
           {NAV_ITEMS_MOBILE.map((item) => {
-            const active = pathname === item.href
+            const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref
             return (
               <Link
