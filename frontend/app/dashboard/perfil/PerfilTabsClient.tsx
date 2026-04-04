@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
 import { MisCamposTab, type MisCampoItem } from './MisCamposTab'
+import {
+  MisEventosRsvpSection,
+  type MisEventoRsvpItem,
+} from './MisEventosRsvpSection'
 import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { NotificacionesTab } from './NotificacionesTab'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
@@ -26,6 +30,8 @@ export function PerfilTabsClient({
   teamSlug,
   misEquipos,
   misCampos,
+  misEventosRsvp,
+  misEventosRsvpHasMore,
   initialJoinRequests,
   isAdmin,
   pendingJoinPending,
@@ -37,6 +43,8 @@ export function PerfilTabsClient({
   teamSlug: string | null
   misEquipos: MisEquipoItem[]
   misCampos: MisCampoItem[]
+  misEventosRsvp: MisEventoRsvpItem[]
+  misEventosRsvpHasMore: boolean
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
   pendingJoinPending: { id: string; nombre: string }[]
@@ -128,6 +136,12 @@ export function PerfilTabsClient({
               teamSlug={teamSlug}
               pendingJoinPending={pendingJoinPending}
             />
+            <div className="mx-auto max-w-[640px]">
+              <MisEventosRsvpSection
+                items={misEventosRsvp}
+                hasMore={misEventosRsvpHasMore}
+              />
+            </div>
             <div className="mx-auto mt-8 max-w-[640px] space-y-8">
               {isAdmin ? (
                 <Link

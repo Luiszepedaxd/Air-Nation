@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -41,23 +41,30 @@ export function RSVPButton({
   initialCount,
   initialHasRsvp,
   sessionUserId,
+  onCountChange,
 }: {
   eventId: string
   cupo: number
   initialCount: number
   initialHasRsvp: boolean
   sessionUserId: string | null
+  onCountChange?: (delta: number) => void
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [count, setCount] = useState(initialCount)
+  const [localCount, setLocalCount] = useState(initialCount)
   const [hasRsvp, setHasRsvp] = useState(initialHasRsvp)
+
+  useEffect(() => {
+    setLocalCount(initialCount)
+    setHasRsvp(initialHasRsvp)
+  }, [initialCount, initialHasRsvp])
 
   const eventoLleno = useMemo(() => {
     if (cupo <= 0) return false
     if (hasRsvp) return false
-    return count >= cupo
-  }, [cupo, count, hasRsvp])
+    return localCount >= cupo
+  }, [cupo, localCount, hasRsvp])
 
   const redirectLogin = useCallback(() => {
     const path = `/eventos/${eventId}`
@@ -77,9 +84,10 @@ export function RSVPButton({
       return
     }
     setHasRsvp(true)
-    setCount((c) => c + 1)
+    setLocalCount((prev) => prev + 1)
+    onCountChange?.(1)
     router.refresh()
-  }, [sessionUserId, loading, eventoLleno, eventId, router])
+  }, [sessionUserId, loading, eventoLleno, eventId, router, onCountChange])
 
   const handleCancel = useCallback(async () => {
     if (!sessionUserId || loading) return
@@ -95,9 +103,10 @@ export function RSVPButton({
       return
     }
     setHasRsvp(false)
-    setCount((c) => Math.max(0, c - 1))
+    setLocalCount((prev) => Math.max(0, prev - 1))
+    onCountChange?.(-1)
     router.refresh()
-  }, [sessionUserId, loading, eventId, router])
+  }, [sessionUserId, loading, eventId, router, onCountChange])
 
   if (!sessionUserId) {
     return (

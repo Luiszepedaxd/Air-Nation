@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { fetchPendingJoinRequestsForModerator } from '@/lib/pending-join-requests'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
+import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
 import { type MisEquipoItem } from './MisEquiposSection'
 import { PerfilTabsClient } from './PerfilTabsClient'
 
@@ -107,6 +108,37 @@ export default async function PerfilPage({
     destacado: Boolean(r.destacado),
   }))
 
+  let misEventosRsvp: MisEventoRsvpItem[] = []
+  let misEventosRsvpHasMore = false
+  const { data: rsvpIdRows } = await supabase
+    .from('event_rsvps')
+    .select('event_id')
+    .eq('user_id', authUser.id)
+
+  const rsvpEventIds = Array.from(
+    new Set(
+      (rsvpIdRows ?? [])
+        .map((r) => r.event_id as string | undefined)
+        .filter((id): id is string => Boolean(id))
+    )
+  )
+
+  if (rsvpEventIds.length > 0) {
+    const { data: misEvRows } = await supabase
+      .from('events')
+      .select('id, title, fecha, imagen_url')
+      .in('id', rsvpEventIds)
+      .eq('status', 'publicado')
+      .eq('published', true)
+      .gte('fecha', new Date().toISOString())
+      .order('fecha', { ascending: true })
+      .limit(6)
+
+    const list = (misEvRows ?? []) as MisEventoRsvpItem[]
+    misEventosRsvpHasMore = list.length > 5
+    misEventosRsvp = list.slice(0, 5)
+  }
+
   const pendingJoinPending: { id: string; nombre: string }[] = []
   for (const r of pendingJoinRows ?? []) {
     const raw = r as {
@@ -127,6 +159,8 @@ export default async function PerfilPage({
       teamSlug={teamSlug}
       misEquipos={misEquipos}
       misCampos={misCampos}
+      misEventosRsvp={misEventosRsvp}
+      misEventosRsvpHasMore={misEventosRsvpHasMore}
       initialJoinRequests={initialJoinRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
