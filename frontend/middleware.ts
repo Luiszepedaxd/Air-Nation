@@ -69,8 +69,15 @@ export async function middleware(request: NextRequest) {
     const appRole =
       !error && profile?.app_role != null ? profile.app_role : 'player'
 
+    const isEventosAdminPath =
+      pathname === '/admin/eventos' || pathname.startsWith('/admin/eventos/')
+
     if (appRole !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+      const allowFieldOwnerEventos =
+        appRole === 'field_owner' && isEventosAdminPath
+      if (!allowFieldOwnerEventos) {
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
     }
   }
 

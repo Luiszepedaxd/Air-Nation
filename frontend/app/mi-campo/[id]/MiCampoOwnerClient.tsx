@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { FieldReviewPublic } from '@/app/campos/types'
 import { supabase } from '@/lib/supabase'
+import { EventosTab, type MiCampoEventRow } from './components/EventosTab'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -32,7 +33,7 @@ export type FieldRequestOwnerRow = {
   team_nombre: string | null
 }
 
-type TabId = 'info' | 'reviews' | 'requests'
+type TabId = 'info' | 'reviews' | 'events' | 'requests'
 
 type FieldHeader = {
   id: string
@@ -158,23 +159,23 @@ function formatDateOnly(iso: string | null): string {
   }
 }
 
-/** Bloque 6: persistir evento en `public.events` cuando se apruebe una solicitud. */
-async function placeholderCreateEventFromApprovedRequest(_requestId: string) {
-  void _requestId
-}
-
 export function MiCampoOwnerClient({
   field,
   initialReviews,
+  initialEvents,
   initialRequests,
+  canCreateEvento,
 }: {
   field: FieldHeader
   initialReviews: FieldReviewPublic[]
+  initialEvents: MiCampoEventRow[]
   initialRequests: FieldRequestOwnerRow[]
+  canCreateEvento: boolean
 }) {
   const [activeTab, setActiveTab] = useState<TabId>('info')
   const [reviews] = useState<FieldReviewPublic[]>(initialReviews)
   const [requests, setRequests] = useState<FieldRequestOwnerRow[]>(initialRequests)
+  const [events] = useState(initialEvents)
 
   const isPrivado = (field.tipo || '').toLowerCase() === 'privado'
   const approved = field.status.toLowerCase() === 'aprobado'
@@ -197,18 +198,12 @@ export function MiCampoOwnerClient({
 
   const handleApprove = async (row: FieldRequestOwnerRow) => {
     try {
-      const { error } = await supabase
-        .from('field_requests')
-        .update({
-          status: 'aprobado',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', row.id)
-        .eq('field_id', field.id)
+      const { error } = await supabase.rpc('create_event_from_field_request', {
+        p_request_id: row.id,
+      })
 
       if (error) throw error
 
-      await placeholderCreateEventFromApprovedRequest(row.id)
       setRequests((prev) => prev.filter((x) => x.id !== row.id))
     } catch {
       /* noop */
@@ -271,6 +266,14 @@ export function MiCampoOwnerClient({
             className={`${tabBase} ${tabClass('reviews')}`}
           >
             RESEÑAS
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('events')}
+            style={jost}
+            className={`${tabBase} ${tabClass('events')}`}
+          >
+            EVENTOS
           </button>
           <button
             type="button"
@@ -439,6 +442,14 @@ export function MiCampoOwnerClient({
               </>
             )}
           </div>
+        ) : null}
+
+        {activeTab === 'events' ? (
+          <EventosTab
+            fieldId={field.id}
+            events={events}
+            canCreateEvento={canCreateEvento}
+          />
         ) : null}
 
         {activeTab === 'requests' ? (

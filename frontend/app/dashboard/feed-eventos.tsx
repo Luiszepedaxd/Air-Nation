@@ -3,15 +3,33 @@ import { createDashboardSupabaseServerClient } from './supabase-server'
 import { Carrusel } from './components/Carrusel'
 import { SectionHeader } from './components/SectionHeader'
 
-const jost = { fontFamily: "'Jost', sans-serif" } as const
+const jost = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+} as const
 
-type EventRow = {
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+type EventFeedRow = {
   id: string
   title: string
   fecha: string
-  disciplina: string | null
   imagen_url: string | null
-  field_id: string | null
+  cupo: number
+  fields: unknown
+}
+
+function normalizeFields(raw: unknown): {
+  nombre: string | null
+  ciudad: string | null
+} {
+  const o = Array.isArray(raw) ? raw[0] : raw
+  if (!o || typeof o !== 'object') return { nombre: null, ciudad: null }
+  const x = o as Record<string, unknown>
+  return {
+    nombre: typeof x.nombre === 'string' ? x.nombre : null,
+    ciudad: typeof x.ciudad === 'string' ? x.ciudad : null,
+  }
 }
 
 const WD = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'] as const
@@ -98,60 +116,83 @@ export async function EventosSection() {
   const nowIso = new Date().toISOString()
   const { data, error } = await supabase
     .from('events')
-    .select('id, title, fecha, disciplina, imagen_url, field_id')
+    .select(
+      `
+      id,
+      title,
+      fecha,
+      imagen_url,
+      cupo,
+      fields ( nombre, ciudad )
+    `
+    )
     .eq('published', true)
-    .gt('fecha', nowIso)
+    .eq('status', 'publicado')
+    .gte('fecha', nowIso)
     .order('fecha', { ascending: true })
-    .limit(3)
+    .limit(10)
 
   if (error || !data?.length) return null
 
-  const events = data as EventRow[]
+  const events = data as EventFeedRow[]
 
   return (
     <section>
-      <SectionHeader title="PRÓXIMOS EVENTOS" href="/eventos" />
+      <SectionHeader title="PRÓXIMOS EVENTOS" href="/eventos" linkLabel="Ver todos →" />
       <Carrusel>
-        {events.map((ev) => (
-          <Link
-            key={ev.id}
-            href={`/eventos/${ev.id}`}
-            className="w-[200px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[240px]"
-          >
-            <article>
-              <div className="aspect-square w-full overflow-hidden bg-[#F4F4F4]">
-                {ev.imagen_url ? (
-                  <img
-                    src={ev.imagen_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <CalendarioIcon />
-                  </div>
-                )}
-              </div>
-              <div className="p-[10px]">
-                <p
-                  style={jost}
-                  className="text-[10px] font-extrabold uppercase text-[#CC4B37]"
-                >
-                  {formatEventBannerDate(ev.fecha)}
-                </p>
-                <h3
-                  style={jost}
-                  className="mt-1 line-clamp-2 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
-                >
-                  {ev.title}
-                </h3>
-                {ev.disciplina ? (
-                  <p className="mt-1 text-[11px] text-[#666666]">{ev.disciplina}</p>
-                ) : null}
-              </div>
-            </article>
-          </Link>
-        ))}
+        {events.map((ev) => {
+          const f = normalizeFields(ev.fields)
+          const sub = [f.nombre?.trim(), f.ciudad?.trim()]
+            .filter(Boolean)
+            .join(' · ')
+          return (
+            <Link
+              key={ev.id}
+              href={`/eventos/${ev.id}`}
+              className="w-[200px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[240px]"
+            >
+              <article>
+                <div className="aspect-square w-full overflow-hidden bg-[#F4F4F4]">
+                  {ev.imagen_url ? (
+                    <img
+                      src={ev.imagen_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <CalendarioIcon />
+                    </div>
+                  )}
+                </div>
+                <div className="p-[10px]">
+                  <p
+                    style={jost}
+                    className="text-[10px] font-extrabold uppercase text-[#CC4B37]"
+                  >
+                    {formatEventBannerDate(ev.fecha)}
+                  </p>
+                  <h3
+                    style={jost}
+                    className="mt-1 line-clamp-2 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
+                  >
+                    {ev.title}
+                  </h3>
+                  {sub ? (
+                    <p className="mt-1 line-clamp-2 text-[11px] text-[#666666]" style={lato}>
+                      {sub}
+                    </p>
+                  ) : null}
+                  {ev.cupo > 0 ? (
+                    <p className="mt-1 text-[10px] text-[#999999]" style={lato}>
+                      Cupo: {ev.cupo}
+                    </p>
+                  ) : null}
+                </div>
+              </article>
+            </Link>
+          )
+        })}
       </Carrusel>
     </section>
   )

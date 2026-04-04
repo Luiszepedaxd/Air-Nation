@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import type { FieldReviewPublic } from '@/app/campos/types'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import type { MiCampoEventRow } from './components/EventosTab'
 import { MiCampoOwnerClient, type FieldRequestOwnerRow } from './MiCampoOwnerClient'
 
 function mapFieldRequests(
@@ -77,6 +78,54 @@ export default async function MiCampoPage({
     redirect('/dashboard/perfil')
   }
 
+  const { data: meRow } = await supabase
+    .from('users')
+    .select('app_role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const appRole = meRow?.app_role as string | undefined
+  const canCreateEvento =
+    appRole === 'admin' || appRole === 'field_owner'
+
+  let initialEvents: MiCampoEventRow[] = []
+  const { data: evRaw, error: evErr } = await supabase
+    .from('events')
+    .select('id, title, fecha, cupo, tipo, status, published, imagen_url')
+    .eq('field_id', id)
+    .order('fecha', { ascending: false })
+
+  if (!evErr && evRaw?.length) {
+    const evIds = evRaw.map((e) => e.id as string)
+    const countMap = new Map<string, number>()
+    const { data: rsvpRows } = await supabase
+      .from('event_rsvps')
+      .select('event_id')
+      .in('event_id', evIds)
+
+    if (Array.isArray(rsvpRows)) {
+      for (const r of rsvpRows as { event_id: string }[]) {
+        const eid = r.event_id
+        countMap.set(eid, (countMap.get(eid) ?? 0) + 1)
+      }
+    }
+
+    initialEvents = evRaw.map((e) => {
+      const eid = e.id as string
+      return {
+        id: eid,
+        title: String(e.title ?? ''),
+        fecha: String(e.fecha ?? ''),
+        cupo: Number(e.cupo ?? 0),
+        tipo: (e.tipo as string | null) ?? null,
+        status: String(e.status ?? ''),
+        published: Boolean(e.published),
+        imagen_url: (e.imagen_url as string | null) ?? null,
+        rsvp_count: countMap.get(eid) ?? 0,
+      }
+    })
+  }
+
   const { data: reviewsRaw, error: revErr } = await supabase
     .from('field_reviews')
     .select(
@@ -150,7 +199,9 @@ export default async function MiCampoPage({
           descripcion: (field.descripcion as string | null) ?? null,
         }}
         initialReviews={initialReviews}
+        initialEvents={initialEvents}
         initialRequests={initialRequests}
+        canCreateEvento={canCreateEvento}
       />
     </div>
   )
