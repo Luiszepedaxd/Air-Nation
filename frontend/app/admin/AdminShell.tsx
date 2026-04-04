@@ -146,6 +146,35 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: '/admin/assets',
+    label: 'ASSETS',
+    icon: (active) => (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x="3"
+          y="5"
+          width="18"
+          height="14"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+        />
+        <path
+          d="M3 17l5-5 4 4 4-6 5 7"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx="8"
+          cy="9"
+          r="1.5"
+          fill={active ? '#CC4B37' : '#666666'}
+        />
+      </svg>
+    ),
+  },
 ]
 
 function navActive(pathname: string, href: string) {

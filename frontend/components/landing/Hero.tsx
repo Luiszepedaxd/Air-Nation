@@ -1,5 +1,6 @@
 // No "use client" needed — no hooks
 import Link from "next/link";
+import { getSiteAssets } from "@/lib/site-assets";
 
 const STATS = [
   { num: "100%",  label: "Gratis para empezar"            },
@@ -7,13 +8,16 @@ const STATS = [
   { num: "MX",    label: "Lanzamiento inicial"            },
 ];
 
-export default function Hero() {
+export default async function Hero() {
+  const assets = await getSiteAssets();
+  const heroSrc = assets["hero_background"] || "/herofoto2.jpg";
+
   return (
     <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[#111111]">
 
-      {/* 1. Foto — fondo (estática en /public) */}
+      {/* 1. Foto — fondo (CMS o /public) */}
       <img
-        src="/herofoto2.jpg"
+        src={heroSrc}
         alt="Airsoft — jugadores en acción"
         className="absolute inset-0 z-0 h-full w-full min-h-full min-w-full object-cover object-center"
         loading="eager"

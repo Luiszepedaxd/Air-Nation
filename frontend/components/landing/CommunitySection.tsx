@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getSiteAssets } from "@/lib/site-assets";
 
 const STATS = [
   { num: "200k+",  label: "Réplicas esperando ser registradas"  },
@@ -6,7 +7,10 @@ const STATS = [
   { num: "México", label: "Primer mercado — escala global"       },
 ];
 
-export default function CommunitySection() {
+export default async function CommunitySection() {
+  const assets = await getSiteAssets();
+  const comunidadSrc = assets["comunidad_foto"] || "/comunidad-foto-1.jpg";
+
   return (
     <section id="comunidad" className="bg-[#F4F4F4] py-24 sm:py-32 px-5 sm:px-8">
       <div className="max-w-7xl mx-auto">
@@ -16,7 +20,7 @@ export default function CommunitySection() {
           {/* Mitad derecha: foto + velo */}
           <div className="absolute inset-y-0 right-0 z-0 hidden w-1/2 overflow-hidden lg:block">
             <img
-              src="/comunidad-foto-1.jpg"
+              src={comunidadSrc}
               alt="Comunidad de airsoft"
               className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
               loading="lazy"
