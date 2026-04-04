@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+
+export const revalidate = 0
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { TeamHero } from './components/TeamHero'

@@ -105,8 +105,8 @@ export function EditTeamClient({
       return
     }
 
-    router.push(`/equipos/${encodeURIComponent(slug)}`)
     router.refresh()
+    router.push(`/equipos/${encodeURIComponent(slug)}`)
   }, [
     nombre,
     ciudad,
