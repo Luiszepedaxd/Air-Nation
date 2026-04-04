@@ -58,6 +58,7 @@ const getCampoBySlug = cache(async (slug: string): Promise<CampoDetailRow | null
       ubicacion_lng,
       team_id,
       status,
+      galeria_urls,
       teams ( nombre, slug, logo_url )
     `
     )
@@ -72,10 +73,14 @@ const getCampoBySlug = cache(async (slug: string): Promise<CampoDetailRow | null
 
   const d = data as unknown as Record<string, unknown>
   const teamsRaw = d.teams
-  const { teams: _drop, ...rest } = d
+  const { teams: _drop, galeria_urls: galRaw, ...rest } = d
   void _drop
+  const galeria_urls = Array.isArray(galRaw)
+    ? galRaw.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : null
   return {
     ...rest,
+    galeria_urls: galeria_urls && galeria_urls.length > 0 ? galeria_urls : null,
     teams: normalizeTeamEmbed(teamsRaw),
   } as CampoDetailRow
 })

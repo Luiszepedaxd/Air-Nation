@@ -5,11 +5,26 @@ import { createPortal } from 'react-dom'
 
 type PostPhotoGalleryProps = {
   urls: string[]
+  /**
+   * `post`: layouts compactos (máx. 4 fotos).
+   * `campo`: grid 2 cols móvil / 3 desktop, thumbnails cuadrados, todas las URLs (hasta maxPhotos).
+   */
+  variant?: 'post' | 'campo'
+  /** Límite de fotos en la cuadrícula (por defecto 4 en post, 24 en campo). */
+  maxPhotos?: number
 }
 
-export function PostPhotoGallery({ urls }: PostPhotoGalleryProps) {
+export function PostPhotoGallery({
+  urls,
+  variant = 'post',
+  maxPhotos,
+}: PostPhotoGalleryProps) {
   const [lightbox, setLightbox] = useState<number | null>(null)
-  const list = urls.slice(0, 4)
+  const cleaned = urls.filter((u) => typeof u === 'string' && u.trim().length > 0)
+  const cap =
+    maxPhotos ??
+    (variant === 'campo' ? 24 : 4)
+  const list = cleaned.slice(0, cap)
   const n = list.length
 
   const close = useCallback(() => setLightbox(null), [])
@@ -47,6 +62,42 @@ export function PostPhotoGallery({ urls }: PostPhotoGalleryProps) {
   if (n === 0) return null
 
   const open = (idx: number) => setLightbox(idx)
+
+  if (variant === 'campo') {
+    const lightboxNodeCampo =
+      lightbox !== null ? (
+        <LightboxPortal
+          urls={list}
+          index={lightbox}
+          onClose={close}
+          onPrev={prev}
+          onNext={next}
+        />
+      ) : null
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          {list.map((u, idx) => (
+            <button
+              key={`${u}-${idx}`}
+              type="button"
+              className="aspect-square w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+              onClick={() => open(idx)}
+              aria-label={`Ver foto ${idx + 1} en grande`}
+            >
+              <img
+                src={u}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </button>
+          ))}
+        </div>
+        {lightboxNodeCampo}
+      </>
+    )
+  }
 
   const lightboxNode =
     lightbox !== null ? (

@@ -30,6 +30,7 @@ export type CampoDetailRow = {
   ubicacion_lng: number | string | null
   team_id: string | null
   status: string
+  galeria_urls: string[] | null
   teams: {
     nombre: string
     slug: string

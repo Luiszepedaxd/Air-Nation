@@ -1,7 +1,13 @@
 import Link from 'next/link'
+import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 import type { CampoDetailRow } from '../../types'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
+const jostHeading = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+  textTransform: 'uppercase' as const,
+}
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
@@ -168,7 +174,12 @@ export function CampoInfo({ field }: { field: CampoDetailRow }) {
       ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
       : null
 
+  const galeriaUrls = (field.galeria_urls ?? []).filter(
+    (u) => typeof u === 'string' && u.trim().length > 0
+  )
+
   return (
+    <>
     <section className="border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-5 md:px-6">
       <h2
         className="border-b border-[#EEEEEE] pb-3 text-sm font-extrabold uppercase tracking-[0.12em] text-[#111111]"
@@ -319,5 +330,20 @@ export function CampoInfo({ field }: { field: CampoDetailRow }) {
         ) : null}
       </div>
     </section>
+
+    {galeriaUrls.length > 0 ? (
+      <section className="mt-6 border border-[#EEEEEE] bg-[#FFFFFF] px-4 py-5 md:px-6">
+        <h2
+          className="border-b border-[#EEEEEE] pb-3 text-sm font-extrabold uppercase tracking-[0.12em] text-[#111111]"
+          style={jostHeading}
+        >
+          Galería
+        </h2>
+        <div className="mt-4">
+          <PostPhotoGallery urls={galeriaUrls} variant="campo" />
+        </div>
+      </section>
+    ) : null}
+    </>
   )
 }
