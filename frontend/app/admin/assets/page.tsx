@@ -21,13 +21,13 @@ export type SiteAssetRow = {
 export default async function AdminAssetsPage() {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const { data: assets, error } = await supabase
     .from("site_assets")
     .select("*")
     .order("updated_at", { ascending: false });
 
   const rows: SiteAssetRow[] =
-    !error && data ? (data as SiteAssetRow[]) : [];
+    !error && assets ? (assets as SiteAssetRow[]) : [];
 
   return (
     <div className="min-w-[375px] p-6">
@@ -47,7 +47,7 @@ export default async function AdminAssetsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {rows.slice(0, 4).map((row) => (
+        {rows.map((row) => (
           <AssetUploader
             key={row.id}
             assetKey={row.key}
