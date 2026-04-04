@@ -62,8 +62,6 @@ router.post("/", async (req, res) => {
     const timestamp = new Date().toISOString();
 
     const apiKey = process.env.RESEND_API_KEY;
-    const fromAddr =
-      process.env.RESEND_FROM_EMAIL || "AirNation <onboarding@resend.dev>";
 
     if (!apiKey) {
       console.warn("[feedback] RESEND_API_KEY no configurada");
@@ -92,8 +90,8 @@ router.post("/", async (req, res) => {
 `.trim();
 
     const { error: sendErr } = await resend.emails.send({
-      from: fromAddr,
-      to: ["info@airnation.online"],
+      from: "AirNation <info@airnation.online>",
+      to: "info@airnation.online",
       subject: `[AirNation Feedback] [${categoria}]`,
       html,
     });
