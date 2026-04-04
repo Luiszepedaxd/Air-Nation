@@ -149,12 +149,38 @@ router.post("/", async (req, res) => {
         ciudad: String(ciudad).trim(),
         created_by,
         slug: uniqueSlug,
+        status: "activo",
       })
       .select()
       .single();
 
     if (error) {
+      console.error("[POST /teams] teams INSERT error:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
       return res.status(500).json({ error: error.message });
+    }
+
+    const { error: memberError } = await supabase.from("team_members").insert({
+      team_id: team.id,
+      user_id: created_by,
+      rol_plataforma: "founder",
+      rango_militar: "fundador",
+      status: "activo",
+    });
+
+    if (memberError) {
+      console.error("[POST /teams] team_members INSERT error:", {
+        message: memberError.message,
+        code: memberError.code,
+        details: memberError.details,
+        hint: memberError.hint,
+        team_id: team.id,
+        user_id: created_by,
+      });
     }
 
     res.status(201).json({ team });
