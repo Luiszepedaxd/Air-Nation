@@ -20,3 +20,18 @@ export type TeamMemberAdminRow = {
   avatar_url: string | null
   ciudad: string | null
 }
+
+export type TeamPostAdminRow = {
+  id: string
+  content: string | null
+  fotos_urls: string[] | null
+  created_at: string
+  created_by: string | null
+}
+
+export type TeamAlbumAdminRow = {
+  id: string
+  nombre: string | null
+  fotos_urls: string[] | null
+  created_at: string
+}

@@ -29,7 +29,10 @@ export type TeamPostRow = {
   id: string
   title: string | null
   content: string | null
+  /** Legacy: una sola foto */
   foto_url: string | null
+  /** Varias fotos (columna `fotos_urls` en `team_posts`) */
+  fotos_urls: string[] | null
   created_at: string
 }
 

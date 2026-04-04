@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
 import type {
+  TeamAlbumAdminRow,
   TeamJoinRequestAdminRow,
   TeamMemberAdminRow,
+  TeamPostAdminRow,
 } from './types'
 
 const jost = {
@@ -20,6 +22,18 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
 
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://air-nation-production.up.railway.app/api/v1'
+).replace(/\/$/, '')
+const UPLOAD_ENDPOINT = `${API_URL}/upload`
+
+const ALLOWED_IMG = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const MAX_POST_PHOTOS = 4
+const MAX_ALBUM_PHOTOS = 20
+const MAX_MB = 5
+const MAX_BYTES = MAX_MB * 1024 * 1024
+
 const RANGO_OPTIONS = [
   'fundador',
   'capitan',
@@ -27,7 +41,7 @@ const RANGO_OPTIONS = [
   'miembro',
 ] as const
 
-type TabId = 'solicitudes' | 'integrantes' | 'perfil'
+type TabId = 'solicitudes' | 'integrantes' | 'posts' | 'albumes' | 'perfil'
 
 function relativeTime(iso: string): string {
   try {
@@ -65,6 +79,103 @@ function formatRangoBadge(rango: string | null | undefined) {
   return rango.replace(/_/g, ' ').toUpperCase()
 }
 
+function validateImageFile(file: File): string | null {
+  if (!ALLOWED_IMG.has(file.type)) {
+    return 'Solo se permiten JPG, PNG o WebP'
+  }
+  if (file.size > MAX_BYTES) {
+    return `Cada foto puede pesar máximo ${MAX_MB} MB`
+  }
+  return null
+}
+
+async function uploadOneFile(file: File): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
+  const json = (await res.json().catch(() => ({}))) as {
+    url?: string
+    error?: string
+  }
+  if (!res.ok) throw new Error(json.error || 'Error al subir la imagen')
+  if (!json.url || typeof json.url !== 'string') {
+    throw new Error('Respuesta inválida del servidor')
+  }
+  return json.url
+}
+
+function SpinnerInline({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className ?? 'h-5 w-5 animate-spin text-[#FFFFFF]'}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  )
+}
+
+function IconCamera() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 7h3l1.5-2h7L17 7h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="13" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}
+
+function IconTrash() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M9 3h6M5 6h14M8 6l1 14h6l1-14M10 11v6M14 11v6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function IconImagePlaceholder() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 5h16v14H4V5z"
+        stroke="#AAAAAA"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M8 14l2.5-3 2 2.5L17 10l3 4v3H4v-4l4-3z"
+        stroke="#AAAAAA"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="9" r="1.5" fill="#AAAAAA" />
+    </svg>
+  )
+}
+
 export function AdminClient({
   slug,
   teamId,
@@ -75,6 +186,8 @@ export function AdminClient({
   viewerRol,
   initialJoinRequests,
   initialMembers,
+  initialPosts,
+  initialAlbums,
 }: {
   slug: string
   teamId: string
@@ -85,10 +198,14 @@ export function AdminClient({
   logoUrl: string | null
   initialJoinRequests: TeamJoinRequestAdminRow[]
   initialMembers: TeamMemberAdminRow[]
+  initialPosts: TeamPostAdminRow[]
+  initialAlbums: TeamAlbumAdminRow[]
 }) {
   const [activeTab, setActiveTab] = useState<TabId>('solicitudes')
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
   const [members, setMembers] = useState(initialMembers)
+  const [posts, setPosts] = useState(initialPosts)
+  const [albums, setAlbums] = useState(initialAlbums)
   const pendingCount = joinRequests.length
 
   const viewerIsFounder = isFounderRol(viewerRol)
@@ -156,6 +273,22 @@ export function AdminClient({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('posts')}
+            style={jost}
+            className={`${tabBase} ${tabClass('posts')}`}
+          >
+            POSTS
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('albumes')}
+            style={jost}
+            className={`${tabBase} ${tabClass('albumes')}`}
+          >
+            ÁLBUMES
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('perfil')}
             style={jost}
             className={`${tabBase} ${tabClass('perfil')}`}
@@ -182,6 +315,24 @@ export function AdminClient({
             viewerUserId={viewerUserId}
             viewerIsFounder={viewerIsFounder}
             viewerIsAdmin={viewerIsAdmin}
+          />
+        ) : null}
+
+        {activeTab === 'posts' ? (
+          <PostsTab
+            teamId={teamId}
+            viewerUserId={viewerUserId}
+            posts={posts}
+            setPosts={setPosts}
+          />
+        ) : null}
+
+        {activeTab === 'albumes' ? (
+          <AlbumsTab
+            teamId={teamId}
+            viewerUserId={viewerUserId}
+            albums={albums}
+            setAlbums={setAlbums}
           />
         ) : null}
 
@@ -741,6 +892,655 @@ function PerfilEquipoTab({
       >
         VER PERFIL PÚBLICO
       </a>
+    </div>
+  )
+}
+
+type PendingPhoto = { id: string; file: File; preview: string }
+
+function normalizeFotoUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(
+    (u): u is string => typeof u === 'string' && u.trim().length > 0
+  )
+}
+
+function postUrls(row: TeamPostAdminRow): string[] {
+  return normalizeFotoUrls(row.fotos_urls)
+}
+
+function PostPhotoGrid({ urls }: { urls: string[] }) {
+  if (urls.length === 0) return null
+  const grid =
+    urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+  return (
+    <div className={`grid ${grid} gap-2`}>
+      {urls.map((u) => (
+        <div
+          key={u}
+          className="aspect-square w-full overflow-hidden bg-[#F4F4F4]"
+        >
+          <img
+            src={u}
+            alt=""
+            width={400}
+            height={400}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PostsTab({
+  teamId,
+  viewerUserId,
+  posts,
+  setPosts,
+}: {
+  teamId: string
+  viewerUserId: string
+  posts: TeamPostAdminRow[]
+  setPosts: React.Dispatch<React.SetStateAction<TeamPostAdminRow[]>>
+}) {
+  const [postText, setPostText] = useState('')
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
+  const [publishing, setPublishing] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [pickErr, setPickErr] = useState('')
+  const postInputRef = useRef<HTMLInputElement>(null)
+  const pendingRef = useRef(pendingPhotos)
+  pendingRef.current = pendingPhotos
+
+  useEffect(() => {
+    return () => {
+      pendingRef.current.forEach((p) => URL.revokeObjectURL(p.preview))
+    }
+  }, [])
+
+  const removePending = (id: string) => {
+    setPendingPhotos((prev) => {
+      const found = prev.find((x) => x.id === id)
+      if (found) URL.revokeObjectURL(found.preview)
+      return prev.filter((x) => x.id !== id)
+    })
+  }
+
+  const addPostFiles = (files: FileList | null) => {
+    if (!files?.length) return
+    setPickErr('')
+    const next: PendingPhoto[] = []
+    let firstErr: string | null = null
+    for (const file of Array.from(files)) {
+      if (pendingPhotos.length + next.length >= MAX_POST_PHOTOS) break
+      const err = validateImageFile(file)
+      if (err) {
+        if (!firstErr) firstErr = err
+        continue
+      }
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`
+      next.push({
+        id,
+        file,
+        preview: URL.createObjectURL(file),
+      })
+    }
+    if (firstErr) setPickErr(firstErr)
+    if (next.length) setPendingPhotos((p) => [...p, ...next])
+    if (postInputRef.current) postInputRef.current.value = ''
+  }
+
+  const canPublish =
+    postText.trim().length > 0 || pendingPhotos.length > 0
+
+  const handlePublish = async () => {
+    if (!canPublish || publishing) return
+    setPublishing(true)
+    try {
+      const urls: string[] = []
+      for (const p of pendingPhotos) {
+        urls.push(await uploadOneFile(p.file))
+      }
+      const text = postText.trim()
+      const { data, error } = await supabase
+        .from('team_posts')
+        .insert({
+          team_id: teamId,
+          content: text.length ? text : null,
+          fotos_urls: urls.length ? urls : [],
+          published: true,
+          created_by: viewerUserId,
+        })
+        .select('id, content, fotos_urls, created_at, created_by')
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        const row = data as TeamPostAdminRow
+        setPosts((prev) => [
+          {
+            ...row,
+            fotos_urls: Array.isArray(row.fotos_urls)
+              ? row.fotos_urls.filter(
+                  (u): u is string =>
+                    typeof u === 'string' && u.trim().length > 0
+                )
+              : null,
+          },
+          ...prev,
+        ])
+      }
+
+      setPostText('')
+      for (const p of pendingPhotos) {
+        URL.revokeObjectURL(p.preview)
+      }
+      setPendingPhotos([])
+    } catch {
+      /* noop */
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  const softDeletePost = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('team_posts')
+        .update({ published: false })
+        .eq('id', id)
+        .eq('team_id', teamId)
+
+      if (error) throw error
+
+      setPosts((prev) => prev.filter((x) => x.id !== id))
+      setConfirmDeleteId(null)
+    } catch {
+      /* noop */
+    }
+  }
+
+  return (
+    <div className="pb-10">
+      <div>
+        <div className="relative">
+          <textarea
+            value={postText}
+            onChange={(e) => setPostText(e.target.value.slice(0, 500))}
+            placeholder="¿Qué está pasando en el equipo?"
+            rows={4}
+            className="min-h-[100px] w-full resize-y border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 pb-8 pt-3 text-[14px] text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
+            style={lato}
+            maxLength={500}
+          />
+          <span
+            className="pointer-events-none absolute bottom-2 right-2 text-[11px] text-[#999999]"
+            style={lato}
+          >
+            {postText.length}/500
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <input
+            ref={postInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => addPostFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => postInputRef.current?.click()}
+            disabled={pendingPhotos.length >= MAX_POST_PHOTOS}
+            style={jost}
+            className="inline-flex items-center gap-2 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <IconCamera />
+            AGREGAR FOTOS
+          </button>
+        </div>
+
+        {pickErr ? (
+          <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato} role="alert">
+            {pickErr}
+          </p>
+        ) : null}
+
+        {pendingPhotos.length > 0 ? (
+          <div className="mt-4 grid w-fit grid-cols-2 gap-2">
+            {pendingPhotos.map((p) => (
+              <div
+                key={p.id}
+                className="relative h-20 w-20 shrink-0 overflow-hidden bg-[#F4F4F4]"
+              >
+                <img
+                  src={p.preview}
+                  alt=""
+                  width={80}
+                  height={80}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePending(p.id)}
+                  className="absolute right-0 top-0 flex h-6 w-6 items-center justify-center bg-[rgba(0,0,0,0.5)] text-[12px] font-bold text-white"
+                  aria-label="Quitar foto"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => void handlePublish()}
+            disabled={!canPublish || publishing}
+            style={jost}
+            className="inline-flex min-h-[44px] min-w-[140px] items-center justify-center gap-2 bg-[#CC4B37] px-6 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {publishing ? (
+              <>
+                <SpinnerInline />
+                <span>Subiendo…</span>
+              </>
+            ) : (
+              'PUBLICAR'
+            )}
+          </button>
+        </div>
+      </div>
+
+      <hr className="my-8 border-0 border-t border-solid border-[#EEEEEE]" />
+
+      {posts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+          <p style={lato} className="text-[14px] text-[#666666]">
+            Aún no hay publicaciones
+          </p>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-6">
+          {posts.map((post) => {
+            const urls = postUrls(post)
+            return (
+              <li key={post.id}>
+                <div className="flex flex-col gap-3">
+                  <PostPhotoGrid urls={urls} />
+                  {post.content?.trim() ? (
+                    <p
+                      className="whitespace-pre-wrap text-[14px] text-[#111111]"
+                      style={lato}
+                    >
+                      {post.content.trim()}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <p className="text-[11px] text-[#999999]" style={lato}>
+                      {relativeTime(post.created_at)}
+                    </p>
+                    <div className="shrink-0">
+                      {confirmDeleteId === post.id ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p
+                            style={lato}
+                            className="text-[13px] text-[#111111]"
+                          >
+                            ¿Eliminar este post?
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => void softDeletePost(post.id)}
+                            style={jost}
+                            className="min-h-[32px] bg-[#CC4B37] px-3 text-[10px] font-extrabold uppercase text-[#FFFFFF]"
+                          >
+                            SÍ
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            style={jost}
+                            className="min-h-[32px] border border-solid border-[#EEEEEE] px-3 text-[10px] font-extrabold uppercase text-[#666666]"
+                          >
+                            NO
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(post.id)}
+                          className="inline-flex items-center gap-1 text-[#999999] transition-colors hover:text-[#666666]"
+                          aria-label="Eliminar publicación"
+                        >
+                          <IconTrash />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+const albumInputClass =
+  'w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
+
+function AlbumsTab({
+  teamId,
+  viewerUserId,
+  albums,
+  setAlbums,
+}: {
+  teamId: string
+  viewerUserId: string
+  albums: TeamAlbumAdminRow[]
+  setAlbums: React.Dispatch<React.SetStateAction<TeamAlbumAdminRow[]>>
+}) {
+  const [nombre, setNombre] = useState('')
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
+  const [creating, setCreating] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [pickErr, setPickErr] = useState('')
+  const albumInputRef = useRef<HTMLInputElement>(null)
+  const albumPendingRef = useRef(pendingPhotos)
+  albumPendingRef.current = pendingPhotos
+
+  useEffect(() => {
+    return () => {
+      albumPendingRef.current.forEach((p) => URL.revokeObjectURL(p.preview))
+    }
+  }, [])
+
+  const removePending = (id: string) => {
+    setPendingPhotos((prev) => {
+      const found = prev.find((x) => x.id === id)
+      if (found) URL.revokeObjectURL(found.preview)
+      return prev.filter((x) => x.id !== id)
+    })
+  }
+
+  const addAlbumFiles = (files: FileList | null) => {
+    if (!files?.length) return
+    setPickErr('')
+    const next: PendingPhoto[] = []
+    let firstErr: string | null = null
+    for (const file of Array.from(files)) {
+      if (pendingPhotos.length + next.length >= MAX_ALBUM_PHOTOS) break
+      const err = validateImageFile(file)
+      if (err) {
+        if (!firstErr) firstErr = err
+        continue
+      }
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`
+      next.push({
+        id,
+        file,
+        preview: URL.createObjectURL(file),
+      })
+    }
+    if (firstErr) setPickErr(firstErr)
+    if (next.length) setPendingPhotos((p) => [...p, ...next])
+    if (albumInputRef.current) albumInputRef.current.value = ''
+  }
+
+  const canCreate = nombre.trim().length > 0 && pendingPhotos.length > 0
+
+  const handleCreate = async () => {
+    if (!canCreate || creating) return
+    setCreating(true)
+    try {
+      const urls: string[] = []
+      for (const p of pendingPhotos) {
+        urls.push(await uploadOneFile(p.file))
+      }
+      const { data, error } = await supabase
+        .from('team_albums')
+        .insert({
+          team_id: teamId,
+          nombre: nombre.trim().slice(0, 60),
+          fotos_urls: urls,
+          created_by: viewerUserId,
+        })
+        .select('id, nombre, fotos_urls, created_at')
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        const row = data as TeamAlbumAdminRow
+        setAlbums((prev) => [
+          {
+            ...row,
+            fotos_urls: Array.isArray(row.fotos_urls)
+              ? row.fotos_urls.filter(
+                  (u): u is string =>
+                    typeof u === 'string' && u.trim().length > 0
+                )
+              : null,
+          },
+          ...prev,
+        ])
+      }
+
+      setNombre('')
+      for (const p of pendingPhotos) {
+        URL.revokeObjectURL(p.preview)
+      }
+      setPendingPhotos([])
+    } catch {
+      /* noop */
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const deleteAlbum = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('team_albums')
+        .delete()
+        .eq('id', id)
+        .eq('team_id', teamId)
+
+      if (error) throw error
+
+      setAlbums((prev) => prev.filter((x) => x.id !== id))
+      setConfirmDeleteId(null)
+    } catch {
+      /* noop */
+    }
+  }
+
+  return (
+    <div className="pb-10">
+      <div>
+        <input
+          type="text"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value.slice(0, 60))}
+          placeholder="Nombre del álbum (ej: Partida Enero 2026)"
+          maxLength={60}
+          className={albumInputClass}
+          style={lato}
+        />
+
+        <div className="mt-4">
+          <input
+            ref={albumInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => addAlbumFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => albumInputRef.current?.click()}
+            disabled={pendingPhotos.length >= MAX_ALBUM_PHOTOS}
+            style={jost}
+            className="inline-flex items-center gap-2 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <IconCamera />
+            AGREGAR FOTOS
+          </button>
+        </div>
+
+        {pickErr ? (
+          <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato} role="alert">
+            {pickErr}
+          </p>
+        ) : null}
+
+        {pendingPhotos.length > 0 ? (
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {pendingPhotos.map((p) => (
+              <div
+                key={p.id}
+                className="relative aspect-square w-full overflow-hidden bg-[#F4F4F4]"
+              >
+                <img
+                  src={p.preview}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePending(p.id)}
+                  className="absolute right-0 top-0 flex h-6 w-6 items-center justify-center bg-[rgba(0,0,0,0.5)] text-[12px] font-bold text-white"
+                  aria-label="Quitar foto"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => void handleCreate()}
+            disabled={!canCreate || creating}
+            style={jost}
+            className="inline-flex min-h-[44px] min-w-[160px] items-center justify-center gap-2 bg-[#CC4B37] px-6 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {creating ? (
+              <>
+                <SpinnerInline />
+                <span>Subiendo…</span>
+              </>
+            ) : (
+              'CREAR ÁLBUM'
+            )}
+          </button>
+        </div>
+      </div>
+
+      <hr className="my-8 border-0 border-t border-solid border-[#EEEEEE]" />
+
+      {albums.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+          <p style={lato} className="text-[14px] text-[#666666]">
+            Aún no hay álbumes
+          </p>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-4">
+          {albums.map((album) => {
+            const urls = normalizeFotoUrls(album.fotos_urls)
+            const cover = urls[0]
+            const count = urls.length
+
+            return (
+              <li
+                key={album.id}
+                className="flex gap-3 border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-3"
+              >
+                <div className="h-20 w-20 shrink-0 overflow-hidden bg-[#F4F4F4]">
+                  {cover ? (
+                    <img
+                      src={cover}
+                      alt=""
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <IconImagePlaceholder />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    style={{ ...jost, fontWeight: 700, textTransform: 'none' }}
+                    className="text-[14px] text-[#111111]"
+                  >
+                    {album.nombre?.trim() || 'Álbum'}
+                  </p>
+                  <p className="mt-1 text-[12px] text-[#666666]" style={lato}>
+                    {count} {count === 1 ? 'foto' : 'fotos'}
+                  </p>
+                  <div className="mt-2">
+                    {confirmDeleteId === album.id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p
+                          style={lato}
+                          className="text-[13px] text-[#111111]"
+                        >
+                          ¿Eliminar este álbum?
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void deleteAlbum(album.id)}
+                          style={jost}
+                          className="min-h-[32px] bg-[#CC4B37] px-3 text-[10px] font-extrabold uppercase text-[#FFFFFF]"
+                        >
+                          SÍ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          style={jost}
+                          className="min-h-[32px] border border-solid border-[#EEEEEE] px-3 text-[10px] font-extrabold uppercase text-[#666666]"
+                        >
+                          NO
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(album.id)}
+                        className="inline-flex items-center gap-1 text-[#999999] transition-colors hover:text-[#666666]"
+                        aria-label="Eliminar álbum"
+                      >
+                        <IconTrash />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

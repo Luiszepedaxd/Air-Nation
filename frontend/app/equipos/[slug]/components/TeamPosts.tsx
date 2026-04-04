@@ -34,6 +34,44 @@ function formatDate(iso: string) {
   }
 }
 
+function postPhotoUrls(post: TeamPostRow): string[] {
+  const fromArr = post.fotos_urls
+  if (Array.isArray(fromArr) && fromArr.length > 0) {
+    return fromArr.filter(
+      (u): u is string => typeof u === 'string' && u.trim().length > 0
+    )
+  }
+  if (post.foto_url?.trim()) {
+    return [post.foto_url.trim()]
+  }
+  return []
+}
+
+function PostMediaGrid({ urls }: { urls: string[] }) {
+  if (urls.length === 0) {
+    return <div className="aspect-video w-full bg-[#F4F4F4]" />
+  }
+  const grid = urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+  return (
+    <div className={`grid ${grid} gap-2`}>
+      {urls.map((u) => (
+        <div
+          key={u}
+          className="aspect-square w-full overflow-hidden bg-[#F4F4F4]"
+        >
+          <img
+            src={u}
+            alt=""
+            width={800}
+            height={800}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
   if (!posts.length) return null
 
@@ -46,47 +84,47 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
         Publicaciones
       </h2>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {posts.map((post) => (
-          <article
-            key={post.id}
-            className="border border-[#EEEEEE] bg-[#FFFFFF]"
-          >
-            <div className="aspect-video w-full overflow-hidden bg-[#F4F4F4]">
-              {post.foto_url ? (
-                <img
-                  src={post.foto_url}
-                  alt=""
-                  width={800}
-                  height={450}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="h-full w-full bg-[#F4F4F4]" />
-              )}
-            </div>
-            <div className="p-4">
-              <h3
-                style={jost}
-                className="text-[16px] font-extrabold leading-snug text-[#111111]"
-              >
-                {post.title || 'Sin título'}
-              </h3>
-              <p
-                className="mt-2 line-clamp-4 text-[14px] leading-relaxed text-[#111111]"
-                style={lato}
-              >
-                {excerpt(post.content, 120)}
-              </p>
-              <time
-                className="mt-3 block text-[12px] text-[#666666]"
-                style={lato}
-                dateTime={post.created_at}
-              >
-                {formatDate(post.created_at)}
-              </time>
-            </div>
-          </article>
-        ))}
+        {posts.map((post) => {
+          const urls = postPhotoUrls(post)
+          const title = post.title?.trim()
+          const ex = excerpt(post.content, 120)
+
+          return (
+            <article
+              key={post.id}
+              className="border border-[#EEEEEE] bg-[#FFFFFF]"
+            >
+              <div className="w-full overflow-hidden bg-[#F4F4F4]">
+                <PostMediaGrid urls={urls} />
+              </div>
+              <div className="p-4">
+                {title ? (
+                  <h3
+                    style={jost}
+                    className="text-[16px] font-extrabold leading-snug text-[#111111]"
+                  >
+                    {title}
+                  </h3>
+                ) : null}
+                {ex ? (
+                  <p
+                    className={`text-[14px] leading-relaxed text-[#111111] ${title ? 'mt-2' : ''} line-clamp-4`}
+                    style={lato}
+                  >
+                    {ex}
+                  </p>
+                ) : null}
+                <time
+                  className="mt-3 block text-[12px] text-[#666666]"
+                  style={lato}
+                  dateTime={post.created_at}
+                >
+                  {formatDate(post.created_at)}
+                </time>
+              </div>
+            </article>
+          )
+        })}
       </div>
     </section>
   )

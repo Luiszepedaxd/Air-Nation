@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { AdminClient } from './AdminClient'
-import type { TeamJoinRequestAdminRow, TeamMemberAdminRow } from './types'
+import type {
+  TeamAlbumAdminRow,
+  TeamJoinRequestAdminRow,
+  TeamMemberAdminRow,
+  TeamPostAdminRow,
+} from './types'
 
 function one<T>(v: T | T[] | null | undefined): T | null {
   if (v == null) return null
@@ -164,6 +169,49 @@ export default async function EquipoAdminPage({
 
   initialMembers = [...initialMembers].sort(sortMembers)
 
+  const { data: rawPosts, error: postsErr } = await supabase
+    .from('team_posts')
+    .select('id, content, fotos_urls, created_at, created_by')
+    .eq('team_id', teamId)
+    .eq('published', true)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  const initialPosts: TeamPostAdminRow[] =
+    postsErr || !rawPosts
+      ? []
+      : (rawPosts as TeamPostAdminRow[]).map((r) => ({
+          id: r.id,
+          content: r.content,
+          fotos_urls: Array.isArray(r.fotos_urls)
+            ? r.fotos_urls.filter(
+                (u): u is string => typeof u === 'string' && u.trim().length > 0
+              )
+            : null,
+          created_at: r.created_at,
+          created_by: r.created_by,
+        }))
+
+  const { data: rawAlbums, error: albumsErr } = await supabase
+    .from('team_albums')
+    .select('id, nombre, fotos_urls, created_at')
+    .eq('team_id', teamId)
+    .order('created_at', { ascending: false })
+
+  const initialAlbums: TeamAlbumAdminRow[] =
+    albumsErr || !rawAlbums
+      ? []
+      : (rawAlbums as TeamAlbumAdminRow[]).map((r) => ({
+          id: r.id,
+          nombre: r.nombre,
+          fotos_urls: Array.isArray(r.fotos_urls)
+            ? r.fotos_urls.filter(
+                (u): u is string => typeof u === 'string' && u.trim().length > 0
+              )
+            : null,
+          created_at: r.created_at,
+        }))
+
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <AdminClient
@@ -176,6 +224,8 @@ export default async function EquipoAdminPage({
         viewerRol={viewerRol}
         initialJoinRequests={initialJoinRequests}
         initialMembers={initialMembers}
+        initialPosts={initialPosts}
+        initialAlbums={initialAlbums}
       />
     </div>
   )
