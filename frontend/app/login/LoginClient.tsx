@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginClient({
@@ -10,6 +10,7 @@ export default function LoginClient({
   loginFotoUrl: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -29,7 +30,12 @@ export default function LoginClient({
       setLoading(false);
       return;
     }
-    router.push("/dashboard");
+    const redirect = searchParams.get("redirect");
+    if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
+      router.push(redirect);
+    } else {
+      router.push("/dashboard");
+    }
   };
 
   return (
