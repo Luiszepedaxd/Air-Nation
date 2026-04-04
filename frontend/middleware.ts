@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
 
+  // /equipos/* no está en el matcher: no toca cookies de sesión; queda público salvo lógica en página.
   // Solo rutas privadas (perfiles públicos /u/[id] no están en el matcher y son públicos)
   const requiresAuth =
     pathname.startsWith('/dashboard') ||

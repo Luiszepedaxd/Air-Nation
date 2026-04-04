@@ -1,18 +1,13 @@
 "use client";
 
-import {
-  useCallback,
-  useMemo,
-  useState,
-  type FormEvent,
-} from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useFormState, useFormStatus } from "react-dom";
 import { generateTeamSlug } from "@/lib/team-slug";
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"
-).replace(/\/$/, "");
+import {
+  createTeamAction,
+  type CreateTeamState,
+} from "./actions";
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -20,68 +15,45 @@ const jostHeading = {
   textTransform: "uppercase" as const,
 };
 
-export function TeamForm({ userId }: { userId: string }) {
-  const router = useRouter();
+const initialState: CreateTeamState = null;
+
+function SubmitButton({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending || disabled}
+      className="mt-8 w-full rounded-[2px] bg-[#CC4B37] py-3.5 text-xs font-extrabold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
+      style={jostHeading}
+    >
+      {pending ? "Creando…" : "Crear equipo"}
+    </button>
+  );
+}
+
+export function TeamForm() {
   const [nombre, setNombre] = useState("");
   const [ciudad, setCiudad] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [state, formAction] = useFormState(createTeamAction, initialState);
 
   const slug = useMemo(
     () => generateTeamSlug(undefined, nombre),
     [nombre]
   );
 
-  const handleSubmit = useCallback(
-    async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    const n = nombre.trim();
+    const c = ciudad.trim();
+    if (n.length < 2 || c.length < 2) {
       e.preventDefault();
-      const n = nombre.trim();
-      const c = ciudad.trim();
-      if (!userId || n.length < 2 || c.length < 2) {
-        setError("Nombre y ciudad (mínimo 2 caracteres) son obligatorios.");
-        return;
-      }
-      const slugToSend = generateTeamSlug(undefined, n);
-      setSubmitting(true);
-      setError("");
-      try {
-        const res = await fetch(`${API_URL}/teams`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nombre: n,
-            ciudad: c,
-            created_by: userId,
-            slug: slugToSend,
-          }),
-        });
-        const data = (await res.json()) as {
-          team?: { id: string; nombre?: string; slug?: string | null };
-          error?: string;
-        };
-        if (!res.ok || !data.team?.id) {
-          setError(data.error || "No se pudo crear el equipo. Intenta de nuevo.");
-          return;
-        }
-        const outSlug = data.team.slug?.trim();
-        if (outSlug) {
-          router.push(`/equipos/${encodeURIComponent(outSlug)}`);
-        } else {
-          router.push("/dashboard");
-        }
-      } catch {
-        setError("No se pudo crear el equipo. Intenta de nuevo.");
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [userId, nombre, ciudad, router]
-  );
+    }
+  };
 
   return (
     <form
       className="mx-auto max-w-[480px]"
-      onSubmit={(e) => void handleSubmit(e)}
+      action={formAction}
+      onSubmit={handleSubmit}
       noValidate
     >
       <input type="hidden" name="slug" value={slug} readOnly aria-hidden />
@@ -135,18 +107,13 @@ export function TeamForm({ userId }: { userId: string }) {
         </div>
       </div>
 
-      {error ? (
-        <p className="mt-4 text-sm text-[#CC4B37]">{error}</p>
+      {state?.error ? (
+        <p className="mt-4 text-sm text-[#CC4B37]">{state.error}</p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={submitting || nombre.trim().length < 2 || ciudad.trim().length < 2}
-        className="mt-8 w-full rounded-[2px] bg-[#CC4B37] py-3.5 text-xs font-extrabold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-45"
-        style={jostHeading}
-      >
-        {submitting ? "Creando…" : "Crear equipo"}
-      </button>
+      <SubmitButton
+        disabled={nombre.trim().length < 2 || ciudad.trim().length < 2}
+      />
 
       <p className="mt-6 text-center text-sm text-[#666666]">
         <Link href="/dashboard" className="text-[#CC4B37] hover:underline">

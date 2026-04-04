@@ -62,7 +62,7 @@ export default function NuevoEquipoPage() {
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] px-6 py-10 text-[#111111]">
-      <TeamForm userId={userId} />
+      <TeamForm />
     </main>
   );
 }
