@@ -67,6 +67,7 @@ router.post("/", requireAdmin, async (req, res) => {
           model,
           messages: [{ role: "user", content: enrichedPrompt }],
           max_tokens: 4096,
+          modalities: ["text", "image"],
         }),
         signal: getTimeoutSignal(TIMEOUT_CHAT_MS),
       });
@@ -90,6 +91,8 @@ router.post("/", requireAdmin, async (req, res) => {
       }
 
       const orData = await orRes.json();
+      console.log("CONTENT ARRAY:", JSON.stringify(orData.choices?.[0]?.message?.content, null, 2));
+      console.log("ALL KEYS IN MESSAGE:", Object.keys(orData.choices?.[0]?.message || {}));
       console.log("FULL CHOICES:", JSON.stringify(orData.choices, null, 2));
       console.log("OpenRouter response:", JSON.stringify(orData, null, 2));
 
