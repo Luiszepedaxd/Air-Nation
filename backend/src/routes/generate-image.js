@@ -99,36 +99,61 @@ router.post("/", requireAdmin, async (req, res) => {
       const message = orData.choices?.[0]?.message;
       const content = message?.content;
       const reasoningDetails = message?.reasoning_details || [];
+      const messageImages = message?.images || [];
+
+      // 1. Buscar en message.images (Gemini Image models)
+      if (messageImages.length > 0) {
+        const img = messageImages[0];
+        if (img?.url) {
+          imageUrl = img.url;
+        } else if (img?.data) {
+          imageBase64 = img.data;
+          imageMimeType = img.mimeType || img.mime_type || "image/png";
+        } else if (typeof img === "string") {
+          if (img.startsWith("data:")) {
+            const [meta, b64] = img.split(",");
+            imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+            imageBase64 = b64;
+          } else if (img.startsWith("http")) {
+            imageUrl = img;
+          } else {
+            imageBase64 = img;
+            imageMimeType = "image/png";
+          }
+        }
+      }
 
       console.log("Content type:", typeof content);
       console.log("Content value:", JSON.stringify(content, null, 2));
 
       // Buscar imagen en content (array o string)
-      if (Array.isArray(content)) {
-        const imageBlock = content.find(
-          (b) =>
-            b &&
-            (b.type === "image_url" ||
-              b.type === "image" ||
-              b.image_url ||
-              b.data)
-        );
-        if (imageBlock?.image_url?.url) {
-          const dataUrl = imageBlock.image_url.url;
-          if (dataUrl.startsWith("data:")) {
-            const [meta, b64] = dataUrl.split(",");
-            imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
-            imageBase64 = b64;
-          } else {
-            imageUrl = dataUrl;
+      if (!imageUrl && !imageBase64) {
+        if (Array.isArray(content)) {
+          const imageBlock = content.find(
+            (b) =>
+              b &&
+              (b.type === "image_url" ||
+                b.type === "image" ||
+                b.image_url ||
+                b.data)
+          );
+          if (imageBlock?.image_url?.url) {
+            const dataUrl = imageBlock.image_url.url;
+            if (dataUrl.startsWith("data:")) {
+              const [meta, b64] = dataUrl.split(",");
+              imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+              imageBase64 = b64;
+            } else {
+              imageUrl = dataUrl;
+            }
+          } else if (imageBlock?.data) {
+            imageBase64 = imageBlock.data;
           }
-        } else if (imageBlock?.data) {
-          imageBase64 = imageBlock.data;
+        } else if (typeof content === "string" && content.startsWith("data:")) {
+          const [meta, b64] = content.split(",");
+          imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+          imageBase64 = b64;
         }
-      } else if (typeof content === "string" && content.startsWith("data:")) {
-        const [meta, b64] = content.split(",");
-        imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
-        imageBase64 = b64;
       }
 
       // Si no se encontró en content, buscar en reasoning_details
