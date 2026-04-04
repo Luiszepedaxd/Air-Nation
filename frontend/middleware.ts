@@ -45,6 +45,11 @@ export async function middleware(request: NextRequest) {
     pathname === '/campos/nuevo'
 
   if (!session && requiresAuth) {
+    if (pathname === '/campos/nuevo') {
+      return NextResponse.redirect(
+        new URL('/login?redirect=/campos/nuevo', request.url)
+      )
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -53,7 +58,8 @@ export async function middleware(request: NextRequest) {
     pathname === '/register'
   )) return NextResponse.redirect(new URL('/dashboard', request.url))
 
-  if (session && (isAdminRoute || pathname === '/campos/nuevo')) {
+  // /campos/nuevo: solo exige sesión (arriba). Cualquier usuario registrado puede registrar un campo.
+  if (session && isAdminRoute) {
     const { data: profile, error } = await supabase
       .from('users')
       .select('app_role')
@@ -63,14 +69,7 @@ export async function middleware(request: NextRequest) {
     const appRole =
       !error && profile?.app_role != null ? profile.app_role : 'player'
 
-    if (isAdminRoute && appRole !== 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
-    if (
-      pathname === '/campos/nuevo' &&
-      appRole !== 'admin' &&
-      appRole !== 'field_owner'
-    ) {
+    if (appRole !== 'admin') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
