@@ -1,5 +1,9 @@
 const express = require("express");
 const supabase = require("../lib/supabase");
+const {
+  generateTeamSlug,
+  resolveUniqueTeamSlug,
+} = require("../lib/teamSlug");
 
 const router = express.Router();
 
@@ -125,17 +129,27 @@ router.get("/:id", async (req, res) => {
  * @param {string} req.body.nombre - nombre del equipo
  * @param {string} req.body.ciudad - ciudad
  * @param {string} req.body.created_by - id del usuario creador
+ * @param {string} [req.body.slug] - slug opcional (se normaliza; si falta se deriva del nombre)
  */
 router.post("/", async (req, res) => {
   try {
-    const { nombre, ciudad, created_by } = req.body || {};
+    const { nombre, ciudad, created_by, slug: rawSlug } = req.body || {};
     if (!nombre || !ciudad || !created_by) {
       return res.status(400).json({ error: "nombre, ciudad y created_by son requeridos" });
     }
 
+    const nombreTrim = String(nombre).trim();
+    const baseSlug = generateTeamSlug(rawSlug, nombreTrim);
+    const uniqueSlug = await resolveUniqueTeamSlug(supabase, baseSlug);
+
     const { data: team, error } = await supabase
       .from("teams")
-      .insert({ nombre: String(nombre).trim(), ciudad, created_by })
+      .insert({
+        nombre: nombreTrim,
+        ciudad: String(ciudad).trim(),
+        created_by,
+        slug: uniqueSlug,
+      })
       .select()
       .single();
 

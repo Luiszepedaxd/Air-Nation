@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { generateTeamSlug } from "@/lib/team-slug";
 
 const STORAGE_KEY = "airnation_onboarding";
 
@@ -484,6 +485,7 @@ export default function OnboardingPage() {
           nombre: query,
           ciudad: state.ciudad,
           created_by: userId,
+          slug: generateTeamSlug(undefined, query),
         }),
       });
       const data = (await res.json()) as { team?: TeamRow; error?: string };
