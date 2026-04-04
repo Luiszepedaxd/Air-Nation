@@ -1,3 +1,5 @@
+export const revalidate = 0;
+
 import RegisterClient from "./RegisterClient";
 import { getSiteAssets } from "@/lib/site-assets";
 

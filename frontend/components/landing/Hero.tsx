@@ -1,3 +1,5 @@
+export const revalidate = 0;
+
 // No "use client" needed — no hooks
 import Link from "next/link";
 import { getSiteAssets } from "@/lib/site-assets";
