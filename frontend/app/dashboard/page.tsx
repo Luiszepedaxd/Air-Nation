@@ -7,8 +7,20 @@ import { VideosSection, VideosSkeleton } from './feed-videos'
 import { CamposSection, CamposSkeleton } from './feed-campos'
 import { EquiposSection, EquiposSkeleton } from './feed-equipos'
 import { EventosSection, EventosSkeleton } from './feed-eventos'
+import { ClearOnboardingParam } from './clear-onboarding-param'
 
-export default async function DashboardHomePage() {
+function fromOnboardingParam(
+  from: string | string[] | undefined
+): boolean {
+  if (from === 'onboarding') return true
+  return Array.isArray(from) && from[0] === 'onboarding'
+}
+
+export default async function DashboardHomePage({
+  searchParams,
+}: {
+  searchParams: { from?: string | string[] }
+}) {
   const supabase = createDashboardSupabaseServerClient()
   const {
     data: { user },
@@ -21,10 +33,14 @@ export default async function DashboardHomePage() {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!access?.alias) redirect('/onboarding')
+  const skipOnboardingGate = fromOnboardingParam(searchParams.from)
+  if (!access?.alias && !skipOnboardingGate) redirect('/onboarding')
 
   return (
     <main className="min-h-full bg-[#FFFFFF]">
+      <Suspense fallback={null}>
+        <ClearOnboardingParam />
+      </Suspense>
       <div className="flex flex-col gap-6 py-4 md:py-6">
         <div className="w-full px-4 md:mx-auto md:max-w-[1200px] md:px-6">
           <Suspense fallback={<SaludoSkeleton />}>
