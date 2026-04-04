@@ -142,19 +142,36 @@ export function ReviewForm({ fieldId, slug, onSaved }: Props) {
     setError('')
     try {
       const com = comentario.trim().slice(0, 300)
-      const { error: upErr } = await supabase.from('field_reviews').upsert(
-        {
-          field_id: fieldId,
-          user_id: userId,
-          rating,
-          comentario: com || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'field_id,user_id' }
-      )
-      if (upErr) {
-        setError('No se pudo guardar. Intenta de nuevo.')
-        return
+      const payload = {
+        field_id: fieldId,
+        user_id: userId,
+        rating,
+        comentario: com || null,
+      }
+
+      const { error: insertError } = await supabase
+        .from('field_reviews')
+        .insert(payload)
+
+      if (insertError) {
+        const code =
+          typeof insertError === 'object' && insertError !== null
+            ? (insertError as { code?: string }).code
+            : undefined
+        if (code === '23505') {
+          const { error: updateError } = await supabase
+            .from('field_reviews')
+            .update({ rating, comentario: com || null })
+            .eq('field_id', fieldId)
+            .eq('user_id', userId)
+          if (updateError) {
+            setError('No se pudo guardar')
+            return
+          }
+        } else {
+          setError('No se pudo guardar')
+          return
+        }
       }
 
       const { data: u } = await supabase
@@ -180,7 +197,7 @@ export function ReviewForm({ fieldId, slug, onSaved }: Props) {
       setEditing(false)
       onSaved(row)
     } catch {
-      setError('No se pudo guardar. Intenta de nuevo.')
+      setError('No se pudo guardar')
     } finally {
       setSaving(false)
     }
