@@ -48,4 +48,33 @@ export const api = {
     list: (authority?: string) =>
       request<{ docs: any[] }>(`/docs${authority ? `?authority=${authority}` : ""}`),
   },
+
+  feedback: {
+    submit: async (body: {
+      categoria: string;
+      mensaje: string;
+      email?: string | null;
+      user_id?: string | null;
+    }): Promise<{ success: boolean; error?: string }> => {
+      const res = await fetch(`${BASE_URL}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data.error || `Error ${res.status}`,
+        };
+      }
+      return {
+        success: data.success === true,
+        error: data.error,
+      };
+    },
+  },
 };
