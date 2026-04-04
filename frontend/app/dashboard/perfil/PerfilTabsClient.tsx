@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
+import { MisCamposTab, type MisCampoItem } from './MisCamposTab'
 import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { NotificacionesTab } from './NotificacionesTab'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
@@ -14,7 +15,7 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
-type TabId = 'perfil' | 'equipos' | 'notificaciones'
+type TabId = 'perfil' | 'equipos' | 'campos' | 'notificaciones'
 
 const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
@@ -24,6 +25,7 @@ export function PerfilTabsClient({
   teamNombre,
   teamSlug,
   misEquipos,
+  misCampos,
   initialJoinRequests,
   isAdmin,
   pendingJoinPending,
@@ -32,6 +34,7 @@ export function PerfilTabsClient({
   teamNombre: string | null
   teamSlug: string | null
   misEquipos: MisEquipoItem[]
+  misCampos: MisCampoItem[]
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
   pendingJoinPending: { id: string; nombre: string }[]
@@ -83,6 +86,14 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('campos')}
+            style={jost}
+            className={`${tabBase} ${tabClass('campos')}`}
+          >
+            MIS CAMPOS
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('notificaciones')}
             style={jost}
             className={`${tabBase} inline-flex items-center gap-1.5 ${tabClass(
@@ -99,7 +110,6 @@ export function PerfilTabsClient({
               </span>
             ) : null}
           </button>
-          {/* Bloque 5 — MIS CAMPOS: añadir aquí un <button> tab adicional */}
         </div>
       </div>
 
@@ -176,6 +186,8 @@ export function PerfilTabsClient({
             variant="tab"
           />
         ) : null}
+
+        {activeTab === 'campos' ? <MisCamposTab items={misCampos} /> : null}
 
         {activeTab === 'notificaciones' ? (
           <NotificacionesTab requests={joinRequests} onRemove={removeRequest} />

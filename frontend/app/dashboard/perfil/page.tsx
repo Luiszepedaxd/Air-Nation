@@ -84,6 +84,25 @@ export default async function PerfilPage() {
     .eq('user_id', authUser.id)
     .eq('status', 'pendiente')
 
+  const { data: misCamposRows } = await supabase
+    .from('fields')
+    .select(
+      'id, nombre, slug, ciudad, tipo, foto_portada_url, status, destacado'
+    )
+    .eq('created_by', authUser.id)
+    .order('created_at', { ascending: false })
+
+  const misCampos = (misCamposRows ?? []).map((r) => ({
+    id: r.id as string,
+    nombre: r.nombre as string,
+    slug: r.slug as string,
+    ciudad: (r.ciudad as string | null) ?? null,
+    tipo: (r.tipo as string | null) ?? null,
+    foto_portada_url: (r.foto_portada_url as string | null) ?? null,
+    status: String(r.status ?? ''),
+    destacado: Boolean(r.destacado),
+  }))
+
   const pendingJoinPending: { id: string; nombre: string }[] = []
   for (const r of pendingJoinRows ?? []) {
     const raw = r as {
@@ -103,6 +122,7 @@ export default async function PerfilPage() {
       teamNombre={teamNombre}
       teamSlug={teamSlug}
       misEquipos={misEquipos}
+      misCampos={misCampos}
       initialJoinRequests={initialJoinRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
