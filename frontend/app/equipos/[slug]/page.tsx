@@ -109,22 +109,14 @@ async function fetchPosts(teamId: string): Promise<TeamPostRow[]> {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('team_posts')
-    .select('id, title, content, foto_url, fotos_urls, created_at')
+    .select('id, title, content, foto_url, created_at')
     .eq('team_id', teamId)
     .eq('published', true)
     .order('created_at', { ascending: false })
     .limit(6)
 
   if (error || !data) return []
-  return (data as TeamPostRow[]).map((row) => {
-    const raw = row.fotos_urls
-    const fotos_urls = Array.isArray(raw)
-      ? raw.filter(
-          (u): u is string => typeof u === 'string' && u.trim().length > 0
-        )
-      : null
-    return { ...row, fotos_urls }
-  })
+  return data as TeamPostRow[]
 }
 
 async function fetchAlbumsWithPhotos(teamId: string): Promise<AlbumWithPhotos[]> {

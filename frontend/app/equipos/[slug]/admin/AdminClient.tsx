@@ -341,7 +341,9 @@ export function AdminClient({
 
       const { data: postsData, error: postsError } = await supabase
         .from('team_posts')
-        .select('id, content, fotos_urls, created_at, created_by')
+        .select(
+          'id, team_id, title, content, foto_url, published, created_by, created_at'
+        )
         .eq('team_id', teamId)
         .eq('published', true)
         .order('created_at', { ascending: false })
@@ -1131,7 +1133,8 @@ function normalizeFotoUrls(raw: unknown): string[] {
 }
 
 function postUrls(row: TeamPostAdminRow): string[] {
-  return normalizeFotoUrls(row.fotos_urls)
+  const u = row.foto_url?.trim()
+  return u ? [u] : []
 }
 
 function PostPhotoGrid({ urls }: { urls: string[] }) {
@@ -1237,30 +1240,21 @@ function PostsTab({
         .from('team_posts')
         .insert({
           team_id: teamId,
+          title: null,
           content: text.length ? text : null,
-          fotos_urls: urls.length ? urls : [],
+          foto_url: urls[0] ?? null,
           published: true,
           created_by: viewerUserId,
         })
-        .select('id, content, fotos_urls, created_at, created_by')
+        .select(
+          'id, team_id, title, content, foto_url, published, created_by, created_at'
+        )
         .single()
 
       if (error) throw error
 
       if (data) {
-        const row = data as TeamPostAdminRow
-        setPosts((prev) => [
-          {
-            ...row,
-            fotos_urls: Array.isArray(row.fotos_urls)
-              ? row.fotos_urls.filter(
-                  (u): u is string =>
-                    typeof u === 'string' && u.trim().length > 0
-                )
-              : null,
-          },
-          ...prev,
-        ])
+        setPosts((prev) => [data as TeamPostAdminRow, ...prev])
       }
 
       setPostText('')

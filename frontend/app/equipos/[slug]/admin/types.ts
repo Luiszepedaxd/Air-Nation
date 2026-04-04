@@ -23,10 +23,13 @@ export type TeamMemberAdminRow = {
 
 export type TeamPostAdminRow = {
   id: string
+  team_id: string
+  title: string | null
   content: string | null
-  fotos_urls: string[] | null
-  created_at: string
+  foto_url: string | null
+  published: boolean
   created_by: string | null
+  created_at: string
 }
 
 export type TeamAlbumAdminRow = {

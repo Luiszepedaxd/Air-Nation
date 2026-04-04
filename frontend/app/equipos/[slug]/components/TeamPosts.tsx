@@ -35,12 +35,6 @@ function formatDate(iso: string) {
 }
 
 function postPhotoUrls(post: TeamPostRow): string[] {
-  const fromArr = post.fotos_urls
-  if (Array.isArray(fromArr) && fromArr.length > 0) {
-    return fromArr.filter(
-      (u): u is string => typeof u === 'string' && u.trim().length > 0
-    )
-  }
   if (post.foto_url?.trim()) {
     return [post.foto_url.trim()]
   }
