@@ -19,10 +19,15 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
-type TabId = 'perfil' | 'equipos' | 'campos' | 'notificaciones'
+type TabId = 'perfil' | 'equipos' | 'campos' | 'eventos' | 'notificaciones'
 
 const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
+
+function initialTabFromParam(tab?: TabId): TabId {
+  if (tab === 'campos' || tab === 'eventos') return tab
+  return 'perfil'
+}
 
 export function PerfilTabsClient({
   user,
@@ -30,8 +35,8 @@ export function PerfilTabsClient({
   teamSlug,
   misEquipos,
   misCampos,
-  misEventosRsvp,
-  misEventosRsvpHasMore,
+  misEventosProximos,
+  misEventosPasados,
   initialJoinRequests,
   isAdmin,
   pendingJoinPending,
@@ -43,8 +48,8 @@ export function PerfilTabsClient({
   teamSlug: string | null
   misEquipos: MisEquipoItem[]
   misCampos: MisCampoItem[]
-  misEventosRsvp: MisEventoRsvpItem[]
-  misEventosRsvpHasMore: boolean
+  misEventosProximos: MisEventoRsvpItem[]
+  misEventosPasados: MisEventoRsvpItem[]
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
   pendingJoinPending: { id: string; nombre: string }[]
@@ -52,7 +57,7 @@ export function PerfilTabsClient({
   campoRegistradoNotice?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<TabId>(() =>
-    initialTab === 'campos' ? 'campos' : 'perfil'
+    initialTabFromParam(initialTab)
   )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
   const pendingCount = joinRequests.length
@@ -108,6 +113,14 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('eventos')}
+            style={jost}
+            className={`${tabBase} ${tabClass('eventos')}`}
+          >
+            MIS EVENTOS
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('notificaciones')}
             style={jost}
             className={`${tabBase} inline-flex items-center gap-1.5 ${tabClass(
@@ -136,12 +149,6 @@ export function PerfilTabsClient({
               teamSlug={teamSlug}
               pendingJoinPending={pendingJoinPending}
             />
-            <div className="mx-auto max-w-[640px]">
-              <MisEventosRsvpSection
-                items={misEventosRsvp}
-                hasMore={misEventosRsvpHasMore}
-              />
-            </div>
             <div className="mx-auto mt-8 max-w-[640px] space-y-8">
               {isAdmin ? (
                 <Link
@@ -219,6 +226,15 @@ export function PerfilTabsClient({
             ) : null}
             <MisCamposTab items={misCampos} />
           </>
+        ) : null}
+
+        {activeTab === 'eventos' ? (
+          <div className="mx-auto max-w-[640px]">
+            <MisEventosRsvpSection
+              proximos={misEventosProximos}
+              pasados={misEventosPasados}
+            />
+          </div>
         ) : null}
 
         {activeTab === 'notificaciones' ? (

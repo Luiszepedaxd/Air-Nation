@@ -96,11 +96,15 @@ const getEventoById = cache(async (id: string): Promise<EventDetailRow | null> =
 
 async function fetchRsvpCount(eventId: string): Promise<number> {
   const supabase = createPublicSupabaseClient()
-  const { data, error } = await supabase.rpc('event_rsvp_count', {
-    p_event_id: eventId,
-  })
-  if (error || data == null) return 0
-  return typeof data === 'number' ? data : Number(data)
+  const { count, error } = await supabase
+    .from('event_rsvps')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_id', eventId)
+  if (error) {
+    console.error('[eventos/id] rsvp count', error.message)
+    return 0
+  }
+  return count ?? 0
 }
 
 export async function generateMetadata({

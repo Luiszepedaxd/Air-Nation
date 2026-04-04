@@ -108,8 +108,39 @@ export default async function PerfilPage({
     destacado: Boolean(r.destacado),
   }))
 
-  let misEventosRsvp: MisEventoRsvpItem[] = []
-  let misEventosRsvpHasMore = false
+  function normalizeFieldEmbed(raw: unknown): {
+    nombre: string | null
+    slug: string | null
+  } {
+    const o = Array.isArray(raw) ? raw[0] : raw
+    if (!o || typeof o !== 'object') return { nombre: null, slug: null }
+    const x = o as Record<string, unknown>
+    return {
+      nombre: typeof x.nombre === 'string' ? x.nombre : null,
+      slug: typeof x.slug === 'string' ? x.slug : null,
+    }
+  }
+
+  function mapEventRow(r: {
+    id: string
+    title: string
+    fecha: string
+    imagen_url: string | null
+    fields: unknown
+  }): MisEventoRsvpItem {
+    const f = normalizeFieldEmbed(r.fields)
+    return {
+      id: r.id,
+      title: r.title,
+      fecha: r.fecha,
+      imagen_url: r.imagen_url,
+      field_nombre: f.nombre,
+      field_slug: f.slug,
+    }
+  }
+
+  let misEventosProximos: MisEventoRsvpItem[] = []
+  let misEventosPasados: MisEventoRsvpItem[] = []
   const { data: rsvpIdRows } = await supabase
     .from('event_rsvps')
     .select('event_id')
@@ -123,20 +154,51 @@ export default async function PerfilPage({
     )
   )
 
+  const nowIso = new Date().toISOString()
+
   if (rsvpEventIds.length > 0) {
-    const { data: misEvRows } = await supabase
+    const { data: proxRows } = await supabase
       .from('events')
-      .select('id, title, fecha, imagen_url')
+      .select('id, title, fecha, imagen_url, fields ( nombre, slug )')
       .in('id', rsvpEventIds)
       .eq('status', 'publicado')
       .eq('published', true)
-      .gte('fecha', new Date().toISOString())
+      .gte('fecha', nowIso)
       .order('fecha', { ascending: true })
-      .limit(6)
 
-    const list = (misEvRows ?? []) as MisEventoRsvpItem[]
-    misEventosRsvpHasMore = list.length > 5
-    misEventosRsvp = list.slice(0, 5)
+    misEventosProximos = (proxRows ?? []).map((row) =>
+      mapEventRow(
+        row as {
+          id: string
+          title: string
+          fecha: string
+          imagen_url: string | null
+          fields: unknown
+        }
+      )
+    )
+
+    const { data: pastRows } = await supabase
+      .from('events')
+      .select('id, title, fecha, imagen_url, fields ( nombre, slug )')
+      .in('id', rsvpEventIds)
+      .eq('status', 'publicado')
+      .eq('published', true)
+      .lt('fecha', nowIso)
+      .order('fecha', { ascending: false })
+      .limit(10)
+
+    misEventosPasados = (pastRows ?? []).map((row) =>
+      mapEventRow(
+        row as {
+          id: string
+          title: string
+          fecha: string
+          imagen_url: string | null
+          fields: unknown
+        }
+      )
+    )
   }
 
   const pendingJoinPending: { id: string; nombre: string }[] = []
@@ -159,12 +221,18 @@ export default async function PerfilPage({
       teamSlug={teamSlug}
       misEquipos={misEquipos}
       misCampos={misCampos}
-      misEventosRsvp={misEventosRsvp}
-      misEventosRsvpHasMore={misEventosRsvpHasMore}
+      misEventosProximos={misEventosProximos}
+      misEventosPasados={misEventosPasados}
       initialJoinRequests={initialJoinRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
-      initialTab={searchParams.tab === 'campos' ? 'campos' : undefined}
+      initialTab={
+        searchParams.tab === 'campos'
+          ? 'campos'
+          : searchParams.tab === 'eventos'
+            ? 'eventos'
+            : undefined
+      }
       campoRegistradoNotice={searchParams.campo_creado === '1'}
     />
   )

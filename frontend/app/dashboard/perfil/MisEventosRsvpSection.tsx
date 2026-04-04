@@ -14,76 +14,129 @@ export type MisEventoRsvpItem = {
   title: string
   fecha: string
   imagen_url: string | null
+  field_nombre: string | null
+  field_slug: string | null
+}
+
+function EventoCard({ e }: { e: MisEventoRsvpItem }) {
+  const fechaCorta = formatEventoFechaCorta(e.fecha)
+  const fn = e.field_nombre?.trim()
+  const fs = e.field_slug?.trim()
+  const eventoHref = `/eventos/${e.id}`
+
+  return (
+    <li className="rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-colors hover:border-[#DDDDDD]">
+      <div className="flex gap-3">
+        <Link
+          href={eventoHref}
+          className="h-12 w-12 shrink-0 overflow-hidden bg-[#F4F4F4]"
+        >
+          {e.imagen_url?.trim() ? (
+            <img
+              src={e.imagen_url.trim()}
+              alt=""
+              width={48}
+              height={48}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-full w-full items-center justify-center text-[10px] text-[#AAAAAA]"
+              style={jost}
+            >
+              —
+            </div>
+          )}
+        </Link>
+        <div className="min-w-0 flex-1" style={lato}>
+          <Link href={eventoHref} className="block">
+            <p
+              className="text-[14px] font-semibold leading-snug text-[#111111] hover:text-[#CC4B37]"
+              style={{ ...jost, fontWeight: 700, textTransform: 'none' }}
+            >
+              {e.title}
+            </p>
+          </Link>
+          {fechaCorta ? (
+            <p className="mt-1 text-[12px] text-[#666666]">{fechaCorta}</p>
+          ) : null}
+          {fn && fs ? (
+            <p className="mt-1 text-[12px] text-[#666666]">
+              <span className="text-[#999999]">Campo: </span>
+              <Link
+                href={`/campos/${encodeURIComponent(fs)}`}
+                className="font-semibold text-[#CC4B37] underline-offset-2 hover:underline"
+              >
+                {fn}
+              </Link>
+            </p>
+          ) : fn ? (
+            <p className="mt-1 text-[12px] text-[#666666]">
+              <span className="text-[#999999]">Campo: </span>
+              {fn}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </li>
+  )
 }
 
 export function MisEventosRsvpSection({
-  items,
-  hasMore,
+  proximos,
+  pasados,
 }: {
-  items: MisEventoRsvpItem[]
-  hasMore: boolean
+  proximos: MisEventoRsvpItem[]
+  pasados: MisEventoRsvpItem[]
 }) {
-  if (items.length === 0) return null
+  const hasAny = proximos.length > 0 || pasados.length > 0
 
-  return (
-    <section className="mt-8 border-t border-solid border-[#EEEEEE] pt-8">
-      <h2
-        style={jost}
-        className="text-[11px] font-extrabold uppercase tracking-widest text-[#999999]"
-      >
-        MIS EVENTOS
-      </h2>
-      <ul className="mt-4 space-y-3">
-        {items.map((e) => {
-          const fechaCorta = formatEventoFechaCorta(e.fecha)
-          return (
-            <li key={e.id}>
-              <Link
-                href={`/eventos/${e.id}`}
-                className="flex items-center gap-3 rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-2 transition-colors hover:border-[#DDDDDD]"
-              >
-                <div className="h-10 w-10 shrink-0 overflow-hidden bg-[#F4F4F4]">
-                  {e.imagen_url?.trim() ? (
-                    <img
-                      src={e.imagen_url.trim()}
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="flex h-full w-full items-center justify-center text-[10px] text-[#AAAAAA]"
-                      style={jost}
-                    >
-                      —
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1" style={lato}>
-                  <p className="truncate text-[13px] font-semibold text-[#111111]">
-                    {e.title}
-                  </p>
-                  {fechaCorta ? (
-                    <p className="mt-0.5 truncate text-[12px] text-[#666666]">
-                      {fechaCorta}
-                    </p>
-                  ) : null}
-                </div>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
-      {hasMore ? (
+  if (!hasAny) {
+    return (
+      <div className="flex flex-col items-center gap-6 px-2 py-12 text-center">
+        <p className="text-[13px] text-[#666666]" style={lato}>
+          No tienes eventos con confirmación (RSVP)
+        </p>
         <Link
           href="/eventos"
-          className="mt-4 inline-block text-[12px] font-semibold text-[#CC4B37] underline-offset-2 hover:underline"
-          style={lato}
+          style={jost}
+          className="inline-flex min-h-[44px] min-w-[200px] items-center justify-center bg-[#CC4B37] px-6 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
         >
-          Ver todos mis eventos →
+          EXPLORAR EVENTOS
         </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-8 pb-10">
+      {proximos.length > 0 ? (
+        <ul className="flex flex-col gap-4">
+          {proximos.map((e) => (
+            <EventoCard key={e.id} e={e} />
+          ))}
+        </ul>
       ) : null}
-    </section>
+
+      {pasados.length > 0 ? (
+        <div>
+          <h2
+            style={jost}
+            className={`mb-4 text-[11px] font-extrabold uppercase tracking-widest text-[#999999] ${
+              proximos.length > 0
+                ? 'border-t border-solid border-[#EEEEEE] pt-8'
+                : ''
+            }`}
+          >
+            PASADOS
+          </h2>
+          <ul className="flex flex-col gap-4">
+            {pasados.map((e) => (
+              <EventoCard key={e.id} e={e} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   )
 }
