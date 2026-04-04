@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import AIImageGenerator from "./AIImageGenerator";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
@@ -138,6 +139,38 @@ export default function AssetUploader({
     }
   };
 
+  const handleGenerated = async (url: string) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      throw new Error("Sesión expirada. Recarga la página.");
+    }
+
+    const patchRes = await fetch(`${API_BASE}/assets/${assetId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ image_url: url }),
+    });
+
+    if (!patchRes.ok) {
+      const err = await patchRes.json().catch(() => ({}));
+      throw new Error(
+        typeof err.error === "string" ? err.error : "Error al guardar la URL"
+      );
+    }
+
+    router.refresh();
+  };
+
   const updatedLabel = (() => {
     try {
       const d = new Date(updatedAt);
@@ -226,14 +259,31 @@ export default function AssetUploader({
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={onPickFile}
-            className="mt-2 flex h-10 w-full items-center justify-center bg-[#111111] text-[0.65rem] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#333333]"
-            style={{ ...jostBtn, borderRadius: 2 }}
-          >
-            CAMBIAR IMAGEN
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onPickFile}
+              className="mt-2 flex h-10 w-full items-center justify-center bg-[#111111] text-[0.65rem] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#333333]"
+              style={{ ...jostBtn, borderRadius: 2 }}
+            >
+              CAMBIAR IMAGEN
+            </button>
+            <div className="relative mt-4 flex items-center py-1">
+              <div className="h-px flex-1 bg-[#EEEEEE]" />
+              <span
+                className="px-3 text-center text-[11px] text-[#999999]"
+                style={latoBody}
+              >
+                O GENERAR CON IA
+              </span>
+              <div className="h-px flex-1 bg-[#EEEEEE]" />
+            </div>
+            <AIImageGenerator
+              assetId={assetId}
+              assetKey={assetKey}
+              onGenerated={handleGenerated}
+            />
+          </>
         )}
       </div>
     </article>
