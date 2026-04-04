@@ -79,13 +79,40 @@ function AirNationLogoWhite() {
   )
 }
 
+function ShieldIcon14() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3L4 7v5c0 4.418 3.358 8.193 8 9 4.642-.807 8-4.582 8-9V7L12 3Z"
+        stroke="#666666"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function PinIcon12() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10z"
+        stroke="#999999"
+        strokeWidth="1.5"
+      />
+      <circle cx="12" cy="11" r="2" stroke="#999999" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
 export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserData }>(
   function CredentialCard({ data }, ref) {
     const alias = data.alias?.trim() || '—'
+    const nombreTrim = data.nombre?.trim() || ''
     const initial = (data.alias?.trim()?.[0] || data.nombre?.trim()?.[0] || '?').toUpperCase()
-    const equipoCiudad = [data.teamNombre?.trim() || 'SIN EQUIPO', data.ciudad?.trim() || null]
-      .filter(Boolean)
-      .join(' · ')
+    const teamTrim = data.teamNombre?.trim() || ''
+    const ciudadTrim = data.ciudad?.trim() || ''
     const memberDisplay = formatMemberNo(data.member_number)
     const verifyUrl = `https://airnation.online/verify/${data.id}`
 
@@ -133,15 +160,37 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               <p style={jost} className="text-[18px] font-extrabold uppercase leading-tight text-[#111111]">
                 {alias}
               </p>
+              {nombreTrim ? (
+                <p style={lato} className="mt-1 text-[13px] font-normal normal-case text-[#666666]">
+                  {nombreTrim}
+                </p>
+              ) : null}
               <p
                 style={lato}
                 className="mt-1 text-[11px] font-normal uppercase tracking-wide text-[#CC4B37]"
               >
                 {rolLabel(data.rol)}
               </p>
-              <p style={lato} className="mt-1 text-[11px] leading-snug text-[#666666]">
-                {equipoCiudad}
-              </p>
+              {(teamTrim || ciudadTrim) ? (
+                <div className="mt-1.5 flex flex-col gap-1.5">
+                  {teamTrim ? (
+                    <div className="inline-flex max-w-full items-center gap-1.5 self-start border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-2 py-0.5 rounded-[2px]">
+                      <ShieldIcon14 />
+                      <span style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">
+                        {teamTrim}
+                      </span>
+                    </div>
+                  ) : null}
+                  {ciudadTrim ? (
+                    <div className="flex items-center gap-1">
+                      <PinIcon12 />
+                      <span style={lato} className="text-[11px] font-normal text-[#666666]">
+                        {ciudadTrim}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
 
