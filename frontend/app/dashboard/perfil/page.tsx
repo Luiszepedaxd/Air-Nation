@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
+import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
 import { ProfileView } from './ProfileView'
 
@@ -38,6 +39,47 @@ export default async function PerfilPage() {
 
   const isAdmin = row.app_role === 'admin'
 
+  const { data: memberships } = await supabase
+    .from('team_members')
+    .select('team_id, rol_plataforma, rango_militar')
+    .eq('user_id', authUser.id)
+    .eq('status', 'activo')
+
+  const teamIds = Array.from(
+    new Set((memberships ?? []).map((m) => m.team_id as string))
+  )
+
+  let misEquipos: MisEquipoItem[] = []
+
+  if (teamIds.length > 0) {
+    const { data: teamsRows } = await supabase
+      .from('teams')
+      .select('id, nombre, slug, logo_url, ciudad, status')
+      .in('id', teamIds)
+      .eq('status', 'activo')
+
+    const byId = new Map(
+      (teamsRows ?? []).map((t) => [t.id as string, t])
+    )
+
+    misEquipos = (memberships ?? [])
+      .map((m) => {
+        const tid = m.team_id as string
+        const team = byId.get(tid)
+        if (!team) return null
+        return {
+          id: team.id as string,
+          nombre: team.nombre as string,
+          slug: team.slug as string,
+          logo_url: team.logo_url as string | null,
+          ciudad: team.ciudad as string | null,
+          rol_plataforma: m.rol_plataforma as string | null,
+          rango_militar: m.rango_militar as string | null,
+        }
+      })
+      .filter((x): x is MisEquipoItem => x != null)
+  }
+
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pb-10 pt-6 md:px-6">
       <h1
@@ -47,6 +89,7 @@ export default async function PerfilPage() {
         MI PERFIL
       </h1>
       <ProfileView user={row} teamNombre={teamNombre} />
+      <MisEquiposSection teams={misEquipos} />
       <div className="mx-auto mt-8 max-w-[640px] space-y-8">
         {isAdmin ? (
           <Link
