@@ -1,7 +1,11 @@
 "use client"
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  fetchPendingJoinRequestCount,
+  PENDING_JOIN_UPDATED_EVENT,
+} from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
@@ -115,11 +119,74 @@ function AdminShieldIcon({ active }: { active: boolean }) {
   )
 }
 
+const perfilHref = '/dashboard/perfil'
+
+function ProfileIconWithBadge({
+  active,
+  badgeCount,
+}: {
+  active: boolean
+  badgeCount: number
+}) {
+  return (
+    <span className="relative inline-flex">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle
+          cx="12"
+          cy="8"
+          r="4"
+          stroke={active ? '#CC4B37' : '#767676'}
+          strokeWidth="1.8"
+        />
+        <path
+          d="M4 20c0-4 3.582-7 8-7s8 3 8 7"
+          stroke={active ? '#CC4B37' : '#767676'}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+      {badgeCount > 0 ? (
+        <span
+          className="absolute -right-1 -top-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#CC4B37] px-0.5 text-[10px] font-extrabold leading-none text-[#FFFFFF]"
+          style={{ fontFamily: "'Jost', sans-serif" }}
+        >
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      ) : null}
+    </span>
+  )
+}
+
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
   const [panicModal, setPanicModal] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [pendingJoinCount, setPendingJoinCount] = useState(0)
+
+  const refreshPendingJoinCount = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      setPendingJoinCount(0)
+      return
+    }
+    const n = await fetchPendingJoinRequestCount(supabase, user.id)
+    setPendingJoinCount(n)
+  }, [])
+
+  useEffect(() => {
+    void refreshPendingJoinCount()
+  }, [pathname, refreshPendingJoinCount])
+
+  useEffect(() => {
+    const onUpd = () => {
+      void refreshPendingJoinCount()
+    }
+    window.addEventListener(PENDING_JOIN_UPDATED_EVENT, onUpd)
+    return () => window.removeEventListener(PENDING_JOIN_UPDATED_EVENT, onUpd)
+  }, [refreshPendingJoinCount])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -160,12 +227,20 @@ export default function BottomNav() {
         <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {
             const active = pathname === item.href
+            const isPerfil = item.href === perfilHref
             return (
               <Link key={item.href} href={item.href}
                     className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
                       active ? 'border-b-2 border-[#CC4B37]' : 'border-b-2 border-transparent'
                     }`}>
-                {item.icon(active)}
+                {isPerfil ? (
+                  <ProfileIconWithBadge
+                    active={active}
+                    badgeCount={pendingJoinCount}
+                  />
+                ) : (
+                  item.icon(active)
+                )}
                 <span className={`text-[9px] font-bold uppercase tracking-wider ${
                   active ? 'text-[#CC4B37]' : 'text-[#767676]'
                 }`}>
@@ -219,13 +294,21 @@ export default function BottomNav() {
         <div className="grid h-14 w-full grid-cols-5 items-stretch">
           {NAV_ITEMS_MOBILE.map((item) => {
             const active = pathname === item.href
+            const isPerfil = item.href === perfilHref
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className="flex min-w-0 flex-col items-center justify-center gap-1"
               >
-                {item.icon(active)}
+                {isPerfil ? (
+                  <ProfileIconWithBadge
+                    active={active}
+                    badgeCount={pendingJoinCount}
+                  />
+                ) : (
+                  item.icon(active)
+                )}
                 <span
                   className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
                     active ? 'text-[#CC4B37]' : 'text-[#767676]'

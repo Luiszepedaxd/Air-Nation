@@ -55,10 +55,21 @@ function canEditTeam(rol: string | null) {
   return r === 'founder' || r === 'admin'
 }
 
-export function MisEquiposSection({ teams }: { teams: MisEquipoItem[] }) {
+export function MisEquiposSection({
+  teams,
+  variant = 'default',
+}: {
+  teams: MisEquipoItem[]
+  variant?: 'default' | 'tab'
+}) {
+  const sectionTop =
+    variant === 'tab'
+      ? 'mx-auto max-w-[640px]'
+      : 'mx-auto mt-8 max-w-[640px] border-t border-solid border-[#EEEEEE] pt-8'
+
   if (teams.length === 0) {
     return (
-      <section className="mx-auto mt-8 max-w-[640px] border-t border-solid border-[#EEEEEE] pt-8">
+      <section className={sectionTop}>
         <h2
           style={jost}
           className="text-[14px] font-extrabold uppercase tracking-wide text-[#111111]"
@@ -80,7 +91,7 @@ export function MisEquiposSection({ teams }: { teams: MisEquipoItem[] }) {
   }
 
   return (
-    <section className="mx-auto mt-8 max-w-[640px] border-t border-solid border-[#EEEEEE] pt-8">
+    <section className={sectionTop}>
       <h2
         style={jost}
         className="text-[14px] font-extrabold uppercase tracking-wide text-[#111111]"
@@ -143,13 +154,22 @@ export function MisEquiposSection({ teams }: { teams: MisEquipoItem[] }) {
                   Ver
                 </Link>
                 {canEditTeam(t.rol_plataforma) ? (
-                  <Link
-                    href={`/equipos/${encodeURIComponent(t.slug)}/editar`}
-                    style={jost}
-                    className="inline-flex min-h-[36px] items-center justify-center rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
-                  >
-                    Editar
-                  </Link>
+                  <>
+                    <Link
+                      href={`/equipos/${encodeURIComponent(t.slug)}/admin`}
+                      style={jost}
+                      className="inline-flex min-h-[36px] items-center justify-center rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+                    >
+                      Administrar
+                    </Link>
+                    <Link
+                      href={`/equipos/${encodeURIComponent(t.slug)}/editar`}
+                      style={jost}
+                      className="inline-flex min-h-[36px] items-center justify-center rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+                    >
+                      Editar
+                    </Link>
+                  </>
                 ) : null}
               </div>
             </li>

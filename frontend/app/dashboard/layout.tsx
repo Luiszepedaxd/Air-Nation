@@ -7,7 +7,10 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="min-h-screen min-h-dvh flex flex-col bg-[#F4F4F4]">
-      <div className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0 md:pt-16">
+      <div
+        id="dashboard-scroll-root"
+        className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0 md:pt-16"
+      >
         {children}
       </div>
       <BottomNav />
