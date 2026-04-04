@@ -99,6 +99,64 @@ function formatRangoBadge(rango: string | null | undefined) {
   return rango.replace(/_/g, ' ').toUpperCase()
 }
 
+function MemberNameLine({
+  nombre,
+  alias,
+}: {
+  nombre: string | null
+  alias: string | null
+}) {
+  const n = nombre?.trim() || ''
+  const a = alias?.trim() || ''
+  if (n && a) {
+    return (
+      <p className="text-[14px] text-[#111111]" style={lato}>
+        <span className="font-semibold">{n}</span>
+        <span className="text-[#666666]"> · @{a}</span>
+      </p>
+    )
+  }
+  if (n) {
+    return (
+      <p className="text-[14px] text-[#111111]" style={lato}>
+        <span className="font-semibold">{n}</span>
+      </p>
+    )
+  }
+  if (a) {
+    return (
+      <p className="text-[14px] text-[#111111]" style={lato}>
+        <span className="font-semibold">@{a}</span>
+      </p>
+    )
+  }
+  return (
+    <p className="text-[14px] italic text-[#AAAAAA]" style={lato}>
+      Usuario
+    </p>
+  )
+}
+
+function RolPlataformaBadge({ rol }: { rol: string | null }) {
+  const k = (rol || '').toLowerCase().trim()
+  const label =
+    k === 'founder' ? 'FUNDADOR' : k === 'admin' ? 'ADMIN' : 'MIEMBRO'
+  const cls =
+    k === 'founder'
+      ? 'bg-[#CC4B37] text-[#FFFFFF]'
+      : k === 'admin'
+        ? 'bg-[#111111] text-[#FFFFFF]'
+        : 'bg-[#F4F4F4] text-[#666666]'
+  return (
+    <span
+      style={jost}
+      className={`inline-block rounded-[2px] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${cls}`}
+    >
+      {label}
+    </span>
+  )
+}
+
 function validateImageFile(file: File): string | null {
   if (!ALLOWED_IMG.has(file.type)) {
     return 'Solo se permiten JPG, PNG o WebP'
@@ -587,22 +645,13 @@ function SolicitudesTab({
   const handleApprove = async (row: TeamJoinRequestAdminRow) => {
     setBusyId(row.id)
     try {
-      const { error: uErr } = await supabase
-        .from('team_join_requests')
-        .update({ status: 'aprobado' })
-        .eq('id', row.id)
-
-      if (uErr) throw uErr
-
-      const { error: iErr } = await supabase.from('team_members').insert({
-        team_id: teamId,
-        user_id: row.user_id,
-        rol_plataforma: 'member',
-        rango_militar: 'miembro',
-        status: 'activo',
+      const { error } = await supabase.rpc('approve_team_member', {
+        p_request_id: row.id,
+        p_team_id: row.team_id,
+        p_user_id: row.user_id,
       })
 
-      if (iErr) throw iErr
+      if (error) throw error
 
       onRemove(row.id)
       notifyPendingJoinUpdated()
@@ -648,9 +697,6 @@ function SolicitudesTab({
   return (
     <ul className="flex flex-col gap-4 pb-10">
       {joinRequests.map((row) => {
-        const name =
-          row.nombre?.trim() || row.alias?.trim() || 'Usuario'
-        const alias = row.alias?.trim()
         const busy = busyId === row.id
         return (
           <li
@@ -677,12 +723,7 @@ function SolicitudesTab({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] text-[#111111]" style={lato}>
-                  <span className="font-semibold">{name}</span>
-                  {alias ? (
-                    <span className="text-[#666666]"> · @{alias}</span>
-                  ) : null}
-                </p>
+                <MemberNameLine nombre={row.nombre} alias={row.alias} />
                 {row.ciudad?.trim() ? (
                   <p
                     className="mt-0.5 text-[12px] text-[#666666]"
@@ -864,12 +905,18 @@ function IntegrantesTab({
   return (
     <ul className="flex flex-col gap-4 pb-10">
       {members.map((m) => {
-        const name = m.nombre?.trim() || m.alias?.trim() || 'Usuario'
         const alias = m.alias?.trim()
         const busy = busyMemberId === m.id
         const showRango = canShowRango(m)
         const showRol = canShowRolToggle(m)
         const showRemove = canShowRemove(m)
+        const rolLabel = rolBadgeLabel(m.rol_plataforma)
+        const rangoLabel = m.rango_militar
+          ? formatRangoBadge(m.rango_militar)
+          : ''
+        const showRangoBadge =
+          !!rangoLabel &&
+          rangoLabel.trim().toUpperCase() !== rolLabel.trim().toUpperCase()
 
         return (
           <li
@@ -896,12 +943,7 @@ function IntegrantesTab({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[14px] text-[#111111]" style={lato}>
-                  <span className="font-semibold">{name}</span>
-                  {alias ? (
-                    <span className="text-[#666666]"> · @{alias}</span>
-                  ) : null}
-                </p>
+                <MemberNameLine nombre={m.nombre} alias={m.alias} />
                 {m.ciudad?.trim() ? (
                   <p
                     className="mt-0.5 text-[12px] text-[#666666]"
@@ -911,18 +953,13 @@ function IntegrantesTab({
                   </p>
                 ) : null}
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span
-                    style={jost}
-                    className="inline-block bg-[#F4F4F4] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#111111]"
-                  >
-                    {rolBadgeLabel(m.rol_plataforma)}
-                  </span>
-                  {m.rango_militar ? (
+                  <RolPlataformaBadge rol={m.rol_plataforma} />
+                  {showRangoBadge ? (
                     <span
                       style={lato}
-                      className="text-[11px] font-normal uppercase text-[#666666]"
+                      className="text-[11px] font-normal uppercase text-[#999999]"
                     >
-                      {formatRangoBadge(m.rango_militar)}
+                      {rangoLabel}
                     </span>
                   ) : null}
                 </div>
@@ -997,7 +1034,11 @@ function IntegrantesTab({
                           style={lato}
                           className="text-[13px] text-[#111111]"
                         >
-                          ¿Remover a @{alias || name}?
+                          ¿Remover a{' '}
+                          {alias
+                            ? `@${alias}`
+                            : m.nombre?.trim() || 'este usuario'}
+                          ?
                         </p>
                         <button
                           type="button"

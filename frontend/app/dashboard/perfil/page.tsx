@@ -21,13 +21,15 @@ export default async function PerfilPage() {
   if (error || !row) redirect('/login')
 
   let teamNombre: string | null = null
+  let teamSlug: string | null = null
   if (row.team_id) {
     const { data: team } = await supabase
       .from('teams')
-      .select('nombre')
+      .select('nombre, slug')
       .eq('id', row.team_id)
       .maybeSingle()
     teamNombre = team?.nombre ?? null
+    teamSlug = (team?.slug as string | undefined) ?? null
   }
 
   const isAdmin = row.app_role === 'admin'
@@ -99,6 +101,7 @@ export default async function PerfilPage() {
     <PerfilTabsClient
       user={row}
       teamNombre={teamNombre}
+      teamSlug={teamSlug}
       misEquipos={misEquipos}
       initialJoinRequests={initialJoinRequests}
       isAdmin={isAdmin}

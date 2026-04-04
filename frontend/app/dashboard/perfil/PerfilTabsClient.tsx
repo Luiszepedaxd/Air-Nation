@@ -22,6 +22,7 @@ const tabBase =
 export function PerfilTabsClient({
   user,
   teamNombre,
+  teamSlug,
   misEquipos,
   initialJoinRequests,
   isAdmin,
@@ -29,6 +30,7 @@ export function PerfilTabsClient({
 }: {
   user: ProfileUserRow
   teamNombre: string | null
+  teamSlug: string | null
   misEquipos: MisEquipoItem[]
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
@@ -107,6 +109,7 @@ export function PerfilTabsClient({
             <ProfileView
               user={user}
               teamNombre={teamNombre}
+              teamSlug={teamSlug}
               pendingJoinPending={pendingJoinPending}
             />
             <div className="mx-auto mt-8 max-w-[640px] space-y-8">

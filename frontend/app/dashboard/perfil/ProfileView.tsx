@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const API_URL = (
@@ -108,12 +109,14 @@ function Spinner({ className = 'text-[#FFFFFF]' }: { className?: string }) {
 type Props = {
   user: ProfileUserRow
   teamNombre: string | null
+  teamSlug: string | null
   pendingJoinPending?: { id: string; nombre: string }[]
 }
 
 export function ProfileView({
   user: initialUser,
   teamNombre,
+  teamSlug,
   pendingJoinPending = [],
 }: Props) {
   const [user, setUser] = useState<ProfileUserRow>(initialUser)
@@ -466,12 +469,49 @@ export function ProfileView({
               <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
                 EQUIPO
               </p>
-              <p
-                className={`mt-1 text-[15px] ${readTeamNombre ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}
-                style={lato}
-              >
-                {readTeamNombre || 'Sin equipo'}
-              </p>
+              {initialUser.team_id ? (
+                readTeamNombre ? (
+                  <p className="mt-1 text-[15px]" style={lato}>
+                    {teamSlug ? (
+                      <Link
+                        href={`/equipos/${encodeURIComponent(teamSlug)}`}
+                        className="font-semibold text-[#111111] underline decoration-[#EEEEEE] underline-offset-2 transition-colors hover:text-[#CC4B37] hover:decoration-[#CC4B37]"
+                      >
+                        {readTeamNombre}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-[#111111]">
+                        {readTeamNombre}
+                      </span>
+                    )}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[15px] text-[#AAAAAA]" style={lato}>
+                    —
+                  </p>
+                )
+              ) : (
+                <p
+                  className={`mt-1 text-[15px] ${readTeamNombre ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}
+                  style={lato}
+                >
+                  {readTeamNombre || 'Sin equipo'}
+                </p>
+              )}
+              {!initialUser.team_id && pendingJoinPending.length === 0 ? (
+                <div className="mt-2">
+                  <p className="text-[12px] text-[#999999]" style={lato}>
+                    ¿Quieres unirte a un equipo?
+                  </p>
+                  <Link
+                    href="/equipos"
+                    className="mt-0.5 inline-block text-[12px] font-semibold text-[#CC4B37]"
+                    style={lato}
+                  >
+                    Buscar equipos →
+                  </Link>
+                </div>
+              ) : null}
               {pendingJoinPending.length > 0 ? (
                 <ul className="mt-2 list-none space-y-1 p-0">
                   {pendingJoinPending.map((row) => (
