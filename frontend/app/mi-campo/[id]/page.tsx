@@ -24,6 +24,7 @@ function mapFieldRequests(
       alias?: string | null
       avatar_url?: string | null
       ciudad?: string | null
+      email?: string | null
     } | null
     const t = (Array.isArray(r.teams) ? r.teams[0] : r.teams) as {
       nombre?: string | null
@@ -42,6 +43,7 @@ function mapFieldRequests(
       avatar_url: u?.avatar_url ?? null,
       ciudad: u?.ciudad ?? null,
       team_nombre: t?.nombre ?? null,
+      solicitante_email: u?.email ?? null,
     }
   })
 }
@@ -160,7 +162,7 @@ export default async function MiCampoPage({
         numero_jugadores,
         mensaje,
         created_at,
-        users ( nombre, alias, avatar_url, ciudad ),
+        users ( nombre, alias, avatar_url, ciudad, email ),
         teams ( nombre )
       `
       )

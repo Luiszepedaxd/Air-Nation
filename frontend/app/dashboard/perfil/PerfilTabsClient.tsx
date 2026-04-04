@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
 import { MisCamposTab, type MisCampoItem } from './MisCamposTab'
 import {
@@ -38,6 +39,7 @@ export function PerfilTabsClient({
   misEventosProximos,
   misEventosPasados,
   initialJoinRequests,
+  approvedFieldNotices,
   isAdmin,
   pendingJoinPending,
   initialTab,
@@ -51,6 +53,7 @@ export function PerfilTabsClient({
   misEventosProximos: MisEventoRsvpItem[]
   misEventosPasados: MisEventoRsvpItem[]
   initialJoinRequests: JoinRequestRow[]
+  approvedFieldNotices: ApprovedFieldNotice[]
   isAdmin: boolean
   pendingJoinPending: { id: string; nombre: string }[]
   initialTab?: TabId
@@ -60,7 +63,8 @@ export function PerfilTabsClient({
     initialTabFromParam(initialTab)
   )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
-  const pendingCount = joinRequests.length
+  const pendingCount =
+    joinRequests.length + approvedFieldNotices.length
 
   const tabClass = (tabId: TabId) =>
     activeTab === tabId
@@ -238,7 +242,11 @@ export function PerfilTabsClient({
         ) : null}
 
         {activeTab === 'notificaciones' ? (
-          <NotificacionesTab requests={joinRequests} onRemove={removeRequest} />
+          <NotificacionesTab
+            requests={joinRequests}
+            approvedFieldNotices={approvedFieldNotices}
+            onRemove={removeRequest}
+          />
         ) : null}
       </div>
     </main>

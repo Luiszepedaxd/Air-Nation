@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
+import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import type { CampoDetailRow, FieldReviewPublic } from '../types'
 import { CampoHero } from './components/CampoHero'
 import { CampoInfo } from './components/CampoInfo'
@@ -163,11 +164,20 @@ export default async function CampoPublicPage({
 
   const initialReviews = await fetchReviews(field.id)
 
+  const supabaseAuth = createDashboardSupabaseServerClient()
+  const {
+    data: { user: authUser },
+  } = await supabaseAuth.auth.getUser()
+
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <CampoHero field={field} />
       <div className="mx-auto max-w-[960px] space-y-6 px-4 py-6 md:px-6 md:py-8">
-        <CampoInfo field={field} />
+        <CampoInfo
+          field={field}
+          fieldSlug={params.slug}
+          currentUserId={authUser?.id ?? null}
+        />
         <CampoReviews
           fieldId={field.id}
           slug={params.slug}

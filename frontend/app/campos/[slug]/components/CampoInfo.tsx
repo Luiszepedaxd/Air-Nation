@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 import type { CampoDetailRow } from '../../types'
+import { SolicitarCampoButton } from './SolicitarCampoButton'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const jostHeading = {
@@ -165,7 +166,15 @@ function parseCoord(
   return { lat: la, lng: lo }
 }
 
-export function CampoInfo({ field }: { field: CampoDetailRow }) {
+export function CampoInfo({
+  field,
+  fieldSlug,
+  currentUserId,
+}: {
+  field: CampoDetailRow
+  fieldSlug: string
+  currentUserId: string | null
+}) {
   const tipo = normalizeTipo(field.tipo)
   const team = field.teams
   const coords = parseCoord(field.ubicacion_lat, field.ubicacion_lng)
@@ -320,13 +329,12 @@ export function CampoInfo({ field }: { field: CampoDetailRow }) {
         )}
 
         {tipo === 'privado' ? (
-          <button
-            type="button"
-            className="inline-flex w-full items-center justify-center border border-[#CC4B37] bg-[#CC4B37] px-4 py-4 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-white md:w-auto md:min-w-[220px]"
-            style={{ ...jost, borderRadius: 2 }}
-          >
-            SOLICITAR CAMPO
-          </button>
+          <SolicitarCampoButton
+            fieldId={field.id}
+            fieldNombre={field.nombre}
+            fieldSlug={fieldSlug}
+            userId={currentUserId}
+          />
         ) : null}
       </div>
     </section>

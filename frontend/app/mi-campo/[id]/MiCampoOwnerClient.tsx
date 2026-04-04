@@ -31,6 +31,7 @@ export type FieldRequestOwnerRow = {
   avatar_url: string | null
   ciudad: string | null
   team_nombre: string | null
+  solicitante_email: string | null
 }
 
 type TabId = 'info' | 'reviews' | 'events' | 'requests'
@@ -176,6 +177,11 @@ export function MiCampoOwnerClient({
   const [reviews] = useState<FieldReviewPublic[]>(initialReviews)
   const [requests, setRequests] = useState<FieldRequestOwnerRow[]>(initialRequests)
   const [events] = useState(initialEvents)
+  const [approvalFeedback, setApprovalFeedback] = useState<{
+    kind: 'ok' | 'err'
+    eventId?: string
+    message: string
+  } | null>(null)
 
   const isPrivado = (field.tipo || '').toLowerCase() === 'privado'
   const approved = field.status.toLowerCase() === 'aprobado'
@@ -197,16 +203,55 @@ export function MiCampoOwnerClient({
       : 0
 
   const handleApprove = async (row: FieldRequestOwnerRow) => {
+    setApprovalFeedback(null)
     try {
-      const { error } = await supabase.rpc('create_event_from_field_request', {
-        p_request_id: row.id,
-      })
+      const { data: eventId, error } = await supabase.rpc(
+        'create_event_from_field_request',
+        { p_request_id: row.id }
+      )
 
       if (error) throw error
+      const eid =
+        typeof eventId === 'string' ? eventId : String(eventId ?? '')
+      if (!eid) throw new Error('No se obtuvo el id del evento')
 
       setRequests((prev) => prev.filter((x) => x.id !== row.id))
-    } catch {
-      /* noop */
+
+      const fechaFmt = formatDateOnly(row.fecha_deseada)
+      try {
+        await fetch(
+          `/api/v1/fields/${encodeURIComponent(field.id)}/notify-request-approved`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              solicitante_email: row.solicitante_email,
+              solicitante_nombre:
+                row.nombre?.trim() ||
+                row.alias?.trim() ||
+                'Jugador',
+              field_nombre: field.nombre,
+              event_id: eid,
+              fecha_deseada: fechaFmt,
+            }),
+          }
+        )
+      } catch {
+        /* el evento ya se creó; el correo es complementario */
+      }
+
+      setApprovalFeedback({
+        kind: 'ok',
+        eventId: eid,
+        message: 'Evento creado — ver en /eventos/[eventId]',
+      })
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: string }).message)
+          : 'No se pudo aprobar la solicitud.'
+      setApprovalFeedback({ kind: 'err', message: msg })
     }
   }
 
@@ -454,6 +499,30 @@ export function MiCampoOwnerClient({
 
         {activeTab === 'requests' ? (
           <div className="pb-10">
+            {approvalFeedback ? (
+              <div
+                className={`mb-4 border border-solid px-4 py-3 text-[13px] ${
+                  approvalFeedback.kind === 'ok'
+                    ? 'border-[#EEEEEE] bg-[#F4F4F4] text-[#111111]'
+                    : 'border-[#CC4B37] bg-[#FFFFFF] text-[#CC4B37]'
+                }`}
+                style={lato}
+              >
+                {approvalFeedback.kind === 'ok' && approvalFeedback.eventId ? (
+                  <>
+                    Evento creado —{' '}
+                    <Link
+                      href={`/eventos/${approvalFeedback.eventId}`}
+                      className="font-semibold text-[#CC4B37] underline-offset-2 hover:underline"
+                    >
+                      ver en /eventos/{approvalFeedback.eventId}
+                    </Link>
+                  </>
+                ) : (
+                  approvalFeedback.message
+                )}
+              </div>
+            ) : null}
             {!isPrivado ? (
               <p className="text-[14px] text-[#666666]" style={lato}>
                 Este es un campo público — no requiere solicitudes

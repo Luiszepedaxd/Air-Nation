@@ -86,6 +86,13 @@ WITH CHECK (
   )
 );
 
+-- Solicitante: leer sus propias solicitudes (estado en /campos y perfil)
+DROP POLICY IF EXISTS "field_requests_select_solicitante" ON public.field_requests;
+
+CREATE POLICY "field_requests_select_solicitante" ON public.field_requests FOR SELECT TO authenticated USING (
+  solicitante_id = auth.uid ()
+);
+
 -- Dueño: ver reseñas de sus campos aunque el campo no esté aprobado (panel /mi-campo)
 DROP POLICY IF EXISTS "field_reviews_select_field_owner" ON public.field_reviews;
 

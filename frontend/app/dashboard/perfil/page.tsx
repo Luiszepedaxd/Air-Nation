@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
 import { fetchPendingJoinRequestsForModerator } from '@/lib/pending-join-requests'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
@@ -82,6 +83,57 @@ export default async function PerfilPage({
     supabase,
     authUser.id
   )
+
+  const weekAgo = new Date()
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const weekAgoIso = weekAgo.toISOString()
+
+  const { data: approvedFieldRaw, error: approvedFieldErr } = await supabase
+    .from('field_requests')
+    .select(
+      `
+      id,
+      fecha_deseada,
+      created_at,
+      updated_at,
+      approved_event_id,
+      fields ( nombre, slug )
+    `
+    )
+    .eq('solicitante_id', authUser.id)
+    .eq('status', 'aprobado')
+    .gte('updated_at', weekAgoIso)
+    .not('approved_event_id', 'is', null)
+    .order('updated_at', { ascending: false })
+
+  if (approvedFieldErr) {
+    console.error('[perfil] approved field notices:', approvedFieldErr.message)
+  }
+
+  const approvedFieldNotices: ApprovedFieldNotice[] = []
+  for (const r of approvedFieldRaw ?? []) {
+    const raw = r as {
+      id?: string
+      fecha_deseada?: string | null
+      created_at?: string
+      updated_at?: string
+      approved_event_id?: string | null
+      fields?: { nombre?: string; slug?: string } | { nombre?: string; slug?: string }[] | null
+    }
+    const eid = raw.approved_event_id
+    const rid = raw.id
+    if (!eid || !rid) continue
+    const f = Array.isArray(raw.fields) ? raw.fields[0] : raw.fields
+    approvedFieldNotices.push({
+      id: rid,
+      fecha_deseada: raw.fecha_deseada ?? null,
+      created_at: String(raw.created_at ?? ''),
+      updated_at: String(raw.updated_at ?? raw.created_at ?? ''),
+      field_nombre: f?.nombre?.trim() || 'Campo',
+      field_slug: f?.slug?.trim() || '',
+      event_id: eid,
+    })
+  }
 
   const { data: pendingJoinRows } = await supabase
     .from('team_join_requests')
@@ -224,6 +276,7 @@ export default async function PerfilPage({
       misEventosProximos={misEventosProximos}
       misEventosPasados={misEventosPasados}
       initialJoinRequests={initialJoinRequests}
+      approvedFieldNotices={approvedFieldNotices}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
       initialTab={

@@ -1,10 +1,15 @@
--- =============================================================================
--- BLOQUE SEPARADO — RPC: crear evento al aprobar solicitud de campo privado
--- Ejecutar en Supabase SQL Editor (después de `events_and_rsvps.sql` y `field_requests`).
--- Requiere columna `field_requests.approved_event_id` — aplicar antes
--- `field_requests_solicitante_select_approved_event.sql` si la tabla ya existía.
--- =============================================================================
--- Nota: en `field_requests` la columna de cupo es `numero_jugadores` (no num_jugadores).
+-- Ejecutar en Supabase SQL Editor (después de field_requests_and_rls + events_rpc).
+-- 1) El solicitante puede leer sus propias solicitudes (estado del botón y perfil).
+-- 2) Enlace estable al evento generado al aprobar.
+
+ALTER TABLE public.field_requests
+  ADD COLUMN IF NOT EXISTS approved_event_id uuid REFERENCES public.events (id) ON DELETE SET NULL;
+
+DROP POLICY IF EXISTS "field_requests_select_solicitante" ON public.field_requests;
+
+CREATE POLICY "field_requests_select_solicitante" ON public.field_requests FOR SELECT TO authenticated USING (
+  solicitante_id = auth.uid ()
+);
 
 CREATE OR REPLACE FUNCTION public.create_event_from_field_request (p_request_id uuid)
 RETURNS uuid
