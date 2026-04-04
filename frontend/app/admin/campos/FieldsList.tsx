@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { updateFieldStatus, toggleDestacado } from './actions'
+import { updateFieldStatus, toggleDestacado, updateOrdenDestacado } from './actions'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -93,9 +93,12 @@ export default function FieldsList({
   const [tab, setTab] = useState<FilterTab>('todos')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [toggleBusyId, setToggleBusyId] = useState<string | null>(null)
+  const [ordenBusyId, setOrdenBusyId] = useState<string | null>(null)
+  const [ordenDraft, setOrdenDraft] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setFields(initialFields)
+    setOrdenDraft({})
   }, [initialFields])
 
   const filtered = useMemo(() => {
@@ -111,6 +114,35 @@ export default function FieldsList({
     )
     const result = await toggleDestacado(id, next)
     setToggleBusyId(null)
+    if ('error' in result && result.error) {
+      setFields(prev)
+      window.alert(result.error)
+      return
+    }
+    router.refresh()
+  }
+
+  const handleOrdenDestacadoBlur = async (id: string) => {
+    const row = fields.find((x) => x.id === id)
+    if (!row?.destacado) return
+    const raw =
+      ordenDraft[id] ??
+      (row.orden_destacado != null ? String(row.orden_destacado) : '')
+    const trimmed = raw.trim()
+    if (trimmed === '') return
+    const n = Number.parseInt(trimmed, 10)
+    if (!Number.isFinite(n) || n < 1) {
+      window.alert('Introduce un orden válido (entero ≥ 1)')
+      return
+    }
+    if (n === row.orden_destacado) return
+    setOrdenBusyId(id)
+    const prev = fields
+    setFields((list) =>
+      list.map((r) => (r.id === id ? { ...r, orden_destacado: n } : r))
+    )
+    const result = await updateOrdenDestacado(id, n)
+    setOrdenBusyId(null)
     if ('error' in result && result.error) {
       setFields(prev)
       window.alert(result.error)
@@ -229,16 +261,47 @@ export default function FieldsList({
                     <StatusBadge status={f.status} />
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
-                    <input
-                      type="checkbox"
-                      checked={f.destacado}
-                      disabled={toggleBusyId === f.id}
-                      onChange={(e) =>
-                        handleToggleDestacado(f.id, e.target.checked)
-                      }
-                      className="h-4 w-4 accent-[#CC4B37] disabled:opacity-50"
-                      aria-label="Destacado"
-                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={f.destacado}
+                        disabled={toggleBusyId === f.id}
+                        onChange={(e) =>
+                          handleToggleDestacado(f.id, e.target.checked)
+                        }
+                        className="h-4 w-4 shrink-0 accent-[#CC4B37] disabled:opacity-50"
+                        aria-label="Destacado"
+                      />
+                      {f.destacado ? (
+                        <input
+                          type="number"
+                          min={1}
+                          disabled={ordenBusyId === f.id}
+                          placeholder="Orden"
+                          value={
+                            ordenDraft[f.id] ??
+                            (f.orden_destacado != null
+                              ? String(f.orden_destacado)
+                              : '')
+                          }
+                          onChange={(e) =>
+                            setOrdenDraft((d) => ({
+                              ...d,
+                              [f.id]: e.target.value,
+                            }))
+                          }
+                          onBlur={() => void handleOrdenDestacadoBlur(f.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.currentTarget.blur()
+                            }
+                          }}
+                          className="h-8 shrink-0 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-1.5 text-center text-sm text-[#111111] tabular-nums placeholder:text-[#999999] disabled:opacity-50"
+                          style={{ width: 60, borderRadius: 2, ...latoBody }}
+                          aria-label="Orden destacado"
+                        />
+                      ) : null}
+                    </div>
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                     <div className="flex flex-wrap gap-2">

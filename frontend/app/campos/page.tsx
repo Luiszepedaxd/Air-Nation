@@ -20,7 +20,7 @@ async function fetchCamposAprobados(): Promise<CampoListRow[]> {
     )
     .eq('status', 'aprobado')
     .order('destacado', { ascending: false })
-    .order('orden_destacado', { ascending: true })
+    .order('orden_destacado', { ascending: true, nullsFirst: false })
     .order('nombre', { ascending: true })
 
   if (error) {

@@ -12,6 +12,8 @@ type FieldRow = {
   ciudad: string | null
   foto_portada_url: string | null
   disciplinas: unknown
+  destacado: boolean
+  orden_destacado: number | null
 }
 
 function disciplinasToList(value: unknown): string[] {
@@ -75,11 +77,13 @@ export async function CamposSection() {
   const supabase = createDashboardSupabaseServerClient()
   const { data, error } = await supabase
     .from('fields')
-    .select('id, nombre, slug, ciudad, foto_portada_url, disciplinas')
+    .select(
+      'id, nombre, slug, ciudad, foto_portada_url, disciplinas, destacado, orden_destacado'
+    )
     .eq('status', 'aprobado')
-    .eq('destacado', true)
-    .order('orden_destacado', { ascending: true })
-    .limit(3)
+    .order('destacado', { ascending: false })
+    .order('orden_destacado', { ascending: true, nullsFirst: false })
+    .order('nombre', { ascending: true })
 
   if (error || !data?.length) return null
 

@@ -73,6 +73,9 @@ export async function updateOrdenDestacado(
   if (!Number.isFinite(orden) || !Number.isInteger(orden)) {
     return { error: 'Orden debe ser un número entero' }
   }
+  if (orden < 1) {
+    return { error: 'Orden debe ser al menos 1' }
+  }
 
   const supabase = createAdminClient()
   const { error } = await supabase

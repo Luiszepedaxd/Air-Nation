@@ -112,7 +112,7 @@ export function CampoCard({ field }: { field: CampoListRow }) {
           </span>
           {field.destacado ? (
             <span
-              className="absolute right-2 top-2 bg-[#CC4B37] px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-white"
+              className="absolute right-2 top-2 z-[1] bg-[#CC4B37] px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-white"
               style={{ ...jost, borderRadius: 0 }}
             >
               DESTACADO
