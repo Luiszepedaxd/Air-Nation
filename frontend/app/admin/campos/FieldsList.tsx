@@ -17,17 +17,17 @@ export type FieldListItem = {
   id: string
   nombre: string
   ciudad: string | null
-  status: 'pending' | 'aprobado' | 'rejected'
+  status: 'pendiente' | 'aprobado' | 'rechazado'
   destacado: boolean
   orden_destacado: number | null
   foto_portada_url: string | null
   created_at: string | null
 }
 
-type FilterTab = 'todos' | 'pending' | 'aprobado' | 'rejected'
+type FilterTab = 'todos' | 'pendiente' | 'aprobado' | 'rechazado'
 
 function StatusBadge({ status }: { status: FieldListItem['status'] }) {
-  if (status === 'pending') {
+  if (status === 'pendiente') {
     return (
       <span
         className="inline-block text-[11px] font-semibold tracking-wide"
@@ -78,9 +78,9 @@ function StatusBadge({ status }: { status: FieldListItem['status'] }) {
 
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'todos', label: 'TODOS' },
-  { id: 'pending', label: 'PENDIENTES' },
+  { id: 'pendiente', label: 'PENDIENTES' },
   { id: 'aprobado', label: 'APROBADOS' },
-  { id: 'rejected', label: 'RECHAZADOS' },
+  { id: 'rechazado', label: 'RECHAZADOS' },
 ]
 
 export default function FieldsList({
@@ -121,7 +121,7 @@ export default function FieldsList({
 
   const handleStatus = async (
     id: string,
-    status: 'aprobado' | 'rejected' | 'pending'
+    status: 'aprobado' | 'rechazado' | 'pendiente'
   ) => {
     setBusyId(id)
     const result = await updateFieldStatus(id, status)
@@ -254,7 +254,7 @@ export default function FieldsList({
                       >
                         VER
                       </Link>
-                      {f.status === 'pending' && (
+                      {f.status === 'pendiente' && (
                         <button
                           type="button"
                           disabled={busyId === f.id}
@@ -270,11 +270,11 @@ export default function FieldsList({
                           APROBAR
                         </button>
                       )}
-                      {(f.status === 'pending' || f.status === 'aprobado') && (
+                      {(f.status === 'pendiente' || f.status === 'aprobado') && (
                         <button
                           type="button"
                           disabled={busyId === f.id}
-                          onClick={() => handleStatus(f.id, 'rejected')}
+                          onClick={() => handleStatus(f.id, 'rechazado')}
                           className="inline-flex items-center justify-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-50"
                           style={{
                             ...jostHeading,

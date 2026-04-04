@@ -22,9 +22,9 @@ export default async function AdminCamposPage() {
   const fields: FieldListItem[] =
     !error && data ? (data as FieldListItem[]) : []
 
-  const pending = fields.filter((f) => f.status === 'pending').length
+  const pending = fields.filter((f) => f.status === 'pendiente').length
   const approved = fields.filter((f) => f.status === 'aprobado').length
-  const rejected = fields.filter((f) => f.status === 'rejected').length
+  const rejected = fields.filter((f) => f.status === 'rechazado').length
 
   return (
     <div className="p-6">

@@ -16,7 +16,7 @@ const jostHeading = {
 
 const latoBody = { fontFamily: "'Lato', sans-serif" }
 
-type FieldStatus = 'pending' | 'aprobado' | 'rejected'
+type FieldStatus = 'pendiente' | 'aprobado' | 'rechazado'
 
 type FieldRow = {
   id: string
@@ -50,7 +50,7 @@ function formatFecha(iso: string | null): string {
 }
 
 function StatusBadge({ status }: { status: FieldStatus }) {
-  if (status === 'pending') {
+  if (status === 'pendiente') {
     return (
       <span
         className="inline-block text-[11px] font-semibold tracking-wide"
@@ -500,7 +500,7 @@ export default async function AdminCampoDetallePage({
         </h2>
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            {field.status === 'pending' ? (
+            {field.status === 'pendiente' ? (
               <form action={approveFieldForm}>
                 <input type="hidden" name="id" value={id} />
                 <button
@@ -512,7 +512,7 @@ export default async function AdminCampoDetallePage({
                 </button>
               </form>
             ) : null}
-            {field.status === 'pending' || field.status === 'aprobado' ? (
+            {field.status === 'pendiente' || field.status === 'aprobado' ? (
               <form action={rejectFieldForm}>
                 <input type="hidden" name="id" value={id} />
                 <button
