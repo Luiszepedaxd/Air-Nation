@@ -85,6 +85,7 @@ export default async function EditarEquipoPage({
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <EditTeamClient
+        teamId={team.id as string}
         team={{
           id: team.id as string,
           nombre: team.nombre as string,

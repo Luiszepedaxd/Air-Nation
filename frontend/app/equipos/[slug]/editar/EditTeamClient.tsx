@@ -8,7 +8,16 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/ssr'
+
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+  'https://placeholder.supabase.co'
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder'
+
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -33,9 +42,12 @@ export type EditableTeam = {
 }
 
 export function EditTeamClient({
+  teamId,
   team,
   slug,
 }: {
+  /** UUID del equipo — obligatorio para el WHERE del UPDATE */
+  teamId: string
   team: EditableTeam
   slug: string
 }) {
@@ -60,28 +72,39 @@ export function EditTeamClient({
       setError('El nombre debe tener al menos 2 caracteres.')
       return
     }
+    if (!teamId) {
+      setError('Error interno: falta el identificador del equipo.')
+      return
+    }
+
     setSaving(true)
     setError('')
+
+    const payload = {
+      nombre: n,
+      ciudad: ciudad.trim() || null,
+      descripcion: descripcion.trim() || null,
+      historia: historia.trim() || null,
+      instagram: instagram.trim() || null,
+      facebook: facebook.trim() || null,
+      whatsapp_url: whatsappUrl.trim() || null,
+      foto_portada_url: fotoPortadaUrl.trim() || null,
+      logo_url: logoUrl.trim() || null,
+    }
+
     const { error: upErr } = await supabase
       .from('teams')
-      .update({
-        nombre: n,
-        ciudad: ciudad.trim() || null,
-        descripcion: descripcion.trim() || null,
-        historia: historia.trim() || null,
-        instagram: instagram.trim() || null,
-        facebook: facebook.trim() || null,
-        whatsapp_url: whatsappUrl.trim() || null,
-        foto_portada_url: fotoPortadaUrl.trim() || null,
-        logo_url: logoUrl.trim() || null,
-      })
-      .eq('id', team.id)
+      .update(payload)
+      .eq('id', teamId)
 
     setSaving(false)
+
     if (upErr) {
+      console.error('[EditTeamClient] teams UPDATE error:', upErr)
       setError(upErr.message)
       return
     }
+
     router.push(`/equipos/${encodeURIComponent(slug)}`)
     router.refresh()
   }, [
@@ -94,7 +117,7 @@ export function EditTeamClient({
     whatsappUrl,
     fotoPortadaUrl,
     logoUrl,
-    team.id,
+    teamId,
     slug,
     router,
   ])
@@ -201,12 +224,6 @@ export function EditTeamClient({
         </Field>
       </div>
 
-      {error ? (
-        <p className="mt-4 text-sm text-[#CC4B37]" style={lato}>
-          {error}
-        </p>
-      ) : null}
-
       <div className="mt-8 flex flex-wrap gap-3">
         <button
           type="button"
@@ -225,6 +242,12 @@ export function EditTeamClient({
           Cancelar
         </Link>
       </div>
+
+      {error ? (
+        <p className="mt-4 text-sm text-[#CC4B37]" style={lato} role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }
