@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
+import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
@@ -51,13 +52,23 @@ function initialFromName(row: JoinRequestRow) {
   return s.toUpperCase()
 }
 
+function solicitanteNombreLine(row: PendingFieldOwnerRequest) {
+  const n = row.solicitante_nombre?.trim()
+  if (n) return n
+  const a = row.solicitante_alias?.trim()
+  if (a) return `@${a}`
+  return 'Un jugador'
+}
+
 export function NotificacionesTab({
   requests,
   approvedFieldNotices,
+  ownerPendingFieldRequests,
   onRemove,
 }: {
   requests: JoinRequestRow[]
   approvedFieldNotices: ApprovedFieldNotice[]
+  ownerPendingFieldRequests: PendingFieldOwnerRequest[]
   onRemove: (id: string) => void
 }) {
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -110,7 +121,11 @@ export function NotificacionesTab({
     }
   }
 
-  if (requests.length === 0 && approvedFieldNotices.length === 0) {
+  if (
+    requests.length === 0 &&
+    approvedFieldNotices.length === 0 &&
+    ownerPendingFieldRequests.length === 0
+  ) {
     return (
       <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
         <p style={jost} className="text-[14px] font-extrabold uppercase text-[#666666]">
@@ -201,6 +216,69 @@ export function NotificacionesTab({
                       RECHAZAR
                     </button>
                   </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {ownerPendingFieldRequests.length > 0 ? (
+        <section>
+          <h2
+            className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
+            style={jost}
+          >
+            Solicitudes en tus campos
+          </h2>
+          <ul className="flex flex-col gap-4">
+            {ownerPendingFieldRequests.map((row) => {
+              const fechaTxt = formatDateOnly(row.fecha_deseada)
+              const num = row.num_jugadores
+              return (
+                <li
+                  key={row.id}
+                  className="border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+                >
+                  <p className="text-[14px] text-[#111111]" style={lato}>
+                    <span className="font-semibold">
+                      {solicitanteNombreLine(row)}
+                    </span>{' '}
+                    quiere usar{' '}
+                    <span className="font-semibold">{row.field_nombre}</span>
+                  </p>
+                  <p className="mt-2 text-[13px] text-[#666666]" style={lato}>
+                    {fechaTxt ? (
+                      <>
+                        Fecha deseada:{' '}
+                        <span className="font-semibold text-[#111111]">
+                          {fechaTxt}
+                        </span>
+                      </>
+                    ) : (
+                      'Fecha deseada: —'
+                    )}
+                    {num != null ? (
+                      <>
+                        {' · '}
+                        {num}{' '}
+                        {num === 1 ? 'jugador' : 'jugadores'}
+                      </>
+                    ) : null}
+                  </p>
+                  <p
+                    className="mt-1 text-[12px] text-[#666666]"
+                    style={lato}
+                  >
+                    {relativeTime(row.created_at)}
+                  </p>
+                  <Link
+                    href={`/mi-campo/${encodeURIComponent(row.field_id)}`}
+                    style={jost}
+                    className="mt-4 inline-flex min-h-[40px] w-full items-center justify-center bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase text-[#FFFFFF] sm:w-auto"
+                  >
+                    VER SOLICITUD
+                  </Link>
                 </li>
               )
             })}

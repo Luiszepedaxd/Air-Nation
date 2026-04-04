@@ -170,10 +170,14 @@ export function CampoInfo({
   field,
   fieldSlug,
   currentUserId,
+  solicitanteNombre,
+  solicitanteAlias,
 }: {
   field: CampoDetailRow
   fieldSlug: string
   currentUserId: string | null
+  solicitanteNombre: string | null
+  solicitanteAlias: string | null
 }) {
   const tipo = normalizeTipo(field.tipo)
   const team = field.teams
@@ -334,6 +338,8 @@ export function CampoInfo({
             fieldNombre={field.nombre}
             fieldSlug={fieldSlug}
             userId={currentUserId}
+            solicitanteNombre={solicitanteNombre}
+            solicitanteAlias={solicitanteAlias}
           />
         ) : null}
       </div>

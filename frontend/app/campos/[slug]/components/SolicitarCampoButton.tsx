@@ -27,11 +27,15 @@ export function SolicitarCampoButton({
   fieldNombre,
   fieldSlug,
   userId,
+  solicitanteNombre,
+  solicitanteAlias,
 }: {
   fieldId: string
   fieldNombre: string
   fieldSlug: string
   userId: string | null
+  solicitanteNombre: string | null
+  solicitanteAlias: string | null
 }) {
   const router = useRouter()
   const loginHref = `/login?redirect=${encodeURIComponent(`/campos/${fieldSlug}`)}`
@@ -160,6 +164,30 @@ export function SolicitarCampoButton({
         status: 'pendiente',
       })
       if (insErr) throw insErr
+
+      const payload = {
+        solicitante_nombre:
+          solicitanteNombre?.trim() || 'Un jugador',
+        solicitante_alias: solicitanteAlias?.trim() ?? '',
+        field_nombre: fieldNombre.trim() || 'Campo',
+        fecha_deseada: fechaDeseada,
+        num_jugadores: numJugadores,
+        mensaje: mensaje.trim() ? mensaje.trim().slice(0, 300) : null,
+      }
+      try {
+        await fetch(
+          `/api/v1/fields/${encodeURIComponent(fieldId)}/notify-new-request`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          }
+        )
+      } catch {
+        /* el insert ya se guardó */
+      }
+
       setSentOk(true)
       setHasPending(true)
       setOpen(false)

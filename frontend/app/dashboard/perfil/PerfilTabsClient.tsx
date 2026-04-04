@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
+import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
 import { MisCamposTab, type MisCampoItem } from './MisCamposTab'
 import {
@@ -40,6 +41,7 @@ export function PerfilTabsClient({
   misEventosPasados,
   initialJoinRequests,
   approvedFieldNotices,
+  ownerPendingFieldRequests,
   isAdmin,
   pendingJoinPending,
   initialTab,
@@ -54,6 +56,7 @@ export function PerfilTabsClient({
   misEventosPasados: MisEventoRsvpItem[]
   initialJoinRequests: JoinRequestRow[]
   approvedFieldNotices: ApprovedFieldNotice[]
+  ownerPendingFieldRequests: PendingFieldOwnerRequest[]
   isAdmin: boolean
   pendingJoinPending: { id: string; nombre: string }[]
   initialTab?: TabId
@@ -64,7 +67,9 @@ export function PerfilTabsClient({
   )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
   const pendingCount =
-    joinRequests.length + approvedFieldNotices.length
+    joinRequests.length +
+    approvedFieldNotices.length +
+    ownerPendingFieldRequests.length
 
   const tabClass = (tabId: TabId) =>
     activeTab === tabId
@@ -245,6 +250,7 @@ export function PerfilTabsClient({
           <NotificacionesTab
             requests={joinRequests}
             approvedFieldNotices={approvedFieldNotices}
+            ownerPendingFieldRequests={ownerPendingFieldRequests}
             onRemove={removeRequest}
           />
         ) : null}

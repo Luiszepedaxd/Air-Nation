@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
+import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
 import { fetchPendingJoinRequestsForModerator } from '@/lib/pending-join-requests'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
@@ -160,6 +161,66 @@ export default async function PerfilPage({
     destacado: Boolean(r.destacado),
   }))
 
+  const ownedFieldIds = misCampos.map((c) => c.id)
+  const ownerPendingFieldRequests: PendingFieldOwnerRequest[] = []
+  if (ownedFieldIds.length > 0) {
+    const { data: frOwnerPending, error: frOwnerErr } = await supabase
+      .from('field_requests')
+      .select(
+        `
+        id,
+        field_id,
+        fecha_deseada,
+        num_jugadores,
+        created_at,
+        fields ( nombre ),
+        users ( nombre, alias )
+      `
+      )
+      .in('field_id', ownedFieldIds)
+      .eq('status', 'pendiente')
+      .order('created_at', { ascending: false })
+
+    if (frOwnerErr) {
+      console.error(
+        '[perfil] owner pending field requests:',
+        frOwnerErr.message
+      )
+    }
+
+    for (const raw of frOwnerPending ?? []) {
+      const r = raw as {
+        id?: string
+        field_id?: string
+        fecha_deseada?: string | null
+        num_jugadores?: number | null
+        created_at?: string
+        fields?: { nombre?: string } | { nombre?: string }[] | null
+        users?: { nombre?: string; alias?: string } | null | unknown[]
+      }
+      const rid = r.id
+      const fid = r.field_id
+      if (!rid || !fid) continue
+      const f = Array.isArray(r.fields) ? r.fields[0] : r.fields
+      const u = Array.isArray(r.users) ? r.users[0] : r.users
+      const uo =
+        u && typeof u === 'object'
+          ? (u as { nombre?: string | null; alias?: string | null })
+          : null
+      ownerPendingFieldRequests.push({
+        id: rid,
+        field_id: fid,
+        fecha_deseada: r.fecha_deseada ?? null,
+        num_jugadores:
+          typeof r.num_jugadores === 'number' ? r.num_jugadores : null,
+        created_at: String(r.created_at ?? ''),
+        field_nombre: f?.nombre?.trim() || 'Campo',
+        solicitante_nombre: uo?.nombre ?? null,
+        solicitante_alias: uo?.alias ?? null,
+      })
+    }
+  }
+
   function normalizeFieldEmbed(raw: unknown): {
     nombre: string | null
     slug: string | null
@@ -277,6 +338,7 @@ export default async function PerfilPage({
       misEventosPasados={misEventosPasados}
       initialJoinRequests={initialJoinRequests}
       approvedFieldNotices={approvedFieldNotices}
+      ownerPendingFieldRequests={ownerPendingFieldRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
       initialTab={

@@ -169,6 +169,18 @@ export default async function CampoPublicPage({
     data: { user: authUser },
   } = await supabaseAuth.auth.getUser()
 
+  let solicitanteNombre: string | null = null
+  let solicitanteAlias: string | null = null
+  if (authUser?.id) {
+    const { data: perfil } = await supabaseAuth
+      .from('users')
+      .select('nombre, alias')
+      .eq('id', authUser.id)
+      .maybeSingle()
+    solicitanteNombre = (perfil?.nombre as string | null) ?? null
+    solicitanteAlias = (perfil?.alias as string | null) ?? null
+  }
+
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <CampoHero field={field} />
@@ -177,6 +189,8 @@ export default async function CampoPublicPage({
           field={field}
           fieldSlug={params.slug}
           currentUserId={authUser?.id ?? null}
+          solicitanteNombre={solicitanteNombre}
+          solicitanteAlias={solicitanteAlias}
         />
         <CampoReviews
           fieldId={field.id}
