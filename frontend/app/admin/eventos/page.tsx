@@ -22,6 +22,15 @@ function normalizeFields(raw: unknown): {
   }
 }
 
+function normalizeCreador(raw: unknown): string | null {
+  const o = Array.isArray(raw) ? raw[0] : raw
+  if (!o || typeof o !== 'object') return null
+  const x = o as Record<string, unknown>
+  const alias = typeof x.alias === 'string' ? x.alias.trim() : ''
+  const nombre = typeof x.nombre === 'string' ? x.nombre.trim() : ''
+  return alias || nombre || null
+}
+
 export default async function AdminEventosPage() {
   const ctx = await getSupabaseForEventosModule()
   if ('error' in ctx) redirect('/dashboard')
@@ -41,7 +50,8 @@ export default async function AdminEventosPage() {
       status,
       imagen_url,
       created_at,
-      fields ( nombre, ciudad )
+      fields ( nombre, ciudad ),
+      creador:users!created_by ( alias, nombre )
     `
     )
     .order('fecha', { ascending: false })
@@ -63,6 +73,7 @@ export default async function AdminEventosPage() {
         imagen_url: (r.imagen_url as string | null) ?? null,
         field_nombre: f.nombre,
         field_ciudad: f.ciudad,
+        creador_label: normalizeCreador(r.creador),
       })
     }
   }

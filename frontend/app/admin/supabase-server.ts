@@ -10,10 +10,24 @@ const anonKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder'
 
 export function createAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  )
+  const serviceUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+    'https://placeholder.supabase.co'
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY?.trim()
+  if (!serviceKey) {
+    throw new Error('SUPABASE_SERVICE_KEY no está configurada')
+  }
+  return createClient(serviceUrl, serviceKey)
+}
+
+/** Cliente con rol de servicio solo si la key existe (evita fallos opacos en build). */
+export function tryCreateServiceRoleClient(): ReturnType<
+  typeof createClient
+> | null {
+  const serviceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY?.trim()
+  if (!serviceUrl || !serviceKey) return null
+  return createClient(serviceUrl, serviceKey)
 }
 
 export function createAdminSupabaseServerClient() {

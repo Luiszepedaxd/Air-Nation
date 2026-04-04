@@ -42,12 +42,18 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/onboarding') ||
     isAdminRoute ||
-    pathname === '/campos/nuevo'
+    pathname === '/campos/nuevo' ||
+    pathname === '/eventos/nuevo'
 
   if (!session && requiresAuth) {
     if (pathname === '/campos/nuevo') {
       return NextResponse.redirect(
         new URL('/login?redirect=/campos/nuevo', request.url)
+      )
+    }
+    if (pathname === '/eventos/nuevo') {
+      return NextResponse.redirect(
+        new URL('/login?redirect=/eventos/nuevo', request.url)
       )
     }
     return NextResponse.redirect(new URL('/login', request.url))
@@ -91,6 +97,7 @@ export const config = {
     '/admin',
     '/admin/:path*',
     '/campos/nuevo',
+    '/eventos/nuevo',
     '/login',
     '/register',
   ],

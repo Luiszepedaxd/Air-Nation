@@ -29,6 +29,7 @@ export type AdminEventoRow = {
   imagen_url: string | null
   field_nombre: string | null
   field_ciudad: string | null
+  creador_label: string | null
 }
 
 type FilterTab = 'todos' | 'publicados' | 'borradores' | 'cancelados'
@@ -187,6 +188,9 @@ export default function EventosList({
                 TÍTULO
               </th>
               <th className="p-3 text-[10px] text-[#666666]" style={jostHeading}>
+                CREADOR
+              </th>
+              <th className="p-3 text-[10px] text-[#666666]" style={jostHeading}>
                 CAMPO
               </th>
               <th className="p-3 text-[10px] text-[#666666]" style={jostHeading}>
@@ -216,7 +220,7 @@ export default function EventosList({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="p-8 text-center text-[#666666]"
                   style={latoBody}
                 >
@@ -254,6 +258,9 @@ export default function EventosList({
                       >
                         {r.title}
                       </p>
+                    </td>
+                    <td className="max-w-[120px] p-2 text-[12px] text-[#666666]" style={latoBody}>
+                      {r.creador_label?.trim() || '—'}
                     </td>
                     <td className="max-w-[140px] p-2 text-[13px] text-[#666666]" style={latoBody}>
                       {r.field_nombre?.trim() || '—'}

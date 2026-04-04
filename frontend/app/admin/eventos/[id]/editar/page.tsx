@@ -33,7 +33,9 @@ export default async function AdminEventoEditarPage({
       tipo,
       imagen_url,
       published,
-      status
+      status,
+      organizador_id,
+      organizador:users!organizador_id ( id, nombre, alias )
     `
     )
     .eq('id', id)
@@ -56,6 +58,15 @@ export default async function AdminEventoEditarPage({
     !fErr && fieldRows ? (fieldRows as FieldOption[]) : []
 
   const row = ev as Record<string, unknown>
+  const orgRaw = row.organizador as unknown
+  const orgObj = Array.isArray(orgRaw) ? orgRaw[0] : orgRaw
+  let organizador_display: string | null = null
+  if (orgObj && typeof orgObj === 'object') {
+    const o = orgObj as Record<string, unknown>
+    const a = typeof o.alias === 'string' ? o.alias.trim() : ''
+    const n = typeof o.nombre === 'string' ? o.nombre.trim() : ''
+    organizador_display = a || n || null
+  }
 
   return (
     <div className="p-6">
@@ -81,6 +92,8 @@ export default async function AdminEventoEditarPage({
           imagen_url: (row.imagen_url as string | null) ?? null,
           published: Boolean(row.published),
           status: String(row.status ?? ''),
+          organizador_id: (row.organizador_id as string | null) ?? null,
+          organizador_display,
         }}
       />
     </div>

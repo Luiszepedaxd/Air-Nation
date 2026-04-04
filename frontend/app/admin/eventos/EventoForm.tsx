@@ -1,10 +1,15 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
+import { supabase } from '@/lib/supabase'
 import { upsertEvento } from './actions'
 import type { EventosActor } from './eventos-supabase'
+
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
+).replace(/\/$/, '')
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -50,6 +55,8 @@ export function EventoForm({
     imagen_url: string | null
     published: boolean
     status: string
+    organizador_id?: string | null
+    organizador_display?: string | null
   }
 }) {
   const router = useRouter()
@@ -76,7 +83,55 @@ export function EventoForm({
   const [saving, setSaving] = useState(false)
   const [activeUploads, setActiveUploads] = useState(0)
 
+  const showOrganizerPicker = actor === 'admin'
+  const [organizerQuery, setOrganizerQuery] = useState('')
+  const [organizerResults, setOrganizerResults] = useState<
+    { id: string; nombre: string | null; alias: string | null; email: string | null }[]
+  >([])
+  const [organizerOpen, setOrganizerOpen] = useState(false)
+  const [selectedOrganizerId, setSelectedOrganizerId] = useState(
+    () => initial?.organizador_id?.trim() || ''
+  )
+  const [selectedOrganizerLabel, setSelectedOrganizerLabel] = useState(
+    () =>
+      initial?.organizador_display?.trim() ||
+      (initial?.organizador_id ? 'Organizador seleccionado' : '')
+  )
+  const organizerSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const requireField = actor === 'field_owner'
+
+  useEffect(() => {
+    if (!showOrganizerPicker || organizerQuery.trim().length < 2) {
+      setOrganizerResults([])
+      return
+    }
+    if (organizerSearchRef.current) clearTimeout(organizerSearchRef.current)
+    organizerSearchRef.current = setTimeout(() => {
+      void (async () => {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        if (!token) return
+        try {
+          const res = await fetch(
+            `${API_BASE}/users/search?q=${encodeURIComponent(organizerQuery.trim())}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+          if (!res.ok) return
+          const body = (await res.json()) as {
+            users?: { id: string; nombre: string | null; alias: string | null; email: string | null }[]
+          }
+          setOrganizerResults(body.users ?? [])
+          setOrganizerOpen(true)
+        } catch {
+          setOrganizerResults([])
+        }
+      })()
+    }, 280)
+    return () => {
+      if (organizerSearchRef.current) clearTimeout(organizerSearchRef.current)
+    }
+  }, [organizerQuery, showOrganizerPicker])
 
   const handleCancel = useCallback(() => {
     router.push('/admin/eventos')
@@ -116,25 +171,25 @@ export function EventoForm({
       const fechaIso = new Date(fechaLocal).toISOString()
 
       setSaving(true)
-      const res = await upsertEvento(
-        {
-          id: initial?.id,
-          title: t,
-          descripcion: descripcion.trim(),
-          field_id: fid || null,
-          fecha: fechaIso,
-          cupo: cupoNum,
-          disciplina,
-          tipo,
-          imagen_url: imagenUrl.trim() || null,
-          published,
-          status:
-            initial?.status?.toLowerCase() === 'cancelado'
-              ? 'cancelado'
-              : undefined,
-        },
-        null
-      )
+      const res = await upsertEvento({
+        id: initial?.id,
+        title: t,
+        descripcion: descripcion.trim(),
+        field_id: fid || null,
+        fecha: fechaIso,
+        cupo: cupoNum,
+        disciplina,
+        tipo,
+        imagen_url: imagenUrl.trim() || null,
+        published,
+        status:
+          initial?.status?.toLowerCase() === 'cancelado'
+            ? 'cancelado'
+            : undefined,
+        ...(showOrganizerPicker
+          ? { organizador_id: selectedOrganizerId.trim() || null }
+          : {}),
+      })
       setSaving(false)
       if ('error' in res && res.error) {
         setClientError(res.error)
@@ -157,6 +212,8 @@ export function EventoForm({
       initial?.status,
       requireField,
       router,
+      showOrganizerPicker,
+      selectedOrganizerId,
     ]
   )
 
@@ -202,6 +259,96 @@ export function EventoForm({
           {descripcion.length}/1000
         </p>
       </div>
+
+      {showOrganizerPicker ? (
+        <div className="relative">
+          <label
+            className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+            style={jostHeading}
+          >
+            Organizador (opcional)
+          </label>
+          <p className="mb-2 text-[12px] text-[#666666]" style={latoBody}>
+            Por defecto eres tú. Busca por alias o nombre para asignar a otro
+            usuario.
+          </p>
+          {selectedOrganizerId ? (
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span
+                className="inline-flex max-w-full items-center gap-2 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[12px] text-[#111111]"
+                style={{ borderRadius: 2 }}
+              >
+                <span className="truncate" style={latoBody}>
+                  {selectedOrganizerLabel ||
+                    selectedOrganizerId.slice(0, 8) + '…'}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedOrganizerId('')
+                  setSelectedOrganizerLabel('')
+                  setOrganizerQuery('')
+                  setOrganizerResults([])
+                }}
+                className="text-[11px] uppercase tracking-wide text-[#CC4B37]"
+                style={jostHeading}
+              >
+                Quitar
+              </button>
+            </div>
+          ) : null}
+          <input
+            type="text"
+            value={organizerQuery}
+            onChange={(e) => setOrganizerQuery(e.target.value)}
+            onFocus={() => {
+              if (organizerResults.length) setOrganizerOpen(true)
+            }}
+            placeholder="Buscar usuario…"
+            autoComplete="off"
+            className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+            style={{ borderRadius: 2 }}
+          />
+          {organizerOpen && organizerResults.length > 0 ? (
+            <ul
+              className="absolute z-20 mt-1 max-h-48 w-full overflow-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF] shadow-md"
+              style={{ borderRadius: 2 }}
+            >
+              {organizerResults.map((u) => {
+                const label =
+                  u.alias?.trim() ||
+                  u.nombre?.trim() ||
+                  u.email?.trim() ||
+                  u.id.slice(0, 8)
+                return (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedOrganizerId(u.id)
+                        setSelectedOrganizerLabel(label)
+                        setOrganizerQuery('')
+                        setOrganizerOpen(false)
+                        setOrganizerResults([])
+                      }}
+                      className="w-full px-3 py-2 text-left text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                      style={latoBody}
+                    >
+                      {label}
+                      {u.email?.trim() ? (
+                        <span className="block text-[11px] text-[#999999]">
+                          {u.email}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       <div>
         <label

@@ -68,11 +68,15 @@ export type EventoUpsertPayload = {
   published: boolean
   /** Al crear, opcional (por defecto publicado si published). */
   status?: 'publicado' | 'borrador' | 'cancelado'
+  /**
+   * Solo admin: UUID de organizador. Vacío/null en creación = el usuario actual.
+   * En edición, si se envía, actualiza organizador (solo admin).
+   */
+  organizador_id?: string | null
 }
 
 export async function upsertEvento(
-  payload: EventoUpsertPayload,
-  organizadorId: string | null
+  payload: EventoUpsertPayload
 ): Promise<{ ok: true; id: string } | { error: string }> {
   const ctx = await getSupabaseForEventosModule()
   if ('error' in ctx) return { error: ctx.error }
@@ -86,7 +90,7 @@ export async function upsertEvento(
         ? 'publicado'
         : 'borrador'
 
-  const base = {
+  const base: Record<string, unknown> = {
     title: payload.title.slice(0, 100),
     descripcion: payload.descripcion ? payload.descripcion.slice(0, 1000) : null,
     field_id: payload.field_id || null,
@@ -100,6 +104,10 @@ export async function upsertEvento(
   }
 
   if (payload.id) {
+    if (ctx.role === 'admin' && payload.organizador_id !== undefined) {
+      const raw = payload.organizador_id?.trim()
+      base.organizador_id = raw && raw.length ? raw : uid
+    }
     const { error } = await ctx.supabase
       .from('events')
       .update(base)
@@ -113,9 +121,14 @@ export async function upsertEvento(
     return { ok: true, id: payload.id }
   }
 
+  let organizerForInsert = uid
+  if (ctx.role === 'admin' && payload.organizador_id?.trim()) {
+    organizerForInsert = payload.organizador_id.trim()
+  }
+
   const insertRow = {
     ...base,
-    organizador_id: organizadorId ?? uid,
+    organizador_id: organizerForInsert,
     created_by: uid,
   }
 

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
+import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { EventoCard, type EventoCardRow } from './components/EventoCard'
 
@@ -91,23 +93,38 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
 
 export default async function EventosPage() {
   const eventos = await fetchEventos()
+  const userSb = createAdminSupabaseServerClient()
+  const {
+    data: { session },
+  } = await userSb.auth.getSession()
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <header className="bg-[#111111] px-4 py-8 md:py-10">
-        <div className="mx-auto max-w-[1200px] md:px-6">
-          <h1
-            className="text-2xl font-extrabold uppercase leading-tight text-white"
-            style={{ ...jost, fontWeight: 800 }}
-          >
-            EVENTOS
-          </h1>
-          <p
-            className="mt-2 text-sm text-[#999999]"
-            style={lato}
-          >
-            Partidas y eventos de la comunidad
-          </p>
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 md:flex-row md:items-end md:justify-between md:px-6">
+          <div>
+            <h1
+              className="text-2xl font-extrabold uppercase leading-tight text-white"
+              style={{ ...jost, fontWeight: 800 }}
+            >
+              EVENTOS
+            </h1>
+            <p
+              className="mt-2 text-sm text-[#999999]"
+              style={lato}
+            >
+              Partidas y eventos de la comunidad
+            </p>
+          </div>
+          {session ? (
+            <Link
+              href="/eventos/nuevo"
+              className="inline-flex shrink-0 items-center justify-center border border-solid border-[#FFFFFF]/30 bg-[#CC4B37] px-5 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#FFFFFF] transition-opacity hover:opacity-90"
+              style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+            >
+              CREAR EVENTO
+            </Link>
+          ) : null}
         </div>
       </header>
 

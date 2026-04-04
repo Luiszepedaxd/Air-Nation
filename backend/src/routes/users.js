@@ -1,5 +1,6 @@
 const express = require("express");
 const supabase = require("../lib/supabase");
+const { requireAdmin } = require("../middleware/requireAdmin");
 
 const router = express.Router();
 
@@ -24,6 +25,50 @@ const VALID_COMO_SE_ENTERO = new Set([
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * GET /api/v1/users/search?q=texto
+ * Búsqueda por alias o nombre (solo admin, Bearer Supabase JWT).
+ */
+router.get("/search", requireAdmin, async (req, res) => {
+  try {
+    const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (q.length < 2) {
+      return res.json({ users: [] });
+    }
+    const safe = q.replace(/%/g, "").replace(/_/g, "").slice(0, 80);
+    const pattern = `%${safe}%`;
+
+    const [aliasRes, nombreRes] = await Promise.all([
+      supabase
+        .from("users")
+        .select("id, nombre, alias, email")
+        .ilike("alias", pattern)
+        .limit(12),
+      supabase
+        .from("users")
+        .select("id, nombre, alias, email")
+        .ilike("nombre", pattern)
+        .limit(12),
+    ]);
+
+    if (aliasRes.error) {
+      return res.status(500).json({ error: aliasRes.error.message });
+    }
+    if (nombreRes.error) {
+      return res.status(500).json({ error: nombreRes.error.message });
+    }
+
+    const map = new Map();
+    for (const row of [...(aliasRes.data || []), ...(nombreRes.data || [])]) {
+      if (row && row.id) map.set(row.id, row);
+    }
+    const users = Array.from(map.values()).slice(0, 20);
+    return res.json({ users });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 // GET /api/v1/users/:id
 router.get("/:id", (req, res) => res.json({ user: null, id: req.params.id }));
