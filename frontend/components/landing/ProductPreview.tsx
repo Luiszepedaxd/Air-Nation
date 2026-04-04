@@ -39,7 +39,7 @@ function QrPlaceholder() {
 }
 
 /** Contenido del card de credencial; tipografía más compacta en móvil */
-function CredentialCard({ profileImageUrl }: { profileImageUrl: string }) {
+function CredentialCard({ previewUrl }: { previewUrl: string }) {
   return (
     <div className="overflow-hidden rounded-none border border-[#EEEEEE] bg-white shadow-sm">
       <div className="bg-[#CC4B37] px-3 py-2 md:px-5 md:py-3">
@@ -54,7 +54,7 @@ function CredentialCard({ profileImageUrl }: { profileImageUrl: string }) {
       <div className="bg-white px-3 py-3 md:px-5 md:py-4">
         <div className="flex gap-3 md:gap-4">
           <img
-            src={profileImageUrl}
+            src={previewUrl}
             alt="Foto de perfil"
             className="w-16 h-16 object-cover object-center"
           />
@@ -148,13 +148,13 @@ function ReplicaCards() {
 
 /** Credencial + réplicas dentro del área scrollable del dispositivo */
 function DeviceScrollContent({
-  profileImageUrl,
+  previewUrl,
 }: {
-  profileImageUrl: string;
+  previewUrl: string;
 }) {
   return (
     <>
-      <CredentialCard profileImageUrl={profileImageUrl} />
+      <CredentialCard previewUrl={previewUrl} />
       <div className="flex flex-col gap-3 px-3 pb-3 pt-3 md:px-5 md:pb-4 md:pt-4">
         <ReplicaCards />
       </div>
@@ -162,7 +162,7 @@ function DeviceScrollContent({
   );
 }
 
-function PhoneMockup({ profileImageUrl }: { profileImageUrl: string }) {
+function PhoneMockup({ previewUrl }: { previewUrl: string }) {
   return (
     <div className="mx-auto w-full max-w-[320px] md:hidden">
       <div className="rounded-[2.5rem] border-4 border-[#2A2A2A] bg-[#1A1A1A] p-2.5 shadow-2xl">
@@ -171,7 +171,7 @@ function PhoneMockup({ profileImageUrl }: { profileImageUrl: string }) {
         </div>
         <div className="overflow-hidden rounded-b-[2rem] bg-white">
           <div className="max-h-[min(520px,70vh)] overflow-y-auto">
-            <DeviceScrollContent profileImageUrl={profileImageUrl} />
+            <DeviceScrollContent previewUrl={previewUrl} />
           </div>
           <div className="flex h-6 shrink-0 items-center justify-center bg-white">
             <div className="h-1 w-16 rounded-full bg-[#EEEEEE]" />
@@ -182,7 +182,7 @@ function PhoneMockup({ profileImageUrl }: { profileImageUrl: string }) {
   );
 }
 
-function TabletMockup({ profileImageUrl }: { profileImageUrl: string }) {
+function TabletMockup({ previewUrl }: { previewUrl: string }) {
   return (
     <div className="relative mx-auto hidden w-full max-w-[620px] md:block">
       <div className="relative aspect-[4/3] w-full overflow-visible rounded-[2rem] border-4 border-[#2A2A2A] bg-[#1A1A1A] p-3 shadow-2xl">
@@ -195,7 +195,7 @@ function TabletMockup({ profileImageUrl }: { profileImageUrl: string }) {
             <span className="h-2 w-2 rounded-full bg-[#2A2A2A]" />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto rounded-b-[1.2rem] bg-white">
-            <DeviceScrollContent profileImageUrl={profileImageUrl} />
+            <DeviceScrollContent previewUrl={previewUrl} />
           </div>
         </div>
       </div>
@@ -205,7 +205,7 @@ function TabletMockup({ profileImageUrl }: { profileImageUrl: string }) {
 
 export default async function ProductPreview() {
   const assets = await getSiteAssets();
-  const profileImageUrl = assets["credencial_preview"] || "/profilepic.jpg";
+  const previewUrl = assets["credencial_preview"] ?? "/profilepic.jpg";
 
   return (
     <section id="preview" className="bg-white px-5 py-24 sm:px-8 sm:py-32">
@@ -238,8 +238,8 @@ export default async function ProductPreview() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <PhoneMockup profileImageUrl={profileImageUrl} />
-          <TabletMockup profileImageUrl={profileImageUrl} />
+          <PhoneMockup previewUrl={previewUrl} />
+          <TabletMockup previewUrl={previewUrl} />
         </div>
       </div>
     </section>

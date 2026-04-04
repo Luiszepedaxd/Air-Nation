@@ -9,7 +9,7 @@ const STATS = [
 
 export default async function CommunitySection() {
   const assets = await getSiteAssets();
-  const comunidadSrc = assets["comunidad_foto"] || "/comunidad-foto-1.jpg";
+  const comunidadUrl = assets["comunidad_foto"] ?? "/comunidad-foto-1.jpg";
 
   return (
     <section id="comunidad" className="bg-[#F4F4F4] py-24 sm:py-32 px-5 sm:px-8">
@@ -20,7 +20,7 @@ export default async function CommunitySection() {
           {/* Mitad derecha: foto + velo */}
           <div className="absolute inset-y-0 right-0 z-0 hidden w-1/2 overflow-hidden lg:block">
             <img
-              src={comunidadSrc}
+              src={comunidadUrl}
               alt="Comunidad de airsoft"
               className="absolute inset-0 h-full w-full object-cover object-center opacity-60"
               loading="lazy"

@@ -10,14 +10,14 @@ const STATS = [
 
 export default async function Hero() {
   const assets = await getSiteAssets();
-  const heroSrc = assets["hero_background"] || "/herofoto2.jpg";
+  const heroUrl = assets["hero_background"] ?? "/herofoto2.jpg";
 
   return (
     <section className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[#111111]">
 
       {/* 1. Foto — fondo (CMS o /public) */}
       <img
-        src={heroSrc}
+        src={heroUrl}
         alt="Airsoft — jugadores en acción"
         className="absolute inset-0 z-0 h-full w-full min-h-full min-w-full object-cover object-center"
         loading="eager"
