@@ -281,6 +281,11 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    const aliasT = form.alias.trim()
+    if (aliasT.length < 2 || aliasT.length > 30) {
+      setFormError('El alias debe tener entre 2 y 30 caracteres.')
+      return
+    }
     setSaveLoading(true)
     try {
       const res = await fetch(`${API_URL}/users/${user.id}`, {
@@ -503,6 +508,7 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
               className={`${inputClass} mt-2`}
               style={lato}
               value={form.alias}
+              maxLength={30}
               onChange={(e) => setForm((f) => ({ ...f, alias: e.target.value }))}
             />
           </div>

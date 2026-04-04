@@ -66,8 +66,6 @@ const VALID_COMO = new Set<string>([
   "otro",
 ]);
 
-const ALIAS_RE = /^[a-zA-Z0-9_-]*$/;
-
 const CIUDADES: { value: string; label: string }[] = [
   { value: "", label: "Selecciona tu ciudad" },
   { value: "Ciudad de México", label: "Ciudad de México" },
@@ -398,8 +396,8 @@ export default function OnboardingPage() {
   }, [debouncedTeamQuery, state.paso, state.ciudad, state.team_id]);
 
   const aliasValid = useMemo(() => {
-    const a = state.alias;
-    return a.length > 0 && a.length <= 20 && ALIAS_RE.test(a);
+    const t = state.alias.trim();
+    return t.length >= 2 && t.length <= 30;
   }, [state.alias]);
 
   const step1Ok =
@@ -506,8 +504,7 @@ export default function OnboardingPage() {
   }, [userId, debouncedTeamQuery, state.ciudad, selectTeam]);
 
   const onAliasChange = (v: string) => {
-    if (v.length > 20) return;
-    if (!ALIAS_RE.test(v)) return;
+    if (v.length > 30) return;
     update({ alias: v });
   };
 
@@ -617,12 +614,13 @@ export default function OnboardingPage() {
                 className={inputShell}
                 placeholder="¿Cómo te conocen en el campo?"
                 value={state.alias}
+                maxLength={30}
                 onChange={(e) => onAliasChange(e.target.value)}
                 autoComplete="nickname"
               />
               <div className="flex justify-end mt-1">
                 <span className="text-[11px] text-[#999]">
-                  {state.alias.length}/20
+                  {state.alias.length}/30
                 </span>
               </div>
             </div>
