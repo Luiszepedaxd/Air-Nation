@@ -1,6 +1,6 @@
 import AppShell from '@/components/layout/AppShell'
 
-export default function EquiposLayout({
+export default function CamposLayout({
   children,
 }: {
   children: React.ReactNode
