@@ -223,7 +223,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
 
         <div className="border-t border-solid border-[#EEEEEE] bg-[#F4F4F4] px-5 py-2">
           <p style={lato} className="text-[10px] leading-relaxed text-[#666666]">
-            airnation.online · Verificar: /verify/{data.id}
+            airnation.online
           </p>
         </div>
       </div>
