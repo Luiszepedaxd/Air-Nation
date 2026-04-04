@@ -91,13 +91,23 @@ router.post("/", requireAdmin, async (req, res) => {
 
       const orData = await orRes.json();
       console.log("OpenRouter response:", JSON.stringify(orData, null, 2));
-      const content = orData.choices?.[0]?.message?.content;
+
+      const message = orData.choices?.[0]?.message;
+      const content = message?.content;
+      const reasoningDetails = message?.reasoning_details || [];
+
       console.log("Content type:", typeof content);
       console.log("Content value:", JSON.stringify(content, null, 2));
 
+      // Buscar imagen en content (array o string)
       if (Array.isArray(content)) {
         const imageBlock = content.find(
-          (b) => b && (b.type === "image_url" || b.type === "image")
+          (b) =>
+            b &&
+            (b.type === "image_url" ||
+              b.type === "image" ||
+              b.image_url ||
+              b.data)
         );
         if (imageBlock?.image_url?.url) {
           const dataUrl = imageBlock.image_url.url;
@@ -108,11 +118,35 @@ router.post("/", requireAdmin, async (req, res) => {
           } else {
             imageUrl = dataUrl;
           }
+        } else if (imageBlock?.data) {
+          imageBase64 = imageBlock.data;
         }
       } else if (typeof content === "string" && content.startsWith("data:")) {
         const [meta, b64] = content.split(",");
         imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
         imageBase64 = b64;
+      }
+
+      // Si no se encontró en content, buscar en reasoning_details
+      if (!imageUrl && !imageBase64) {
+        for (const detail of reasoningDetails) {
+          if (detail?.data) {
+            imageBase64 = detail.data;
+            imageMimeType = "image/jpeg";
+            break;
+          }
+          if (detail?.image_url?.url) {
+            const dataUrl = detail.image_url.url;
+            if (dataUrl.startsWith("data:")) {
+              const [meta, b64] = dataUrl.split(",");
+              imageMimeType = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+              imageBase64 = b64;
+            } else {
+              imageUrl = dataUrl;
+            }
+            break;
+          }
+        }
       }
 
       if (!imageUrl && !imageBase64) {
