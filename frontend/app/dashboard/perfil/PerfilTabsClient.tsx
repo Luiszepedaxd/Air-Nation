@@ -16,11 +16,8 @@ const jost = {
 
 type TabId = 'perfil' | 'equipos' | 'notificaciones'
 
-const tabBtn =
-  'relative shrink-0 border-b-2 border-transparent px-4 py-[14px] text-[12px] font-extrabold uppercase text-[#666666] transition-[color,border-color] duration-150'
-
-const tabBtnActive =
-  'border-[#CC4B37] text-[#111111]'
+const tabBase =
+  'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
 
 export function PerfilTabsClient({
   user,
@@ -35,9 +32,14 @@ export function PerfilTabsClient({
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
 }) {
-  const [tab, setTab] = useState<TabId>('perfil')
+  const [activeTab, setActiveTab] = useState<TabId>('perfil')
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
   const pendingCount = joinRequests.length
+
+  const tabClass = (tabId: TabId) =>
+    activeTab === tabId
+      ? 'border-b-2 border-[#CC4B37] text-[#111111] pb-[14px] px-4'
+      : 'border-b-2 border-transparent text-[#666666] pb-[14px] px-4'
 
   const removeRequest = useCallback((id: string) => {
     setJoinRequests((r) => r.filter((x) => x.id !== id))
@@ -46,7 +48,7 @@ export function PerfilTabsClient({
   useEffect(() => {
     const el = document.getElementById('dashboard-scroll-root')
     el?.scrollTo({ top: 0 })
-  }, [tab])
+  }, [activeTab])
 
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pb-10 pt-6 md:px-6">
@@ -61,24 +63,27 @@ export function PerfilTabsClient({
         <div className="flex overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
-            onClick={() => setTab('perfil')}
-            className={`${tabBtn} ${tab === 'perfil' ? tabBtnActive : ''}`}
+            onClick={() => setActiveTab('perfil')}
+            style={jost}
+            className={`${tabBase} ${tabClass('perfil')}`}
           >
             MI PERFIL
           </button>
           <button
             type="button"
-            onClick={() => setTab('equipos')}
-            className={`${tabBtn} ${tab === 'equipos' ? tabBtnActive : ''}`}
+            onClick={() => setActiveTab('equipos')}
+            style={jost}
+            className={`${tabBase} ${tabClass('equipos')}`}
           >
             MIS EQUIPOS
           </button>
           <button
             type="button"
-            onClick={() => setTab('notificaciones')}
-            className={`${tabBtn} inline-flex items-center gap-1.5 ${
-              tab === 'notificaciones' ? tabBtnActive : ''
-            }`}
+            onClick={() => setActiveTab('notificaciones')}
+            style={jost}
+            className={`${tabBase} inline-flex items-center gap-1.5 ${tabClass(
+              'notificaciones'
+            )}`}
           >
             <span>NOTIFICACIONES</span>
             {pendingCount > 0 ? (
@@ -95,7 +100,7 @@ export function PerfilTabsClient({
       </div>
 
       <div className="mt-6">
-        {tab === 'perfil' ? (
+        {activeTab === 'perfil' ? (
           <>
             <ProfileView user={user} teamNombre={teamNombre} />
             <div className="mx-auto mt-8 max-w-[640px] space-y-8">
@@ -155,11 +160,11 @@ export function PerfilTabsClient({
           </>
         ) : null}
 
-        {tab === 'equipos' ? (
+        {activeTab === 'equipos' ? (
           <MisEquiposSection teams={misEquipos} variant="tab" />
         ) : null}
 
-        {tab === 'notificaciones' ? (
+        {activeTab === 'notificaciones' ? (
           <NotificacionesTab requests={joinRequests} onRemove={removeRequest} />
         ) : null}
       </div>
