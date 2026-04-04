@@ -1,4 +1,5 @@
-import type { PublicTeam } from '../types'
+import type { MemberDisplay, PublicTeam } from '../types'
+import { TeamEditLink } from './TeamEditLink'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -91,7 +92,13 @@ function socialHref(
   return `https://facebook.com/${v.replace(/^@/, '')}`
 }
 
-export function TeamHero({ team }: { team: PublicTeam }) {
+export function TeamHero({
+  team,
+  members,
+}: {
+  team: PublicTeam
+  members: MemberDisplay[]
+}) {
   const initial = (team.nombre?.trim()?.[0] || '?').toUpperCase()
 
   return (
@@ -187,6 +194,8 @@ export function TeamHero({ team }: { team: PublicTeam }) {
             </a>
           ) : null}
         </div>
+
+        <TeamEditLink members={members} slug={team.slug} />
       </div>
     </header>
   )

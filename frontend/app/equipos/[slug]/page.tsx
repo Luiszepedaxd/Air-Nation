@@ -176,7 +176,7 @@ export default async function EquipoPublicPage({
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
-      <TeamHero team={team} />
+      <TeamHero team={team} members={members} />
       <TeamStats memberCount={members.length} createdAt={team.created_at} />
       <div className="mx-auto max-w-[960px] px-4 py-4">
         <JoinButton teamId={team.id} slug={params.slug} members={members} />
