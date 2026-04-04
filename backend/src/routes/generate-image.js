@@ -228,6 +228,9 @@ router.post("/", requireAdmin, async (req, res) => {
       }
 
       const filename = `${(assetKey || "asset").replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${imageMimeType.split("/")[1]}`;
+      console.log("mimeType detectado:", imageMimeType);
+      console.log("buffer primeros bytes:", buffer.slice(0, 4).toString("hex"));
+      console.log("base64 primeros 20 chars:", imageBase64?.substring(0, 20));
       const cloudflareUrl = await uploadToCloudflare(buffer, filename, imageMimeType);
       return res.json({ url: cloudflareUrl });
     }
@@ -240,6 +243,9 @@ router.post("/", requireAdmin, async (req, res) => {
       const buffer = Buffer.from(arrayBuffer);
       const ext = contentType.split("/")[1]?.split(";")[0] || "jpg";
       const filename = `${(assetKey || "asset").replace(/[^a-z0-9]/gi, "-")}-${Date.now()}.${ext}`;
+      console.log("mimeType detectado:", contentType);
+      console.log("buffer primeros bytes:", buffer.slice(0, 4).toString("hex"));
+      console.log("base64 primeros 20 chars:", imageBase64?.substring(0, 20));
       const cloudflareUrl = await uploadToCloudflare(buffer, filename, contentType);
       return res.json({ url: cloudflareUrl });
     }
