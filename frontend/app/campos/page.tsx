@@ -18,7 +18,7 @@ async function fetchCamposAprobados(): Promise<CampoListRow[]> {
     .select(
       'id, nombre, slug, ciudad, tipo, foto_portada_url, disciplinas, promedio_rating, destacado, orden_destacado'
     )
-    .eq('status', 'approved')
+    .eq('status', 'aprobado')
     .order('destacado', { ascending: false })
     .order('orden_destacado', { ascending: true })
     .order('nombre', { ascending: true })

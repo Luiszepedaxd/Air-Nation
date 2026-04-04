@@ -76,7 +76,7 @@ export async function CamposSection() {
   const { data, error } = await supabase
     .from('fields')
     .select('id, nombre, slug, ciudad, foto_portada_url, disciplinas')
-    .eq('status', 'approved')
+    .eq('status', 'aprobado')
     .eq('destacado', true)
     .order('orden_destacado', { ascending: true })
     .limit(3)

@@ -17,14 +17,14 @@ export type FieldListItem = {
   id: string
   nombre: string
   ciudad: string | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'aprobado' | 'rejected'
   destacado: boolean
   orden_destacado: number | null
   foto_portada_url: string | null
   created_at: string | null
 }
 
-type FilterTab = 'todos' | 'pending' | 'approved' | 'rejected'
+type FilterTab = 'todos' | 'pending' | 'aprobado' | 'rejected'
 
 function StatusBadge({ status }: { status: FieldListItem['status'] }) {
   if (status === 'pending') {
@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: FieldListItem['status'] }) {
       </span>
     )
   }
-  if (status === 'approved') {
+  if (status === 'aprobado') {
     return (
       <span
         className="inline-block text-[11px] font-semibold tracking-wide text-[#FFFFFF]"
@@ -79,7 +79,7 @@ function StatusBadge({ status }: { status: FieldListItem['status'] }) {
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'todos', label: 'TODOS' },
   { id: 'pending', label: 'PENDIENTES' },
-  { id: 'approved', label: 'APROBADOS' },
+  { id: 'aprobado', label: 'APROBADOS' },
   { id: 'rejected', label: 'RECHAZADOS' },
 ]
 
@@ -121,7 +121,7 @@ export default function FieldsList({
 
   const handleStatus = async (
     id: string,
-    status: 'approved' | 'rejected' | 'pending'
+    status: 'aprobado' | 'rejected' | 'pending'
   ) => {
     setBusyId(id)
     const result = await updateFieldStatus(id, status)
@@ -258,7 +258,7 @@ export default function FieldsList({
                         <button
                           type="button"
                           disabled={busyId === f.id}
-                          onClick={() => handleStatus(f.id, 'approved')}
+                          onClick={() => handleStatus(f.id, 'aprobado')}
                           className="inline-flex items-center justify-center bg-[#1B5E20] text-[#FFFFFF] transition-colors hover:opacity-90 disabled:opacity-50"
                           style={{
                             ...jostHeading,
@@ -270,7 +270,7 @@ export default function FieldsList({
                           APROBAR
                         </button>
                       )}
-                      {(f.status === 'pending' || f.status === 'approved') && (
+                      {(f.status === 'pending' || f.status === 'aprobado') && (
                         <button
                           type="button"
                           disabled={busyId === f.id}

@@ -33,7 +33,7 @@ USING (
     FROM public.fields f
     WHERE
       f.id = field_reviews.field_id
-      AND f.status = 'approved'
+      AND f.status = 'aprobado'
   )
 );
 

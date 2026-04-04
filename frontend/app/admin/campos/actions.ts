@@ -4,10 +4,10 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '../supabase-server'
 
-type FieldStatus = 'approved' | 'rejected' | 'pending'
+type FieldStatus = 'aprobado' | 'rejected' | 'pending'
 
 function isFieldStatus(v: unknown): v is FieldStatus {
-  return v === 'approved' || v === 'rejected' || v === 'pending'
+  return v === 'aprobado' || v === 'rejected' || v === 'pending'
 }
 
 export async function updateFieldStatus(
@@ -90,7 +90,7 @@ export async function updateOrdenDestacado(
 
 export async function approveFieldForm(formData: FormData): Promise<void> {
   const id = String(formData.get('id') ?? '').trim()
-  const result = await updateFieldStatus(id, 'approved')
+  const result = await updateFieldStatus(id, 'aprobado')
   if ('error' in result && result.error) {
     redirect(
       `/admin/campos/${encodeURIComponent(id)}?err=${encodeURIComponent(result.error)}`

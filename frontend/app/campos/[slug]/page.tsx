@@ -62,7 +62,7 @@ const getCampoBySlug = cache(async (slug: string): Promise<CampoDetailRow | null
     `
     )
     .eq('slug', slug)
-    .eq('status', 'approved')
+    .eq('status', 'aprobado')
     .maybeSingle()
 
   if (error || !data) {
