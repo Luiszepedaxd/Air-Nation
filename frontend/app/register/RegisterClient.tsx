@@ -148,11 +148,11 @@ export default function RegisterClient({
         </div>
       </div>
 
-      <div className="relative hidden w-[45%] bg-[#111111] lg:block">
+      <div className="relative sticky top-0 hidden h-screen w-[45%] overflow-hidden bg-[#111111] lg:block">
         <img
           src={registerImageSrc}
           alt=""
-          className="h-full w-full object-cover opacity-60"
+          className="h-full w-full object-cover object-center opacity-60"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-transparent" />
         <div className="absolute bottom-12 left-10 right-10">
