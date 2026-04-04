@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { notifyTeamJoinRequest } from "@/lib/notify-team-join-request";
 import { generateTeamSlug } from "@/lib/team-slug";
 
 const STORAGE_KEY = "airnation_onboarding";
@@ -35,6 +36,8 @@ type OnboardingState = {
     | "evento"
     | "otro"
     | "";
+  /** true si eligió un equipo existente (búsqueda); solicitud join, sin users.team_id */
+  team_join_via_request: boolean;
 };
 
 const DEFAULT_STATE: OnboardingState = {
@@ -46,6 +49,7 @@ const DEFAULT_STATE: OnboardingState = {
   team_id: null,
   team_nombre: "",
   como_se_entero: "",
+  team_join_via_request: false,
 };
 
 const VALID_ROLES = new Set<string>([
@@ -157,6 +161,8 @@ function parseStoredState(raw: string): OnboardingState | null {
             : null,
       team_nombre: typeof p.team_nombre === "string" ? p.team_nombre : "",
       como_se_entero: como,
+      team_join_via_request:
+        p.team_join_via_request === true ? true : false,
     };
   } catch {
     return null;
@@ -434,6 +440,28 @@ export default function OnboardingPage() {
     setSubmitting(true);
     setSubmitError("");
     try {
+      if (state.team_id && state.team_join_via_request) {
+        const { error: joinErr } = await supabase
+          .from("team_join_requests")
+          .insert({
+            team_id: state.team_id,
+            user_id: userId,
+            mensaje: "Solicitud desde onboarding",
+            status: "pendiente",
+          });
+        if (joinErr && (joinErr as { code?: string }).code !== "23505") {
+          console.warn("[onboarding] team_join_requests insert:", joinErr);
+        }
+        await notifyTeamJoinRequest(state.team_id, {
+          solicitante_nombre: state.nombre.trim(),
+          solicitante_alias: state.alias.trim() || null,
+          team_nombre: state.team_nombre.trim() || "Equipo",
+        });
+      }
+
+      const patchTeamId =
+        state.team_join_via_request ? null : state.team_id;
+
       const res = await fetch(`${API_URL}/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -442,7 +470,7 @@ export default function OnboardingPage() {
           alias: state.alias.trim(),
           ciudad: state.ciudad,
           rol: state.rol,
-          team_id: state.team_id,
+          team_id: patchTeamId,
           como_se_entero: state.como_se_entero,
         }),
       });
@@ -459,15 +487,22 @@ export default function OnboardingPage() {
     }
   }, [userId, canContinue, state, router]);
 
-  const selectTeam = useCallback((t: TeamRow) => {
-    update({ team_id: t.id, team_nombre: t.nombre });
-    setTeamSearchInput("");
-    setDebouncedTeamQuery("");
-    setSearchTeams([]);
-  }, [update]);
+  const selectTeam = useCallback(
+    (t: TeamRow, joinViaRequest: boolean) => {
+      update({
+        team_id: t.id,
+        team_nombre: t.nombre,
+        team_join_via_request: joinViaRequest,
+      });
+      setTeamSearchInput("");
+      setDebouncedTeamQuery("");
+      setSearchTeams([]);
+    },
+    [update]
+  );
 
   const clearTeam = useCallback(() => {
-    update({ team_id: null, team_nombre: "" });
+    update({ team_id: null, team_nombre: "", team_join_via_request: false });
     setTeamSearchInput("");
     setDebouncedTeamQuery("");
   }, [update]);
@@ -493,11 +528,14 @@ export default function OnboardingPage() {
         setSubmitError("Algo salió mal. Intenta de nuevo.");
         return;
       }
-      selectTeam({
-        id: data.team.id,
-        nombre: data.team.nombre ?? query,
-        ciudad: state.ciudad,
-      });
+      selectTeam(
+        {
+          id: data.team.id,
+          nombre: data.team.nombre ?? query,
+          ciudad: state.ciudad,
+        },
+        false
+      );
     } catch {
       setSubmitError("Algo salió mal. Intenta de nuevo.");
     } finally {
@@ -751,7 +789,7 @@ export default function OnboardingPage() {
                               <button
                                 type="button"
                                 className="w-full text-left px-2.5 py-2.5 text-sm cursor-pointer hover:bg-[#F4F4F4] bg-transparent border-0"
-                                onClick={() => selectTeam(t)}
+                                onClick={() => selectTeam(t, true)}
                               >
                                 {t.nombre}
                               </button>
@@ -781,7 +819,11 @@ export default function OnboardingPage() {
                     type="button"
                     className="mt-4 text-xs text-[#999] bg-transparent border-0 p-0 cursor-pointer underline-offset-2 hover:underline text-left"
                     onClick={() => {
-                      update({ team_id: null, team_nombre: "" });
+                      update({
+                        team_id: null,
+                        team_nombre: "",
+                        team_join_via_request: false,
+                      });
                       setTeamSearchInput("");
                     }}
                   >

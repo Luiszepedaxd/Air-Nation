@@ -102,6 +102,108 @@ router.get("/", async (req, res) => {
   }
 });
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * POST /api/v1/teams/:teamId/notify-join-request
+ * Notifica por email al founder del equipo (Resend).
+ */
+router.post("/:teamId/notify-join-request", async (req, res) => {
+  try {
+    const teamId = req.params.teamId;
+    if (!UUID_RE.test(teamId)) {
+      return res.status(400).json({ error: "teamId inválido" });
+    }
+
+    const { solicitante_nombre, solicitante_alias, team_nombre } = req.body || {};
+    const nombreStr =
+      typeof solicitante_nombre === "string" ? solicitante_nombre.trim() : "";
+    const teamNombreStr =
+      typeof team_nombre === "string" ? team_nombre.trim() : "tu equipo";
+    const aliasStr =
+      solicitante_alias === null || solicitante_alias === undefined
+        ? ""
+        : String(solicitante_alias).trim();
+
+    const { data: teamRow, error: teamErr } = await supabase
+      .from("teams")
+      .select("id, slug, nombre")
+      .eq("id", teamId)
+      .maybeSingle();
+
+    if (teamErr || !teamRow) {
+      return res.status(404).json({ error: "Equipo no encontrado" });
+    }
+
+    const slug = teamRow.slug ? String(teamRow.slug) : "";
+
+    const { data: founderMember, error: fmErr } = await supabase
+      .from("team_members")
+      .select("user_id")
+      .eq("team_id", teamId)
+      .eq("rol_plataforma", "founder")
+      .eq("status", "activo")
+      .maybeSingle();
+
+    if (fmErr || !founderMember?.user_id) {
+      return res.json({ ok: true, skipped: true, reason: "no_founder" });
+    }
+
+    const { data: founderUser, error: fuErr } = await supabase
+      .from("users")
+      .select("email")
+      .eq("id", founderMember.user_id)
+      .maybeSingle();
+
+    const toEmail =
+      founderUser && typeof founderUser.email === "string"
+        ? founderUser.email.trim()
+        : "";
+
+    if (fuErr || !toEmail) {
+      return res.json({ ok: true, skipped: true, reason: "no_email" });
+    }
+
+    const apiKey = process.env.RESEND_API_KEY;
+    const fromAddr =
+      process.env.RESEND_FROM_EMAIL || "AirNation <onboarding@resend.dev>";
+
+    if (!apiKey) {
+      console.warn("[notify-join-request] RESEND_API_KEY no configurada");
+      return res.json({ ok: true, skipped: true, reason: "no_resend" });
+    }
+
+    const { Resend } = require("resend");
+    const resend = new Resend(apiKey);
+
+    const aliasPart = aliasStr ? ` (@${aliasStr})` : "";
+    const adminPath = slug
+      ? `https://airnation.online/equipos/${encodeURIComponent(slug)}/admin`
+      : `https://airnation.online/equipos/${encodeURIComponent(teamId)}/admin`;
+
+    const textBody = `${nombreStr || "Alguien"}${aliasPart} quiere unirse a tu equipo.\n\nRevisa las solicitudes en: ${adminPath}\n`;
+
+    const subject = `Nueva solicitud para unirse a ${teamNombreStr} — AirNation`;
+
+    const { error: sendErr } = await resend.emails.send({
+      from: fromAddr,
+      to: [toEmail],
+      subject,
+      text: textBody,
+    });
+
+    if (sendErr) {
+      console.error("[notify-join-request] Resend error:", sendErr);
+      return res.status(500).json({ error: sendErr.message || "Error al enviar email" });
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /**
  * GET /api/v1/teams/:id
  * @param {string} req.params.id - UUID del equipo

@@ -76,6 +76,25 @@ export default async function PerfilPage() {
     authUser.id
   )
 
+  const { data: pendingJoinRows } = await supabase
+    .from('team_join_requests')
+    .select('id, teams ( nombre )')
+    .eq('user_id', authUser.id)
+    .eq('status', 'pendiente')
+
+  const pendingJoinPending: { id: string; nombre: string }[] = []
+  for (const r of pendingJoinRows ?? []) {
+    const raw = r as {
+      id?: string
+      teams?: { nombre?: string } | { nombre?: string }[] | null
+    }
+    const t = raw.teams
+    const n = Array.isArray(t) ? t[0] : t
+    const name = n?.nombre?.trim()
+    const rid = raw.id
+    if (name && rid) pendingJoinPending.push({ id: rid, nombre: name })
+  }
+
   return (
     <PerfilTabsClient
       user={row}
@@ -83,6 +102,7 @@ export default async function PerfilPage() {
       misEquipos={misEquipos}
       initialJoinRequests={initialJoinRequests}
       isAdmin={isAdmin}
+      pendingJoinPending={pendingJoinPending}
     />
   )
 }

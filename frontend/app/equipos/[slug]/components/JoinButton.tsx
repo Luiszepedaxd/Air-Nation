@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createPublicSupabaseClient } from '@/app/u/supabase-public'
+import { supabase } from '@/lib/supabase'
+import { notifyTeamJoinRequest } from '@/lib/notify-team-join-request'
 import type { MemberDisplay } from '../types'
 
 const jost = {
@@ -11,25 +12,33 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
-type BtnState =
-  | 'idle'
-  | 'loading'
-  | 'sent'
-  | 'ya_miembro'
-  | 'error'
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+type JoinUiState =
   | 'checking'
+  | 'ya_miembro'
+  | 'pendiente'
+  | 'rechazado'
+  | 'sin_solicitud'
+  | 'loading'
+  | 'error'
+
+const btnJoinClass =
+  'w-full rounded-[2px] bg-[#CC4B37] px-6 py-3 text-[14px] font-extrabold uppercase text-white transition-opacity hover:opacity-90 disabled:opacity-60 md:w-auto'
 
 export function JoinButton({
   teamId,
   slug,
+  teamNombre,
   members,
 }: {
   teamId: string
   slug: string
+  teamNombre: string
   members: MemberDisplay[]
 }) {
   const router = useRouter()
-  const [state, setState] = useState<BtnState>('checking')
+  const [state, setState] = useState<JoinUiState>('checking')
 
   const memberIds = useMemo(
     () => new Set(members.map((m) => m.user_id)),
@@ -38,37 +47,52 @@ export function JoinButton({
 
   useEffect(() => {
     let cancelled = false
-    const supabase = createPublicSupabaseClient()
 
     ;(async () => {
-      const { data } = await supabase.auth.getUser()
-      const uid = data.user?.id ?? null
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      const uid = user?.id ?? null
       if (cancelled) return
 
-      if (uid && memberIds.has(uid)) {
+      if (!uid) {
+        setState('sin_solicitud')
+        return
+      }
+
+      if (memberIds.has(uid)) {
         setState('ya_miembro')
         return
       }
 
-      if (uid) {
-        const { data: existing } = await supabase
-          .from('team_join_requests')
-          .select('id')
-          .eq('team_id', teamId)
-          .eq('user_id', uid)
-          .eq('status', 'pendiente')
-          .maybeSingle()
+      const { data } = await supabase
+        .from('team_join_requests')
+        .select('status')
+        .eq('team_id', teamId)
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-        if (cancelled) return
-        if (existing) {
-          setState('sent')
-          return
-        }
+      if (cancelled) return
+
+      if (!data?.status) {
+        setState('sin_solicitud')
+        return
       }
 
-      if (!cancelled) setState('idle')
+      const st = String(data.status).toLowerCase()
+      if (st === 'pendiente') {
+        setState('pendiente')
+        return
+      }
+      if (st === 'rechazado') {
+        setState('rechazado')
+        return
+      }
+      setState('sin_solicitud')
     })().catch(() => {
-      if (!cancelled) setState('idle')
+      if (!cancelled) setState('sin_solicitud')
     })
 
     return () => {
@@ -78,12 +102,52 @@ export function JoinButton({
 
   const redirectPath = `/equipos/${encodeURIComponent(slug)}`
 
-  const handleClick = useCallback(async () => {
-    if (state === 'ya_miembro' || state === 'sent') return
+  const sendJoinRequest = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const uid = user?.id ?? null
+    if (!uid) return false
 
-    const supabase = createPublicSupabaseClient()
-    const { data } = await supabase.auth.getUser()
-    const uid = data.user?.id ?? null
+    setState('loading')
+
+    const { error } = await supabase.from('team_join_requests').insert({
+      team_id: teamId,
+      user_id: uid,
+      status: 'pendiente',
+    })
+
+    if (error) {
+      const code = (error as { code?: string }).code
+      if (code === '23505') {
+        setState('pendiente')
+        return true
+      }
+      setState('error')
+      return false
+    }
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('nombre, alias')
+      .eq('id', uid)
+      .maybeSingle()
+
+    await notifyTeamJoinRequest(teamId, {
+      solicitante_nombre: (profile?.nombre as string | null)?.trim() || 'Usuario',
+      solicitante_alias: (profile?.alias as string | null) ?? null,
+      team_nombre: teamNombre,
+    })
+
+    setState('pendiente')
+    return true
+  }, [teamId, teamNombre])
+
+  const handleClick = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const uid = user?.id ?? null
 
     if (!uid) {
       router.push(`/login?redirect=${encodeURIComponent(redirectPath)}`)
@@ -95,32 +159,12 @@ export function JoinButton({
       return
     }
 
-    setState('loading')
+    if (state === 'pendiente' || state === 'ya_miembro') return
 
-    const { error } = await supabase.from('team_join_requests').insert({
-      team_id: teamId,
-      user_id: uid,
-      status: 'pendiente',
-    })
-
-    if (!error) {
-      setState('sent')
-      return
+    if (state === 'rechazado' || state === 'sin_solicitud') {
+      await sendJoinRequest()
     }
-
-    const code = (error as { code?: string }).code
-    const msg = error.message || ''
-    if (
-      code === '23505' ||
-      msg.toLowerCase().includes('duplicate') ||
-      msg.toLowerCase().includes('unique')
-    ) {
-      setState('sent')
-      return
-    }
-
-    setState('error')
-  }, [state, teamId, router, redirectPath, memberIds])
+  }, [state, router, redirectPath, memberIds, sendJoinRequest])
 
   if (state === 'checking') {
     return (
@@ -130,23 +174,20 @@ export function JoinButton({
 
   if (state === 'ya_miembro') {
     return (
-      <p
-        className="text-center text-[14px] text-[#666666]"
-        style={{ fontFamily: "'Lato', sans-serif" }}
-      >
-        Ya eres miembro de este equipo
+      <p style={jost} className="text-center text-[11px] font-extrabold uppercase text-[#111111]">
+        YA ERES MIEMBRO
       </p>
     )
   }
 
-  if (state === 'sent') {
+  if (state === 'pendiente') {
     return (
-      <p
+      <div
         style={jost}
-        className="text-center text-[14px] font-extrabold uppercase text-[#111111]"
+        className="inline-flex w-full max-w-md items-center justify-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-3 text-[11px] font-extrabold uppercase text-[#666666] md:w-auto"
       >
-        Solicitud enviada
-      </p>
+        SOLICITUD PENDIENTE
+      </div>
     )
   }
 
@@ -157,14 +198,18 @@ export function JoinButton({
         onClick={() => void handleClick()}
         disabled={state === 'loading'}
         style={jost}
-        className="w-full rounded-[2px] bg-[#CC4B37] px-6 py-3 text-[14px] font-extrabold uppercase text-white transition-opacity hover:opacity-90 disabled:opacity-60 md:w-auto"
+        className={btnJoinClass}
       >
-        {state === 'loading' ? 'Enviando…' : 'Unirse al equipo'}
+        {state === 'loading'
+          ? 'Enviando…'
+          : state === 'rechazado'
+            ? 'VOLVER A SOLICITAR'
+            : 'UNIRSE AL EQUIPO'}
       </button>
       {state === 'error' ? (
         <p
           className="text-center text-[12px] text-[#CC4B37] md:text-left"
-          style={{ fontFamily: "'Lato', sans-serif" }}
+          style={lato}
         >
           No se pudo enviar la solicitud. Intenta de nuevo más tarde.
         </p>

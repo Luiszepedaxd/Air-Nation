@@ -1,4 +1,8 @@
+'use client'
+
 import Link from 'next/link'
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -55,13 +59,58 @@ function canEditTeam(rol: string | null) {
   return r === 'founder' || r === 'admin'
 }
 
+function isFounder(rol: string | null) {
+  return (rol || '').toLowerCase().trim() === 'founder'
+}
+
 export function MisEquiposSection({
-  teams,
+  teams: initialTeams,
+  userId,
   variant = 'default',
 }: {
   teams: MisEquipoItem[]
+  userId: string
   variant?: 'default' | 'tab'
 }) {
+  const [teams, setTeams] = useState(initialTeams)
+  const [leaveConfirmId, setLeaveConfirmId] = useState<string | null>(null)
+  const [leavingId, setLeavingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    setTeams(initialTeams)
+  }, [initialTeams])
+
+  const handleLeave = useCallback(
+    async (t: MisEquipoItem) => {
+      setLeavingId(t.id)
+      try {
+        const { error: e1 } = await supabase
+          .from('team_members')
+          .update({ status: 'inactivo' })
+          .eq('team_id', t.id)
+          .eq('user_id', userId)
+
+        if (e1) throw e1
+
+        const { error: e2 } = await supabase
+          .from('users')
+          .update({ team_id: null })
+          .eq('id', userId)
+          .eq('team_id', t.id)
+
+        if (e2) throw e2
+
+        setTeams((prev) => prev.filter((x) => x.id !== t.id))
+        setLeaveConfirmId(null)
+      } catch {
+        /* noop */
+      } finally {
+        setLeavingId(null)
+      }
+    },
+    [userId]
+  )
+
   const sectionTop =
     variant === 'tab'
       ? 'mx-auto max-w-[640px]'
@@ -102,6 +151,9 @@ export function MisEquiposSection({
       <ul className="mt-6 flex flex-col gap-4">
         {teams.map((t) => {
           const initial = (t.nombre?.trim()?.[0] || '?').toUpperCase()
+          const showLeave = !isFounder(t.rol_plataforma)
+          const busy = leavingId === t.id
+
           return (
             <li
               key={t.id}
@@ -170,6 +222,47 @@ export function MisEquiposSection({
                       Editar
                     </Link>
                   </>
+                ) : null}
+                {showLeave ? (
+                  <div className="w-full sm:w-auto">
+                    {leaveConfirmId === t.id ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p
+                          className="text-[12px] text-[#111111]"
+                          style={lato}
+                        >
+                          ¿Salir de {t.nombre.trim()}?
+                        </p>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void handleLeave(t)}
+                          style={jost}
+                          className="min-h-[32px] bg-[#CC4B37] px-3 text-[10px] font-extrabold uppercase text-[#FFFFFF] disabled:opacity-50"
+                        >
+                          SÍ
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setLeaveConfirmId(null)}
+                          style={jost}
+                          className="min-h-[32px] border border-solid border-[#EEEEEE] px-3 text-[10px] font-extrabold uppercase text-[#666666] disabled:opacity-50"
+                        >
+                          NO
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        style={jost}
+                        onClick={() => setLeaveConfirmId(t.id)}
+                        className="border-0 bg-transparent p-0 text-[11px] font-extrabold uppercase text-[#999999] hover:text-[#666666]"
+                      >
+                        SALIR
+                      </button>
+                    )}
+                  </div>
                 ) : null}
               </div>
             </li>

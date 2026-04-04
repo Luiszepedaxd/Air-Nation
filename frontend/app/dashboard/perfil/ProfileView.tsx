@@ -108,9 +108,14 @@ function Spinner({ className = 'text-[#FFFFFF]' }: { className?: string }) {
 type Props = {
   user: ProfileUserRow
   teamNombre: string | null
+  pendingJoinPending?: { id: string; nombre: string }[]
 }
 
-export function ProfileView({ user: initialUser, teamNombre }: Props) {
+export function ProfileView({
+  user: initialUser,
+  teamNombre,
+  pendingJoinPending = [],
+}: Props) {
   const [user, setUser] = useState<ProfileUserRow>(initialUser)
   const [readTeamNombre, setReadTeamNombre] = useState(teamNombre ?? '')
   const [editMode, setEditMode] = useState(false)
@@ -467,6 +472,23 @@ export function ProfileView({ user: initialUser, teamNombre }: Props) {
               >
                 {readTeamNombre || 'Sin equipo'}
               </p>
+              {pendingJoinPending.length > 0 ? (
+                <ul className="mt-2 list-none space-y-1 p-0">
+                  {pendingJoinPending.map((row) => (
+                    <li
+                      key={row.id}
+                      className="flex items-start gap-2 text-[12px] text-[#999999]"
+                      style={lato}
+                    >
+                      <span
+                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#E8A317]"
+                        aria-hidden
+                      />
+                      Solicitud pendiente en {row.nombre}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
             <div className={`${fieldShell} md:col-span-2`}>
               <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">

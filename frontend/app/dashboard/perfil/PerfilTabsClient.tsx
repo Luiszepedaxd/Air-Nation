@@ -25,12 +25,14 @@ export function PerfilTabsClient({
   misEquipos,
   initialJoinRequests,
   isAdmin,
+  pendingJoinPending,
 }: {
   user: ProfileUserRow
   teamNombre: string | null
   misEquipos: MisEquipoItem[]
   initialJoinRequests: JoinRequestRow[]
   isAdmin: boolean
+  pendingJoinPending: { id: string; nombre: string }[]
 }) {
   const [activeTab, setActiveTab] = useState<TabId>('perfil')
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
@@ -102,7 +104,11 @@ export function PerfilTabsClient({
       <div className="mt-6">
         {activeTab === 'perfil' ? (
           <>
-            <ProfileView user={user} teamNombre={teamNombre} />
+            <ProfileView
+              user={user}
+              teamNombre={teamNombre}
+              pendingJoinPending={pendingJoinPending}
+            />
             <div className="mx-auto mt-8 max-w-[640px] space-y-8">
               {isAdmin ? (
                 <Link
@@ -161,7 +167,11 @@ export function PerfilTabsClient({
         ) : null}
 
         {activeTab === 'equipos' ? (
-          <MisEquiposSection teams={misEquipos} variant="tab" />
+          <MisEquiposSection
+            teams={misEquipos}
+            userId={user.id}
+            variant="tab"
+          />
         ) : null}
 
         {activeTab === 'notificaciones' ? (

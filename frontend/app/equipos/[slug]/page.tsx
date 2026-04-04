@@ -195,7 +195,12 @@ export default async function EquipoPublicPage({
       <TeamStats memberCount={members.length} createdAt={team.created_at} />
       <TeamInfo team={team} />
       <div className="mx-auto max-w-[960px] px-4 py-4">
-        <JoinButton teamId={team.id} slug={params.slug} members={members} />
+        <JoinButton
+          teamId={team.id}
+          slug={params.slug}
+          teamNombre={team.nombre}
+          members={members}
+        />
       </div>
       <TeamPosts posts={posts} />
       <TeamAlbums albums={albums} />
