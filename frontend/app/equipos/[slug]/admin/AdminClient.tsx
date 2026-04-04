@@ -274,19 +274,8 @@ export function AdminClient({
         .eq('team_id', teamId)
         .eq('status', 'activo')
 
-      const postsQuery = supabase
-        .from('team_posts')
-        .select('id, content, fotos_urls, created_at, created_by')
-        .eq('team_id', teamId)
-        .eq('published', true)
-        .order('created_at', { ascending: false })
-        .limit(20)
-
-      const [
-        { data: rawJoin, error: joinErr },
-        { data: rawMembers, error: memErr },
-        { data: rawPosts, error: postsErr },
-      ] = await Promise.all([joinQuery, membersQuery, postsQuery])
+      const [{ data: rawJoin, error: joinErr }, { data: rawMembers, error: memErr }] =
+        await Promise.all([joinQuery, membersQuery])
 
       if (cancelled) return
 
@@ -350,29 +339,21 @@ export function AdminClient({
 
       mappedMembers = [...mappedMembers].sort(sortMembers)
 
-      if (postsErr) {
-        console.error('team_posts fetch failed:', postsErr)
-      }
+      const { data: postsData, error: postsError } = await supabase
+        .from('team_posts')
+        .select('id, content, fotos_urls, created_at, created_by')
+        .eq('team_id', teamId)
+        .eq('published', true)
+        .order('created_at', { ascending: false })
+        .limit(20)
 
-      const mappedPosts: TeamPostAdminRow[] =
-        postsErr || !rawPosts
-          ? []
-          : (rawPosts as TeamPostAdminRow[]).map((r) => ({
-              id: r.id,
-              content: r.content,
-              fotos_urls: Array.isArray(r.fotos_urls)
-                ? r.fotos_urls.filter(
-                    (u): u is string =>
-                      typeof u === 'string' && u.trim().length > 0
-                  )
-                : null,
-              created_at: r.created_at,
-              created_by: r.created_by,
-            }))
+      if (postsError) {
+        console.error('team_posts fetch error:', postsError)
+      }
+      setPosts(postsData || [])
 
       setJoinRequests(mappedJoin)
       setMembers(mappedMembers)
-      setPosts(mappedPosts)
       setLoadingSolicitudes(false)
       setLoadingIntegrantes(false)
       setLoadingPosts(false)
