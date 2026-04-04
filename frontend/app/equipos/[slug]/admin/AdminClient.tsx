@@ -41,6 +41,25 @@ const RANGO_OPTIONS = [
   'miembro',
 ] as const
 
+function one<T>(v: T | T[] | null | undefined): T | null {
+  if (v == null) return null
+  return Array.isArray(v) ? (v[0] ?? null) : v
+}
+
+function sortMembers(a: TeamMemberAdminRow, b: TeamMemberAdminRow) {
+  const rank = (r: string | null) => {
+    const x = (r || '').toLowerCase()
+    if (x === 'founder') return 1
+    if (x === 'admin') return 2
+    return 3
+  }
+  const dr = rank(a.rol_plataforma) - rank(b.rol_plataforma)
+  if (dr !== 0) return dr
+  const an = (a.nombre || a.alias || '').toLowerCase()
+  const bn = (b.nombre || b.alias || '').toLowerCase()
+  return an.localeCompare(bn, 'es')
+}
+
 type TabId = 'solicitudes' | 'integrantes' | 'posts' | 'albumes' | 'perfil'
 
 function relativeTime(iso: string): string {
@@ -184,8 +203,6 @@ export function AdminClient({
   logoUrl,
   viewerUserId,
   viewerRol,
-  initialJoinRequests,
-  initialMembers,
   initialPosts,
   initialAlbums,
 }: {
@@ -196,14 +213,14 @@ export function AdminClient({
   teamNombre: string
   teamCiudad: string | null
   logoUrl: string | null
-  initialJoinRequests: TeamJoinRequestAdminRow[]
-  initialMembers: TeamMemberAdminRow[]
   initialPosts: TeamPostAdminRow[]
   initialAlbums: TeamAlbumAdminRow[]
 }) {
   const [activeTab, setActiveTab] = useState<TabId>('solicitudes')
-  const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
-  const [members, setMembers] = useState(initialMembers)
+  const [joinRequests, setJoinRequests] = useState<TeamJoinRequestAdminRow[]>([])
+  const [members, setMembers] = useState<TeamMemberAdminRow[]>([])
+  const [loadingSolicitudes, setLoadingSolicitudes] = useState(true)
+  const [loadingIntegrantes, setLoadingIntegrantes] = useState(true)
   const [posts, setPosts] = useState(initialPosts)
   const [albums, setAlbums] = useState(initialAlbums)
   const pendingCount = joinRequests.length
@@ -219,6 +236,120 @@ export function AdminClient({
   const removeRequest = useCallback((id: string) => {
     setJoinRequests((r) => r.filter((x) => x.id !== id))
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadLists() {
+      setLoadingSolicitudes(true)
+      setLoadingIntegrantes(true)
+
+      const joinQuery = supabase
+        .from('team_join_requests')
+        .select(
+          `
+          id,
+          team_id,
+          user_id,
+          mensaje,
+          created_at,
+          users ( nombre, alias, avatar_url, ciudad )
+        `
+        )
+        .eq('team_id', teamId)
+        .eq('status', 'pendiente')
+        .order('created_at', { ascending: false })
+
+      const membersQuery = supabase
+        .from('team_members')
+        .select(
+          `
+          id,
+          user_id,
+          rol_plataforma,
+          rango_militar,
+          users ( nombre, alias, avatar_url, ciudad )
+        `
+        )
+        .eq('team_id', teamId)
+        .eq('status', 'activo')
+
+      const [{ data: rawJoin, error: joinErr }, { data: rawMembers, error: memErr }] =
+        await Promise.all([joinQuery, membersQuery])
+
+      if (cancelled) return
+
+      const mappedJoin: TeamJoinRequestAdminRow[] =
+        joinErr || !rawJoin
+          ? []
+          : (rawJoin as {
+              id: string
+              team_id: string
+              user_id: string
+              mensaje: string | null
+              created_at: string
+              users: unknown
+            }[]).map((r) => {
+              const u = one(r.users) as {
+                nombre: string | null
+                alias: string | null
+                avatar_url: string | null
+                ciudad: string | null
+              } | null
+              return {
+                id: r.id,
+                team_id: r.team_id,
+                user_id: r.user_id,
+                mensaje: r.mensaje,
+                created_at: r.created_at,
+                nombre: u?.nombre ?? null,
+                alias: u?.alias ?? null,
+                avatar_url: u?.avatar_url ?? null,
+                ciudad: u?.ciudad ?? null,
+              }
+            })
+
+      let mappedMembers: TeamMemberAdminRow[] =
+        memErr || !rawMembers
+          ? []
+          : (rawMembers as {
+              id: string
+              user_id: string
+              rol_plataforma: string | null
+              rango_militar: string | null
+              users: unknown
+            }[]).map((r) => {
+              const u = one(r.users) as {
+                nombre: string | null
+                alias: string | null
+                avatar_url: string | null
+                ciudad: string | null
+              } | null
+              return {
+                id: r.id,
+                user_id: r.user_id,
+                rol_plataforma: r.rol_plataforma,
+                rango_militar: r.rango_militar,
+                nombre: u?.nombre ?? null,
+                alias: u?.alias ?? null,
+                avatar_url: u?.avatar_url ?? null,
+                ciudad: u?.ciudad ?? null,
+              }
+            })
+
+      mappedMembers = [...mappedMembers].sort(sortMembers)
+
+      setJoinRequests(mappedJoin)
+      setMembers(mappedMembers)
+      setLoadingSolicitudes(false)
+      setLoadingIntegrantes(false)
+    }
+
+    void loadLists()
+    return () => {
+      cancelled = true
+    }
+  }, [teamId])
 
   useEffect(() => {
     const el = document.getElementById('dashboard-scroll-root')
@@ -254,7 +385,7 @@ export function AdminClient({
             className={`${tabBase} ${tabClass('solicitudes')} inline-flex items-center gap-1.5`}
           >
             <span>SOLICITUDES</span>
-            {pendingCount > 0 ? (
+            {!loadingSolicitudes && pendingCount > 0 ? (
               <span
                 style={jost}
                 className="inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#CC4B37] px-1 text-[10px] font-extrabold leading-none text-[#FFFFFF]"
@@ -304,6 +435,7 @@ export function AdminClient({
             teamId={teamId}
             joinRequests={joinRequests}
             onRemove={removeRequest}
+            loading={loadingSolicitudes}
           />
         ) : null}
 
@@ -315,6 +447,7 @@ export function AdminClient({
             viewerUserId={viewerUserId}
             viewerIsFounder={viewerIsFounder}
             viewerIsAdmin={viewerIsAdmin}
+            loading={loadingIntegrantes}
           />
         ) : null}
 
@@ -349,16 +482,70 @@ export function AdminClient({
   )
 }
 
+function SolicitudesTabSkeleton() {
+  return (
+    <ul className="flex flex-col gap-4 pb-10" aria-busy aria-label="Cargando solicitudes">
+      {[0, 1, 2].map((k) => (
+        <li
+          key={k}
+          className="animate-pulse border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+        >
+          <div className="flex gap-3">
+            <div className="h-12 w-12 shrink-0 bg-[#EEEEEE]" />
+            <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+              <div className="h-4 max-w-[200px] rounded-sm bg-[#EEEEEE]" />
+              <div className="h-3 max-w-[120px] rounded-sm bg-[#F4F4F4]" />
+              <div className="h-3 max-w-[160px] rounded-sm bg-[#F4F4F4]" />
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <div className="h-10 min-w-[120px] flex-1 bg-[#EEEEEE] sm:flex-none" />
+            <div className="h-10 min-w-[120px] flex-1 bg-[#F4F4F4] sm:flex-none" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function IntegrantesTabSkeleton() {
+  return (
+    <ul className="flex flex-col gap-4 pb-10" aria-busy aria-label="Cargando integrantes">
+      {[0, 1, 2, 3].map((k) => (
+        <li
+          key={k}
+          className="animate-pulse border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+        >
+          <div className="flex gap-3">
+            <div className="h-12 w-12 shrink-0 bg-[#EEEEEE]" />
+            <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+              <div className="h-4 max-w-[180px] rounded-sm bg-[#EEEEEE]" />
+              <div className="h-3 max-w-[100px] rounded-sm bg-[#F4F4F4]" />
+              <div className="mt-2 h-6 max-w-[200px] rounded-sm bg-[#F4F4F4]" />
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function SolicitudesTab({
   teamId,
   joinRequests,
   onRemove,
+  loading,
 }: {
   teamId: string
   joinRequests: TeamJoinRequestAdminRow[]
   onRemove: (id: string) => void
+  loading: boolean
 }) {
   const [busyId, setBusyId] = useState<string | null>(null)
+
+  if (loading) {
+    return <SolicitudesTabSkeleton />
+  }
 
   const handleApprove = async (row: TeamJoinRequestAdminRow) => {
     setBusyId(row.id)
@@ -514,6 +701,7 @@ function IntegrantesTab({
   viewerUserId,
   viewerIsFounder,
   viewerIsAdmin,
+  loading,
 }: {
   teamId: string
   members: TeamMemberAdminRow[]
@@ -521,9 +709,14 @@ function IntegrantesTab({
   viewerUserId: string
   viewerIsFounder: boolean
   viewerIsAdmin: boolean
+  loading: boolean
 }) {
   const [busyMemberId, setBusyMemberId] = useState<string | null>(null)
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
+
+  if (loading) {
+    return <IntegrantesTabSkeleton />
+  }
 
   const canShowRango = (m: TeamMemberAdminRow) => {
     if (m.user_id === viewerUserId) return false
