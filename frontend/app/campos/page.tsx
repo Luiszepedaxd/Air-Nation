@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
+import { isDestacadoTrue } from './components/DestacadoBadge'
 import { CamposGrid } from './components/CamposGrid'
 import type { CampoListRow } from './types'
 
@@ -27,7 +28,11 @@ async function fetchCamposAprobados(): Promise<CampoListRow[]> {
     console.error('[campos] list:', error.message)
     return []
   }
-  return (data ?? []) as CampoListRow[]
+  const rows = (data ?? []) as CampoListRow[]
+  return rows.map((r) => ({
+    ...r,
+    destacado: isDestacadoTrue(r.destacado),
+  }))
 }
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const

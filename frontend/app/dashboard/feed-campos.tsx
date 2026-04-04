@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DestacadoBadge, isDestacadoTrue } from '@/app/campos/components/DestacadoBadge'
 import { createDashboardSupabaseServerClient } from './supabase-server'
 import { Carrusel } from './components/Carrusel'
 import { SectionHeader } from './components/SectionHeader'
@@ -85,64 +86,82 @@ export async function CamposSection() {
     .order('orden_destacado', { ascending: true, nullsFirst: false })
     .order('nombre', { ascending: true })
 
-  if (error || !data?.length) return null
+  if (error) {
+    console.error('[feed-campos]', error.message)
+  }
 
-  const fields = data as FieldRow[]
+  const raw = (data ?? []) as FieldRow[]
+  const fields: FieldRow[] = raw.map((row) => ({
+    ...row,
+    destacado: isDestacadoTrue(row.destacado),
+  }))
 
   return (
     <section>
-      <SectionHeader title="CAMPOS DESTACADOS" href="/campos" />
-      <Carrusel>
-        {fields.map((field) => {
-          const tags = disciplinasToList(field.disciplinas)
-          return (
-            <Link
-              key={field.id}
-              href={`/campos/${field.slug}`}
-              className="w-[220px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[260px]"
-            >
-              <article>
-                <div className="aspect-[4/3] w-full overflow-hidden bg-[#F4F4F4]">
-                  {field.foto_portada_url ? (
-                    <img
-                      src={field.foto_portada_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                      <PinMapaIcon />
-                    </div>
-                  )}
-                </div>
-                <div className="p-[10px]">
-                  <h3
-                    style={jost}
-                    className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
-                  >
-                    {field.nombre}
-                  </h3>
-                  {field.ciudad ? (
-                    <p className="mt-1 text-[11px] text-[#666666]">{field.ciudad}</p>
-                  ) : null}
-                  {tags.length > 0 ? (
-                    <ul className="mt-1 flex flex-wrap gap-[4px]">
-                      {tags.map((tag) => (
-                        <li
-                          key={tag}
-                          className="border border-[#EEEEEE] bg-[#F4F4F4] px-[6px] py-[2px] text-[9px] text-[#666666] leading-tight"
-                        >
-                          {tag}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </div>
-              </article>
-            </Link>
-          )
-        })}
-      </Carrusel>
+      <SectionHeader title="CAMPOS" href="/campos" />
+      {fields.length === 0 ? (
+        <p
+          className="px-4 pb-4 text-[12px] text-[#666666] md:mx-auto md:max-w-[1200px] md:px-6"
+          style={{ fontFamily: "'Lato', sans-serif" }}
+        >
+          Aún no hay campos aprobados.
+        </p>
+      ) : (
+        <Carrusel>
+          {fields.map((field) => {
+            const tags = disciplinasToList(field.disciplinas)
+            return (
+              <Link
+                key={field.id}
+                href={`/campos/${field.slug}`}
+                className="w-[220px] shrink-0 snap-start border border-[#EEEEEE] bg-[#FFFFFF] md:w-[260px]"
+              >
+                <article>
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#F4F4F4]">
+                    {field.foto_portada_url ? (
+                      <img
+                        src={field.foto_portada_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <PinMapaIcon />
+                      </div>
+                    )}
+                    {isDestacadoTrue(field.destacado) ? <DestacadoBadge /> : null}
+                  </div>
+                  <div className="p-[10px]">
+                    <h3
+                      style={jost}
+                      className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]"
+                    >
+                      {field.nombre}
+                    </h3>
+                    {field.ciudad ? (
+                      <p className="mt-1 text-[11px] text-[#666666]">
+                        {field.ciudad}
+                      </p>
+                    ) : null}
+                    {tags.length > 0 ? (
+                      <ul className="mt-1 flex flex-wrap gap-[4px]">
+                        {tags.map((tag) => (
+                          <li
+                            key={tag}
+                            className="border border-[#EEEEEE] bg-[#F4F4F4] px-[6px] py-[2px] text-[9px] text-[#666666] leading-tight"
+                          >
+                            {tag}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </article>
+              </Link>
+            )
+          })}
+        </Carrusel>
+      )}
     </section>
   )
 }

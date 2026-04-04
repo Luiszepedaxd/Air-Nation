@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { CampoListRow } from '../types'
+import { DestacadoBadge, isDestacadoTrue } from './DestacadoBadge'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -110,14 +111,7 @@ export function CampoCard({ field }: { field: CampoListRow }) {
           >
             {tipo === 'privado' ? 'PRIVADO' : 'PÚBLICO'}
           </span>
-          {field.destacado ? (
-            <span
-              className="absolute right-2 top-2 z-[1] bg-[#CC4B37] px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-white"
-              style={{ ...jost, borderRadius: 0 }}
-            >
-              DESTACADO
-            </span>
-          ) : null}
+          {isDestacadoTrue(field.destacado) ? <DestacadoBadge /> : null}
         </div>
         <div className="space-y-2 p-3">
           <h2
