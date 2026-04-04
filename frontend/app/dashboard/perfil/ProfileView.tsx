@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -138,6 +139,16 @@ export function ProfileView({
   const fileRef = useRef<HTMLInputElement>(null)
   const [shareLabel, setShareLabel] = useState('COMPARTIR PERFIL')
   const shareCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [localPendingJoins, setLocalPendingJoins] = useState<
+    { id: string; nombre: string }[]
+  >([])
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState('')
+
+  const displayPendingJoins = useMemo(() => {
+    const seen = new Set(pendingJoinPending.map((p) => p.id))
+    const extra = localPendingJoins.filter((p) => !seen.has(p.id))
+    return [...pendingJoinPending, ...extra]
+  }, [pendingJoinPending, localPendingJoins])
 
   useEffect(() => {
     setReadTeamNombre(teamNombre ?? '')
@@ -258,6 +269,7 @@ export function ProfileView({
 
   const startEdit = () => {
     setFormError('')
+    setProfileSuccessMsg('')
     setForm(initialFromUser(user))
     setTeamIdDraft(user.team_id)
     setTeamSearchText(user.team_id ? readTeamNombre : '')
@@ -289,6 +301,7 @@ export function ProfileView({
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
+    setProfileSuccessMsg('')
     const aliasT = form.alias.trim()
     if (aliasT.length < 2 || aliasT.length > 30) {
       setFormError('El alias debe tener entre 2 y 30 caracteres.')
@@ -296,6 +309,11 @@ export function ProfileView({
     }
     setSaveLoading(true)
     try {
+      const wantsNewTeam =
+        teamIdDraft != null &&
+        teamIdDraft !== user.team_id &&
+        teamSearchText.trim().length > 0
+
       const res = await fetch(`${API_URL}/users/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -304,7 +322,6 @@ export function ProfileView({
           alias: form.alias.trim(),
           ciudad: form.ciudad.trim(),
           rol: form.rol,
-          team_id: teamIdDraft,
         }),
       })
       if (!res.ok) {
@@ -321,9 +338,49 @@ export function ProfileView({
           alias: form.alias.trim(),
           ciudad: form.ciudad.trim(),
           rol: form.rol,
-          team_id: teamIdDraft,
         }))
-      setReadTeamNombre(teamIdDraft ? teamSearchText.trim() : '')
+
+      if (wantsNewTeam && teamIdDraft) {
+        const nombreSolicitud = teamSearchText.trim()
+        const { data: joinRow, error: joinErr } = await supabase
+          .from('team_join_requests')
+          .insert({
+            team_id: teamIdDraft,
+            user_id: user.id,
+            mensaje: 'Solicitud desde editar perfil',
+            status: 'pendiente',
+          })
+          .select('id')
+          .maybeSingle()
+
+        const code = (joinErr as { code?: string } | null)?.code
+        if (joinErr && code !== '23505') {
+          setFormError('Perfil guardado, pero no se pudo enviar la solicitud al equipo.')
+          setEditMode(false)
+          return
+        }
+        const newId = (joinRow as { id?: string } | null)?.id
+        const alreadyListed =
+          pendingJoinPending.some((p) => p.nombre === nombreSolicitud) ||
+          localPendingJoins.some((p) => p.nombre === nombreSolicitud)
+        if (!alreadyListed) {
+          const id =
+            newId ||
+            (code === '23505' ? `dup-${teamIdDraft}` : `local-${teamIdDraft}`)
+          setLocalPendingJoins((prev) => {
+            if (prev.some((p) => p.id === id || p.nombre === nombreSolicitud)) {
+              return prev
+            }
+            return [...prev, { id, nombre: nombreSolicitud }]
+          })
+        }
+        setProfileSuccessMsg('Solicitud enviada — pendiente de aprobación')
+      }
+
+      const keptTeamId = body.user?.team_id ?? user.team_id
+      if (!wantsNewTeam && keptTeamId && teamSearchText.trim()) {
+        setReadTeamNombre(teamSearchText.trim())
+      }
       setEditMode(false)
     } catch {
       setFormError('Error de red. Intenta de nuevo.')
@@ -469,7 +526,7 @@ export function ProfileView({
               <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
                 EQUIPO
               </p>
-              {initialUser.team_id ? (
+              {user.team_id ? (
                 readTeamNombre ? (
                   <p className="mt-1 text-[15px]" style={lato}>
                     {teamSlug ? (
@@ -490,31 +547,9 @@ export function ProfileView({
                     —
                   </p>
                 )
-              ) : (
-                <p
-                  className={`mt-1 text-[15px] ${readTeamNombre ? 'text-[#111111]' : 'text-[#AAAAAA]'}`}
-                  style={lato}
-                >
-                  {readTeamNombre || 'Sin equipo'}
-                </p>
-              )}
-              {!initialUser.team_id && pendingJoinPending.length === 0 ? (
-                <div className="mt-2">
-                  <p className="text-[12px] text-[#999999]" style={lato}>
-                    ¿Quieres unirte a un equipo?
-                  </p>
-                  <Link
-                    href="/equipos"
-                    className="mt-0.5 inline-block text-[12px] font-semibold text-[#CC4B37]"
-                    style={lato}
-                  >
-                    Buscar equipos →
-                  </Link>
-                </div>
-              ) : null}
-              {pendingJoinPending.length > 0 ? (
-                <ul className="mt-2 list-none space-y-1 p-0">
-                  {pendingJoinPending.map((row) => (
+              ) : displayPendingJoins.length > 0 ? (
+                <ul className="mt-1 list-none space-y-1 p-0">
+                  {displayPendingJoins.map((row) => (
                     <li
                       key={row.id}
                       className="flex items-start gap-2 text-[12px] text-[#999999]"
@@ -528,7 +563,19 @@ export function ProfileView({
                     </li>
                   ))}
                 </ul>
-              ) : null}
+              ) : (
+                <div className="mt-1">
+                  <p className="text-[12px] text-[#999999]" style={lato}>
+                    ¿Quieres unirte a un equipo?{' '}
+                    <Link
+                      href="/equipos"
+                      className="font-semibold text-[#CC4B37]"
+                    >
+                      Buscar equipos →
+                    </Link>
+                  </p>
+                </div>
+              )}
             </div>
             <div className={`${fieldShell} md:col-span-2`}>
               <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
@@ -539,6 +586,16 @@ export function ProfileView({
               </p>
             </div>
           </div>
+
+          {profileSuccessMsg ? (
+            <p
+              className="mt-6 text-center text-[13px] text-[#2E7D32]"
+              style={lato}
+              role="status"
+            >
+              {profileSuccessMsg}
+            </p>
+          ) : null}
 
           <button
             type="button"

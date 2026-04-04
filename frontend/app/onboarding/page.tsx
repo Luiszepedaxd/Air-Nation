@@ -305,6 +305,8 @@ export default function OnboardingPage() {
   const [submitError, setSubmitError] = useState("");
 
   const skipNextPersist = useRef(false);
+  /** Evita que el efecto de persistencia vuelva a escribir localStorage tras un submit exitoso. */
+  const submitCompletedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -340,6 +342,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (!storageReady) return;
+    if (submitCompletedRef.current) return;
     if (skipNextPersist.current) {
       skipNextPersist.current = false;
       return;
@@ -478,7 +481,12 @@ export default function OnboardingPage() {
         setSubmitError("Algo salió mal. Intenta de nuevo.");
         return;
       }
-      localStorage.removeItem(STORAGE_KEY);
+      submitCompletedRef.current = true;
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignore */
+      }
       router.push("/dashboard");
     } catch {
       setSubmitError("Algo salió mal. Intenta de nuevo.");

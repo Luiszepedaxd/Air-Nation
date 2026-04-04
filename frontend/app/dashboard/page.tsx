@@ -5,6 +5,7 @@ import { SaludoSection, SaludoSkeleton } from './feed-saludo'
 import { NoticiasSection, NoticiasSkeleton } from './feed-noticias'
 import { VideosSection, VideosSkeleton } from './feed-videos'
 import { CamposSection, CamposSkeleton } from './feed-campos'
+import { EquiposSection, EquiposSkeleton } from './feed-equipos'
 import { EventosSection, EventosSkeleton } from './feed-eventos'
 
 export default async function DashboardHomePage() {
@@ -41,6 +42,10 @@ export default async function DashboardHomePage() {
 
         <Suspense fallback={<CamposSkeleton />}>
           <CamposSection />
+        </Suspense>
+
+        <Suspense fallback={<EquiposSkeleton />}>
+          <EquiposSection />
         </Suspense>
 
         <Suspense fallback={<EventosSkeleton />}>

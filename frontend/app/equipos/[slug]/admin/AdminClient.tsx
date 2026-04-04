@@ -308,11 +308,18 @@ export function AdminClient({
         .select(
           `
           id,
-          team_id,
           user_id,
+          team_id,
           mensaje,
           created_at,
-          users ( nombre, alias, avatar_url, ciudad )
+          status,
+          users (
+            id,
+            nombre,
+            alias,
+            avatar_url,
+            ciudad
+          )
         `
         )
         .eq('team_id', teamId)
@@ -327,7 +334,14 @@ export function AdminClient({
           user_id,
           rol_plataforma,
           rango_militar,
-          users ( nombre, alias, avatar_url, ciudad )
+          status,
+          users (
+            id,
+            nombre,
+            alias,
+            avatar_url,
+            ciudad
+          )
         `
         )
         .eq('team_id', teamId)
@@ -350,6 +364,7 @@ export function AdminClient({
               users: unknown
             }[]).map((r) => {
               const u = one(r.users) as {
+                id?: string
                 nombre: string | null
                 alias: string | null
                 avatar_url: string | null
@@ -379,6 +394,7 @@ export function AdminClient({
               users: unknown
             }[]).map((r) => {
               const u = one(r.users) as {
+                id?: string
                 nombre: string | null
                 alias: string | null
                 avatar_url: string | null
@@ -882,18 +898,18 @@ function IntegrantesTab({
     }
   }
 
-  const removeMember = async (memberId: string) => {
-    setBusyMemberId(memberId)
+  const removeMember = async (member: TeamMemberAdminRow) => {
+    setBusyMemberId(member.id)
     try {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ status: 'inactivo' })
-        .eq('id', memberId)
-        .eq('team_id', teamId)
+      const { error } = await supabase.rpc('remove_team_member', {
+        p_member_id: member.id,
+        p_team_id: teamId,
+        p_user_id: member.user_id,
+      })
 
       if (error) throw error
 
-      setMembers((prev) => prev.filter((x) => x.id !== memberId))
+      setMembers((prev) => prev.filter((x) => x.id !== member.id))
       setConfirmRemoveId(null)
     } catch {
       /* noop */
@@ -923,36 +939,43 @@ function IntegrantesTab({
             key={m.id}
             className="border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
           >
-            <div className="flex gap-3">
-              <div className="h-12 w-12 shrink-0 overflow-hidden bg-[#F4F4F4]">
-                {m.avatar_url ? (
-                  <img
-                    src={m.avatar_url}
-                    alt=""
-                    width={48}
-                    height={48}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center text-[16px] text-[#CC4B37]"
-                    style={jost}
-                  >
-                    {initialFromUser(m.nombre, m.alias)}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <MemberNameLine nombre={m.nombre} alias={m.alias} />
-                {m.ciudad?.trim() ? (
-                  <p
-                    className="mt-0.5 text-[12px] text-[#666666]"
-                    style={lato}
-                  >
-                    {m.ciudad.trim()}
-                  </p>
-                ) : null}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-3">
+              <Link
+                href={`/u/${encodeURIComponent(m.user_id)}`}
+                className="flex gap-3 text-left transition-opacity hover:opacity-90"
+              >
+                <div className="h-12 w-12 shrink-0 overflow-hidden bg-[#F4F4F4]">
+                  {m.avatar_url ? (
+                    <img
+                      src={m.avatar_url}
+                      alt=""
+                      width={48}
+                      height={48}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-full w-full items-center justify-center text-[16px] text-[#CC4B37]"
+                      style={jost}
+                    >
+                      {initialFromUser(m.nombre, m.alias)}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <MemberNameLine nombre={m.nombre} alias={m.alias} />
+                  {m.ciudad?.trim() ? (
+                    <p
+                      className="mt-0.5 text-[12px] text-[#666666]"
+                      style={lato}
+                    >
+                      {m.ciudad.trim()}
+                    </p>
+                  ) : null}
+                </div>
+              </Link>
+              <div className="min-w-0 w-full">
+                <div className="flex flex-wrap items-center gap-2">
                   <RolPlataformaBadge rol={m.rol_plataforma} />
                   {showRangoBadge ? (
                     <span
@@ -1043,7 +1066,7 @@ function IntegrantesTab({
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => void removeMember(m.id)}
+                          onClick={() => void removeMember(m)}
                           style={jost}
                           className="min-h-[32px] bg-[#CC4B37] px-3 text-[10px] font-extrabold uppercase text-[#FFFFFF] disabled:opacity-50"
                         >

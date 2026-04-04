@@ -7,9 +7,11 @@ const jost = { fontFamily: "'Jost', sans-serif" } as const
 type Props = {
   title: string
   href?: string
+  /** Texto del enlace (por defecto coincide con otras secciones del home). */
+  linkLabel?: string
 }
 
-export function SectionHeader({ title, href }: Props) {
+export function SectionHeader({ title, href, linkLabel }: Props) {
   return (
     <div className="w-full border-t border-[#EEEEEE]">
       <div className="flex items-center justify-between gap-3 px-4 py-3 md:mx-auto md:max-w-[1200px] md:px-6">
@@ -25,7 +27,7 @@ export function SectionHeader({ title, href }: Props) {
             className="shrink-0 font-normal text-[11px] text-[#CC4B37]"
             style={{ fontFamily: "'Lato', sans-serif" }}
           >
-            VER TODOS →
+            {linkLabel ?? 'VER TODOS →'}
           </Link>
         ) : null}
       </div>
