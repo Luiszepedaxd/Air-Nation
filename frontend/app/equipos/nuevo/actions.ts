@@ -49,6 +49,8 @@ export async function createTeamAction(
   const nombre = String(formData.get('nombre') ?? '').trim()
   const ciudad = String(formData.get('ciudad') ?? '').trim()
   const rawSlug = String(formData.get('slug') ?? '').trim()
+  const logoUrl = String(formData.get('logo_url') ?? '').trim()
+  const fotoPortadaUrl = String(formData.get('foto_portada_url') ?? '').trim()
 
   if (nombre.length < 2 || ciudad.length < 2) {
     return {
@@ -76,6 +78,8 @@ export async function createTeamAction(
       created_by: user.id,
       slug: uniqueSlug,
       status: 'activo',
+      logo_url: logoUrl || null,
+      foto_portada_url: fotoPortadaUrl || null,
     })
     .select()
     .single()

@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { generateTeamSlug } from "@/lib/team-slug";
+import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import {
   createTeamAction,
   type CreateTeamState,
@@ -34,6 +35,10 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
 export function TeamForm() {
   const [nombre, setNombre] = useState("");
   const [ciudad, setCiudad] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [portadaUrl, setPortadaUrl] = useState("");
+  const [clientError, setClientError] = useState("");
+  const [activeUploads, setActiveUploads] = useState(0);
   const [state, formAction] = useFormState(createTeamAction, initialState);
 
   const slug = useMemo(
@@ -44,7 +49,7 @@ export function TeamForm() {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     const n = nombre.trim();
     const c = ciudad.trim();
-    if (n.length < 2 || c.length < 2) {
+    if (n.length < 2 || c.length < 2 || activeUploads > 0) {
       e.preventDefault();
     }
   };
@@ -57,6 +62,14 @@ export function TeamForm() {
       noValidate
     >
       <input type="hidden" name="slug" value={slug} readOnly aria-hidden />
+      <input type="hidden" name="logo_url" value={logoUrl} readOnly aria-hidden />
+      <input
+        type="hidden"
+        name="foto_portada_url"
+        value={portadaUrl}
+        readOnly
+        aria-hidden
+      />
 
       <h1
         className="text-[22px] font-extrabold leading-tight text-[#111111] md:text-[26px]"
@@ -105,14 +118,55 @@ export function TeamForm() {
             className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
           />
         </div>
+        <ImageUploadField
+          label="LOGO DEL EQUIPO"
+          currentUrl={logoUrl.trim() || null}
+          onUpload={(url) => {
+            setLogoUrl(url);
+            setClientError("");
+          }}
+          onError={(msg) => setClientError(msg)}
+          aspectRatio="square"
+          maxSizeMB={2}
+          minWidth={200}
+          minHeight={200}
+          recommendedText="JPG, PNG o WebP · Mínimo 200×200 px · Máximo 2 MB · Recomendado: 500×500 px"
+          onUploadStart={() => setActiveUploads((n) => n + 1)}
+          onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
+        />
+        <ImageUploadField
+          label="FOTO DE PORTADA"
+          currentUrl={portadaUrl.trim() || null}
+          onUpload={(url) => {
+            setPortadaUrl(url);
+            setClientError("");
+          }}
+          onError={(msg) => setClientError(msg)}
+          aspectRatio="landscape"
+          maxSizeMB={5}
+          minWidth={800}
+          minHeight={300}
+          recommendedText="JPG, PNG o WebP · Mínimo 800×300 px · Máximo 5 MB · Recomendado: 1200×400 px"
+          onUploadStart={() => setActiveUploads((n) => n + 1)}
+          onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
+        />
       </div>
 
       {state?.error ? (
         <p className="mt-4 text-sm text-[#CC4B37]">{state.error}</p>
       ) : null}
+      {clientError ? (
+        <p className="mt-4 text-sm text-[#CC4B37]" role="alert">
+          {clientError}
+        </p>
+      ) : null}
 
       <SubmitButton
-        disabled={nombre.trim().length < 2 || ciudad.trim().length < 2}
+        disabled={
+          nombre.trim().length < 2 ||
+          ciudad.trim().length < 2 ||
+          activeUploads > 0
+        }
       />
 
       <p className="mt-6 text-center text-sm text-[#666666]">

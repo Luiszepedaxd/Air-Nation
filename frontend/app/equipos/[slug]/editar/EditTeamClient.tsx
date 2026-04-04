@@ -9,6 +9,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+import { ImageUploadField } from '@/components/ui/ImageUploadField'
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
@@ -65,6 +66,7 @@ export function EditTeamClient({
   const [logoUrl, setLogoUrl] = useState(team.logo_url ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [activeUploads, setActiveUploads] = useState(0)
 
   const handleSave = useCallback(async () => {
     const n = nombre.trim()
@@ -74,6 +76,9 @@ export function EditTeamClient({
     }
     if (!teamId) {
       setError('Error interno: falta el identificador del equipo.')
+      return
+    }
+    if (activeUploads > 0) {
       return
     }
 
@@ -120,6 +125,7 @@ export function EditTeamClient({
     teamId,
     slug,
     router,
+    activeUploads,
   ])
 
   const inputClass =
@@ -178,24 +184,32 @@ export function EditTeamClient({
             className={`${inputClass} resize-y`}
           />
         </Field>
-        <Field label="URL foto portada" style={jost}>
-          <input
-            type="url"
-            value={fotoPortadaUrl}
-            onChange={(e) => setFotoPortadaUrl(e.target.value)}
-            className={inputClass}
-            placeholder="https://"
-          />
-        </Field>
-        <Field label="URL logo" style={jost}>
-          <input
-            type="url"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            className={inputClass}
-            placeholder="https://"
-          />
-        </Field>
+        <ImageUploadField
+          label="LOGO DEL EQUIPO"
+          currentUrl={logoUrl.trim() || null}
+          onUpload={(url) => setLogoUrl(url)}
+          onError={(msg) => setError(msg)}
+          aspectRatio="square"
+          maxSizeMB={2}
+          minWidth={200}
+          minHeight={200}
+          recommendedText="JPG, PNG o WebP · Mínimo 200×200 px · Máximo 2 MB · Recomendado: 500×500 px"
+          onUploadStart={() => setActiveUploads((n) => n + 1)}
+          onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
+        />
+        <ImageUploadField
+          label="FOTO DE PORTADA"
+          currentUrl={fotoPortadaUrl.trim() || null}
+          onUpload={(url) => setFotoPortadaUrl(url)}
+          onError={(msg) => setError(msg)}
+          aspectRatio="landscape"
+          maxSizeMB={5}
+          minWidth={800}
+          minHeight={300}
+          recommendedText="JPG, PNG o WebP · Mínimo 800×300 px · Máximo 5 MB · Recomendado: 1200×400 px"
+          onUploadStart={() => setActiveUploads((n) => n + 1)}
+          onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
+        />
         <Field label="Instagram" style={jost}>
           <input
             type="text"
@@ -228,7 +242,7 @@ export function EditTeamClient({
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={saving}
+          disabled={saving || activeUploads > 0}
           style={jost}
           className="rounded-[2px] bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
         >
