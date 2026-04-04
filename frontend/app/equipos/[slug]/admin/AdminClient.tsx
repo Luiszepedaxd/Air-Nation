@@ -901,10 +901,23 @@ function IntegrantesTab({
   const removeMember = async (member: TeamMemberAdminRow) => {
     setBusyMemberId(member.id)
     try {
+      const p_member_id = String(member.id ?? '').trim()
+      const p_team_id = String(teamId ?? '').trim()
+      const p_user_id = String(member.user_id ?? '').trim()
+      if (!p_member_id || !p_team_id || !p_user_id) {
+        console.error('[remove_team_member] faltan UUIDs', {
+          p_member_id,
+          p_team_id,
+          p_user_id,
+        })
+        return
+      }
+
+      // PostgREST exige claves idénticas a los argumentos de la función SQL (incl. prefijo p_).
       const { error } = await supabase.rpc('remove_team_member', {
-        p_member_id: member.id,
-        p_team_id: teamId,
-        p_user_id: member.user_id,
+        p_member_id,
+        p_team_id,
+        p_user_id,
       })
 
       if (error) throw error

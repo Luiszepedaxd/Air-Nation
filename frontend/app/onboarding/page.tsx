@@ -305,9 +305,16 @@ export default function OnboardingPage() {
   const [submitError, setSubmitError] = useState("");
 
   const skipNextPersist = useRef(false);
-  /** Evita que el efecto de persistencia vuelva a escribir localStorage tras un submit exitoso. */
-  const submitCompletedRef = useRef(false);
+  /**
+   * Tras submit exitoso: evita re-hidratar / re-persistir desde localStorage vacío
+   * antes de que termine la navegación a /dashboard (misma sesión de React).
+   */
+  const redirectingRef = useRef(false);
 
+  /**
+   * Hidrata sesión y, si hay borrador en localStorage, restaura el paso del formulario.
+   * Si `redirectingRef` es true, no toca localStorage ni el estado del wizard (submit ya limpió storage).
+   */
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -320,6 +327,13 @@ export default function OnboardingPage() {
         return;
       }
       setUserId(user.id);
+
+      if (redirectingRef.current) {
+        setStorageReady(true);
+        setAuthChecked(true);
+        return;
+      }
+
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
@@ -340,9 +354,13 @@ export default function OnboardingPage() {
     };
   }, [router]);
 
+  /**
+   * Persiste el borrador del onboarding en localStorage.
+   * No escribe si estamos redirigiendo tras submit exitoso (evita condiciones de carrera con storage vacío).
+   */
   useEffect(() => {
     if (!storageReady) return;
-    if (submitCompletedRef.current) return;
+    if (redirectingRef.current) return;
     if (skipNextPersist.current) {
       skipNextPersist.current = false;
       return;
@@ -481,7 +499,7 @@ export default function OnboardingPage() {
         setSubmitError("Algo salió mal. Intenta de nuevo.");
         return;
       }
-      submitCompletedRef.current = true;
+      redirectingRef.current = true;
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch {

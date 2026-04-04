@@ -60,3 +60,6 @@ $$;
 
 REVOKE ALL ON FUNCTION public.remove_team_member(UUID, UUID, UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.remove_team_member(UUID, UUID, UUID) TO authenticated;
+
+-- Tras crear o reemplazar la función, refresca la caché de PostgREST en el proyecto (Dashboard:
+-- Settings → API → Restart, o ejecuta en SQL: NOTIFY pgrst, 'reload schema';)
