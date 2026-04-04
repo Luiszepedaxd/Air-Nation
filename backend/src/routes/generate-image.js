@@ -90,6 +90,7 @@ router.post("/", requireAdmin, async (req, res) => {
       }
 
       const orData = await orRes.json();
+      console.log("FULL CHOICES:", JSON.stringify(orData.choices, null, 2));
       console.log("OpenRouter response:", JSON.stringify(orData, null, 2));
 
       const message = orData.choices?.[0]?.message;
@@ -187,6 +188,7 @@ router.post("/", requireAdmin, async (req, res) => {
       }
 
       const orData = await orRes.json();
+      console.log("FULL CHOICES:", JSON.stringify(orData.choices, null, 2));
       console.log("OpenRouter response:", JSON.stringify(orData, null, 2));
       const item = orData.data?.[0];
       if (item?.url) imageUrl = item.url;
