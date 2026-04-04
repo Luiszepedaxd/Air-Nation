@@ -39,3 +39,22 @@ export type AlbumWithPhotos = {
   created_at: string
   fotos_urls: string[]
 }
+
+export type TeamEventoUpcomingRow = {
+  id: string
+  title: string
+  fecha: string
+  imagen_url: string | null
+  cupo: number
+  tipo: string | null
+  field_nombre: string | null
+  field_slug: string | null
+  rsvp_count: number
+}
+
+export type TeamEventoPastRow = {
+  id: string
+  title: string
+  fecha: string
+  imagen_url: string | null
+}

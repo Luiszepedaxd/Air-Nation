@@ -47,3 +47,46 @@ export function disciplinaLabel(raw: string | null | undefined): string {
   if (s === 'airsoft') return 'AIRSOFT'
   return (raw ?? '').toUpperCase() || 'AIRSOFT'
 }
+
+/** Ej. "Sáb 12 abr · 10:00" (sin año, es-MX). */
+export function formatEventoFechaDiaMesHora(iso: string): string {
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    const wdRaw = new Intl.DateTimeFormat('es-MX', { weekday: 'short' }).format(d)
+    const monRaw = new Intl.DateTimeFormat('es-MX', { month: 'short' }).format(d)
+    const strip = (s: string) => s.replace(/\.$/, '').trim()
+    const cap = (s: string) => {
+      const t = strip(s)
+      return t.length ? t.charAt(0).toUpperCase() + t.slice(1) : t
+    }
+    const day = d.getDate()
+    const timePart = new Intl.DateTimeFormat('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d)
+    return `${cap(wdRaw)} ${day} ${cap(monRaw)} · ${timePart}`
+  } catch {
+    return ''
+  }
+}
+
+/** Fecha corta para eventos pasados (título secundario). */
+export function formatEventoFechaPasadaCompacta(iso: string): string {
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    const datePart = new Intl.DateTimeFormat('es-MX', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(d)
+    const strip = (s: string) => s.replace(/\.$/, '').trim()
+    const t = strip(datePart)
+    return t.length ? t.charAt(0).toUpperCase() + t.slice(1) : t
+  } catch {
+    return ''
+  }
+}

@@ -8,11 +8,14 @@ import { TeamStats } from './components/TeamStats'
 import { JoinButton } from './components/JoinButton'
 import { TeamPosts } from './components/TeamPosts'
 import { TeamAlbums } from './components/TeamAlbums'
+import { TeamEventos } from './components/TeamEventos'
 import { TeamMembers } from './components/TeamMembers'
 import type {
   AlbumWithPhotos,
   MemberDisplay,
   PublicTeam,
+  TeamEventoPastRow,
+  TeamEventoUpcomingRow,
   TeamPostRow,
 } from './types'
 
@@ -150,6 +153,152 @@ async function fetchAlbumsWithPhotos(teamId: string): Promise<AlbumWithPhotos[]>
   })
 }
 
+function normalizeEventFieldsEmbed(raw: unknown): {
+  nombre: string | null
+  slug: string | null
+} {
+  const o = Array.isArray(raw) ? raw[0] : raw
+  if (!o || typeof o !== 'object') {
+    return { nombre: null, slug: null }
+  }
+  const x = o as Record<string, unknown>
+  return {
+    nombre: typeof x.nombre === 'string' ? x.nombre : null,
+    slug: typeof x.slug === 'string' ? x.slug : null,
+  }
+}
+
+function teamEventsOrFilter(fieldIds: string[], organizerIds: string[]): string | null {
+  const parts: string[] = []
+  if (fieldIds.length) parts.push(`field_id.in.(${fieldIds.join(',')})`)
+  if (organizerIds.length) parts.push(`organizador_id.in.(${organizerIds.join(',')})`)
+  return parts.length ? parts.join(',') : null
+}
+
+async function fetchTeamEventScope(teamId: string): Promise<{
+  fieldIds: string[]
+  organizerIds: string[]
+}> {
+  const supabase = createPublicSupabaseClient()
+  const [{ data: fieldRows }, { data: memberRows }] = await Promise.all([
+    supabase.from('fields').select('id').eq('team_id', teamId),
+    supabase
+      .from('team_members')
+      .select('user_id')
+      .eq('team_id', teamId)
+      .eq('status', 'activo'),
+  ])
+  const fieldIds = (fieldRows ?? [])
+    .map((r) => r.id as string)
+    .filter(Boolean)
+  const organizerIds = Array.from(
+    new Set(
+      (memberRows ?? []).map((m) => m.user_id as string).filter(Boolean)
+    )
+  )
+  return { fieldIds, organizerIds }
+}
+
+async function fetchTeamUpcomingEvents(
+  fieldIds: string[],
+  organizerIds: string[]
+): Promise<TeamEventoUpcomingRow[]> {
+  const orF = teamEventsOrFilter(fieldIds, organizerIds)
+  if (!orF) return []
+
+  const supabase = createPublicSupabaseClient()
+  const nowIso = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('events')
+    .select(
+      `
+      id,
+      title,
+      fecha,
+      imagen_url,
+      cupo,
+      tipo,
+      fields ( nombre, slug )
+    `
+    )
+    .eq('published', true)
+    .eq('status', 'publicado')
+    .gte('fecha', nowIso)
+    .or(orF)
+    .order('fecha', { ascending: true })
+    .limit(6)
+
+  if (error) {
+    console.error('[equipos/slug] upcoming events:', error.message)
+    return []
+  }
+
+  const rows = (data ?? []) as Record<string, unknown>[]
+  const ids = rows.map((r) => String(r.id)).filter(Boolean)
+  const countMap = new Map<string, number>()
+  if (ids.length > 0) {
+    const { data: batch, error: batchErr } = await supabase.rpc(
+      'event_rsvp_counts_batch',
+      { p_event_ids: ids }
+    )
+    if (!batchErr && Array.isArray(batch)) {
+      for (const row of batch as { event_id: string; total: number }[]) {
+        if (row?.event_id != null) countMap.set(String(row.event_id), row.total)
+      }
+    }
+  }
+
+  return rows.map((r) => {
+    const f = normalizeEventFieldsEmbed(r.fields)
+    const id = String(r.id)
+    return {
+      id,
+      title: String(r.title ?? ''),
+      fecha: String(r.fecha ?? ''),
+      cupo: Number(r.cupo ?? 0),
+      imagen_url: (r.imagen_url as string | null) ?? null,
+      tipo: (r.tipo as string | null) ?? null,
+      field_nombre: f.nombre,
+      field_slug: f.slug,
+      rsvp_count: countMap.get(id) ?? 0,
+    }
+  })
+}
+
+async function fetchTeamPastEvents(
+  fieldIds: string[],
+  organizerIds: string[]
+): Promise<TeamEventoPastRow[]> {
+  const orF = teamEventsOrFilter(fieldIds, organizerIds)
+  if (!orF) return []
+
+  const supabase = createPublicSupabaseClient()
+  const nowIso = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, title, fecha, imagen_url')
+    .eq('published', true)
+    .lt('fecha', nowIso)
+    .or(orF)
+    .order('fecha', { ascending: false })
+    .limit(4)
+
+  if (error) {
+    console.error('[equipos/slug] past events:', error.message)
+    return []
+  }
+
+  return (data ?? []).map((r) => {
+    const row = r as Record<string, unknown>
+    return {
+      id: String(row.id ?? ''),
+      title: String(row.title ?? ''),
+      fecha: String(row.fecha ?? ''),
+      imagen_url: (row.imagen_url as string | null) ?? null,
+    }
+  })
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -183,10 +332,13 @@ export default async function EquipoPublicPage({
   const team = await getTeamBySlug(params.slug)
   if (!team) notFound()
 
-  const [members, posts, albums] = await Promise.all([
+  const scope = await fetchTeamEventScope(team.id)
+  const [members, posts, albums, upcomingEvents, pastEvents] = await Promise.all([
     fetchMembers(team.id),
     fetchPosts(team.id),
     fetchAlbumsWithPhotos(team.id),
+    fetchTeamUpcomingEvents(scope.fieldIds, scope.organizerIds),
+    fetchTeamPastEvents(scope.fieldIds, scope.organizerIds),
   ])
 
   return (
@@ -204,6 +356,7 @@ export default async function EquipoPublicPage({
       </div>
       <TeamPosts posts={posts} />
       <TeamAlbums albums={albums} />
+      <TeamEventos upcoming={upcomingEvents} past={pastEvents} />
       <TeamMembers members={members} />
     </div>
   )
