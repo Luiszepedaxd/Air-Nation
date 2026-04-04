@@ -9,8 +9,6 @@ const replicasRouter = require("./routes/replicas");
 const docsRouter = require("./routes/docs");
 const uploadRouter = require("./routes/upload");
 const assetsRouter = require("./routes/assets");
-const generateImageRouter = require("./routes/generate-image");
-const imageModelsRouter = require("./routes/image-models");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -37,8 +35,6 @@ app.use("/api/v1/replicas", replicasRouter);
 app.use("/api/v1/docs", docsRouter);
 app.use("/api/v1/upload", uploadRouter);
 app.use("/api/v1/assets", assetsRouter);
-app.use("/api/v1/generate-image", generateImageRouter);
-app.use("/api/v1/image-models", imageModelsRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
