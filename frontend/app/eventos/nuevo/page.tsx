@@ -28,7 +28,18 @@ function mapFieldRows(
   }))
 }
 
-export default async function EventoNuevoPage() {
+function firstSearchParam(
+  v: string | string[] | undefined
+): string | undefined {
+  if (v == null) return undefined
+  return Array.isArray(v) ? v[0] : v
+}
+
+export default async function EventoNuevoPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | string[] | undefined>
+}) {
   const supabase = createAdminSupabaseServerClient()
   const {
     data: { user },
@@ -76,6 +87,15 @@ export default async function EventoNuevoPage() {
 
   const canCreatePrivate = privateFields.length > 0
 
+  const rawFieldId = firstSearchParam(searchParams.field_id)?.trim()
+  let lockedField: { id: string; nombre: string } | null = null
+  if (rawFieldId) {
+    const match = publicFields.find((f) => f.id === rawFieldId)
+    if (match) {
+      lockedField = { id: match.id, nombre: match.nombre }
+    }
+  }
+
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <header className="bg-[#111111] px-4 py-8 md:py-10">
@@ -97,6 +117,7 @@ export default async function EventoNuevoPage() {
           publicFields={publicFields}
           privateFields={privateFields}
           canCreatePrivate={canCreatePrivate}
+          lockedField={lockedField}
         />
       </div>
     </div>

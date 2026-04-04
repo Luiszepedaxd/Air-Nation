@@ -332,6 +332,16 @@ export function CampoInfo({
           </button>
         )}
 
+        {tipo === 'publico' && currentUserId ? (
+          <Link
+            href={`/eventos/nuevo?field_id=${encodeURIComponent(field.id)}&field_nombre=${encodeURIComponent(field.nombre)}`}
+            className="inline-flex w-full items-center justify-center border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 py-3 text-center text-[11px] tracking-[0.12em] text-[#111111] md:w-auto md:min-w-[220px]"
+            style={{ ...jostHeading, fontSize: 11, borderRadius: 0 }}
+          >
+            CREAR EVENTO AQUÍ
+          </Link>
+        ) : null}
+
         {tipo === 'privado' ? (
           <SolicitarCampoButton
             fieldId={field.id}

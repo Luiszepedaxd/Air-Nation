@@ -123,11 +123,8 @@ export function SolicitarCampoButton({
   const buttonDisabled =
     sentOk || hasPending || checkingPending || submitting || uploadBusy > 0
 
-  const buttonLabel = sentOk
-    ? 'SOLICITUD ENVIADA'
-    : hasPending
-      ? 'SOLICITUD PENDIENTE'
-      : 'SOLICITAR CAMPO'
+  const buttonLabel =
+    sentOk || hasPending ? 'SOLICITUD ENVIADA' : 'SOLICITAR CAMPO'
 
   const buttonClass = sentOk || hasPending
     ? 'inline-flex w-full cursor-not-allowed items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-4 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-[#666666] md:w-auto md:min-w-[220px]'

@@ -23,15 +23,17 @@ export function EventoNuevoForm({
   publicFields,
   privateFields,
   canCreatePrivate,
+  lockedField,
 }: {
   publicFields: NuevoFieldOption[]
   privateFields: NuevoFieldOption[]
   canCreatePrivate: boolean
+  lockedField?: { id: string; nombre: string } | null
 }) {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [descripcion, setDescripcion] = useState('')
-  const [fieldId, setFieldId] = useState('')
+  const [fieldId, setFieldId] = useState(() => lockedField?.id ?? '')
   const [fechaLocal, setFechaLocal] = useState('')
   const [cupo, setCupo] = useState('0')
   const [tipo, setTipo] = useState<'publico' | 'privado'>('publico')
@@ -46,11 +48,12 @@ export function EventoNuevoForm({
 
   const setTipoSafe = useCallback(
     (next: 'publico' | 'privado') => {
+      if (lockedField && next === 'privado') return
       setTipo(next)
-      setFieldId('')
+      if (!lockedField) setFieldId('')
       setClientError('')
     },
-    []
+    [lockedField]
   )
 
   const handleSubmit = useCallback(
@@ -78,7 +81,7 @@ export function EventoNuevoForm({
         setClientError('No tienes campos privados de equipo para evento privado.')
         return
       }
-      const fid = fieldId.trim()
+      const fid = lockedField ? lockedField.id : fieldId.trim()
       if (tipo === 'privado' && !fid) {
         setClientError('Selecciona el campo privado.')
         return
@@ -118,6 +121,7 @@ export function EventoNuevoForm({
       imagenUrl,
       canCreatePrivate,
       router,
+      lockedField,
     ]
   )
 
@@ -186,7 +190,7 @@ export function EventoNuevoForm({
           </button>
           <button
             type="button"
-            disabled={!canCreatePrivate}
+            disabled={!canCreatePrivate || Boolean(lockedField)}
             onClick={() => canCreatePrivate && setTipoSafe('privado')}
             className={`flex-1 border border-solid px-4 py-3 text-[10px] tracking-[0.12em] ${
               tipo === 'privado'
@@ -204,36 +208,50 @@ export function EventoNuevoForm({
             equipo con campo privado aprobado.
           </p>
         ) : null}
+        {lockedField ? (
+          <p className="mt-2 text-[11px] text-[#999999]" style={latoBody}>
+            El evento se crea en el campo desde el que llegaste; no puedes
+            cambiarlo aquí.
+          </p>
+        ) : null}
       </div>
 
       <div>
-        <label
-          className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+        <p
+          className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
           style={jostHeading}
         >
           Campo asociado
-          {tipo === 'privado' ? <span className="text-[#CC4B37]"> *</span> : null}
-        </label>
-        <select
-          value={fieldId}
-          onChange={(e) => setFieldId(e.target.value)}
-          required={tipo === 'privado'}
-          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
-          style={{ borderRadius: 2 }}
-        >
-          <option value="">
-            {tipo === 'privado'
-              ? 'Selecciona un campo privado'
-              : '— Sin campo —'}
-          </option>
-          {fieldOptions.map((f) => (
-            <option key={f.id} value={f.id}>
-              {f.nombre}
-              {f.ciudad?.trim() ? ` · ${f.ciudad.trim()}` : ''}
-              {tipo === 'privado' ? ' · PRIVADO' : ''}
+          {tipo === 'privado' && !lockedField ? (
+            <span className="text-[#CC4B37]"> *</span>
+          ) : null}
+        </p>
+        {lockedField ? (
+          <p className="text-sm text-[#666666]" style={latoBody}>
+            Campo: {lockedField.nombre}
+          </p>
+        ) : (
+          <select
+            value={fieldId}
+            onChange={(e) => setFieldId(e.target.value)}
+            required={tipo === 'privado'}
+            className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+            style={{ borderRadius: 2 }}
+          >
+            <option value="">
+              {tipo === 'privado'
+                ? 'Selecciona un campo privado'
+                : '— Sin campo —'}
             </option>
-          ))}
-        </select>
+            {fieldOptions.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.nombre}
+                {f.ciudad?.trim() ? ` · ${f.ciudad.trim()}` : ''}
+                {tipo === 'privado' ? ' · PRIVADO' : ''}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div>
