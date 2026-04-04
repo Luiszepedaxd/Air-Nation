@@ -242,6 +242,7 @@ export function PerfilTabsClient({
             <MisEventosRsvpSection
               proximos={misEventosProximos}
               pasados={misEventosPasados}
+              currentUserId={user.id}
             />
           </div>
         ) : null}

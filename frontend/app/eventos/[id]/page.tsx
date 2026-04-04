@@ -13,16 +13,19 @@ function normalizeFieldsEmbed(raw: unknown): {
   nombre: string | null
   slug: string | null
   ciudad: string | null
+  foto_portada_url: string | null
 } {
   const o = Array.isArray(raw) ? raw[0] : raw
   if (!o || typeof o !== 'object') {
-    return { nombre: null, slug: null, ciudad: null }
+    return { nombre: null, slug: null, ciudad: null, foto_portada_url: null }
   }
   const x = o as Record<string, unknown>
   return {
     nombre: typeof x.nombre === 'string' ? x.nombre : null,
     slug: typeof x.slug === 'string' ? x.slug : null,
     ciudad: typeof x.ciudad === 'string' ? x.ciudad : null,
+    foto_portada_url:
+      typeof x.foto_portada_url === 'string' ? x.foto_portada_url : null,
   }
 }
 
@@ -78,7 +81,7 @@ const getEventoById = cache(async (id: string): Promise<EventDetailRow | null> =
       tipo,
       published,
       organizador_id,
-      fields ( nombre, slug, ciudad ),
+      fields ( nombre, slug, ciudad, foto_portada_url ),
       organizador:users!organizador_id ( id, nombre, alias, avatar_url )
     `
     )
@@ -118,6 +121,10 @@ export async function generateMetadata({
   const row = await getEventoById(id)
   if (!row) return { title: 'Evento — AirNation' }
 
+  const fMeta = normalizeFieldsEmbed(row.fields)
+  const imagenOg =
+    row.imagen_url?.trim() || fMeta.foto_portada_url?.trim() || null
+
   const fechaTxt = formatEventoFechaCorta(row.fecha)
   const desc =
     row.descripcion?.trim() ||
@@ -126,9 +133,7 @@ export async function generateMetadata({
   return {
     title: `${row.title} — AirNation`,
     description: desc.slice(0, 160),
-    openGraph: row.imagen_url?.trim()
-      ? { images: [{ url: row.imagen_url.trim() }] }
-      : undefined,
+    openGraph: imagenOg ? { images: [{ url: imagenOg }] } : undefined,
   }
 }
 
@@ -144,6 +149,8 @@ export default async function EventoDetailPage({
   if (!row) notFound()
 
   const f = normalizeFieldsEmbed(row.fields)
+  const heroImagen =
+    row.imagen_url?.trim() || f.foto_portada_url?.trim() || null
   const org = normalizeOrganizador(row.organizador)
   const rsvpCount = await fetchRsvpCount(id)
 
@@ -170,7 +177,7 @@ export default async function EventoDetailPage({
       <EventoHero
         title={row.title}
         fecha={row.fecha}
-        imagen_url={row.imagen_url}
+        imagen_url={heroImagen}
         tipo={row.tipo}
         disciplina={row.disciplina}
       />

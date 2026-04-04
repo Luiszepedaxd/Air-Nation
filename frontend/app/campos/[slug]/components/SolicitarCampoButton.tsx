@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -52,6 +53,8 @@ export function SolicitarCampoButton({
   const [sentOk, setSentOk] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null)
+  const [uploadBusy, setUploadBusy] = useState(0)
 
   const minDate = useMemo(() => todayInputMin(), [])
 
@@ -118,7 +121,7 @@ export function SolicitarCampoButton({
   }, [open, userId, loadTeams])
 
   const buttonDisabled =
-    sentOk || hasPending || checkingPending || submitting
+    sentOk || hasPending || checkingPending || submitting || uploadBusy > 0
 
   const buttonLabel = sentOk
     ? 'SOLICITUD ENVIADA'
@@ -161,6 +164,7 @@ export function SolicitarCampoButton({
         fecha_deseada: fechaDeseada,
         num_jugadores: numJugadores,
         mensaje: mensaje.trim() ? mensaje.trim().slice(0, 300) : null,
+        imagen_url: imagenUrl?.trim() || null,
         status: 'pendiente',
       })
       if (insErr) throw insErr
@@ -195,6 +199,7 @@ export function SolicitarCampoButton({
       setMensaje('')
       setTeamId('')
       setNumJugadores(10)
+      setImagenUrl(null)
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err
@@ -320,6 +325,32 @@ export function SolicitarCampoButton({
                   ))}
                 </select>
               </label>
+
+              <div className="mt-4">
+                <ImageUploadField
+                  label="IMAGEN DEL EVENTO (OPCIONAL)"
+                  currentUrl={imagenUrl}
+                  onUpload={(url) => setImagenUrl(url)}
+                  onError={(msg) => setError(msg)}
+                  aspectRatio="landscape"
+                  maxSizeMB={5}
+                  minWidth={800}
+                  minHeight={300}
+                  recommendedText="JPG, PNG o WebP · Máx 5MB · Se usará como portada del evento"
+                  onUploadStart={() =>
+                    setUploadBusy((n) => n + 1)
+                  }
+                  onUploadEnd={() =>
+                    setUploadBusy((n) => Math.max(0, n - 1))
+                  }
+                />
+                <p
+                  className="mt-2 text-[11px] leading-snug text-[#999999]"
+                  style={lato}
+                >
+                  Si no subes imagen, se usará la foto del campo como portada.
+                </p>
+              </div>
 
               <label className="mt-4 block">
                 <span

@@ -224,13 +224,18 @@ export default async function PerfilPage({
   function normalizeFieldEmbed(raw: unknown): {
     nombre: string | null
     slug: string | null
+    foto_portada_url: string | null
   } {
     const o = Array.isArray(raw) ? raw[0] : raw
-    if (!o || typeof o !== 'object') return { nombre: null, slug: null }
+    if (!o || typeof o !== 'object') {
+      return { nombre: null, slug: null, foto_portada_url: null }
+    }
     const x = o as Record<string, unknown>
     return {
       nombre: typeof x.nombre === 'string' ? x.nombre : null,
       slug: typeof x.slug === 'string' ? x.slug : null,
+      foto_portada_url:
+        typeof x.foto_portada_url === 'string' ? x.foto_portada_url : null,
     }
   }
 
@@ -239,6 +244,7 @@ export default async function PerfilPage({
     title: string
     fecha: string
     imagen_url: string | null
+    organizador_id: string | null
     fields: unknown
   }): MisEventoRsvpItem {
     const f = normalizeFieldEmbed(r.fields)
@@ -247,8 +253,10 @@ export default async function PerfilPage({
       title: r.title,
       fecha: r.fecha,
       imagen_url: r.imagen_url,
+      field_foto: f.foto_portada_url,
       field_nombre: f.nombre,
       field_slug: f.slug,
+      organizador_id: r.organizador_id,
     }
   }
 
@@ -272,7 +280,9 @@ export default async function PerfilPage({
   if (rsvpEventIds.length > 0) {
     const { data: proxRows } = await supabase
       .from('events')
-      .select('id, title, fecha, imagen_url, fields ( nombre, slug )')
+      .select(
+        'id, title, fecha, imagen_url, organizador_id, fields ( nombre, slug, foto_portada_url )'
+      )
       .in('id', rsvpEventIds)
       .eq('status', 'publicado')
       .eq('published', true)
@@ -286,6 +296,7 @@ export default async function PerfilPage({
           title: string
           fecha: string
           imagen_url: string | null
+          organizador_id: string | null
           fields: unknown
         }
       )
@@ -293,7 +304,9 @@ export default async function PerfilPage({
 
     const { data: pastRows } = await supabase
       .from('events')
-      .select('id, title, fecha, imagen_url, fields ( nombre, slug )')
+      .select(
+        'id, title, fecha, imagen_url, organizador_id, fields ( nombre, slug, foto_portada_url )'
+      )
       .in('id', rsvpEventIds)
       .eq('status', 'publicado')
       .eq('published', true)
@@ -308,6 +321,7 @@ export default async function PerfilPage({
           title: string
           fecha: string
           imagen_url: string | null
+          organizador_id: string | null
           fields: unknown
         }
       )

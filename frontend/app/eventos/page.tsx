@@ -18,16 +18,19 @@ function normalizeFieldsEmbed(raw: unknown): {
   nombre: string | null
   slug: string | null
   ciudad: string | null
+  foto_portada_url: string | null
 } {
   const o = Array.isArray(raw) ? raw[0] : raw
   if (!o || typeof o !== 'object') {
-    return { nombre: null, slug: null, ciudad: null }
+    return { nombre: null, slug: null, ciudad: null, foto_portada_url: null }
   }
   const x = o as Record<string, unknown>
   return {
     nombre: typeof x.nombre === 'string' ? x.nombre : null,
     slug: typeof x.slug === 'string' ? x.slug : null,
     ciudad: typeof x.ciudad === 'string' ? x.ciudad : null,
+    foto_portada_url:
+      typeof x.foto_portada_url === 'string' ? x.foto_portada_url : null,
   }
 }
 
@@ -44,7 +47,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       disciplina,
       imagen_url,
       tipo,
-      fields ( nombre, slug, ciudad )
+      fields ( nombre, slug, ciudad, foto_portada_url )
     `
     )
     .eq('published', true)
@@ -82,6 +85,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       cupo: Number(r.cupo ?? 0),
       disciplina: (r.disciplina as string | null) ?? null,
       imagen_url: (r.imagen_url as string | null) ?? null,
+      field_foto: f.foto_portada_url,
       tipo: (r.tipo as string | null) ?? null,
       field_nombre: f.nombre,
       field_slug: f.slug,

@@ -14,26 +14,41 @@ export type MisEventoRsvpItem = {
   title: string
   fecha: string
   imagen_url: string | null
+  /** `fields.foto_portada_url` para fallback de portada */
+  field_foto: string | null
   field_nombre: string | null
   field_slug: string | null
+  organizador_id: string | null
 }
 
-function EventoCard({ e }: { e: MisEventoRsvpItem }) {
+function EventoCard({
+  e,
+  currentUserId,
+  showEdit,
+}: {
+  e: MisEventoRsvpItem
+  currentUserId: string
+  showEdit: boolean
+}) {
   const fechaCorta = formatEventoFechaCorta(e.fecha)
   const fn = e.field_nombre?.trim()
   const fs = e.field_slug?.trim()
   const eventoHref = `/eventos/${e.id}`
+  const imagenFinal =
+    e.imagen_url?.trim() || e.field_foto?.trim() || null
+  const canEdit =
+    showEdit && e.organizador_id != null && e.organizador_id === currentUserId
 
   return (
-    <li className="rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-colors hover:border-[#DDDDDD]">
+    <li className="border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-colors hover:border-[#DDDDDD]">
       <div className="flex gap-3">
         <Link
           href={eventoHref}
           className="h-12 w-12 shrink-0 overflow-hidden bg-[#F4F4F4]"
         >
-          {e.imagen_url?.trim() ? (
+          {imagenFinal ? (
             <img
-              src={e.imagen_url.trim()}
+              src={imagenFinal}
               alt=""
               width={48}
               height={48}
@@ -77,6 +92,15 @@ function EventoCard({ e }: { e: MisEventoRsvpItem }) {
             </p>
           ) : null}
         </div>
+        {canEdit ? (
+          <Link
+            href={`/eventos/${e.id}/editar`}
+            style={jost}
+            className="flex h-9 shrink-0 items-center self-start border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#111111]"
+          >
+            EDITAR
+          </Link>
+        ) : null}
       </div>
     </li>
   )
@@ -85,9 +109,11 @@ function EventoCard({ e }: { e: MisEventoRsvpItem }) {
 export function MisEventosRsvpSection({
   proximos,
   pasados,
+  currentUserId,
 }: {
   proximos: MisEventoRsvpItem[]
   pasados: MisEventoRsvpItem[]
+  currentUserId: string
 }) {
   const hasAny = proximos.length > 0 || pasados.length > 0
 
@@ -113,7 +139,12 @@ export function MisEventosRsvpSection({
       {proximos.length > 0 ? (
         <ul className="flex flex-col gap-4">
           {proximos.map((e) => (
-            <EventoCard key={e.id} e={e} />
+            <EventoCard
+              key={e.id}
+              e={e}
+              currentUserId={currentUserId}
+              showEdit
+            />
           ))}
         </ul>
       ) : null}
@@ -132,7 +163,12 @@ export function MisEventosRsvpSection({
           </h2>
           <ul className="flex flex-col gap-4">
             {pasados.map((e) => (
-              <EventoCard key={e.id} e={e} />
+              <EventoCard
+                key={e.id}
+                e={e}
+                currentUserId={currentUserId}
+                showEdit={false}
+              />
             ))}
           </ul>
         </div>

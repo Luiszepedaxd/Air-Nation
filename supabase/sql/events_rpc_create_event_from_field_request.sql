@@ -3,21 +3,23 @@
 -- Ejecutar en Supabase SQL Editor (después de `events_and_rsvps.sql` y `field_requests`).
 -- Requiere columna `field_requests.approved_event_id` — aplicar antes
 -- `field_requests_solicitante_select_approved_event.sql` si la tabla ya existía.
--- =============================================================================
+-- Requiere `field_requests.imagen_url` (ver `field_requests_imagen_url.sql`).
 -- Nota: en `field_requests` la columna de cupo es `num_jugadores`.
 
 CREATE OR REPLACE FUNCTION public.create_event_from_field_request (p_request_id uuid)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
+  RETURNS uuid
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public
+  AS $$
 DECLARE
   v_request public.field_requests%ROWTYPE;
 
   v_field public.fields%ROWTYPE;
 
   v_event_id uuid;
+
+  v_imagen text;
 BEGIN
   SELECT
     * INTO v_request
@@ -49,6 +51,8 @@ BEGIN
     RAISE EXCEPTION 'forbidden';
   END IF;
 
+  v_imagen := COALESCE(v_request.imagen_url, v_field.foto_portada_url);
+
   INSERT INTO public.events (
     title,
     descripcion,
@@ -59,6 +63,7 @@ BEGIN
     tipo,
     published,
     status,
+    imagen_url,
     organizador_id,
     created_by
   )
@@ -72,6 +77,7 @@ BEGIN
     'privado',
     true,
     'publicado',
+    v_imagen,
     v_request.solicitante_id,
     v_request.solicitante_id
   )

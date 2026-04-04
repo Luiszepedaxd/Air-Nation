@@ -156,15 +156,18 @@ async function fetchAlbumsWithPhotos(teamId: string): Promise<AlbumWithPhotos[]>
 function normalizeEventFieldsEmbed(raw: unknown): {
   nombre: string | null
   slug: string | null
+  foto_portada_url: string | null
 } {
   const o = Array.isArray(raw) ? raw[0] : raw
   if (!o || typeof o !== 'object') {
-    return { nombre: null, slug: null }
+    return { nombre: null, slug: null, foto_portada_url: null }
   }
   const x = o as Record<string, unknown>
   return {
     nombre: typeof x.nombre === 'string' ? x.nombre : null,
     slug: typeof x.slug === 'string' ? x.slug : null,
+    foto_portada_url:
+      typeof x.foto_portada_url === 'string' ? x.foto_portada_url : null,
   }
 }
 
@@ -218,7 +221,7 @@ async function fetchTeamUpcomingEvents(
       imagen_url,
       cupo,
       tipo,
-      fields ( nombre, slug )
+      fields ( nombre, slug, foto_portada_url )
     `
     )
     .eq('published', true)
@@ -257,6 +260,7 @@ async function fetchTeamUpcomingEvents(
       fecha: String(r.fecha ?? ''),
       cupo: Number(r.cupo ?? 0),
       imagen_url: (r.imagen_url as string | null) ?? null,
+      field_foto: f.foto_portada_url,
       tipo: (r.tipo as string | null) ?? null,
       field_nombre: f.nombre,
       field_slug: f.slug,
@@ -276,7 +280,7 @@ async function fetchTeamPastEvents(
   const nowIso = new Date().toISOString()
   const { data, error } = await supabase
     .from('events')
-    .select('id, title, fecha, imagen_url')
+    .select('id, title, fecha, imagen_url, fields ( foto_portada_url )')
     .eq('published', true)
     .lt('fecha', nowIso)
     .or(orF)
@@ -290,11 +294,18 @@ async function fetchTeamPastEvents(
 
   return (data ?? []).map((r) => {
     const row = r as Record<string, unknown>
+    const rawFields = row.fields
+    const fo = Array.isArray(rawFields) ? rawFields[0] : rawFields
+    const fieldFoto =
+      fo && typeof fo === 'object' && 'foto_portada_url' in fo
+        ? String((fo as { foto_portada_url?: string }).foto_portada_url ?? '')
+        : ''
     return {
       id: String(row.id ?? ''),
       title: String(row.title ?? ''),
       fecha: String(row.fecha ?? ''),
       imagen_url: (row.imagen_url as string | null) ?? null,
+      field_foto: fieldFoto.trim() || null,
     }
   })
 }

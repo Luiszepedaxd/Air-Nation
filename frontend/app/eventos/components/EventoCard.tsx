@@ -12,6 +12,8 @@ export type EventoCardRow = {
   cupo: number
   disciplina: string | null
   imagen_url: string | null
+  /** `fields.foto_portada_url` */
+  field_foto: string | null
   tipo: string | null
   field_nombre: string | null
   field_slug: string | null
@@ -61,6 +63,8 @@ export function EventoCard({ evento }: { evento: EventoCardRow }) {
   const fechaTxt = formatEventoFechaCorta(evento.fecha)
   const disc = disciplinaLabel(evento.disciplina)
   const campo = evento.field_nombre?.trim() || null
+  const imagenFinal =
+    evento.imagen_url?.trim() || evento.field_foto?.trim() || null
 
   return (
     <Link
@@ -68,9 +72,9 @@ export function EventoCard({ evento }: { evento: EventoCardRow }) {
       className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC]"
     >
       <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-        {evento.imagen_url?.trim() ? (
+        {imagenFinal ? (
           <img
-            src={evento.imagen_url.trim()}
+            src={imagenFinal}
             alt=""
             className="h-full w-full object-cover"
           />

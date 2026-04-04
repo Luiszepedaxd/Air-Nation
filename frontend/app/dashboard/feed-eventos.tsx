@@ -22,13 +22,18 @@ type EventFeedRow = {
 function normalizeFields(raw: unknown): {
   nombre: string | null
   ciudad: string | null
+  field_foto: string | null
 } {
   const o = Array.isArray(raw) ? raw[0] : raw
-  if (!o || typeof o !== 'object') return { nombre: null, ciudad: null }
+  if (!o || typeof o !== 'object') {
+    return { nombre: null, ciudad: null, field_foto: null }
+  }
   const x = o as Record<string, unknown>
   return {
     nombre: typeof x.nombre === 'string' ? x.nombre : null,
     ciudad: typeof x.ciudad === 'string' ? x.ciudad : null,
+    field_foto:
+      typeof x.foto_portada_url === 'string' ? x.foto_portada_url : null,
   }
 }
 
@@ -123,7 +128,7 @@ export async function EventosSection() {
       fecha,
       imagen_url,
       cupo,
-      fields ( nombre, ciudad )
+      fields ( nombre, ciudad, foto_portada_url )
     `
     )
     .eq('published', true)
@@ -142,6 +147,8 @@ export async function EventosSection() {
       <Carrusel>
         {events.map((ev) => {
           const f = normalizeFields(ev.fields)
+          const imagenFinal =
+            ev.imagen_url?.trim() || f.field_foto?.trim() || null
           const sub = [f.nombre?.trim(), f.ciudad?.trim()]
             .filter(Boolean)
             .join(' · ')
@@ -153,9 +160,9 @@ export async function EventosSection() {
             >
               <article>
                 <div className="aspect-square w-full overflow-hidden bg-[#F4F4F4]">
-                  {ev.imagen_url ? (
+                  {imagenFinal ? (
                     <img
-                      src={ev.imagen_url}
+                      src={imagenFinal}
                       alt=""
                       className="h-full w-full object-cover"
                     />

@@ -75,6 +75,10 @@ export function TeamEventos({
             {upcoming.map((evento) => {
               const campo = evento.field_nombre?.trim() || null
               const fechaTxt = formatEventoFechaDiaMesHora(evento.fecha)
+              const imagenFinal =
+                evento.imagen_url?.trim() ||
+                evento.field_foto?.trim() ||
+                null
               return (
                 <Link
                   key={evento.id}
@@ -82,9 +86,9 @@ export function TeamEventos({
                   className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC]"
                 >
                   <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-                    {evento.imagen_url?.trim() ? (
+                    {imagenFinal ? (
                       <img
-                        src={evento.imagen_url.trim()}
+                        src={imagenFinal}
                         alt=""
                         className="h-full w-full object-cover"
                       />
@@ -139,16 +143,21 @@ export function TeamEventos({
             EVENTOS PASADOS
           </h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-            {past.map((evento) => (
+            {past.map((evento) => {
+              const imagenFinal =
+                evento.imagen_url?.trim() ||
+                evento.field_foto?.trim() ||
+                null
+              return (
               <Link
                 key={evento.id}
                 href={`/eventos/${evento.id}`}
                 className="flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC]"
               >
                 <div className="aspect-square w-full overflow-hidden bg-[#111111]">
-                  {evento.imagen_url?.trim() ? (
+                  {imagenFinal ? (
                     <img
-                      src={evento.imagen_url.trim()}
+                      src={imagenFinal}
                       alt=""
                       className="h-full w-full object-cover"
                     />
@@ -173,7 +182,8 @@ export function TeamEventos({
                   </p>
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
         </section>
       ) : null}

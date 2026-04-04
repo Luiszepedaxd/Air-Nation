@@ -45,6 +45,7 @@ export type TeamEventoUpcomingRow = {
   title: string
   fecha: string
   imagen_url: string | null
+  field_foto: string | null
   cupo: number
   tipo: string | null
   field_nombre: string | null
@@ -57,4 +58,5 @@ export type TeamEventoPastRow = {
   title: string
   fecha: string
   imagen_url: string | null
+  field_foto: string | null
 }
