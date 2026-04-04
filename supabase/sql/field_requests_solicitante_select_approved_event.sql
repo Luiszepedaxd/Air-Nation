@@ -72,7 +72,7 @@ BEGIN
     v_request.mensaje,
     v_request.field_id,
     v_request.fecha_deseada::timestamptz,
-    v_request.numero_jugadores,
+    v_request.num_jugadores,
     'airsoft',
     'privado',
     true,

@@ -23,7 +23,7 @@ export type FieldRequestOwnerRow = {
   solicitante_id: string
   team_id: string | null
   fecha_deseada: string | null
-  numero_jugadores: number | null
+  num_jugadores: number | null
   mensaje: string | null
   created_at: string
   nombre: string | null
@@ -585,7 +585,7 @@ export function MiCampoOwnerClient({
                         <p className="mt-1 text-[13px] text-[#111111]" style={lato}>
                           Jugadores:{' '}
                           <span className="font-semibold">
-                            {row.numero_jugadores ?? '—'}
+                            {row.num_jugadores ?? '—'}
                           </span>
                         </p>
                         {row.mensaje?.trim() ? (

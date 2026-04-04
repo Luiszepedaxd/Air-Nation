@@ -7,9 +7,9 @@ CREATE TABLE IF NOT EXISTS public.field_requests (
   solicitante_id uuid NOT NULL REFERENCES public.users (id) ON DELETE CASCADE,
   team_id uuid REFERENCES public.teams (id) ON DELETE SET NULL,
   fecha_deseada date,
-  numero_jugadores integer NOT NULL DEFAULT 1 CHECK (
-    numero_jugadores >= 1
-    AND numero_jugadores <= 500
+  num_jugadores integer NOT NULL DEFAULT 1 CHECK (
+    num_jugadores >= 1
+    AND num_jugadores <= 500
   ),
   mensaje text,
   status text NOT NULL DEFAULT 'pendiente' CHECK (

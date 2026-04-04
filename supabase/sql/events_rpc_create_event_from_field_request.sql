@@ -4,7 +4,7 @@
 -- Requiere columna `field_requests.approved_event_id` — aplicar antes
 -- `field_requests_solicitante_select_approved_event.sql` si la tabla ya existía.
 -- =============================================================================
--- Nota: en `field_requests` la columna de cupo es `numero_jugadores` (no num_jugadores).
+-- Nota: en `field_requests` la columna de cupo es `num_jugadores`.
 
 CREATE OR REPLACE FUNCTION public.create_event_from_field_request (p_request_id uuid)
 RETURNS uuid
@@ -67,7 +67,7 @@ BEGIN
     v_request.mensaje,
     v_request.field_id,
     v_request.fecha_deseada::timestamptz,
-    v_request.numero_jugadores,
+    v_request.num_jugadores,
     'airsoft',
     'privado',
     true,

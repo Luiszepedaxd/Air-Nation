@@ -11,7 +11,7 @@ function mapFieldRequests(
     solicitante_id: string
     team_id: string | null
     fecha_deseada: string | null
-    numero_jugadores: number | null
+    num_jugadores: number | null
     mensaje: string | null
     created_at: string
     users: unknown
@@ -35,7 +35,7 @@ function mapFieldRequests(
       solicitante_id: r.solicitante_id,
       team_id: r.team_id,
       fecha_deseada: r.fecha_deseada,
-      numero_jugadores: r.numero_jugadores,
+      num_jugadores: r.num_jugadores,
       mensaje: r.mensaje,
       created_at: r.created_at,
       nombre: u?.nombre ?? null,
@@ -159,7 +159,7 @@ export default async function MiCampoPage({
         solicitante_id,
         team_id,
         fecha_deseada,
-        numero_jugadores,
+        num_jugadores,
         mensaje,
         created_at,
         users ( nombre, alias, avatar_url, ciudad, email ),
@@ -178,7 +178,7 @@ export default async function MiCampoPage({
           solicitante_id: string
           team_id: string | null
           fecha_deseada: string | null
-          numero_jugadores: number | null
+          num_jugadores: number | null
           mensaje: string | null
           created_at: string
           users: unknown

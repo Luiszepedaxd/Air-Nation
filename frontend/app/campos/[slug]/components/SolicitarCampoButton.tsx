@@ -155,7 +155,7 @@ export function SolicitarCampoButton({
         solicitante_id: userId,
         team_id: teamId.trim() ? teamId.trim() : null,
         fecha_deseada: fechaDeseada,
-        numero_jugadores: numJugadores,
+        num_jugadores: numJugadores,
         mensaje: mensaje.trim() ? mensaje.trim().slice(0, 300) : null,
         status: 'pendiente',
       })
