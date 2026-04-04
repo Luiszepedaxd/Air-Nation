@@ -90,7 +90,10 @@ router.post("/", requireAdmin, async (req, res) => {
       }
 
       const orData = await orRes.json();
+      console.log("OpenRouter response:", JSON.stringify(orData, null, 2));
       const content = orData.choices?.[0]?.message?.content;
+      console.log("Content type:", typeof content);
+      console.log("Content value:", JSON.stringify(content, null, 2));
 
       if (Array.isArray(content)) {
         const imageBlock = content.find(
@@ -150,6 +153,7 @@ router.post("/", requireAdmin, async (req, res) => {
       }
 
       const orData = await orRes.json();
+      console.log("OpenRouter response:", JSON.stringify(orData, null, 2));
       const item = orData.data?.[0];
       if (item?.url) imageUrl = item.url;
       else if (item?.b64_json) imageBase64 = item.b64_json;
