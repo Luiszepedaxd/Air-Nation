@@ -1,4 +1,5 @@
 import type { TeamPostRow } from '../types'
+import { PostPhotoGallery } from './PostPhotoGallery'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -42,42 +43,6 @@ function postPhotoUrls(post: TeamPostRow): string[] {
     .slice(0, 4)
 }
 
-function PostMediaGrid({ urls }: { urls: string[] }) {
-  const n = urls.length
-  if (n === 0) return null
-  if (n === 1) {
-    return (
-      <div className="aspect-[16/9] w-full overflow-hidden bg-[#F4F4F4]">
-        <img
-          src={urls[0]}
-          alt=""
-          width={800}
-          height={450}
-          className="h-full w-full object-cover"
-        />
-      </div>
-    )
-  }
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {urls.slice(0, 4).map((u) => (
-        <div
-          key={u}
-          className="aspect-square w-full overflow-hidden bg-[#F4F4F4]"
-        >
-          <img
-            src={u}
-            alt=""
-            width={400}
-            height={400}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
   if (!posts.length) return null
 
@@ -101,7 +66,7 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
             >
               {urls.length > 0 ? (
                 <div className="w-full overflow-hidden bg-[#F4F4F4]">
-                  <PostMediaGrid urls={urls} />
+                  <PostPhotoGallery urls={urls} />
                 </div>
               ) : null}
               <div className="p-4">

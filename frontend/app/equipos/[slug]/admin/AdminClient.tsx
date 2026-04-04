@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
+import { PostPhotoGallery } from '../components/PostPhotoGallery'
 import type {
   TeamAlbumAdminRow,
   TeamJoinRequestAdminRow,
@@ -552,7 +553,7 @@ function PostsTabListSkeleton() {
     <ul className="flex flex-col gap-6" aria-busy aria-label="Cargando publicaciones">
       {[0, 1, 2].map((k) => (
         <li key={k} className="animate-pulse">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-[2px]">
             <div className="aspect-square bg-[#EEEEEE]" />
             <div className="aspect-square bg-[#F4F4F4]" />
           </div>
@@ -1136,42 +1137,6 @@ function postUrls(row: TeamPostAdminRow): string[] {
   return normalizeFotoUrls(row.fotos_urls).slice(0, 4)
 }
 
-function PostPhotoGrid({ urls }: { urls: string[] }) {
-  const n = urls.length
-  if (n === 0) return null
-  if (n === 1) {
-    return (
-      <div className="aspect-[16/9] w-full overflow-hidden bg-[#F4F4F4]">
-        <img
-          src={urls[0]}
-          alt=""
-          width={800}
-          height={450}
-          className="h-full w-full object-cover"
-        />
-      </div>
-    )
-  }
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {urls.slice(0, 4).map((u) => (
-        <div
-          key={u}
-          className="aspect-square w-full overflow-hidden bg-[#F4F4F4]"
-        >
-          <img
-            src={u}
-            alt=""
-            width={400}
-            height={400}
-            className="h-full w-full object-cover"
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function PostsTab({
   teamId,
   viewerUserId,
@@ -1408,7 +1373,7 @@ function PostsTab({
             return (
               <li key={post.id}>
                 <div className="flex flex-col gap-3">
-                  <PostPhotoGrid urls={urls} />
+                  <PostPhotoGallery urls={urls} />
                   {post.content?.trim() ? (
                     <p
                       className="whitespace-pre-wrap text-[14px] text-[#111111]"
