@@ -177,7 +177,7 @@ export async function createCampoAction(
       foto_portada_url: fotoPortadaUrl || null,
       galeria_urls: galeria_urls.length > 0 ? galeria_urls : null,
       team_id,
-      status: 'pending',
+      status: 'pendiente',
       created_by: user.id,
     })
     .select('id')
