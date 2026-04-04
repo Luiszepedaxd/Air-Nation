@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-
-export const revalidate = 0
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { TeamHero } from './components/TeamHero'
+import { TeamInfo } from './components/TeamInfo'
 import { TeamStats } from './components/TeamStats'
 import { JoinButton } from './components/JoinButton'
 import { TeamPosts } from './components/TeamPosts'
@@ -17,29 +16,43 @@ import type {
   TeamPostRow,
 } from './types'
 
+export const revalidate = 0
+
 const getTeamBySlug = cache(async (slug: string): Promise<PublicTeam | null> => {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('teams')
     .select(
-      'id, nombre, slug, ciudad, descripcion, historia, foto_portada_url, logo_url, instagram, facebook, whatsapp_url, created_at, status'
+      'id, nombre, slug, ciudad, descripcion, historia, foto_portada_url, logo_url, galeria_urls, instagram, facebook, whatsapp_url, created_at, status'
     )
     .eq('slug', slug)
     .eq('status', 'activo')
     .maybeSingle()
 
   if (error || !data) return null
-  const row = data as PublicTeam & { status?: string }
+  const row = data as PublicTeam & {
+    status?: string
+    galeria_urls?: string[] | null
+  }
   if (row.status && row.status !== 'activo') return null
+
+  const rawGaleria = row.galeria_urls
+  const galeria_urls = Array.isArray(rawGaleria)
+    ? rawGaleria
+    : rawGaleria != null
+      ? [String(rawGaleria)]
+      : null
+
   return {
     id: row.id,
     nombre: row.nombre,
     slug: row.slug,
     ciudad: row.ciudad,
-    descripcion: row.descripcion,
+    descripcion: row.descripcion ?? null,
     historia: row.historia ?? null,
     foto_portada_url: row.foto_portada_url,
     logo_url: row.logo_url,
+    galeria_urls,
     instagram: row.instagram,
     facebook: row.facebook,
     whatsapp_url: row.whatsapp_url,
@@ -180,6 +193,7 @@ export default async function EquipoPublicPage({
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <TeamHero team={team} members={members} />
       <TeamStats memberCount={members.length} createdAt={team.created_at} />
+      <TeamInfo team={team} />
       <div className="mx-auto max-w-[960px] px-4 py-4">
         <JoinButton teamId={team.id} slug={params.slug} members={members} />
       </div>

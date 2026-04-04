@@ -7,6 +7,8 @@ export type PublicTeam = {
   historia: string | null
   foto_portada_url: string | null
   logo_url: string | null
+  /** Opcional: galería en `teams` si existe la columna en Supabase */
+  galeria_urls: string[] | null
   instagram: string | null
   facebook: string | null
   whatsapp_url: string | null
