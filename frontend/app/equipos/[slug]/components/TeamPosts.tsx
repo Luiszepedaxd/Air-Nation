@@ -92,7 +92,6 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {posts.map((post) => {
           const urls = postPhotoUrls(post)
-          const title = post.title?.trim()
           const ex = excerpt(post.content, 120)
 
           return (
@@ -106,17 +105,9 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
                 </div>
               ) : null}
               <div className="p-4">
-                {title ? (
-                  <h3
-                    style={jost}
-                    className="text-[16px] font-extrabold leading-snug text-[#111111]"
-                  >
-                    {title}
-                  </h3>
-                ) : null}
                 {ex ? (
                   <p
-                    className={`text-[14px] leading-relaxed text-[#111111] ${title ? 'mt-2' : ''} line-clamp-4`}
+                    className="text-[14px] leading-relaxed text-[#111111] line-clamp-4"
                     style={lato}
                   >
                     {ex}

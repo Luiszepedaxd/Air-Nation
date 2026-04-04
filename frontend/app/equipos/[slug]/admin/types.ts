@@ -24,7 +24,6 @@ export type TeamMemberAdminRow = {
 export type TeamPostAdminRow = {
   id: string
   team_id: string
-  title: string | null
   content: string | null
   fotos_urls: string[] | null
   published: boolean

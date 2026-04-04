@@ -27,7 +27,6 @@ export type MemberDisplay = {
 
 export type TeamPostRow = {
   id: string
-  title: string | null
   content: string | null
   fotos_urls: string[] | null
   created_at: string

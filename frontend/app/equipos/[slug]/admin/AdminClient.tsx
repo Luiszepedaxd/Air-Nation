@@ -342,7 +342,7 @@ export function AdminClient({
       const { data: postsData, error: postsError } = await supabase
         .from('team_posts')
         .select(
-          'id, team_id, title, content, fotos_urls, published, created_by, created_at'
+          'id, team_id, content, fotos_urls, published, created_by, created_at'
         )
         .eq('team_id', teamId)
         .eq('published', true)
@@ -1251,14 +1251,13 @@ function PostsTab({
         .from('team_posts')
         .insert({
           team_id: teamId,
-          title: null,
           content: text.length ? text : null,
           fotos_urls: urls,
           published: true,
           created_by: viewerUserId,
         })
         .select(
-          'id, team_id, title, content, fotos_urls, published, created_by, created_at'
+          'id, team_id, content, fotos_urls, published, created_by, created_at'
         )
         .single()
 
