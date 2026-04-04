@@ -54,7 +54,7 @@ export function PostPhotoGallery({ urls }: PostPhotoGalleryProps) {
           onClick={() => setLightbox(0)}
           aria-label="Ver imagen en grande"
         >
-          <div className="aspect-[16/9] w-full overflow-hidden bg-[#F4F4F4]">
+          <div className="aspect-[16/9] w-full max-h-[400px] max-w-full overflow-hidden bg-[#F4F4F4]">
             <img
               src={urls[0]}
               alt=""
@@ -78,12 +78,12 @@ export function PostPhotoGallery({ urls }: PostPhotoGalleryProps) {
 
   return (
     <>
-      <div className="grid w-full grid-cols-2 gap-[2px]">
+      <div className="grid max-h-[400px] w-full grid-cols-2 gap-[2px] overflow-hidden">
         {urls.slice(0, 4).map((u, idx) => (
           <button
             key={`${u}-${idx}`}
             type="button"
-            className="relative aspect-square w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+            className="relative aspect-square w-full min-h-0 cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
             onClick={() => setLightbox(idx)}
             aria-label={`Ver foto ${idx + 1} en grande`}
           >

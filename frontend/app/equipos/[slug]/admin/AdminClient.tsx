@@ -1367,20 +1367,24 @@ function PostsTab({
           </p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-6">
+        <ul className="flex w-full max-w-full min-w-0 flex-col gap-6">
           {posts.map((post) => {
             const urls = postUrls(post)
             return (
-              <li key={post.id}>
-                <div className="flex flex-col gap-3">
-                  <PostPhotoGallery urls={urls} />
+              <li key={post.id} className="min-w-0 w-full max-w-full">
+                <div className="flex w-full max-w-full min-w-0 flex-col gap-3 border border-solid border-[#EEEEEE] p-4">
                   {post.content?.trim() ? (
                     <p
-                      className="whitespace-pre-wrap text-[14px] text-[#111111]"
+                      className="min-w-0 max-w-full break-words whitespace-pre-wrap text-[14px] text-[#111111]"
                       style={lato}
                     >
                       {post.content.trim()}
                     </p>
+                  ) : null}
+                  {urls.length > 0 ? (
+                    <div className="w-full max-h-[400px] overflow-hidden">
+                      <PostPhotoGallery urls={urls} />
+                    </div>
                   ) : null}
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="text-[11px] text-[#999999]" style={lato}>
