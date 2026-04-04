@@ -550,15 +550,17 @@ function IntegrantesTabSkeleton() {
 
 function PostsTabListSkeleton() {
   return (
-    <ul className="flex flex-col gap-6" aria-busy aria-label="Cargando publicaciones">
+    <ul className="flex flex-col" aria-busy aria-label="Cargando publicaciones">
       {[0, 1, 2].map((k) => (
-        <li key={k} className="animate-pulse">
-          <div className="grid grid-cols-2 gap-[2px]">
-            <div className="aspect-square bg-[#EEEEEE]" />
-            <div className="aspect-square bg-[#F4F4F4]" />
+        <li key={k} className="list-none">
+          <div className="mx-auto mb-4 w-full max-w-[600px] animate-pulse border border-solid border-[#EEEEEE] p-4">
+            <div className="mb-3 h-4 max-w-[85%] rounded-sm bg-[#EEEEEE]" />
+            <div className="grid grid-cols-2 gap-[2px]">
+              <div className="h-[140px] bg-[#EEEEEE]" />
+              <div className="h-[140px] bg-[#F4F4F4]" />
+            </div>
+            <div className="mt-3 h-3 w-24 rounded-sm bg-[#F4F4F4]" />
           </div>
-          <div className="mt-3 h-4 max-w-[90%] rounded-sm bg-[#EEEEEE]" />
-          <div className="mt-2 h-3 w-24 rounded-sm bg-[#F4F4F4]" />
         </li>
       ))}
     </ul>
@@ -1367,26 +1369,22 @@ function PostsTab({
           </p>
         </div>
       ) : (
-        <ul className="flex w-full max-w-full min-w-0 flex-col gap-6">
+        <ul className="flex w-full min-w-0 flex-col">
           {posts.map((post) => {
             const urls = postUrls(post)
             return (
-              <li key={post.id} className="min-w-0 w-full max-w-full">
-                <div className="flex w-full max-w-full min-w-0 flex-col gap-3 border border-solid border-[#EEEEEE] p-4">
+              <li key={post.id} className="list-none">
+                <div className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] p-4">
                   {post.content?.trim() ? (
                     <p
-                      className="min-w-0 max-w-full break-words whitespace-pre-wrap text-[14px] text-[#111111]"
+                      className="mb-3 min-w-0 max-w-full break-words whitespace-pre-wrap text-[14px] text-[#111111]"
                       style={lato}
                     >
                       {post.content.trim()}
                     </p>
                   ) : null}
-                  {urls.length > 0 ? (
-                    <div className="w-full max-h-[400px] overflow-hidden">
-                      <PostPhotoGallery urls={urls} />
-                    </div>
-                  ) : null}
-                  <div className="flex flex-wrap items-start justify-between gap-2">
+                  {urls.length > 0 ? <PostPhotoGallery urls={urls} /> : null}
+                  <div className="mt-3 flex items-center justify-between gap-2">
                     <p className="text-[11px] text-[#999999]" style={lato}>
                       {relativeTime(post.created_at)}
                     </p>

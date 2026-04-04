@@ -54,7 +54,7 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
       >
         Publicaciones
       </h2>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="flex flex-col">
         {posts.map((post) => {
           const urls = postPhotoUrls(post)
           const ex = excerpt(post.content, 120)
@@ -62,30 +62,24 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
           return (
             <article
               key={post.id}
-              className="border border-[#EEEEEE] bg-[#FFFFFF]"
+              className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
             >
-              {urls.length > 0 ? (
-                <div className="w-full overflow-hidden bg-[#F4F4F4]">
-                  <PostPhotoGallery urls={urls} />
-                </div>
-              ) : null}
-              <div className="p-4">
-                {ex ? (
-                  <p
-                    className="text-[14px] leading-relaxed text-[#111111] line-clamp-4"
-                    style={lato}
-                  >
-                    {ex}
-                  </p>
-                ) : null}
-                <time
-                  className="mt-3 block text-[12px] text-[#666666]"
+              {ex ? (
+                <p
+                  className="mb-3 text-[14px] leading-relaxed text-[#111111] line-clamp-4"
                   style={lato}
-                  dateTime={post.created_at}
                 >
-                  {formatDate(post.created_at)}
-                </time>
-              </div>
+                  {ex}
+                </p>
+              ) : null}
+              {urls.length > 0 ? <PostPhotoGallery urls={urls} /> : null}
+              <time
+                className="mt-3 block text-[12px] text-[#666666]"
+                style={lato}
+                dateTime={post.created_at}
+              >
+                {formatDate(post.created_at)}
+              </time>
             </article>
           )
         })}

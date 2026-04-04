@@ -9,7 +9,8 @@ type PostPhotoGalleryProps = {
 
 export function PostPhotoGallery({ urls }: PostPhotoGalleryProps) {
   const [lightbox, setLightbox] = useState<number | null>(null)
-  const n = urls.length
+  const list = urls.slice(0, 4)
+  const n = list.length
 
   const close = useCallback(() => setLightbox(null), [])
 
@@ -45,66 +46,140 @@ export function PostPhotoGallery({ urls }: PostPhotoGalleryProps) {
 
   if (n === 0) return null
 
+  const open = (idx: number) => setLightbox(idx)
+
+  const lightboxNode =
+    lightbox !== null ? (
+      <LightboxPortal
+        urls={list}
+        index={lightbox}
+        onClose={close}
+        onPrev={prev}
+        onNext={next}
+      />
+    ) : null
+
   if (n === 1) {
     return (
       <>
         <button
           type="button"
           className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left"
-          onClick={() => setLightbox(0)}
+          onClick={() => open(0)}
           aria-label="Ver imagen en grande"
         >
-          <div className="aspect-[16/9] w-full max-h-[400px] max-w-full overflow-hidden bg-[#F4F4F4]">
+          <div className="h-[280px] w-full max-h-[280px] overflow-hidden bg-[#F4F4F4]">
             <img
-              src={urls[0]}
+              src={list[0]}
               alt=""
-              className="h-full w-full min-h-0 min-w-0 object-cover"
+              className="h-full w-full object-cover"
               draggable={false}
             />
           </div>
         </button>
-        {lightbox !== null ? (
-          <LightboxPortal
-            urls={urls}
-            index={lightbox}
-            onClose={close}
-            onPrev={prev}
-            onNext={next}
-          />
-        ) : null}
+        {lightboxNode}
+      </>
+    )
+  }
+
+  if (n === 2) {
+    return (
+      <>
+        <div className="grid w-full grid-cols-2 gap-[2px]">
+          {list.map((u, idx) => (
+            <button
+              key={`${u}-${idx}`}
+              type="button"
+              className="h-[160px] w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+              onClick={() => open(idx)}
+              aria-label={`Ver foto ${idx + 1} en grande`}
+            >
+              <img
+                src={u}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </button>
+          ))}
+        </div>
+        {lightboxNode}
+      </>
+    )
+  }
+
+  if (n === 3) {
+    return (
+      <>
+        <div className="flex w-full flex-col gap-[2px]">
+          <button
+            type="button"
+            className="h-[160px] w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+            onClick={() => open(0)}
+            aria-label="Ver foto 1 en grande"
+          >
+            <img
+              src={list[0]}
+              alt=""
+              className="h-full w-full object-cover"
+              draggable={false}
+            />
+          </button>
+          <div className="grid w-full grid-cols-2 gap-[2px]">
+            <button
+              type="button"
+              className="h-[100px] w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+              onClick={() => open(1)}
+              aria-label="Ver foto 2 en grande"
+            >
+              <img
+                src={list[1]}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </button>
+            <button
+              type="button"
+              className="h-[100px] w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+              onClick={() => open(2)}
+              aria-label="Ver foto 3 en grande"
+            >
+              <img
+                src={list[2]}
+                alt=""
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+            </button>
+          </div>
+        </div>
+        {lightboxNode}
       </>
     )
   }
 
   return (
     <>
-      <div className="grid max-h-[400px] w-full grid-cols-2 gap-[2px] overflow-hidden">
-        {urls.slice(0, 4).map((u, idx) => (
+      <div className="grid w-full grid-cols-2 gap-[2px]">
+        {list.map((u, idx) => (
           <button
             key={`${u}-${idx}`}
             type="button"
-            className="relative aspect-square w-full min-h-0 cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
-            onClick={() => setLightbox(idx)}
+            className="h-[140px] w-full cursor-pointer overflow-hidden border-0 bg-[#F4F4F4] p-0"
+            onClick={() => open(idx)}
             aria-label={`Ver foto ${idx + 1} en grande`}
           >
             <img
               src={u}
               alt=""
-              className="h-full w-full min-h-0 min-w-0 object-cover"
+              className="h-full w-full object-cover"
               draggable={false}
             />
           </button>
         ))}
       </div>
-      {lightbox !== null ? (
-        <LightboxPortal
-          urls={urls}
-          index={lightbox}
-          onClose={close}
-          onPrev={prev}
-          onNext={next}
-        />
-      ) : null}
+      {lightboxNode}
     </>
   )
 }
