@@ -35,20 +35,32 @@ function formatDate(iso: string) {
 }
 
 function postPhotoUrls(post: TeamPostRow): string[] {
-  if (post.foto_url?.trim()) {
-    return [post.foto_url.trim()]
-  }
-  return []
+  const raw = post.fotos_urls
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+    .slice(0, 4)
 }
 
 function PostMediaGrid({ urls }: { urls: string[] }) {
-  if (urls.length === 0) {
-    return <div className="aspect-video w-full bg-[#F4F4F4]" />
+  const n = urls.length
+  if (n === 0) return null
+  if (n === 1) {
+    return (
+      <div className="aspect-[16/9] w-full overflow-hidden bg-[#F4F4F4]">
+        <img
+          src={urls[0]}
+          alt=""
+          width={800}
+          height={450}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    )
   }
-  const grid = urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
   return (
-    <div className={`grid ${grid} gap-2`}>
-      {urls.map((u) => (
+    <div className="grid grid-cols-2 gap-2">
+      {urls.slice(0, 4).map((u) => (
         <div
           key={u}
           className="aspect-square w-full overflow-hidden bg-[#F4F4F4]"
@@ -56,8 +68,8 @@ function PostMediaGrid({ urls }: { urls: string[] }) {
           <img
             src={u}
             alt=""
-            width={800}
-            height={800}
+            width={400}
+            height={400}
             className="h-full w-full object-cover"
           />
         </div>
@@ -88,9 +100,11 @@ export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
               key={post.id}
               className="border border-[#EEEEEE] bg-[#FFFFFF]"
             >
-              <div className="w-full overflow-hidden bg-[#F4F4F4]">
-                <PostMediaGrid urls={urls} />
-              </div>
+              {urls.length > 0 ? (
+                <div className="w-full overflow-hidden bg-[#F4F4F4]">
+                  <PostMediaGrid urls={urls} />
+                </div>
+              ) : null}
               <div className="p-4">
                 {title ? (
                   <h3

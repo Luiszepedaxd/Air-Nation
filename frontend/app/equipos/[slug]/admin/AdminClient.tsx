@@ -342,7 +342,7 @@ export function AdminClient({
       const { data: postsData, error: postsError } = await supabase
         .from('team_posts')
         .select(
-          'id, team_id, title, content, foto_url, published, created_by, created_at'
+          'id, team_id, title, content, fotos_urls, published, created_by, created_at'
         )
         .eq('team_id', teamId)
         .eq('published', true)
@@ -1133,17 +1133,28 @@ function normalizeFotoUrls(raw: unknown): string[] {
 }
 
 function postUrls(row: TeamPostAdminRow): string[] {
-  const u = row.foto_url?.trim()
-  return u ? [u] : []
+  return normalizeFotoUrls(row.fotos_urls).slice(0, 4)
 }
 
 function PostPhotoGrid({ urls }: { urls: string[] }) {
-  if (urls.length === 0) return null
-  const grid =
-    urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
+  const n = urls.length
+  if (n === 0) return null
+  if (n === 1) {
+    return (
+      <div className="aspect-[16/9] w-full overflow-hidden bg-[#F4F4F4]">
+        <img
+          src={urls[0]}
+          alt=""
+          width={800}
+          height={450}
+          className="h-full w-full object-cover"
+        />
+      </div>
+    )
+  }
   return (
-    <div className={`grid ${grid} gap-2`}>
-      {urls.map((u) => (
+    <div className="grid grid-cols-2 gap-2">
+      {urls.slice(0, 4).map((u) => (
         <div
           key={u}
           className="aspect-square w-full overflow-hidden bg-[#F4F4F4]"
@@ -1242,12 +1253,12 @@ function PostsTab({
           team_id: teamId,
           title: null,
           content: text.length ? text : null,
-          foto_url: urls[0] ?? null,
+          fotos_urls: urls,
           published: true,
           created_by: viewerUserId,
         })
         .select(
-          'id, team_id, title, content, foto_url, published, created_by, created_at'
+          'id, team_id, title, content, fotos_urls, published, created_by, created_at'
         )
         .single()
 

@@ -29,7 +29,7 @@ export type TeamPostRow = {
   id: string
   title: string | null
   content: string | null
-  foto_url: string | null
+  fotos_urls: string[] | null
   created_at: string
 }
 

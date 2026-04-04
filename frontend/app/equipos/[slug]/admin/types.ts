@@ -26,7 +26,7 @@ export type TeamPostAdminRow = {
   team_id: string
   title: string | null
   content: string | null
-  foto_url: string | null
+  fotos_urls: string[] | null
   published: boolean
   created_by: string | null
   created_at: string
