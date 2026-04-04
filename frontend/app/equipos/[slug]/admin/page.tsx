@@ -1,10 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { AdminClient } from './AdminClient'
-import type {
-  TeamAlbumAdminRow,
-  TeamPostAdminRow,
-} from './types'
+import type { TeamAlbumAdminRow } from './types'
 
 function isModeratorRole(rol: string | null | undefined) {
   const r = (rol || '').toLowerCase().trim()
@@ -58,29 +55,6 @@ export default async function EquipoAdminPage({
 
   const viewerRol = (membership.rol_plataforma as string | null) ?? ''
 
-  const { data: rawPosts, error: postsErr } = await supabase
-    .from('team_posts')
-    .select('id, content, fotos_urls, created_at, created_by')
-    .eq('team_id', teamId)
-    .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  const initialPosts: TeamPostAdminRow[] =
-    postsErr || !rawPosts
-      ? []
-      : (rawPosts as TeamPostAdminRow[]).map((r) => ({
-          id: r.id,
-          content: r.content,
-          fotos_urls: Array.isArray(r.fotos_urls)
-            ? r.fotos_urls.filter(
-                (u): u is string => typeof u === 'string' && u.trim().length > 0
-              )
-            : null,
-          created_at: r.created_at,
-          created_by: r.created_by,
-        }))
-
   const { data: rawAlbums, error: albumsErr } = await supabase
     .from('team_albums')
     .select('id, nombre, fotos_urls, created_at')
@@ -111,7 +85,6 @@ export default async function EquipoAdminPage({
         logoUrl={(team.logo_url as string | null) ?? null}
         viewerUserId={user.id}
         viewerRol={viewerRol}
-        initialPosts={initialPosts}
         initialAlbums={initialAlbums}
       />
     </div>

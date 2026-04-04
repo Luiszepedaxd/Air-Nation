@@ -203,7 +203,6 @@ export function AdminClient({
   logoUrl,
   viewerUserId,
   viewerRol,
-  initialPosts,
   initialAlbums,
 }: {
   slug: string
@@ -213,7 +212,6 @@ export function AdminClient({
   teamNombre: string
   teamCiudad: string | null
   logoUrl: string | null
-  initialPosts: TeamPostAdminRow[]
   initialAlbums: TeamAlbumAdminRow[]
 }) {
   const [activeTab, setActiveTab] = useState<TabId>('solicitudes')
@@ -221,7 +219,8 @@ export function AdminClient({
   const [members, setMembers] = useState<TeamMemberAdminRow[]>([])
   const [loadingSolicitudes, setLoadingSolicitudes] = useState(true)
   const [loadingIntegrantes, setLoadingIntegrantes] = useState(true)
-  const [posts, setPosts] = useState(initialPosts)
+  const [posts, setPosts] = useState<TeamPostAdminRow[]>([])
+  const [loadingPosts, setLoadingPosts] = useState(true)
   const [albums, setAlbums] = useState(initialAlbums)
   const pendingCount = joinRequests.length
 
@@ -243,6 +242,7 @@ export function AdminClient({
     async function loadLists() {
       setLoadingSolicitudes(true)
       setLoadingIntegrantes(true)
+      setLoadingPosts(true)
 
       const joinQuery = supabase
         .from('team_join_requests')
@@ -274,8 +274,19 @@ export function AdminClient({
         .eq('team_id', teamId)
         .eq('status', 'activo')
 
-      const [{ data: rawJoin, error: joinErr }, { data: rawMembers, error: memErr }] =
-        await Promise.all([joinQuery, membersQuery])
+      const postsQuery = supabase
+        .from('team_posts')
+        .select('id, content, fotos_urls, created_at, created_by')
+        .eq('team_id', teamId)
+        .eq('published', true)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      const [
+        { data: rawJoin, error: joinErr },
+        { data: rawMembers, error: memErr },
+        { data: rawPosts, error: postsErr },
+      ] = await Promise.all([joinQuery, membersQuery, postsQuery])
 
       if (cancelled) return
 
@@ -339,10 +350,32 @@ export function AdminClient({
 
       mappedMembers = [...mappedMembers].sort(sortMembers)
 
+      if (postsErr) {
+        console.error('team_posts fetch failed:', postsErr)
+      }
+
+      const mappedPosts: TeamPostAdminRow[] =
+        postsErr || !rawPosts
+          ? []
+          : (rawPosts as TeamPostAdminRow[]).map((r) => ({
+              id: r.id,
+              content: r.content,
+              fotos_urls: Array.isArray(r.fotos_urls)
+                ? r.fotos_urls.filter(
+                    (u): u is string =>
+                      typeof u === 'string' && u.trim().length > 0
+                  )
+                : null,
+              created_at: r.created_at,
+              created_by: r.created_by,
+            }))
+
       setJoinRequests(mappedJoin)
       setMembers(mappedMembers)
+      setPosts(mappedPosts)
       setLoadingSolicitudes(false)
       setLoadingIntegrantes(false)
+      setLoadingPosts(false)
     }
 
     void loadLists()
@@ -457,6 +490,7 @@ export function AdminClient({
             viewerUserId={viewerUserId}
             posts={posts}
             setPosts={setPosts}
+            loading={loadingPosts}
           />
         ) : null}
 
@@ -524,6 +558,23 @@ function IntegrantesTabSkeleton() {
               <div className="mt-2 h-6 max-w-[200px] rounded-sm bg-[#F4F4F4]" />
             </div>
           </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function PostsTabListSkeleton() {
+  return (
+    <ul className="flex flex-col gap-6" aria-busy aria-label="Cargando publicaciones">
+      {[0, 1, 2].map((k) => (
+        <li key={k} className="animate-pulse">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="aspect-square bg-[#EEEEEE]" />
+            <div className="aspect-square bg-[#F4F4F4]" />
+          </div>
+          <div className="mt-3 h-4 max-w-[90%] rounded-sm bg-[#EEEEEE]" />
+          <div className="mt-2 h-3 w-24 rounded-sm bg-[#F4F4F4]" />
         </li>
       ))}
     </ul>
@@ -1131,11 +1182,13 @@ function PostsTab({
   viewerUserId,
   posts,
   setPosts,
+  loading,
 }: {
   teamId: string
   viewerUserId: string
   posts: TeamPostAdminRow[]
   setPosts: React.Dispatch<React.SetStateAction<TeamPostAdminRow[]>>
+  loading: boolean
 }) {
   const [postText, setPostText] = useState('')
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
@@ -1355,7 +1408,9 @@ function PostsTab({
 
       <hr className="my-8 border-0 border-t border-solid border-[#EEEEEE]" />
 
-      {posts.length === 0 ? (
+      {loading ? (
+        <PostsTabListSkeleton />
+      ) : posts.length === 0 ? (
         <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
           <p style={lato} className="text-[14px] text-[#666666]">
             Aún no hay publicaciones
