@@ -151,6 +151,16 @@ function IconCheck() {
   );
 }
 
+function IconMoreOptions() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="6" cy="12" r="2" fill="#111111" />
+      <circle cx="12" cy="12" r="2" fill="#111111" />
+      <circle cx="18" cy="12" r="2" fill="#111111" />
+    </svg>
+  );
+}
+
 const SHOW_DELAY_MS = 4000;
 
 export default function PwaInstallPrompt() {
@@ -275,7 +285,7 @@ export default function PwaInstallPrompt() {
         <LogoAirNation />
 
         <p className="mt-6 text-center font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-          ESTAMOS EN PVP
+          ESTAMOS EN TEAM DEATHMATCH
         </p>
 
         <h2
@@ -283,14 +293,14 @@ export default function PwaInstallPrompt() {
           className="mt-3 text-center font-black uppercase leading-tight text-[#111111]"
           style={{ fontFamily: "'Jost', sans-serif", fontSize: "clamp(1.25rem, 4vw, 1.5rem)" }}
         >
-          CONTRA APP STORE
+          ACCESO ANTES
           <br />
-          Y GOOGLE PLAY.
+          DEL LANZAMIENTO.
         </h2>
 
         <p className="mt-4 font-body text-sm leading-relaxed text-[#444444]">
-          Mientras ganamos esa partida, ya puedes tener AirNation en tu teléfono — sin tienda, sin esperas, sin permisos
-          de nadie.
+          Estás dentro antes que nadie. Mientras AirNation llega a App Store y Google Play, ya puedes tenerla en tu
+          pantalla de inicio — sin esperar permiso de nadie.
         </p>
 
         <div className="my-6 border-t border-[#EEEEEE]" />
@@ -326,7 +336,9 @@ export default function PwaInstallPrompt() {
                   1
                 </span>
                 <IconShareIOS />
-                <p className="min-w-0 flex-1 font-body text-sm text-[#444444]">Toca el botón Compartir</p>
+                <p className="min-w-0 flex-1 font-body text-sm text-[#444444]">
+                  Toca el botón Compartir <span aria-hidden>↑</span>
+                </p>
               </div>
               <div className="flex items-start gap-3">
                 <span
@@ -335,9 +347,9 @@ export default function PwaInstallPrompt() {
                 >
                   2
                 </span>
-                <IconAddSquare />
+                <IconMoreOptions />
                 <p className="min-w-0 flex-1 font-body text-sm text-[#444444]">
-                  Selecciona &apos;Agregar a pantalla de inicio&apos;
+                  Desliza y toca &quot;Más opciones&quot; <span aria-hidden>···</span>
                 </p>
               </div>
               <div className="flex items-start gap-3">
@@ -347,8 +359,20 @@ export default function PwaInstallPrompt() {
                 >
                   3
                 </span>
+                <IconAddSquare />
+                <p className="min-w-0 flex-1 font-body text-sm text-[#444444]">
+                  Selecciona &quot;Agregar a pantalla de inicio&quot;
+                </p>
+              </div>
+              <div className="flex items-start gap-3">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#CC4B37] font-body text-xs font-bold text-white"
+                  aria-hidden
+                >
+                  4
+                </span>
                 <IconCheck />
-                <p className="min-w-0 flex-1 font-body text-sm text-[#444444]">Confirma con &apos;Agregar&apos;</p>
+                <p className="min-w-0 flex-1 font-body text-sm text-[#444444]">Confirma tocando &quot;Agregar&quot;</p>
               </div>
             </div>
 
