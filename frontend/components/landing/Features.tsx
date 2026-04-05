@@ -26,60 +26,71 @@ const FEATURES = [
     tag: "ID",
     title: "Credencial Digital",
     description:
-      "Tu identificación con QR verificable. Descárgala una vez, úsala en cualquier campo. Sin impresiones, sin papel.",
+      "QR verificable, descárgala una vez y úsala donde quieras. Sin impresiones, sin papel, sin excusas.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
-        <rect x="2" y="5" width="18" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="8" cy="11" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M12.5 9h5M12.5 12h3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <rect x="2" y="5" width="18" height="12" rx="1" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M5 8h2v2H5V8zm4 0h2v2H9V8zm4 0h2v2h-2V8zM5 12h2v2H5v-2zm8 0h2v2h-2v-2z"
+          fill="currentColor"
+        />
+        <circle cx="8" cy="13" r="2" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
   },
   {
     num: "03",
-    tag: "Equipos",
+    tag: "Equipo",
     title: "Registro de Equipos",
     description:
-      "Crea el perfil de tu equipo, invita integrantes y asígnales roles. Perfil público visible para toda la comunidad.",
+      "Perfil público, roles, álbum y muro. Todo lo que tu equipo necesita para existir en la plataforma.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
-        <circle cx="8" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-        <circle cx="14" cy="7.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M1.5 18c0-3 2.9-4.5 6.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <path
-          d="M8.5 18c0-3 2.46-4.5 5.5-4.5S19.5 15 19.5 18"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
+        <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+        <circle cx="15" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M2 18c0-2.5 2.24-4 5-4s5 1.5 5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M10 18c0-2.5 2.02-4 4.5-4s4.5 1.5 4.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     ),
   },
   {
     num: "04",
-    tag: "Legal",
-    title: "Documentos Oficiales",
+    tag: "Territorio",
+    title: "Campos",
     description:
-      "PDFs de GN, SSP, SCT y Policía Municipal organizados y siempre disponibles. Transporte legal de réplicas sin complicaciones.",
+      "Fichas con ubicación, reglas, contacto y eventos activos. Encuentra o registra tu campo en minutos.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
         <path
-          d="M7 2h8l4 4v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3Z"
+          d="M11 3C8.2 3 6 5.2 6 8c0 4.5 5 11 5 11s5-6.5 5-11c0-2.8-2.2-5-5-5z"
           stroke="currentColor"
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
-        <path d="M15 2v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M7 10h8M7 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="11" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
   },
   {
     num: "05",
-    tag: "Réplicas",
-    title: "Registro de Réplicas",
+    tag: "Agenda",
+    title: "Eventos",
     description:
-      "Número de serie, historial de propietarios y transferencias verificables. El REPUVE del airsoft — si la pierdes, ya tienes cómo demostrar que era tuya.",
+      "Crea, difunde y gestiona partidas. RSVP integrado para que sepas exactamente quién llega.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <rect x="3" y="4" width="16" height="15" rx="1" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M3 9h16M8 2v4M14 2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M7 13h2M11 13h2M7 16h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    num: "06",
+    tag: "Arsenal",
+    title: "Réplicas",
+    description:
+      "Número de serie, fotos, historial y transferencias. Si te la roban, la marcas — y toda la comunidad lo sabe.",
     icon: (
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
         <path
@@ -94,36 +105,36 @@ const FEATURES = [
       </svg>
     ),
   },
+  {
+    num: "07",
+    tag: "Emergencia",
+    title: "SOS + Documentos",
+    description:
+      "PDFs de GN, SSP, SCT y Policía Municipal siempre disponibles. Y un árbol de decisiones paso a paso si te detienen.",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
+        <path
+          d="M7 2h8l4 4v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3Z"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        <path d="M15 2v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M7 10h8M7 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path
+          d="M17 17.5h-3v-3M14 17.5l3.5-3.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
 ];
 
 const ITEMS = [...FEATURES, ...FEATURES, ...FEATURES];
 const GAP = 16;
-
-const STEPS = [
-  {
-    num: "01",
-    title: "Crea tu cuenta",
-    description:
-      "Regístrate gratis con tu correo. En menos de dos minutos ya tienes perfil.",
-  },
-  {
-    num: "02",
-    title: "Completa tu perfil",
-    description: "Agrega alias, foto, ciudad y rol. Únete o crea tu equipo.",
-  },
-  {
-    num: "03",
-    title: "Genera tu credencial",
-    description:
-      "Tu ID digital con QR se genera automáticamente. Descárgala o guárdala en el cel.",
-  },
-  {
-    num: "04",
-    title: "Registra tus réplicas",
-    description:
-      "Ingresa número de serie y fotos. Historial permanente, transferencia en un tap.",
-  },
-];
 
 function cardWidthPx(): number {
   if (typeof window === "undefined") return 340;
@@ -322,35 +333,18 @@ export default function Features() {
             className="font-display font-black uppercase leading-[0.9] text-an-text"
             style={{ fontSize: "clamp(2.6rem, 6vw, 5.2rem)" }}
           >
-            5 HERRAMIENTAS.
+            TODO LO QUE
             <br />
-            UNA PLATAFORMA.
+            EL AIRSOFT
+            <br />
+            NECESITABA.
           </h2>
           <p className="mt-6 max-w-lg font-body text-base leading-[1.7] text-an-text-dim sm:text-[1.05rem]">
-            Todo lo que la comunidad de airsoft necesitaba — reunido en un solo lugar.
+            Siete herramientas construidas desde adentro del juego — no desde una oficina.
           </p>
         </div>
 
         <FeaturesCarousel />
-
-        <div className="mt-16 border-t border-[#EEEEEE] pt-12">
-          <p className="mb-8 font-body text-sm text-[#444444]">En 4 pasos —</p>
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
-            {STEPS.map((step) => (
-              <div key={step.num}>
-                <p className="font-display text-2xl font-black leading-none text-[#CC4B37] sm:text-[1.75rem]">
-                  {step.num}
-                </p>
-                <h3 className="mt-4 font-ui text-sm font-semibold leading-snug text-[#111111] sm:text-base">
-                  {step.title}
-                </h3>
-                <p className="mt-2 font-body text-sm font-normal leading-[1.75] text-[#444444]">
-                  {step.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
