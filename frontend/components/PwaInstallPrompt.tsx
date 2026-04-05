@@ -55,26 +55,9 @@ function isStandalone(): boolean {
 }
 
 export function usePwaInstall() {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptLike | null>(() => getDeferredPromptSingleton());
-
-  useEffect(() => {
-    setDeferred(getDeferredPromptSingleton());
-    const unsub = subscribeDeferredPrompt(() => {
-      setDeferred(getDeferredPromptSingleton());
-    });
-    return unsub;
-  }, []);
-
   const ios = typeof window !== "undefined" && isIOSPlatform();
-  const standalone = typeof window !== "undefined" && isStandalone();
-  let sessionDismissed = false;
-  try {
-    if (typeof window !== "undefined") sessionDismissed = sessionStorage.getItem(SESSION_KEY) === "1";
-  } catch {
-    /* ignore */
-  }
 
-  const canInstall = !standalone && !sessionDismissed && (ios || deferred !== null);
+  const canInstall = true;
 
   const triggerInstall = useCallback(async () => {
     const d = getDeferredPromptSingleton();
@@ -92,6 +75,8 @@ export function usePwaInstall() {
         /* ignore */
       }
     } else if (isIOSPlatform()) {
+      openInstallOverlayHandler?.();
+    } else if (isStandalone()) {
       openInstallOverlayHandler?.();
     }
   }, []);
