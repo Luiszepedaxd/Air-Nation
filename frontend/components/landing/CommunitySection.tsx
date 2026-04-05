@@ -1,7 +1,8 @@
-export const revalidate = 0;
+"use client";
 
 import Link from "next/link";
-import { getSiteAssets } from "@/lib/site-assets";
+import { useCallback, useEffect, useState } from "react";
+import { getSiteAssetValues, getSiteAssets } from "@/lib/site-assets";
 
 const COMUNIDAD_KEYS = [
   "comunidad_foto_1",
@@ -12,18 +13,112 @@ const COMUNIDAD_KEYS = [
   "comunidad_foto_6",
 ] as const;
 
-const STATS = [
-  { num: "—", label: "Jugadores registrados" },
-  { num: "—", label: "Equipos activos", accent: true },
-  { num: "—", label: "Campos registrados" },
+const STAT_CONFIG = [
+  { key: "stat_jugadores", label: "Jugadores registrados", accent: false as boolean },
+  { key: "stat_equipos", label: "Equipos activos", accent: true },
+  { key: "stat_campos", label: "Campos registrados", accent: false },
 ];
 
 function validImageUrl(url: string | null | undefined): url is string {
   return typeof url === "string" && url.trim().length > 0;
 }
 
-export default async function CommunitySection() {
-  const assets = await getSiteAssets();
+function statDisplay(values: Record<string, string>, key: string): string {
+  const v = values[key];
+  return v?.trim() ? v : "—";
+}
+
+function CommunityGalleryCarousel({ urls }: { urls: string[] }) {
+  const [idx, setIdx] = useState(0);
+  const n = urls.length;
+
+  const goPrev = useCallback(() => {
+    if (n === 0) return;
+    setIdx((i) => (i - 1 + n) % n);
+  }, [n]);
+
+  const goNext = useCallback(() => {
+    if (n === 0) return;
+    setIdx((i) => (i + 1) % n);
+  }, [n]);
+
+  if (n === 0) {
+    return <div className="min-h-[200px] w-full bg-an-surface2 border border-an-border" aria-hidden />;
+  }
+
+  const showArrows = n > 1;
+
+  return (
+    <div className="relative w-full overflow-hidden border border-an-border bg-an-surface2 aspect-square">
+      {urls.map((src, i) => (
+        <img
+          key={`${src}-${i}`}
+          src={src}
+          alt=""
+          loading={i === 0 ? "eager" : "lazy"}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-out ${
+            i === idx ? "z-[1] opacity-100" : "z-0 opacity-0 pointer-events-none"
+          }`}
+        />
+      ))}
+
+      {showArrows ? (
+        <>
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Foto anterior"
+            className="absolute left-2 top-1/2 z-[2] flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-an-border bg-white/90 text-an-text transition-colors hover:bg-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M15 6l-6 6 6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Foto siguiente"
+            className="absolute right-2 top-1/2 z-[2] flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-an-border bg-white/90 text-an-text transition-colors hover:bg-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export default function CommunitySection() {
+  const [urls, setUrls] = useState<string[]>([]);
+  const [values, setValues] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [imgs, vals] = await Promise.all([getSiteAssets(), getSiteAssetValues()]);
+      if (cancelled) return;
+      const list = COMUNIDAD_KEYS.map((k) => imgs[k]).filter(validImageUrl);
+      setUrls(list);
+      setValues(vals);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section id="comunidad" className="bg-[#F4F4F4] px-5 py-16 sm:px-8 sm:py-20">
@@ -51,9 +146,9 @@ export default async function CommunitySection() {
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-px bg-an-border">
-            {STATS.map(({ num, label, accent }) => (
+            {STAT_CONFIG.map(({ key, label, accent }) => (
               <div
-                key={label}
+                key={key}
                 className={`flex flex-col items-center text-center py-5 px-3 ${
                   accent ? "bg-an-accent" : "bg-an-surface2"
                 }`}
@@ -63,7 +158,7 @@ export default async function CommunitySection() {
                     accent ? "text-white" : "text-an-text"
                   }`}
                 >
-                  {num}
+                  {statDisplay(values, key)}
                 </span>
                 <span
                   className={`font-body text-[0.58rem] sm:text-[0.62rem] uppercase tracking-[0.1em] mt-1.5 leading-snug ${
@@ -95,22 +190,7 @@ export default async function CommunitySection() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-px bg-an-border">
-          {COMUNIDAD_KEYS.map((key) => {
-            const src = assets[key];
-            if (!validImageUrl(src)) return null;
-            return (
-              <div key={key} className="relative aspect-square bg-an-surface2">
-                <img
-                  src={src}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover border border-an-border"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })}
-        </div>
+        <CommunityGalleryCarousel urls={urls} />
       </div>
     </section>
   );

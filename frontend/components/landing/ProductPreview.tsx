@@ -1,6 +1,7 @@
-export const revalidate = 0;
+"use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { getSiteAssets } from "@/lib/site-assets";
 
 const PREVIEW_KEYS = [
@@ -16,8 +17,95 @@ function validImageUrl(url: string | null | undefined): url is string {
   return typeof url === "string" && url.trim().length > 0;
 }
 
-export default async function ProductPreview() {
-  const assets = await getSiteAssets();
+function PreviewGalleryCarousel({ urls }: { urls: string[] }) {
+  const [idx, setIdx] = useState(0);
+  const n = urls.length;
+
+  const goPrev = useCallback(() => {
+    if (n === 0) return;
+    setIdx((i) => (i - 1 + n) % n);
+  }, [n]);
+
+  const goNext = useCallback(() => {
+    if (n === 0) return;
+    setIdx((i) => (i + 1) % n);
+  }, [n]);
+
+  if (n === 0) {
+    return <div className="min-h-[280px] w-full bg-an-surface2 border border-an-border" aria-hidden />;
+  }
+
+  const showArrows = n > 1;
+
+  return (
+    <div className="relative w-full overflow-hidden border border-an-border bg-an-surface2 aspect-[9/16]">
+      {urls.map((src, i) => (
+        <img
+          key={`${src}-${i}`}
+          src={src}
+          alt=""
+          loading={i === 0 ? "eager" : "lazy"}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ease-out ${
+            i === idx ? "z-[1] opacity-100" : "z-0 opacity-0 pointer-events-none"
+          }`}
+        />
+      ))}
+
+      {showArrows ? (
+        <>
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Captura anterior"
+            className="absolute left-2 top-1/2 z-[2] flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-an-border bg-white/90 text-an-text transition-colors hover:bg-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M15 6l-6 6 6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Captura siguiente"
+            className="absolute right-2 top-1/2 z-[2] flex h-10 w-10 -translate-y-1/2 items-center justify-center border border-an-border bg-white/90 text-an-text transition-colors hover:bg-white"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+export default function ProductPreview() {
+  const [urls, setUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const imgs = await getSiteAssets();
+      if (cancelled) return;
+      const list = PREVIEW_KEYS.map((k) => imgs[k]).filter(validImageUrl);
+      setUrls(list);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section id="preview" className="bg-white px-5 py-16 sm:px-8 sm:py-20">
@@ -49,26 +137,7 @@ export default async function ProductPreview() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-px bg-an-border lg:grid-cols-2">
-          {PREVIEW_KEYS.map((key, slotIndex) => {
-            const url = assets[key];
-            if (!validImageUrl(url)) return null;
-            const hideOnMobile = slotIndex >= 4;
-            return (
-              <div
-                key={key}
-                className={`relative aspect-[9/16] bg-an-surface2 ${hideOnMobile ? "hidden lg:block" : ""}`}
-              >
-                <img
-                  src={url}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover border border-an-border"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })}
-        </div>
+        <PreviewGalleryCarousel urls={urls} />
       </div>
     </section>
   );
