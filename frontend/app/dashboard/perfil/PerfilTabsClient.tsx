@@ -36,22 +36,22 @@ function PerfilPwaInstallBlock() {
   const { canInstall, triggerInstall } = usePwaInstall()
   if (!canInstall) return null
   return (
-    <div className="border-t border-solid border-[#EEEEEE] pt-6">
-      <p className="text-[0.6rem] uppercase tracking-widest text-[#AAAAAA]">
-        ACCESO RÁPIDO
+    <div className="mt-6 border-t border-[#EEEEEE] pt-6">
+      <p className="mb-3 font-body text-[0.6rem] font-bold uppercase tracking-[0.28em] text-[#AAAAAA]">
+        Acceso rápido
       </p>
       <button
         type="button"
         onClick={() => void triggerInstall()}
-        className="mt-3 flex w-full items-center justify-center gap-2 bg-[#111111] py-[14px] font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90"
+        className="flex w-full items-center justify-center gap-2 bg-[#111111] py-[14px] font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90"
         style={{ borderRadius: 2 }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path d="M12 2L20 7V17L12 22L4 17V7L12 2Z" fill="#FFFFFF" />
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+          <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#FFFFFF" />
         </svg>
         INSTALAR AIRNATION
       </button>
-      <p className="mt-2 text-center text-xs text-[#AAAAAA]" style={{ fontFamily: "'Lato', sans-serif" }}>
+      <p className="mt-2 text-center font-body text-xs text-[#AAAAAA]">
         Accede desde tu pantalla de inicio como una app nativa.
       </p>
     </div>
