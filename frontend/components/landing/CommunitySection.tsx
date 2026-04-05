@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { getSiteAssetValues } from "@/lib/site-assets";
 
 const FEED_ITEMS = [
   { text: "GhostMx completó su perfil en AirNation", keyword: "perfil", time: "hace 1 min" },
@@ -40,16 +39,11 @@ const FEED_ITEMS = [
 const FEED_INTERVAL_MS = 4000;
 const EXIT_DURATION_MS = 450;
 
-const STAT_CONFIG = [
-  { key: "stat_jugadores", label: "Jugadores registrados", accent: false as boolean },
-  { key: "stat_equipos", label: "Equipos activos", accent: true },
-  { key: "stat_campos", label: "Campos registrados", accent: false },
+const STATS = [
+  { num: "Entra", label: "El registro es gratis", accent: false as boolean },
+  { num: "Juega", label: "La comunidad te espera", accent: true },
+  { num: "Gana", label: "Tu identidad, tu historia", accent: false },
 ];
-
-function statDisplay(values: Record<string, string>, key: string): string {
-  const v = values[key];
-  return v?.trim() ? v : "—";
-}
 
 function getDotColor(keyword: string): string {
   const k = keyword.toLowerCase();
@@ -170,20 +164,6 @@ function CommunityActivityFeed() {
 }
 
 export default function CommunitySection() {
-  const [values, setValues] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const vals = await getSiteAssetValues();
-      if (cancelled) return;
-      setValues(vals);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   return (
     <section id="comunidad" className="bg-[#F4F4F4] px-5 py-16 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16 lg:items-start">
@@ -210,9 +190,9 @@ export default function CommunitySection() {
           </p>
 
           <div className="mt-10 grid grid-cols-3 gap-px bg-an-border">
-            {STAT_CONFIG.map(({ key, label, accent }) => (
+            {STATS.map(({ num, label, accent }) => (
               <div
-                key={key}
+                key={num}
                 className={`flex flex-col items-center text-center py-5 px-3 ${
                   accent ? "bg-an-accent" : "bg-an-surface2"
                 }`}
@@ -222,10 +202,10 @@ export default function CommunitySection() {
                     accent ? "text-white" : "text-an-text"
                   }`}
                 >
-                  {statDisplay(values, key)}
+                  {num}
                 </span>
                 <span
-                  className={`font-body text-[0.58rem] sm:text-[0.62rem] uppercase tracking-[0.1em] mt-1.5 leading-snug ${
+                  className={`font-body text-[0.58rem] sm:text-[0.62rem] tracking-[0.02em] mt-1.5 leading-snug ${
                     accent ? "text-white/80" : "text-an-text-dim"
                   }`}
                 >
