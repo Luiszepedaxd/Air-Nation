@@ -27,7 +27,7 @@ const NAV_ITEMS = [
     },
   },
   {
-    label: 'Perfil',
+    label: 'Operador',
     href: '/dashboard/perfil',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">

@@ -1,13 +1,42 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "an_pwa_dismissed";
+const SESSION_KEY = "an_pwa_session";
 
 type BeforeInstallPromptLike = {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 };
+
+let deferredPromptSingleton: BeforeInstallPromptLike | null = null;
+const deferredListeners = new Set<() => void>();
+
+function setDeferredPromptSingleton(e: BeforeInstallPromptLike | null) {
+  deferredPromptSingleton = e;
+  deferredListeners.forEach((fn) => fn());
+}
+
+export function getDeferredPromptSingleton(): BeforeInstallPromptLike | null {
+  return deferredPromptSingleton;
+}
+
+function subscribeDeferredPrompt(callback: () => void) {
+  deferredListeners.add(callback);
+  return () => {
+    deferredListeners.delete(callback);
+  };
+}
+
+let openInstallOverlayHandler: (() => void) | null = null;
+
+function registerPwaInstallOverlay(handler: () => void) {
+  openInstallOverlayHandler = handler;
+  return () => {
+    if (openInstallOverlayHandler === handler) openInstallOverlayHandler = null;
+  };
+}
 
 function isMobileViewport(): boolean {
   if (typeof window === "undefined") return false;
@@ -15,7 +44,7 @@ function isMobileViewport(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-function isIOS(): boolean {
+export function isIOSPlatform(): boolean {
   if (typeof navigator === "undefined") return false;
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
 }
@@ -23,6 +52,55 @@ function isIOS(): boolean {
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(display-mode: standalone)").matches;
+}
+
+export function usePwaInstall() {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptLike | null>(() => getDeferredPromptSingleton());
+
+  useEffect(() => {
+    setDeferred(getDeferredPromptSingleton());
+    const unsub = subscribeDeferredPrompt(() => {
+      setDeferred(getDeferredPromptSingleton());
+    });
+    return unsub;
+  }, []);
+
+  const ios = typeof window !== "undefined" && isIOSPlatform();
+  const standalone = typeof window !== "undefined" && isStandalone();
+  let sessionDismissed = false;
+  try {
+    if (typeof window !== "undefined") sessionDismissed = sessionStorage.getItem(SESSION_KEY) === "1";
+  } catch {
+    /* ignore */
+  }
+
+  const canInstall = !standalone && !sessionDismissed && (ios || deferred !== null);
+
+  const triggerInstall = useCallback(async () => {
+    const d = getDeferredPromptSingleton();
+    if (d?.prompt) {
+      try {
+        await d.prompt();
+        await d.userChoice;
+      } catch {
+        /* ignore */
+      }
+      setDeferredPromptSingleton(null);
+      try {
+        sessionStorage.setItem(SESSION_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    } else if (isIOSPlatform()) {
+      openInstallOverlayHandler?.();
+    }
+  }, []);
+
+  return {
+    canInstall,
+    triggerInstall,
+    isIOS: ios,
+  };
 }
 
 function LogoAirNation() {
@@ -73,15 +151,17 @@ function IconCheck() {
   );
 }
 
+const SHOW_DELAY_MS = 4000;
+
 export default function PwaInstallPrompt() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [variant, setVariant] = useState<"ios" | "android" | null>(null);
-
-  const deferredPromptRef = useRef<BeforeInstallPromptLike | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   const dismissPermanent = useCallback(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, "1");
+      sessionStorage.setItem(SESSION_KEY, "1");
     } catch {
       /* ignore */
     }
@@ -93,34 +173,74 @@ export default function PwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
+    return registerPwaInstallOverlay(() => {
+      setVariant("ios");
+      setOpen(true);
+    });
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
+
+    const clearTimer = () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+
+    if (!pathname?.startsWith("/dashboard")) {
+      clearTimer();
+      setOpen(false);
+      return;
+    }
+
+    let cancelled = false;
+
     try {
-      if (localStorage.getItem(STORAGE_KEY) === "1") return;
+      if (sessionStorage.getItem(SESSION_KEY) === "1") return;
     } catch {
       /* ignore */
     }
+
     if (isStandalone()) return;
     if (!isMobileViewport()) return;
 
-    if (isIOS()) {
-      setVariant("ios");
-      setOpen(true);
-      return;
+    if (isIOSPlatform()) {
+      timerRef.current = window.setTimeout(() => {
+        if (!cancelled) {
+          setVariant("ios");
+          setOpen(true);
+        }
+      }, SHOW_DELAY_MS);
+      return () => {
+        cancelled = true;
+        clearTimer();
+      };
     }
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();
-      deferredPromptRef.current = e as unknown as BeforeInstallPromptLike;
-      setVariant("android");
-      setOpen(true);
+      setDeferredPromptSingleton(e as unknown as BeforeInstallPromptLike);
+      clearTimer();
+      timerRef.current = window.setTimeout(() => {
+        if (!cancelled) {
+          setVariant("android");
+          setOpen(true);
+        }
+      }, SHOW_DELAY_MS);
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-  }, []);
+    return () => {
+      cancelled = true;
+      clearTimer();
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+    };
+  }, [pathname]);
 
   const onInstallAndroid = async () => {
-    const ev = deferredPromptRef.current;
+    const ev = getDeferredPromptSingleton();
     if (!ev?.prompt) {
       dismissPermanent();
       return;
@@ -131,9 +251,11 @@ export default function PwaInstallPrompt() {
     } catch {
       /* ignore */
     }
-    deferredPromptRef.current = null;
+    setDeferredPromptSingleton(null);
     dismissPermanent();
   };
+
+  if (!pathname?.startsWith("/dashboard")) return null;
 
   if (!open || !variant) return null;
 
