@@ -112,7 +112,7 @@ function sosNavIcon(active: boolean) {
 
 const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[0], label: 'HOME' },
-  { ...NAV_ITEMS[1], label: 'PERFIL' },
+  { ...NAV_ITEMS[1], label: 'OPERADOR' },
   { ...NAV_ITEMS[2], label: 'CREDENCIAL' },
   { ...NAV_ITEMS[3], label: 'CAMPOS' },
   { ...NAV_ITEMS[4], label: 'RÉPLICAS' },
