@@ -89,13 +89,6 @@ function StatusBadge({ status }: { status: string | null }) {
   )
 }
 
-function hasPlaceholder(t: TeamRow) {
-  return !!(
-    (t.placeholder_owner_nombre && t.placeholder_owner_nombre.trim()) ||
-    (t.placeholder_owner_contacto && t.placeholder_owner_contacto.trim())
-  )
-}
-
 async function actionUpdateTeamMemberRole(formData: FormData) {
   'use server'
   const memberId = String(formData.get('member_id') ?? '').trim()
@@ -221,6 +214,9 @@ export default async function AdminEquiposPage({
   const askDeleteRaw = searchParams.askDelete
   const askDelete = Array.isArray(askDeleteRaw) ? askDeleteRaw[0] : askDeleteRaw
 
+  const pickUserRaw = searchParams.pickUser
+  const pickUser = Array.isArray(pickUserRaw) ? pickUserRaw[0] : pickUserRaw
+
   const { data, error } = await supabase
     .from('teams')
     .select(
@@ -318,6 +314,11 @@ export default async function AdminEquiposPage({
 
   const base = '/admin/equipos'
 
+  const transferResourceName =
+    transferTeamId && teams.length > 0
+      ? teams.find((t) => t.id === transferTeamId)?.nombre?.trim() || 'EQUIPO'
+      : 'EQUIPO'
+
   return (
     <div className="p-6">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -338,19 +339,19 @@ export default async function AdminEquiposPage({
 
       {transferTeamId ? (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="transfer-team-title"
         >
-          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-6 shadow-lg">
+          <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-5 shadow-lg">
             <div className="flex items-start justify-between gap-4">
               <h2
                 id="transfer-team-title"
-                className="text-lg text-[#111111]"
-                style={jostHeading}
+                className="text-base font-black uppercase leading-tight text-[#111111]"
+                style={{ fontFamily: "'Jost', sans-serif" }}
               >
-                TRANSFERIR EQUIPO
+                TRANSFERIR {transferResourceName}
               </h2>
               <Link
                 href={base}
@@ -360,27 +361,24 @@ export default async function AdminEquiposPage({
                 Cerrar
               </Link>
             </div>
-            <p className="mt-2 text-[13px] text-[#666666]" style={latoBody}>
-              Busca por alias o email y confirma al nuevo propietario.
-            </p>
-            <form method="get" className="mt-4 flex flex-wrap gap-2">
-              <input type="hidden" name="transferTeam" value={transferTeamId} />
+            <label className="mt-4 block text-[12px] text-[#666666]" style={latoBody}>
+              Buscar por alias o email
               <input
+                id="transfer-q-equipos"
                 type="search"
                 name="q"
                 defaultValue={q}
-                placeholder="Alias o email"
-                className="min-w-0 flex-1 border border-solid border-[#EEEEEE] px-3 py-2 text-sm text-[#111111]"
+                placeholder="Buscar por alias o email..."
+                autoComplete="off"
+                className="mt-1 w-full border border-solid border-[#EEEEEE] px-3 py-2 text-sm text-[#111111]"
                 style={{ ...latoBody, borderRadius: 2 }}
               />
-              <button
-                type="submit"
-                className="bg-[#111111] px-4 py-2 text-[10px] text-[#FFFFFF]"
-                style={{ ...jostHeading, borderRadius: 2 }}
-              >
-                BUSCAR
-              </button>
-            </form>
+            </label>
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `(function(){var inp=document.getElementById("transfer-q-equipos");if(!inp)return;var tm=setTimeout(function(){},0);inp.addEventListener("input",function(e){clearTimeout(tm);var v=e.target.value;tm=setTimeout(function(){var u=new URL(window.location.href);u.searchParams.set("q",v);u.searchParams.delete("pickUser");if(${JSON.stringify(transferTeamId)})u.searchParams.set("transferTeam",${JSON.stringify(transferTeamId)});window.location.href=u.toString();},300);});})();`,
+              }}
+            />
 
             {q.length > 0 && q.length < 2 ? (
               <p className="mt-3 text-[12px] text-[#666666]" style={latoBody}>
@@ -395,55 +393,70 @@ export default async function AdminEquiposPage({
                     Sin resultados.
                   </li>
                 ) : (
-                  searchResults.map((u) => (
-                    <li
-                      key={u.id}
-                      className="flex items-center gap-3 border border-solid border-[#EEEEEE] p-3"
-                    >
-                      <div className="h-10 w-10 shrink-0 overflow-hidden bg-[#F4F4F4]">
-                        {u.avatar_url ? (
-                          <img
-                            src={u.avatar_url}
-                            alt=""
-                            width={40}
-                            height={40}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div
-                            className="flex h-full w-full items-center justify-center text-[11px] text-[#CC4B37]"
-                            style={jostHeading}
-                          >
-                            {(u.alias?.[0] || u.nombre?.[0] || '?').toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] text-[#111111]" style={latoBody}>
-                          {u.nombre?.trim() || '—'}
-                          {u.alias?.trim() ? (
-                            <span className="text-[#666666]"> · @{u.alias.trim()}</span>
-                          ) : null}
-                        </p>
-                        <p className="truncate text-[12px] text-[#666666]" style={latoBody}>
-                          {u.email ?? '—'}
-                        </p>
-                      </div>
-                      <form action={actionTransferTeam}>
-                        <input type="hidden" name="team_id" value={transferTeamId} />
-                        <input type="hidden" name="new_user_id" value={u.id} />
-                        <button
-                          type="submit"
-                          className="bg-[#1B5E20] px-3 py-2 text-[10px] text-[#FFFFFF]"
-                          style={{ ...jostHeading, borderRadius: 2 }}
+                  searchResults.map((u) => {
+                    const selected = pickUser === u.id
+                    const href = `${base}?transferTeam=${encodeURIComponent(transferTeamId)}&q=${encodeURIComponent(q)}&pickUser=${encodeURIComponent(u.id)}`
+                    return (
+                      <li key={u.id}>
+                        <Link
+                          href={href}
+                          className={`flex items-center gap-3 border border-solid p-3 transition-colors ${
+                            selected
+                              ? 'border-[#CC4B37] bg-[#FFF8F7]'
+                              : 'border-[#EEEEEE] bg-[#FFFFFF] hover:bg-[#F9F9F9]'
+                          }`}
                         >
-                          CONFIRMAR TRANSFERENCIA
-                        </button>
-                      </form>
-                    </li>
-                  ))
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
+                            {u.avatar_url ? (
+                              <img
+                                src={u.avatar_url}
+                                alt=""
+                                width={40}
+                                height={40}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="flex h-full w-full items-center justify-center text-[11px] text-[#CC4B37]"
+                                style={jostHeading}
+                              >
+                                {(u.alias?.[0] || u.nombre?.[0] || '?').toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className="truncate text-[13px] font-bold text-[#111111]"
+                              style={latoBody}
+                            >
+                              {u.alias?.trim() ? `@${u.alias.trim()}` : u.nombre?.trim() || '—'}
+                            </p>
+                            <p className="truncate text-xs text-[#666666]" style={latoBody}>
+                              {u.email ?? '—'}
+                            </p>
+                          </div>
+                        </Link>
+                      </li>
+                    )
+                  })
                 )}
               </ul>
+            ) : null}
+
+            {pickUser &&
+            transferTeamId &&
+            searchResults.some((u) => u.id === pickUser) ? (
+              <form action={actionTransferTeam} className="mt-4 border-t border-solid border-[#EEEEEE] pt-4">
+                <input type="hidden" name="team_id" value={transferTeamId} />
+                <input type="hidden" name="new_user_id" value={pickUser} />
+                <button
+                  type="submit"
+                  className="w-full bg-[#1B5E20] px-3 py-2.5 text-[10px] text-[#FFFFFF] transition-opacity hover:opacity-90"
+                  style={{ ...jostHeading, borderRadius: 2 }}
+                >
+                  CONFIRMAR TRANSFERENCIA
+                </button>
+              </form>
             ) : null}
           </div>
         </div>
@@ -458,7 +471,6 @@ export default async function AdminEquiposPage({
           {teams.map((t) => {
             const members = membersByTeam[t.id] ?? []
             const transferred = !!t.transferred_to
-            const showTransferBtn = !transferred && hasPlaceholder(t)
 
             return (
               <details
@@ -503,15 +515,13 @@ export default async function AdminEquiposPage({
                     >
                       EDITAR
                     </Link>
-                    {showTransferBtn ? (
-                      <Link
-                        href={`${base}?transferTeam=${encodeURIComponent(t.id)}`}
-                        className="inline-flex items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[10px] text-[#111111]"
-                        style={{ ...jostHeading, borderRadius: 2 }}
-                      >
-                        TRANSFERIR
-                      </Link>
-                    ) : null}
+                    <Link
+                      href={`${base}?transferTeam=${encodeURIComponent(t.id)}`}
+                      className="inline-flex items-center justify-center border border-[#111111] px-3 py-1.5 font-bold text-[0.7rem] uppercase tracking-[0.15em] text-[#111111] transition-colors hover:bg-[#111111] hover:text-white"
+                      style={jostHeading}
+                    >
+                      TRANSFERIR
+                    </Link>
                     {askDelete === t.id ? (
                       <form action={actionDeleteTeamConfirm} className="inline-flex items-center gap-2">
                         <input type="hidden" name="id" value={t.id} />
