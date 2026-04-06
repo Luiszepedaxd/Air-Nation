@@ -12,6 +12,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://airnation.online"),
+  alternates: {
+    canonical: '/',
+  },
   title: "AirNation — Plataforma central del airsoft",
   description:
     "Perfil de jugador, credencial digital, equipos, documentación oficial y registro de réplicas. La plataforma hecha por y para la comunidad de airsoft en México.",
