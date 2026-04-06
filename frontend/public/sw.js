@@ -23,11 +23,35 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/**
+ * Do not intercept Next.js internal traffic or non-GET requests.
+ * RSC and /_next/ must reach the network without cache fallbacks that can
+ * yield a non-Response and break respondWith.
+ */
+function shouldPassthroughFetch(request) {
+  if (request.method !== "GET") return true;
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return true;
+  }
+  if (url.searchParams.has("_rsc")) return true;
+  if (url.pathname.includes("/_next/")) return true;
+  return false;
+}
+
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  if (shouldPassthroughFetch(event.request)) return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => response)
-      .catch(() => caches.match(event.request)),
+      .catch(() =>
+        caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request);
+        }),
+      ),
   );
 });

@@ -9,8 +9,8 @@ import {
 } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
 import { updateFieldAdmin } from '@/app/admin/campos/field-edit-actions'
+import { supabase } from '@/lib/supabase'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import {
   FIELD_DAY_KEYS,
@@ -21,15 +21,6 @@ import {
   weekScheduleFromJson,
   weekScheduleToJson,
 } from '@/lib/field-schedule'
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
-  'https://placeholder.supabase.co'
-const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder'
-
-const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||

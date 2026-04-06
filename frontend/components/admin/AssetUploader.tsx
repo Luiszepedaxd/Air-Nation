@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
+import { supabase } from "@/lib/supabase";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
@@ -100,10 +100,6 @@ export default function AssetUploader({
       const { url } = (await uploadRes.json()) as { url?: string };
       if (!url) throw new Error("Respuesta de subida inválida");
 
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
       const {
         data: { session },
       } = await supabase.auth.getSession();
