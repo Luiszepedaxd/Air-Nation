@@ -5,10 +5,12 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
-import Table from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableCell from '@tiptap/extension-table-cell'
-import TableHeader from '@tiptap/extension-table-header'
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from '@tiptap/extension-table'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 import {
