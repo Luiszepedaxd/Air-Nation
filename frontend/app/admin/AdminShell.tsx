@@ -111,6 +111,21 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: '/admin/equipos',
+    label: 'Equipos',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M9 11a3 3 0 100-6 3 3 0 000 6zM17 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM3 20.5v-.5a4 4 0 014-4h4a4 4 0 014 4v.5M14 20.5v-.5a3 3 0 013-3h1"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/eventos',
     label: 'Eventos',
     icon: (active) => (

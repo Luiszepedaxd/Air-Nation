@@ -3,7 +3,13 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { updateFieldStatus, toggleDestacado, updateOrdenDestacado } from './actions'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
+import {
+  deleteField,
+  updateFieldStatus,
+  toggleDestacado,
+  updateOrdenDestacado,
+} from './actions'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -95,6 +101,9 @@ export default function FieldsList({
   const [toggleBusyId, setToggleBusyId] = useState<string | null>(null)
   const [ordenBusyId, setOrdenBusyId] = useState<string | null>(null)
   const [ordenDraft, setOrdenDraft] = useState<Record<string, string>>({})
+  const [pendingDelete, setPendingDelete] = useState<FieldListItem | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     setFields(initialFields)
@@ -165,6 +174,32 @@ export default function FieldsList({
     setFields((list) =>
       list.map((f) => (f.id === id ? { ...f, status } : f))
     )
+    router.refresh()
+  }
+
+  const openDelete = (f: FieldListItem) => {
+    setPendingDelete(f)
+    setDeleteError(null)
+  }
+
+  const closeDelete = () => {
+    if (deleteLoading) return
+    setPendingDelete(null)
+    setDeleteError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setDeleteLoading(true)
+    setDeleteError(null)
+    const result = await deleteField(pendingDelete.id)
+    setDeleteLoading(false)
+    if ('error' in result && result.error) {
+      setDeleteError(result.error)
+      return
+    }
+    setFields((list) => list.filter((x) => x.id !== pendingDelete.id))
+    setPendingDelete(null)
     router.refresh()
   }
 
@@ -349,6 +384,17 @@ export default function FieldsList({
                           RECHAZAR
                         </button>
                       )}
+                      <button
+                        type="button"
+                        disabled={deleteLoading && pendingDelete?.id === f.id}
+                        onClick={() => openDelete(f)}
+                        className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
+                        style={{ borderRadius: 2 }}
+                      >
+                        {deleteLoading && pendingDelete?.id === f.id
+                          ? '…'
+                          : 'ELIMINAR'}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -357,6 +403,15 @@ export default function FieldsList({
           </table>
         </div>
       )}
+
+      <DeleteConfirmModal
+        open={pendingDelete !== null}
+        resourceLabel={pendingDelete?.nombre ?? ''}
+        loading={deleteLoading}
+        error={deleteError}
+        onClose={closeDelete}
+        onConfirm={() => void handleConfirmDelete()}
+      />
     </div>
   )
 }

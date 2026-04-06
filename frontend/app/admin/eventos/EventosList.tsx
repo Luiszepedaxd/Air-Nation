@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import {
   cancelEvent,
   deleteEvent,
@@ -115,6 +116,9 @@ export default function EventosList({
   const [rows, setRows] = useState(initialRows)
   const [tab, setTab] = useState<FilterTab>('todos')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<AdminEventoRow | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     setRows(initialRows)
@@ -151,6 +155,27 @@ export default function EventosList({
       window.alert(res.error)
       return
     }
+    router.refresh()
+  }
+
+  const closeDeleteModal = () => {
+    if (deleteLoading) return
+    setPendingDelete(null)
+    setDeleteError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setDeleteLoading(true)
+    setDeleteError(null)
+    const res = await deleteEvent(pendingDelete.id)
+    setDeleteLoading(false)
+    if (res && 'error' in res && res.error) {
+      setDeleteError(res.error)
+      return
+    }
+    setRows((prev) => prev.filter((x) => x.id !== pendingDelete.id))
+    setPendingDelete(null)
     router.refresh()
   }
 
@@ -323,11 +348,10 @@ export default function EventosList({
                           type="button"
                           disabled={disabled}
                           onClick={() => {
-                            if (!window.confirm('¿Eliminar evento?')) return
-                            void run(r.id, () => deleteEvent(r.id))
+                            setPendingDelete(r)
+                            setDeleteError(null)
                           }}
-                          className="bg-[#111111] px-2 py-1 text-[9px] text-[#FFFFFF] disabled:opacity-50"
-                          style={jostHeading}
+                          className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
                         >
                           ELIMINAR
                         </button>
@@ -351,6 +375,15 @@ export default function EventosList({
           </tbody>
         </table>
       </div>
+
+      <DeleteConfirmModal
+        open={pendingDelete !== null}
+        resourceLabel={pendingDelete?.title ?? ''}
+        loading={deleteLoading}
+        error={deleteError}
+        onClose={closeDeleteModal}
+        onConfirm={() => void handleConfirmDelete()}
+      />
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { deleteVideo } from './actions'
 
 const jostHeading = {
@@ -93,25 +94,36 @@ export default function VideosList({
 }) {
   const [videos, setVideos] = useState<VideoListItem[]>(initialVideos)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<VideoListItem | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     setVideos(initialVideos)
   }, [initialVideos])
 
-  const handleDelete = async (id: string) => {
-    if (
-      !window.confirm('¿Eliminar este video? Esta acción no se puede deshacer.')
-    ) {
-      return
-    }
-    setDeletingId(id)
-    const result = await deleteVideo(id)
+  const openDelete = (v: VideoListItem) => {
+    setPendingDelete(v)
+    setDeleteError(null)
+  }
+
+  const closeDelete = () => {
+    if (deletingId) return
+    setPendingDelete(null)
+    setDeleteError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setDeletingId(pendingDelete.id)
+    setDeleteError(null)
+    const result = await deleteVideo(pendingDelete.id)
     setDeletingId(null)
     if ('error' in result && result.error) {
-      window.alert(result.error)
+      setDeleteError(result.error)
       return
     }
-    setVideos((prev) => prev.filter((v) => v.id !== id))
+    setVideos((prev) => prev.filter((v) => v.id !== pendingDelete.id))
+    setPendingDelete(null)
   }
 
   if (videos.length === 0) {
@@ -176,14 +188,9 @@ export default function VideosList({
                 <button
                   type="button"
                   disabled={deletingId === v.id}
-                  onClick={() => handleDelete(v.id)}
-                  className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-50"
-                  style={{
-                    ...jostHeading,
-                    fontSize: 11,
-                    padding: '4px 10px',
-                    borderRadius: 2,
-                  }}
+                  onClick={() => openDelete(v)}
+                  className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
+                  style={{ borderRadius: 2 }}
                 >
                   {deletingId === v.id ? '…' : 'ELIMINAR'}
                 </button>
@@ -192,6 +199,15 @@ export default function VideosList({
           </article>
         )
       })}
+
+      <DeleteConfirmModal
+        open={pendingDelete !== null}
+        resourceLabel={pendingDelete?.title ?? ''}
+        loading={pendingDelete !== null && deletingId === pendingDelete.id}
+        error={deleteError}
+        onClose={closeDelete}
+        onConfirm={() => void handleConfirmDelete()}
+      />
     </div>
   )
 }

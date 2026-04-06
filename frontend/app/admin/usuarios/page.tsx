@@ -1,4 +1,4 @@
-import { createAdminClient } from '../supabase-server'
+import { createAdminClient, createAdminSupabaseServerClient } from '../supabase-server'
 import UsersTable, { type User } from './UsersTable'
 
 const jostHeading = {
@@ -9,6 +9,10 @@ const jostHeading = {
 
 export default async function AdminUsuariosPage() {
   const supabase = createAdminClient()
+  const sessionClient = createAdminSupabaseServerClient()
+  const {
+    data: { user: sessionUser },
+  } = await sessionClient.auth.getUser()
 
   const { data, error } = await supabase
     .from('users')
@@ -30,7 +34,7 @@ export default async function AdminUsuariosPage() {
       >
         USUARIOS
       </h1>
-      <UsersTable users={users} />
+      <UsersTable users={users} currentUserId={sessionUser?.id ?? null} />
     </div>
   )
 }

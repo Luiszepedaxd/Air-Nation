@@ -1,9 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
-import { deletePost } from './actions'
+import { deleteTeam } from './actions'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -13,12 +12,11 @@ const jostHeading = {
 
 const latoBody = { fontFamily: "'Lato', sans-serif" }
 
-export type PostListItem = {
+export type TeamListItem = {
   id: string
-  title: string
-  slug: string
-  category: string
-  published: boolean
+  nombre: string
+  ciudad: string | null
+  status: string | null
   created_at: string | null
 }
 
@@ -32,36 +30,42 @@ function formatFecha(iso: string | null): string {
   return `${dd}/${mm}/${yyyy}`
 }
 
-function EstadoBadge({ published }: { published: boolean }) {
+function StatusBadge({ status }: { status: string | null }) {
+  const s = (status ?? '').toLowerCase()
+  const isActivo = s === 'activo'
   return (
     <span
       className="inline-block text-[11px] font-semibold tracking-wide"
       style={{
         padding: '4px 8px',
         borderRadius: 2,
-        backgroundColor: published ? '#CC4B37' : '#EEEEEE',
-        color: published ? '#FFFFFF' : '#666666',
+        backgroundColor: isActivo ? '#111111' : '#EEEEEE',
+        color: isActivo ? '#FFFFFF' : '#666666',
         ...jostHeading,
         fontSize: 10,
       }}
     >
-      {published ? 'PUBLICADO' : 'BORRADOR'}
+      {(status ?? '—').toUpperCase()}
     </span>
   )
 }
 
-export default function PostsList({ posts: initialPosts }: { posts: PostListItem[] }) {
-  const [posts, setPosts] = useState<PostListItem[]>(initialPosts)
+export default function TeamsList({
+  teams: initialTeams,
+}: {
+  teams: TeamListItem[]
+}) {
+  const [teams, setTeams] = useState<TeamListItem[]>(initialTeams)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [pendingDelete, setPendingDelete] = useState<PostListItem | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<TeamListItem | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
-    setPosts(initialPosts)
-  }, [initialPosts])
+    setTeams(initialTeams)
+  }, [initialTeams])
 
-  const openDelete = (p: PostListItem) => {
-    setPendingDelete(p)
+  const openDelete = (t: TeamListItem) => {
+    setPendingDelete(t)
     setDeleteError(null)
   }
 
@@ -75,23 +79,20 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
     if (!pendingDelete) return
     setDeletingId(pendingDelete.id)
     setDeleteError(null)
-    const result = await deletePost(pendingDelete.id)
+    const result = await deleteTeam(pendingDelete.id)
     setDeletingId(null)
     if ('error' in result && result.error) {
       setDeleteError(result.error)
       return
     }
-    setPosts((prev) => prev.filter((p) => p.id !== pendingDelete.id))
+    setTeams((prev) => prev.filter((x) => x.id !== pendingDelete.id))
     setPendingDelete(null)
   }
 
-  if (posts.length === 0) {
+  if (teams.length === 0) {
     return (
-      <p
-        className="py-16 text-center text-[#666666]"
-        style={latoBody}
-      >
-        No hay posts aún
+      <p className="py-16 text-center text-[#666666]" style={latoBody}>
+        No hay equipos registrados
       </p>
     )
   }
@@ -101,7 +102,7 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
       <table className="w-full border-collapse text-left text-sm text-[#111111]">
         <thead>
           <tr className="bg-[#F4F4F4]">
-            {(['TÍTULO', 'CATEGORÍA', 'ESTADO', 'FECHA', 'ACCIONES'] as const).map(
+            {(['NOMBRE', 'CIUDAD', 'STATUS', 'FECHA', 'ACCIONES'] as const).map(
               (col) => (
                 <th
                   key={col}
@@ -115,47 +116,33 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
           </tr>
         </thead>
         <tbody>
-          {posts.map((p, i) => (
+          {teams.map((t, i) => (
             <tr
-              key={p.id}
+              key={t.id}
               className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
             >
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                {p.title}
+                {t.nombre}
               </td>
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                {p.category}
+                {t.ciudad ?? '—'}
               </td>
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                <EstadoBadge published={p.published} />
+                <StatusBadge status={t.status} />
               </td>
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                {formatFecha(p.created_at)}
+                {formatFecha(t.created_at)}
               </td>
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/admin/posts/${p.id}/editar`}
-                    className="inline-flex items-center justify-center bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
-                    style={{
-                      ...jostHeading,
-                      fontSize: 11,
-                      padding: '4px 10px',
-                      borderRadius: 2,
-                    }}
-                  >
-                    EDITAR
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={deletingId === p.id}
-                    onClick={() => openDelete(p)}
-                    className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
-                    style={{ borderRadius: 2 }}
-                  >
-                    {deletingId === p.id ? '…' : 'ELIMINAR'}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={deletingId === t.id}
+                  onClick={() => openDelete(t)}
+                  className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
+                  style={{ borderRadius: 2 }}
+                >
+                  {deletingId === t.id ? '…' : 'ELIMINAR'}
+                </button>
               </td>
             </tr>
           ))}
@@ -164,7 +151,7 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
 
       <DeleteConfirmModal
         open={pendingDelete !== null}
-        resourceLabel={pendingDelete?.title ?? ''}
+        resourceLabel={pendingDelete?.nombre ?? ''}
         loading={pendingDelete !== null && deletingId === pendingDelete.id}
         error={deleteError}
         onClose={closeDelete}

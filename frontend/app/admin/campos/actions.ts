@@ -38,6 +38,26 @@ export async function updateFieldStatus(
   return { success: true as const }
 }
 
+export async function deleteField(
+  id: string
+): Promise<{ success: true } | { error: string }> {
+  const trimmedId = id?.trim() ?? ''
+  if (!trimmedId) {
+    return { error: 'ID no válido' }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('fields').delete().eq('id', trimmedId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/campos')
+  revalidatePath(`/admin/campos/${trimmedId}`)
+  return { success: true as const }
+}
+
 export async function toggleDestacado(
   id: string,
   destacado: boolean

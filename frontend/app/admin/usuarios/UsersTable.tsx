@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { updateUserRole } from './actions'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
+import { deleteUser, updateUserRole } from './actions'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -71,12 +72,21 @@ function AppRoleBadge({ role }: { role: string | null }) {
   )
 }
 
-export default function UsersTable({ users: initialUsers }: { users: User[] }) {
+export default function UsersTable({
+  users: initialUsers,
+  currentUserId,
+}: {
+  users: User[]
+  currentUserId: string | null
+}) {
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [search, setSearch] = useState('')
   const [modalUser, setModalUser] = useState<User | null>(null)
   const [modalError, setModalError] = useState<string | null>(null)
   const [pendingRole, setPendingRole] = useState<AppRole | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     setUsers(initialUsers)
@@ -103,6 +113,35 @@ export default function UsersTable({ users: initialUsers }: { users: User[] }) {
     setModalError(null)
     setPendingRole(null)
   }
+
+  const openDeleteModal = (u: User) => {
+    setDeleteTarget(u)
+    setDeleteError(null)
+  }
+
+  const closeDeleteModal = () => {
+    if (deleteLoading) return
+    setDeleteTarget(null)
+    setDeleteError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleteLoading(true)
+    setDeleteError(null)
+    const result = await deleteUser(deleteTarget.id)
+    setDeleteLoading(false)
+    if ('error' in result && result.error) {
+      setDeleteError(result.error)
+      return
+    }
+    setUsers((prev) => prev.filter((x) => x.id !== deleteTarget.id))
+    setDeleteTarget(null)
+  }
+
+  const deleteResourceLabel = deleteTarget
+    ? `${deleteTarget.alias?.trim() || '—'} (${deleteTarget.email?.trim() || 'sin email'})`
+    : ''
 
   const rawRole = modalUser?.app_role
   const currentModalRole: AppRole =
@@ -200,19 +239,31 @@ export default function UsersTable({ users: initialUsers }: { users: User[] }) {
                   {formatRegistro(u.created_at)}
                 </td>
                 <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => openModal(u)}
-                    className="bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
-                    style={{
-                      ...jostHeading,
-                      fontSize: 11,
-                      padding: '4px 10px',
-                      borderRadius: 2,
-                    }}
-                  >
-                    CAMBIAR ROL
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openModal(u)}
+                      className="bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+                      style={{
+                        ...jostHeading,
+                        fontSize: 11,
+                        padding: '4px 10px',
+                        borderRadius: 2,
+                      }}
+                    >
+                      CAMBIAR ROL
+                    </button>
+                    {currentUserId && u.id !== currentUserId ? (
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(u)}
+                        className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white"
+                        style={{ borderRadius: 2 }}
+                      >
+                        ELIMINAR
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -287,6 +338,15 @@ export default function UsersTable({ users: initialUsers }: { users: User[] }) {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        open={deleteTarget !== null}
+        resourceLabel={deleteResourceLabel}
+        loading={deleteLoading}
+        error={deleteError}
+        onClose={closeDeleteModal}
+        onConfirm={() => void handleConfirmDelete()}
+      />
     </div>
   )
 }

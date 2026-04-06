@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { createAdminClient } from '../supabase-server'
 import { getSupabaseForEventosModule } from './eventos-supabase'
 
 export async function toggleEventPublished(
@@ -43,10 +44,8 @@ export async function cancelEvent(
 export async function deleteEvent(
   id: string
 ): Promise<{ ok: true } | { error: string }> {
-  const ctx = await getSupabaseForEventosModule()
-  if ('error' in ctx) return { error: ctx.error }
-
-  const { error } = await ctx.supabase.from('events').delete().eq('id', id)
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('events').delete().eq('id', id)
 
   if (error) return { error: error.message }
   revalidatePath('/admin/eventos')

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { deleteDocument, toggleDocumentPublish, type Authority } from './actions'
 
 const jostHeading = {
@@ -152,6 +153,10 @@ export default function DocumentsList({
   const [tab, setTab] = useState<FilterTab>('todos')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<DocumentListItem | null>(
+    null
+  )
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     setDocuments(initialDocuments)
@@ -176,18 +181,29 @@ export default function DocumentsList({
     router.refresh()
   }
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Eliminar este documento? Esta acción no se puede deshacer.')) {
-      return
-    }
-    setDeletingId(id)
-    const result = await deleteDocument(id)
+  const openDelete = (d: DocumentListItem) => {
+    setPendingDelete(d)
+    setDeleteError(null)
+  }
+
+  const closeDelete = () => {
+    if (deletingId) return
+    setPendingDelete(null)
+    setDeleteError(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDelete) return
+    setDeletingId(pendingDelete.id)
+    setDeleteError(null)
+    const result = await deleteDocument(pendingDelete.id)
     setDeletingId(null)
     if ('error' in result && result.error) {
-      window.alert(result.error)
+      setDeleteError(result.error)
       return
     }
-    setDocuments((list) => list.filter((d) => d.id !== id))
+    setDocuments((list) => list.filter((d) => d.id !== pendingDelete.id))
+    setPendingDelete(null)
     router.refresh()
   }
 
@@ -323,14 +339,9 @@ export default function DocumentsList({
                       <button
                         type="button"
                         disabled={deletingId === d.id}
-                        onClick={() => handleDelete(d.id)}
-                        className="border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[#CC4B37] transition-colors hover:bg-[#FFF3F0] disabled:opacity-50"
-                        style={{
-                          ...jostHeading,
-                          fontSize: 11,
-                          padding: '4px 10px',
-                          borderRadius: 2,
-                        }}
+                        onClick={() => openDelete(d)}
+                        className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
+                        style={{ borderRadius: 2 }}
                       >
                         {deletingId === d.id ? '…' : 'ELIMINAR'}
                       </button>
@@ -342,6 +353,15 @@ export default function DocumentsList({
           </table>
         </div>
       )}
+
+      <DeleteConfirmModal
+        open={pendingDelete !== null}
+        resourceLabel={pendingDelete?.title ?? ''}
+        loading={pendingDelete !== null && deletingId === pendingDelete.id}
+        error={deleteError}
+        onClose={closeDelete}
+        onConfirm={() => void handleConfirmDelete()}
+      />
     </div>
   )
 }
