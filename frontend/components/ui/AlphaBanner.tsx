@@ -347,7 +347,7 @@ export default function AlphaBanner() {
       <button
         type="button"
         onClick={openModal}
-        className={`fixed right-4 z-[60] rounded-none px-3 py-2 text-[11px] uppercase text-white shadow-md transition-opacity hover:opacity-90 ${fabBottomClass}`}
+        className={`fixed left-4 z-[60] rounded-none px-3 py-2 text-[11px] uppercase text-white shadow-md transition-opacity hover:opacity-90 ${fabBottomClass}`}
         style={{
           fontFamily: "'Jost', sans-serif",
           fontWeight: 800,
