@@ -1,11 +1,26 @@
 'use client'
 
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { updateFieldAdmin } from '@/app/admin/campos/field-edit-actions'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
+import {
+  FIELD_DAY_KEYS,
+  FIELD_DAY_LABELS,
+  type FieldDayKey,
+  type WeekScheduleState,
+  defaultWeekSchedule,
+  weekScheduleFromJson,
+  weekScheduleToJson,
+} from '@/lib/field-schedule'
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
@@ -52,23 +67,14 @@ async function postUpload(file: File): Promise<string> {
   return json.url
 }
 
-function horariosToString(raw: unknown): string {
-  if (raw == null) return ''
-  if (typeof raw === 'string') return raw
-  try {
-    return JSON.stringify(raw)
-  } catch {
-    return String(raw)
-  }
-}
-
 export type EditableFieldPayload = {
   id: string
   nombre: string
   descripcion: string | null
-  horarios: unknown
-  ubicacion_lat: number | string | null
-  ubicacion_lng: number | string | null
+  horarios_json: unknown
+  direccion: string | null
+  maps_url: string | null
+  logo_url: string | null
   telefono: string | null
   instagram: string | null
   foto_portada_url: string | null
@@ -121,6 +127,79 @@ function Field({
 const inputClass =
   'w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
 
+function HorariosSemanaEditor({
+  value,
+  onChange,
+}: {
+  value: WeekScheduleState
+  onChange: (next: WeekScheduleState) => void
+}) {
+  const setDay = (key: FieldDayKey, patch: Partial<WeekScheduleState[FieldDayKey]>) => {
+    onChange({
+      ...value,
+      [key]: { ...value[key], ...patch },
+    })
+  }
+
+  return (
+    <div className="w-full">
+      {FIELD_DAY_KEYS.map((day) => {
+        const row = value[day]
+        const open = row.abierto
+        return (
+          <div
+            key={day}
+            className="flex flex-wrap items-center gap-3 border-b border-[#EEEEEE] py-3 first:pt-0"
+          >
+            <span
+              className="w-28 shrink-0 font-bold text-sm text-[#111111]"
+              style={lato}
+            >
+              {FIELD_DAY_LABELS[day]}
+            </span>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[#111111]" style={lato}>
+              <input
+                type="checkbox"
+                checked={open}
+                onChange={(e) =>
+                  setDay(day, { abierto: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-[#CCCCCC] text-[#CC4B37] focus:ring-[#CC4B37]"
+              />
+              Abierto
+            </label>
+            {open ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="time"
+                  value={row.apertura}
+                  onChange={(e) =>
+                    setDay(day, { apertura: e.target.value })
+                  }
+                  className="rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-2 py-2 text-sm text-[#111111]"
+                />
+                <span className="text-[#999999]">—</span>
+                <input
+                  type="time"
+                  value={row.cierre}
+                  onChange={(e) =>
+                    setDay(day, { cierre: e.target.value })
+                  }
+                  className="rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-2 py-2 text-sm text-[#111111]"
+                />
+              </div>
+            ) : (
+              <span className="text-sm text-dim" style={lato}>
+                CERRADO
+              </span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function EditCampoClient({
   fieldId,
   publicSlug,
@@ -137,18 +216,13 @@ export function EditCampoClient({
   const router = useRouter()
   const [nombre, setNombre] = useState(field.nombre)
   const [descripcion, setDescripcion] = useState(field.descripcion ?? '')
-  const [horarios, setHorarios] = useState(horariosToString(field.horarios))
+  const [schedule, setSchedule] = useState<WeekScheduleState>(() =>
+    weekScheduleFromJson(field.horarios_json)
+  )
   const [teamId, setTeamId] = useState(field.team_id ?? '')
-  const [lat, setLat] = useState(
-    field.ubicacion_lat != null && field.ubicacion_lat !== ''
-      ? String(field.ubicacion_lat)
-      : ''
-  )
-  const [lng, setLng] = useState(
-    field.ubicacion_lng != null && field.ubicacion_lng !== ''
-      ? String(field.ubicacion_lng)
-      : ''
-  )
+  const [direccion, setDireccion] = useState(field.direccion ?? '')
+  const [mapsUrl, setMapsUrl] = useState(field.maps_url ?? '')
+  const [logoUrl, setLogoUrl] = useState(field.logo_url ?? '')
   const [telefono, setTelefono] = useState(field.telefono ?? '')
   const [instagram, setInstagram] = useState(field.instagram ?? '')
   const [fotoPortadaUrl, setFotoPortadaUrl] = useState(
@@ -163,6 +237,11 @@ export function EditCampoClient({
   const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const totalGalleryCount = galeriaUrls.length + newGalleryFiles.length
+
+  const horariosJsonObj = useMemo(
+    () => weekScheduleToJson(schedule) as Record<string, unknown>,
+    [schedule]
+  )
 
   const removeExistingGalleryAt = (index: number) => {
     setGaleriaUrls((prev) => prev.filter((_, i) => i !== index))
@@ -204,21 +283,14 @@ export function EditCampoClient({
     setNewGalleryPreviews(nextPreviews)
   }
 
-  const parseCoord = (raw: string): number | null => {
-    const t = raw.trim()
-    if (!t) return null
-    const n = Number(t)
-    return Number.isFinite(n) ? n : null
-  }
-
   const handleSave = useCallback(async () => {
     const n = nombre.trim()
     if (!n || n.length > 80) {
       setError('El nombre es obligatorio (máx. 80 caracteres).')
       return
     }
-    if (descripcion.length > 500 || horarios.length > 200) {
-      setError('Revisa los límites de descripción u horarios.')
+    if (descripcion.length > 500) {
+      setError('Revisa el límite de descripción.')
       return
     }
     if (activeUploads > 0) return
@@ -244,9 +316,10 @@ export function EditCampoClient({
     const payload = {
       nombre: n,
       descripcion: descripcion.trim() || null,
-      horarios: horarios.trim() || null,
-      ubicacion_lat: parseCoord(lat),
-      ubicacion_lng: parseCoord(lng),
+      horarios_json: horariosJsonObj,
+      direccion: direccion.trim() || null,
+      maps_url: mapsUrl.trim() || null,
+      logo_url: logoUrl.trim() || null,
       telefono: telefono.trim() || null,
       instagram: instagram.trim() || null,
       foto_portada_url: fotoPortadaUrl.trim() || null,
@@ -259,9 +332,10 @@ export function EditCampoClient({
         fieldId,
         nombre: payload.nombre,
         descripcion: payload.descripcion,
-        horarios: payload.horarios,
-        ubicacion_lat: payload.ubicacion_lat,
-        ubicacion_lng: payload.ubicacion_lng,
+        horarios_json: payload.horarios_json,
+        direccion: payload.direccion,
+        maps_url: payload.maps_url,
+        logo_url: payload.logo_url,
         telefono: payload.telefono,
         instagram: payload.instagram,
         foto_portada_url: payload.foto_portada_url,
@@ -302,9 +376,10 @@ export function EditCampoClient({
   }, [
     nombre,
     descripcion,
-    horarios,
-    lat,
-    lng,
+    horariosJsonObj,
+    direccion,
+    mapsUrl,
+    logoUrl,
     telefono,
     instagram,
     fotoPortadaUrl,
@@ -316,6 +391,7 @@ export function EditCampoClient({
     adminReturnPath,
     router,
     activeUploads,
+    horariosJsonObj,
   ])
 
   return (
@@ -369,14 +445,7 @@ export function EditCampoClient({
           </p>
         </Field>
         <Field label="Horarios">
-          <textarea
-            value={horarios}
-            onChange={(e) => setHorarios(e.target.value)}
-            rows={2}
-            maxLength={200}
-            placeholder="Sáb y Dom 8am-6pm / Previa cita"
-            className={`${inputClass} resize-y`}
-          />
+          <HorariosSemanaEditor value={schedule} onChange={setSchedule} />
         </Field>
         <Field label="Asociar equipo (opcional)">
           <select
@@ -395,28 +464,27 @@ export function EditCampoClient({
       </FormSection>
 
       <FormSection title="UBICACIÓN Y CONTACTO">
-        <Field label="Latitud">
+        <Field label="Dirección">
           <input
-            type="number"
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            step="any"
-            placeholder="20.6597"
+            type="text"
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            placeholder="Av. Vallarta 1234, Guadalajara, Jalisco"
+            maxLength={300}
+            className={inputClass}
+          />
+        </Field>
+        <Field label="Link de Google Maps">
+          <input
+            type="url"
+            value={mapsUrl}
+            onChange={(e) => setMapsUrl(e.target.value)}
+            placeholder="https://maps.app.goo.gl/..."
             className={inputClass}
           />
           <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
-            Abre Google Maps, clic derecho en tu ubicación, copia las coordenadas.
+            Pega el link compartido desde Google Maps
           </p>
-        </Field>
-        <Field label="Longitud">
-          <input
-            type="number"
-            value={lng}
-            onChange={(e) => setLng(e.target.value)}
-            step="any"
-            placeholder="-103.3496"
-            className={inputClass}
-          />
         </Field>
         <Field label="Teléfono">
           <input
@@ -439,6 +507,22 @@ export function EditCampoClient({
       </FormSection>
 
       <FormSection title="IMÁGENES">
+        <div className="[&_div.relative.h-20.w-20]:overflow-hidden [&_div.relative.h-20.w-20]:rounded-full [&_div.relative.h-20.w-20]:border-[3px] [&_div.relative.h-20.w-20]:border-white [&_img]:object-cover">
+          <ImageUploadField
+            label="LOGO DEL CAMPO"
+            currentUrl={logoUrl.trim() || null}
+            onUpload={(url) => setLogoUrl(url)}
+            onError={(msg) => setError(msg)}
+            aspectRatio="square"
+            maxSizeMB={5}
+            minWidth={64}
+            minHeight={64}
+            recommendedText="JPG, PNG o WebP · Mínimo 64×64px · Máx 5MB"
+            onUploadStart={() => setActiveUploads((n) => n + 1)}
+            onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
+          />
+        </div>
+
         <ImageUploadField
           label="FOTO DE PORTADA"
           currentUrl={fotoPortadaUrl.trim() || null}

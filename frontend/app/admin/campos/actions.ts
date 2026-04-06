@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '../supabase-server'
+import { requireAppAdminUserId } from '../require-app-admin'
 
 type FieldStatus = 'aprobado' | 'rechazado' | 'pendiente'
 
@@ -159,4 +160,82 @@ export async function saveOrdenDestacadoForm(formData: FormData): Promise<void> 
     )
   }
   redirect(`/admin/campos/${id}`)
+}
+
+export async function adminCreateFieldPost(
+  fieldId: string,
+  content: string,
+  fotos_urls: string[]
+): Promise<{ ok: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return { error: 'No autorizado.' }
+  const fid = fieldId?.trim()
+  const text = content?.trim() ?? ''
+  if (!fid || !text) return { error: 'Datos incompletos.' }
+  const urls = fotos_urls.filter((u) => typeof u === 'string' && u.trim()).slice(0, 4)
+  const db = createAdminClient()
+  const { error } = await db.from('field_posts').insert({
+    field_id: fid,
+    content: text,
+    fotos_urls: urls,
+    created_by: adminId,
+  })
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/campos/${fid}`)
+  return { ok: true }
+}
+
+export async function adminDeleteFieldPost(
+  postId: string,
+  fieldId: string
+): Promise<{ ok: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return { error: 'No autorizado.' }
+  const pid = postId?.trim()
+  const fid = fieldId?.trim()
+  if (!pid || !fid) return { error: 'ID no válido.' }
+  const db = createAdminClient()
+  const { error } = await db.from('field_posts').delete().eq('id', pid).eq('field_id', fid)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/campos/${fid}`)
+  return { ok: true }
+}
+
+export async function adminCreateFieldAlbum(
+  fieldId: string,
+  nombre: string,
+  fotos_urls: string[]
+): Promise<{ ok: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return { error: 'No autorizado.' }
+  const fid = fieldId?.trim()
+  const name = nombre?.trim() ?? ''
+  if (!fid || !name) return { error: 'Indica un nombre.' }
+  const urls = fotos_urls.filter((u) => typeof u === 'string' && u.trim())
+  const db = createAdminClient()
+  const { error } = await db.from('field_albums').insert({
+    field_id: fid,
+    nombre: name,
+    fotos_urls: urls,
+    created_by: adminId,
+  })
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/campos/${fid}`)
+  return { ok: true }
+}
+
+export async function adminDeleteFieldAlbum(
+  albumId: string,
+  fieldId: string
+): Promise<{ ok: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return { error: 'No autorizado.' }
+  const aid = albumId?.trim()
+  const fid = fieldId?.trim()
+  if (!aid || !fid) return { error: 'ID no válido.' }
+  const db = createAdminClient()
+  const { error } = await db.from('field_albums').delete().eq('id', aid).eq('field_id', fid)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/campos/${fid}`)
+  return { ok: true }
 }

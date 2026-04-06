@@ -100,13 +100,6 @@ async function resolveUniqueFieldSlug(
   throw new Error('No se pudo generar un slug único')
 }
 
-function parseOptionalNumber(raw: string): number | null {
-  const t = raw.trim()
-  if (!t) return null
-  const n = Number(t)
-  return Number.isFinite(n) ? n : null
-}
-
 export async function createCampoAction(
   _prevState: CreateCampoState,
   formData: FormData
@@ -118,15 +111,30 @@ export async function createCampoAction(
   const tipoRaw = String(formData.get('tipo') ?? '').toLowerCase()
   const tipo = tipoRaw === 'privado' ? 'privado' : 'publico'
   const descripcion = String(formData.get('descripcion') ?? '').trim()
-  const horarios = String(formData.get('horarios') ?? '').trim()
   const teamIdRaw = String(formData.get('team_id') ?? '').trim()
   const team_id = teamIdRaw ? teamIdRaw : null
 
-  const lat = parseOptionalNumber(String(formData.get('ubicacion_lat') ?? ''))
-  const lng = parseOptionalNumber(String(formData.get('ubicacion_lng') ?? ''))
+  const direccion = String(formData.get('direccion') ?? '').trim()
+  const maps_url = String(formData.get('maps_url') ?? '').trim()
+  const logo_url = String(formData.get('logo_url') ?? '').trim()
   const telefono = String(formData.get('telefono') ?? '').trim()
   const instagram = String(formData.get('instagram') ?? '').trim()
   const fotoPortadaUrl = String(formData.get('foto_portada_url') ?? '').trim()
+
+  let horarios_json: Record<string, unknown> | null = null
+  const hjRaw = String(formData.get('horarios_json') ?? '').trim()
+  if (hjRaw) {
+    try {
+      const p = JSON.parse(hjRaw) as unknown
+      if (p && typeof p === 'object' && !Array.isArray(p)) {
+        horarios_json = p as Record<string, unknown>
+      } else {
+        return { error: 'Formato de horarios inválido.' }
+      }
+    } catch {
+      return { error: 'Formato de horarios inválido.' }
+    }
+  }
   const rawSlug = String(formData.get('slug') ?? '').trim()
 
   let galeria_urls: string[] = []
@@ -154,8 +162,11 @@ export async function createCampoAction(
   if (descripcion.length > 500) {
     return { error: 'La descripción no puede superar 500 caracteres.' }
   }
-  if (horarios.length > 200) {
-    return { error: 'Los horarios no pueden superar 200 caracteres.' }
+  if (direccion.length > 300) {
+    return { error: 'La dirección no puede superar 300 caracteres.' }
+  }
+  if (maps_url.length > 2000) {
+    return { error: 'El enlace de mapas es demasiado largo.' }
   }
 
   if (adminContext) {
@@ -199,9 +210,10 @@ export async function createCampoAction(
         ciudad,
         tipo,
         descripcion: descripcion || null,
-        horarios: horarios || null,
-        ubicacion_lat: lat,
-        ubicacion_lng: lng,
+        direccion: direccion || null,
+        maps_url: maps_url || null,
+        logo_url: logo_url || null,
+        horarios_json: horarios_json,
         telefono: telefono || null,
         instagram: instagram || null,
         foto_portada_url: fotoPortadaUrl || null,
@@ -269,9 +281,10 @@ export async function createCampoAction(
       ciudad,
       tipo,
       descripcion: descripcion || null,
-      horarios: horarios || null,
-      ubicacion_lat: lat,
-      ubicacion_lng: lng,
+      direccion: direccion || null,
+      maps_url: maps_url || null,
+      logo_url: logo_url || null,
+      horarios_json: horarios_json,
       telefono: telefono || null,
       instagram: instagram || null,
       foto_portada_url: fotoPortadaUrl || null,

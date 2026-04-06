@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ReviewForm } from './ReviewForm'
 import type { FieldReviewPublic } from '../../types'
 
@@ -79,10 +79,21 @@ type Props = {
   fieldId: string
   slug: string
   initialReviews: FieldReviewPublic[]
+  /** En ficha con pestañas: sin borde exterior duplicado. */
+  variant?: 'default' | 'tab'
 }
 
-export function CampoReviews({ fieldId, slug, initialReviews }: Props) {
+export function CampoReviews({
+  fieldId,
+  slug,
+  initialReviews,
+  variant = 'default',
+}: Props) {
   const [reviews, setReviews] = useState<FieldReviewPublic[]>(initialReviews)
+
+  useEffect(() => {
+    setReviews(initialReviews)
+  }, [initialReviews])
 
   const { average, count } = useMemo(() => {
     const c = reviews.length
@@ -103,16 +114,23 @@ export function CampoReviews({ fieldId, slug, initialReviews }: Props) {
     })
   }, [])
 
+  const shell =
+    variant === 'tab'
+      ? 'border-0 bg-transparent px-0 py-0'
+      : 'border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-6 md:px-6'
+
   return (
-    <section className="border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-6 md:px-6">
+    <section className={shell}>
       <h2
-        className="border-b border-[#EEEEEE] pb-3 text-sm font-extrabold uppercase tracking-[0.12em] text-[#111111]"
+        className={`text-sm font-extrabold uppercase tracking-[0.12em] text-[#111111] ${variant === 'tab' ? 'sr-only' : 'border-b border-[#EEEEEE] pb-3'}`}
         style={jost}
       >
         Reseñas
       </h2>
 
-      <div className="mt-6 flex flex-col gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-4 md:flex-row md:items-center md:justify-between">
+      <div
+        className={`flex flex-col gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-4 md:flex-row md:items-center md:justify-between ${variant === 'tab' ? 'mt-0' : 'mt-6'}`}
+      >
         <div>
           <p
             className="text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
@@ -144,8 +162,8 @@ export function CampoReviews({ fieldId, slug, initialReviews }: Props) {
       <ul className="mt-6 list-none space-y-4 p-0 m-0">
         {reviews.length === 0 ? (
           <li>
-            <p className="text-center text-sm text-[#666666]" style={lato}>
-              Sé el primero en reseñar este campo.
+            <p className="text-center text-sm text-dim" style={lato}>
+              Sé el primero en dejar una reseña
             </p>
           </li>
         ) : (

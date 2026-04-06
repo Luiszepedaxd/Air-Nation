@@ -5,8 +5,8 @@ import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import type { CampoDetailRow, FieldReviewPublic } from '../types'
 import { CampoHero } from './components/CampoHero'
-import { CampoInfo } from './components/CampoInfo'
-import { CampoReviews } from './components/CampoReviews'
+import type { CampoEventoListItem } from './components/CampoPublicTabs'
+import { CampoPublicTabs } from './components/CampoPublicTabs'
 
 export const revalidate = 0
 
@@ -47,16 +47,16 @@ const getCampoBySlug = cache(async (slug: string): Promise<CampoDetailRow | null
       ciudad,
       tipo,
       foto_portada_url,
-      disciplinas,
+      logo_url,
       promedio_rating,
       destacado,
       orden_destacado,
       descripcion,
-      horarios,
+      horarios_json,
       telefono,
       instagram,
-      ubicacion_lat,
-      ubicacion_lng,
+      direccion,
+      maps_url,
       team_id,
       status,
       galeria_urls,
@@ -130,6 +130,33 @@ async function fetchReviews(fieldId: string): Promise<FieldReviewPublic[]> {
   })
 }
 
+async function fetchEventosCampo(fieldId: string): Promise<CampoEventoListItem[]> {
+  const supabase = createPublicSupabaseClient()
+  const nowIso = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, title, fecha, cupo, imagen_url')
+    .eq('field_id', fieldId)
+    .eq('published', true)
+    .eq('status', 'publicado')
+    .gte('fecha', nowIso)
+    .order('fecha', { ascending: true })
+
+  if (error) {
+    console.error('[campos/slug] eventos:', error.message)
+    return []
+  }
+
+  const rows = (data ?? []) as Record<string, unknown>[]
+  return rows.map((r) => ({
+    id: String(r.id ?? ''),
+    title: String(r.title ?? ''),
+    fecha: String(r.fecha ?? ''),
+    cupo: Number(r.cupo ?? 0),
+    imagen_url: (r.imagen_url as string | null) ?? null,
+  }))
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -162,7 +189,10 @@ export default async function CampoPublicPage({
   const field = await getCampoBySlug(params.slug)
   if (!field) notFound()
 
-  const initialReviews = await fetchReviews(field.id)
+  const [initialReviews, eventos] = await Promise.all([
+    fetchReviews(field.id),
+    fetchEventosCampo(field.id),
+  ])
 
   const supabaseAuth = createDashboardSupabaseServerClient()
   const {
@@ -184,20 +214,15 @@ export default async function CampoPublicPage({
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <CampoHero field={field} />
-      <div className="mx-auto max-w-[960px] space-y-6 px-4 py-6 md:px-6 md:py-8">
-        <CampoInfo
-          field={field}
-          fieldSlug={params.slug}
-          currentUserId={authUser?.id ?? null}
-          solicitanteNombre={solicitanteNombre}
-          solicitanteAlias={solicitanteAlias}
-        />
-        <CampoReviews
-          fieldId={field.id}
-          slug={params.slug}
-          initialReviews={initialReviews}
-        />
-      </div>
+      <CampoPublicTabs
+        field={field}
+        fieldSlug={params.slug}
+        currentUserId={authUser?.id ?? null}
+        solicitanteNombre={solicitanteNombre}
+        solicitanteAlias={solicitanteAlias}
+        initialReviews={initialReviews}
+        eventos={eventos}
+      />
     </div>
   )
 }

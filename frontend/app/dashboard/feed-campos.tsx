@@ -12,17 +12,8 @@ type FieldRow = {
   slug: string
   ciudad: string | null
   foto_portada_url: string | null
-  disciplinas: unknown
   destacado: boolean
   orden_destacado: number | null
-}
-
-function disciplinasToList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
-  }
-  if (typeof value === 'string' && value.trim()) return [value.trim()]
-  return []
 }
 
 function PinMapaIcon() {
@@ -79,7 +70,7 @@ export async function CamposSection() {
   const { data, error } = await supabase
     .from('fields')
     .select(
-      'id, nombre, slug, ciudad, foto_portada_url, disciplinas, destacado, orden_destacado'
+      'id, nombre, slug, ciudad, foto_portada_url, destacado, orden_destacado'
     )
     .eq('status', 'aprobado')
     .order('destacado', { ascending: false })
@@ -109,7 +100,6 @@ export async function CamposSection() {
       ) : (
         <Carrusel>
           {fields.map((field) => {
-            const tags = disciplinasToList(field.disciplinas)
             return (
               <Link
                 key={field.id}
@@ -142,18 +132,6 @@ export async function CamposSection() {
                       <p className="mt-1 text-[11px] text-[#666666]">
                         {field.ciudad}
                       </p>
-                    ) : null}
-                    {tags.length > 0 ? (
-                      <ul className="mt-1 flex flex-wrap gap-[4px]">
-                        {tags.map((tag) => (
-                          <li
-                            key={tag}
-                            className="border border-[#EEEEEE] bg-[#F4F4F4] px-[6px] py-[2px] text-[9px] text-[#666666] leading-tight"
-                          >
-                            {tag}
-                          </li>
-                        ))}
-                      </ul>
                     ) : null}
                   </div>
                 </article>

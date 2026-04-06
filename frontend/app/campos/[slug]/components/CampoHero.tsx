@@ -9,29 +9,10 @@ function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
   return 'publico'
 }
 
-function PinIcon() {
-  return (
-    <svg
-      width={14}
-      height={14}
-      viewBox="0 0 24 24"
-      fill="none"
-      className="shrink-0 text-[#666666]"
-      aria-hidden
-    >
-      <path
-        d="M12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5Z"
-        stroke="currentColor"
-        strokeWidth={1.4}
-      />
-      <path
-        d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10Z"
-        stroke="currentColor"
-        strokeWidth={1.4}
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
+function initialNombre(nombre: string): string {
+  const t = nombre.trim()
+  if (!t) return '?'
+  return t.charAt(0).toUpperCase()
 }
 
 export function CampoHero({ field }: { field: CampoDetailRow }) {
@@ -39,9 +20,7 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
 
   return (
     <div className="relative w-full">
-      <div
-        className="relative w-full overflow-hidden bg-[#111111] h-[240px] md:h-[360px]"
-      >
+      <div className="relative w-full overflow-hidden bg-[#111111] h-[240px] md:h-[360px]">
         {field.foto_portada_url ? (
           <img
             src={field.foto_portada_url}
@@ -67,8 +46,31 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
             DESTACADO
           </span>
         ) : null}
+
+        <div className="absolute bottom-0 left-4 z-10 translate-y-1/2 md:left-6">
+          {field.logo_url?.trim() ? (
+            <div className="h-20 w-20 overflow-hidden rounded-full border-[3px] border-white bg-[#F4F4F4] md:h-24 md:w-24">
+              <img
+                src={field.logo_url.trim()}
+                alt=""
+                width={96}
+                height={96}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div
+              className="flex h-20 w-20 items-center justify-center border-[3px] border-white bg-[#EEEEEE] text-2xl font-extrabold text-[#666666] md:h-24 md:w-24 md:text-3xl"
+              style={jost}
+              aria-hidden
+            >
+              {initialNombre(field.nombre)}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 py-5 md:px-6">
+
+      <div className="border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 pb-6 pt-12 md:px-6 md:pb-8 md:pt-14">
         <h1
           className="text-[28px] font-extrabold uppercase leading-tight text-[#111111] md:text-[36px]"
           style={jost}
@@ -77,10 +79,9 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
         </h1>
         {field.ciudad ? (
           <p
-            className="mt-2 flex items-center gap-2 text-sm text-[#666666]"
+            className="mt-2 text-sm text-[#666666]"
             style={lato}
           >
-            <PinIcon />
             {field.ciudad}
           </p>
         ) : null}

@@ -5,7 +5,6 @@ export type CampoListRow = {
   ciudad: string | null
   tipo: string | null
   foto_portada_url: string | null
-  disciplinas: unknown
   promedio_rating: number | string | null
   destacado: boolean
   orden_destacado: number | null
@@ -18,16 +17,16 @@ export type CampoDetailRow = {
   ciudad: string | null
   tipo: string | null
   foto_portada_url: string | null
-  disciplinas: unknown
+  logo_url: string | null
   promedio_rating: number | string | null
   destacado: boolean
   orden_destacado: number | null
   descripcion: string | null
-  horarios: unknown
+  horarios_json: unknown
   telefono: string | null
   instagram: string | null
-  ubicacion_lat: number | string | null
-  ubicacion_lng: number | string | null
+  direccion: string | null
+  maps_url: string | null
   team_id: string | null
   status: string
   galeria_urls: string[] | null

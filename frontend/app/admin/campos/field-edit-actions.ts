@@ -10,9 +10,10 @@ export type UpdateFieldAdminPayload = {
   fieldId: string
   nombre: string
   descripcion: string | null
-  horarios: string | null
-  ubicacion_lat: number | null
-  ubicacion_lng: number | null
+  horarios_json: Record<string, unknown> | null
+  direccion: string | null
+  maps_url: string | null
+  logo_url: string | null
   telefono: string | null
   instagram: string | null
   foto_portada_url: string | null
@@ -39,9 +40,17 @@ export async function updateFieldAdmin(
   }
 
   const descripcion = payload.descripcion?.trim() ?? ''
-  const horarios = payload.horarios?.trim() ?? ''
-  if (descripcion.length > 500 || horarios.length > 200) {
-    return { error: 'Revisa los límites de descripción u horarios.' }
+  if (descripcion.length > 500) {
+    return { error: 'Revisa el límite de descripción.' }
+  }
+
+  const direccion = payload.direccion?.trim() ?? ''
+  const maps_url = payload.maps_url?.trim() ?? ''
+  if (direccion.length > 300) {
+    return { error: 'La dirección no puede superar 300 caracteres.' }
+  }
+  if (maps_url.length > 2000) {
+    return { error: 'El enlace de mapas es demasiado largo.' }
   }
 
   let galeria = payload.galeria_urls
@@ -68,9 +77,10 @@ export async function updateFieldAdmin(
     .update({
       nombre: n,
       descripcion: descripcion || null,
-      horarios: horarios || null,
-      ubicacion_lat: payload.ubicacion_lat,
-      ubicacion_lng: payload.ubicacion_lng,
+      horarios_json: payload.horarios_json,
+      direccion: direccion || null,
+      maps_url: maps_url || null,
+      logo_url: payload.logo_url?.trim() || null,
       telefono: payload.telefono?.trim() || null,
       instagram: payload.instagram?.trim() || null,
       foto_portada_url: payload.foto_portada_url?.trim() || null,
@@ -84,5 +94,6 @@ export async function updateFieldAdmin(
   }
 
   revalidatePath('/admin/campos')
+  revalidatePath(`/admin/campos/${fieldId}`)
   return { success: true }
 }

@@ -16,7 +16,7 @@ export default async function AdminEditarCampoPage({
   const { data: field, error: fieldError } = await supabase
     .from('fields')
     .select(
-      'id, nombre, slug, descripcion, horarios, ubicacion_lat, ubicacion_lng, telefono, instagram, foto_portada_url, galeria_urls, team_id'
+      'id, nombre, slug, descripcion, horarios_json, direccion, maps_url, logo_url, telefono, instagram, foto_portada_url, galeria_urls, team_id'
     )
     .eq('id', params.id)
     .maybeSingle()
@@ -52,9 +52,10 @@ export default async function AdminEditarCampoPage({
           id: field.id as string,
           nombre: field.nombre as string,
           descripcion: (field.descripcion as string | null) ?? null,
-          horarios: field.horarios,
-          ubicacion_lat: field.ubicacion_lat,
-          ubicacion_lng: field.ubicacion_lng,
+          horarios_json: field.horarios_json,
+          direccion: (field.direccion as string | null) ?? null,
+          maps_url: (field.maps_url as string | null) ?? null,
+          logo_url: (field.logo_url as string | null) ?? null,
           telefono: (field.telefono as string | null) ?? null,
           instagram: (field.instagram as string | null) ?? null,
           foto_portada_url: (field.foto_portada_url as string | null) ?? null,

@@ -7,6 +7,7 @@ import {
   saveOrdenDestacadoForm,
   toggleDestacadoForm,
 } from '../actions'
+import { FieldPostsAlbumsClient } from './FieldPostsAlbumsClient'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -24,10 +25,10 @@ type FieldRow = {
   slug: string
   descripcion: string | null
   ciudad: string | null
-  ubicacion_lat: number | string | null
-  ubicacion_lng: number | string | null
-  disciplinas: string[] | null
-  horarios: unknown
+  direccion: string | null
+  maps_url: string | null
+  logo_url: string | null
+  horarios_json: unknown
   foto_portada_url: string | null
   galeria_urls: string[] | null
   telefono: string | null
@@ -295,6 +296,32 @@ export default async function AdminCampoDetallePage({
   const field = data as FieldRow
   const errMsg = searchParams.err
 
+  const { data: postsData } = await supabase
+    .from('field_posts')
+    .select('id, content, fotos_urls, created_at')
+    .eq('field_id', id)
+    .order('created_at', { ascending: false })
+
+  const { data: albumsData } = await supabase
+    .from('field_albums')
+    .select('id, nombre, fotos_urls, created_at')
+    .eq('field_id', id)
+    .order('created_at', { ascending: false })
+
+  const initialPosts = (postsData ?? []).map((r) => ({
+    id: r.id as string,
+    content: String((r as { content?: string }).content ?? ''),
+    fotos_urls: (r as { fotos_urls?: string[] | null }).fotos_urls ?? null,
+    created_at: (r as { created_at?: string | null }).created_at ?? null,
+  }))
+
+  const initialAlbums = (albumsData ?? []).map((r) => ({
+    id: r.id as string,
+    nombre: String((r as { nombre?: string }).nombre ?? ''),
+    fotos_urls: (r as { fotos_urls?: string[] | null }).fotos_urls ?? null,
+    created_at: (r as { created_at?: string | null }).created_at ?? null,
+  }))
+
   return (
     <div className="p-6" style={latoBody}>
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -363,33 +390,9 @@ export default async function AdminCampoDetallePage({
             className="mb-2 text-[11px] tracking-[0.14em] text-[#111111]"
             style={jostHeading}
           >
-            DISCIPLINAS
-          </h2>
-          {field.disciplinas && field.disciplinas.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {field.disciplinas.map((d) => (
-                <span
-                  key={d}
-                  className="inline-block border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-2 py-1 text-[11px] font-semibold text-[#111111]"
-                  style={{ ...jostHeading, borderRadius: 2, fontSize: 10 }}
-                >
-                  {d}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#666666]">—</p>
-          )}
-        </section>
-
-        <section>
-          <h2
-            className="mb-2 text-[11px] tracking-[0.14em] text-[#111111]"
-            style={jostHeading}
-          >
             HORARIOS
           </h2>
-          <HorariosBlock value={field.horarios} />
+          <HorariosBlock value={field.horarios_json} />
         </section>
 
         <section className="flex flex-wrap gap-8 text-sm">
@@ -479,7 +482,22 @@ export default async function AdminCampoDetallePage({
             UBICACIÓN
           </h2>
           <p className="text-sm text-[#111111]">
-            Lat: {field.ubicacion_lat ?? '—'} · Lng: {field.ubicacion_lng ?? '—'}
+            Dirección: {field.direccion?.trim() ? field.direccion.trim() : '—'}
+          </p>
+          <p className="mt-2 text-sm text-[#111111]">
+            Maps:{' '}
+            {field.maps_url?.trim() ? (
+              <a
+                href={field.maps_url.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-[#CC4B37] underline-offset-2 hover:underline"
+              >
+                {field.maps_url.trim()}
+              </a>
+            ) : (
+              '—'
+            )}
           </p>
         </section>
 
@@ -490,6 +508,12 @@ export default async function AdminCampoDetallePage({
           ) : null}
         </section>
       </div>
+
+      <FieldPostsAlbumsClient
+        fieldId={id}
+        initialPosts={initialPosts}
+        initialAlbums={initialAlbums}
+      />
 
       <div className="border-t border-solid border-[#EEEEEE] pt-8">
         <h2
