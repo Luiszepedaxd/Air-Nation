@@ -31,13 +31,6 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
 
   const pathname = request.nextUrl.pathname
-  if (pathname.startsWith('/dashboard/credencial')) {
-    console.error('[middleware:credencial] hit', {
-      pathname,
-      hasSession: !!session,
-      sessionUserId: session?.user?.id ?? null,
-    })
-  }
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
 
   // /equipos/* no está en el matcher: no toca cookies de sesión; queda público salvo lógica en página.
@@ -60,7 +53,6 @@ export async function middleware(request: NextRequest) {
         new URL('/login?redirect=/eventos/nuevo', request.url)
       )
     }
-    console.error('[middleware] redirecting to /login', { pathname, hasSession: !!session })
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
