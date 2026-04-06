@@ -185,6 +185,47 @@ export default async function EventoDetailPage({
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Event',
+            name: row.title,
+            startDate: row.fecha,
+            description: row.descripcion ?? undefined,
+            url: `https://airnation.online/eventos/${id}`,
+            eventStatus: 'https://schema.org/EventScheduled',
+            eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+            ...(heroImagen ? { image: heroImagen } : {}),
+            location: f.nombre
+              ? {
+                  '@type': 'Place',
+                  name: f.nombre,
+                  ...(f.slug
+                    ? { url: `https://airnation.online/campos/${f.slug}` }
+                    : {}),
+                  address: {
+                    '@type': 'PostalAddress',
+                    addressLocality: f.ciudad ?? '',
+                    addressCountry: 'MX',
+                  },
+                }
+              : {
+                  '@type': 'Place',
+                  address: {
+                    '@type': 'PostalAddress',
+                    addressCountry: 'MX',
+                  },
+                },
+            organizer: {
+              '@type': 'Organization',
+              name: 'AirNation',
+              url: 'https://airnation.online',
+            },
+          }),
+        }}
+      />
       <EventoHero
         title={row.title}
         fecha={row.fecha}

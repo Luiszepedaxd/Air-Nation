@@ -220,6 +220,50 @@ export default async function CampoPublicPage({
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SportsActivityLocation',
+            name: field.nombre,
+            url: `https://airnation.online/campos/${field.slug}`,
+            description: field.descripcion ?? undefined,
+            ...(field.foto_portada_url ? { image: field.foto_portada_url } : {}),
+            ...(field.telefono ? { telephone: field.telefono } : {}),
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: field.ciudad ?? '',
+              addressCountry: 'MX',
+            },
+            ...(function () {
+              const f = field as CampoDetailRow & {
+                ubicacion_lat?: number | null
+                ubicacion_lng?: number | null
+              }
+              return f.ubicacion_lat && f.ubicacion_lng
+                ? {
+                    geo: {
+                      '@type': 'GeoCoordinates',
+                      latitude: f.ubicacion_lat,
+                      longitude: f.ubicacion_lng,
+                    },
+                  }
+                : {}
+            })(),
+            ...(field.promedio_rating && Number(field.promedio_rating) > 0
+              ? {
+                  aggregateRating: {
+                    '@type': 'AggregateRating',
+                    ratingValue: Number(field.promedio_rating).toFixed(1),
+                    bestRating: '5',
+                    worstRating: '1',
+                  },
+                }
+              : {}),
+          }),
+        }}
+      />
       <CampoHero field={field} />
       <CampoPublicTabs
         field={field}
