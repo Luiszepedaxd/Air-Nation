@@ -58,16 +58,27 @@ async function fetchPublicProfile(id: string) {
   const { data: row, error } = await supabase
     .from('users')
     .select(
-      'id, alias, nombre, ciudad, rol, avatar_url, foto_portada_url, bio, instagram, tiktok, youtube, facebook, member_number, created_at, perfil_publico, teams(id, nombre, slug)'
+      'id, alias, nombre, ciudad, rol, avatar_url, foto_portada_url, bio, instagram, tiktok, youtube, facebook, member_number, created_at, perfil_publico, team_id'
     )
     .eq('id', id)
     .maybeSingle()
 
-  if (error || !row || !row.alias) return null
+  if (error) console.error('[u/profile] users query error:', error)
+  if (!row || !row.id) return null
 
-  const user = row as unknown as PublicUserProfile
-  if (user.teams && Array.isArray(user.teams)) {
-    user.teams = (user.teams as unknown as { id: string; nombre: string; slug: string }[])[0] ?? null
+  let teamData: { id: string; nombre: string; slug: string } | null = null
+  if (row.team_id) {
+    const { data: team } = await supabase
+      .from('teams')
+      .select('id, nombre, slug')
+      .eq('id', row.team_id)
+      .maybeSingle()
+    if (team) teamData = team as { id: string; nombre: string; slug: string }
+  }
+
+  const user: PublicUserProfile = {
+    ...(row as unknown as Omit<PublicUserProfile, 'teams'>),
+    teams: teamData,
   }
 
   let posts: PlayerPostRow[] = []
