@@ -48,12 +48,8 @@ export default async function DashboardHomePage({
           </Suspense>
         </div>
 
-        <Suspense fallback={<NoticiasSkeleton />}>
-          <NoticiasSection />
-        </Suspense>
-
-        <Suspense fallback={<VideosSkeleton />}>
-          <VideosSection />
+        <Suspense fallback={<EventosSkeleton />}>
+          <EventosSection />
         </Suspense>
 
         <Suspense fallback={<CamposSkeleton />}>
@@ -64,8 +60,12 @@ export default async function DashboardHomePage({
           <EquiposSection />
         </Suspense>
 
-        <Suspense fallback={<EventosSkeleton />}>
-          <EventosSection />
+        <Suspense fallback={<NoticiasSkeleton />}>
+          <NoticiasSection />
+        </Suspense>
+
+        <Suspense fallback={<VideosSkeleton />}>
+          <VideosSection />
         </Suspense>
       </div>
     </main>

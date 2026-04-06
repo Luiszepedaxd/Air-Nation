@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '../supabase-server'
-import { deleteTeam } from './actions'
+import { deleteTeam, toggleTeamDestacado } from './actions'
 import { TransferTeamTrigger } from './TransferModal'
 
 const jostHeading = {
@@ -21,6 +21,7 @@ type TeamRow = {
   slug: string | null
   ciudad: string | null
   status: string | null
+  destacado: boolean
   created_at: string | null
   created_by: string | null
   placeholder_owner_nombre: string | null
@@ -138,6 +139,18 @@ async function actionDeleteTeamConfirm(formData: FormData) {
   redirect('/admin/equipos')
 }
 
+async function actionToggleTeamDestacado(formData: FormData) {
+  'use server'
+  const id = String(formData.get('id') ?? '').trim()
+  const raw = formData.get('destacado')
+  const destacado = raw === 'true'
+  if (!id) return
+  const result = await toggleTeamDestacado(id, destacado)
+  if ('error' in result && result.error) {
+    console.error(result.error)
+  }
+}
+
 export default async function AdminEquiposPage({
   searchParams,
 }: {
@@ -157,6 +170,7 @@ export default async function AdminEquiposPage({
       slug,
       ciudad,
       status,
+      destacado,
       created_at,
       created_by,
       placeholder_owner_nombre,
@@ -165,6 +179,7 @@ export default async function AdminEquiposPage({
       transferred_at
     `
     )
+    .order('destacado', { ascending: false })
     .order('created_at', { ascending: false })
 
   const teams: TeamRow[] =
@@ -271,6 +286,14 @@ export default async function AdminEquiposPage({
                   >
                     {t.nombre}
                   </span>
+                  {t.destacado ? (
+                    <span
+                      className="inline-block bg-[#CC4B37] px-2 py-0.5 text-[10px] font-bold uppercase text-white"
+                      style={jostHeading}
+                    >
+                      DESTACADO
+                    </span>
+                  ) : null}
                   <span className="text-[13px] text-[#666666]" style={latoBody}>
                     {t.ciudad ?? '—'}
                   </span>
@@ -295,6 +318,26 @@ export default async function AdminEquiposPage({
 
                 <div className="space-y-4 border-t border-solid border-[#EEEEEE] px-3 pb-4 pt-2">
                   <div className="flex flex-wrap items-center gap-2">
+                    <form action={actionToggleTeamDestacado}>
+                      <input type="hidden" name="id" value={t.id} />
+                      <input
+                        type="hidden"
+                        name="destacado"
+                        value={(!t.destacado).toString()}
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex items-center justify-center border border-solid bg-[#FFFFFF] px-3 py-2 text-[10px] transition-colors"
+                        style={{
+                          ...jostHeading,
+                          borderRadius: 2,
+                          borderColor: t.destacado ? '#CC4B37' : '#111111',
+                          color: t.destacado ? '#CC4B37' : '#111111',
+                        }}
+                      >
+                        {t.destacado ? 'QUITAR DESTACADO' : 'DESTACAR'}
+                      </button>
+                    </form>
                     <Link
                       href={`${base}/${encodeURIComponent(t.id)}/editar`}
                       className="inline-flex items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[10px] text-[#111111]"

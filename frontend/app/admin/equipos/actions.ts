@@ -102,3 +102,28 @@ export async function updateTeamAdmin(
   revalidatePath('/admin/equipos')
   return { success: true }
 }
+
+export async function toggleTeamDestacado(
+  id: string,
+  destacado: boolean
+): Promise<{ success: true } | { error: string }> {
+  const trimmedId = id?.trim() ?? ''
+  if (!trimmedId) {
+    return { error: 'ID no válido' }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('teams')
+    .update({ destacado })
+    .eq('id', trimmedId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/equipos')
+  revalidatePath('/equipos')
+  revalidatePath('/dashboard')
+  return { success: true as const }
+}

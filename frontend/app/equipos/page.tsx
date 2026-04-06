@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DestacadoBadge, isDestacadoTrue } from '@/app/campos/components/DestacadoBadge'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 
 export const revalidate = 0
@@ -18,6 +19,7 @@ type TeamListRow = {
   ciudad: string | null
   logo_url: string | null
   foto_portada_url: string | null
+  destacado: boolean
 }
 
 function PinIcon() {
@@ -55,15 +57,20 @@ async function fetchEquiposActivos(): Promise<TeamListRow[]> {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('teams')
-    .select('id, nombre, slug, ciudad, logo_url, foto_portada_url')
+    .select('id, nombre, slug, ciudad, logo_url, foto_portada_url, destacado, created_at')
     .eq('status', 'activo')
-    .order('nombre', { ascending: true })
+    .order('destacado', { ascending: false })
+    .order('created_at', { ascending: false })
 
   if (error) {
     console.error('[equipos] list:', error.message)
     return []
   }
-  return (data ?? []) as TeamListRow[]
+  const rows = (data ?? []) as (TeamListRow & { destacado?: unknown })[]
+  return rows.map((r) => ({
+    ...r,
+    destacado: isDestacadoTrue(r.destacado),
+  }))
 }
 
 function EquipoCard({ team }: { team: TeamListRow }) {
@@ -92,6 +99,7 @@ function EquipoCard({ team }: { team: TeamListRow }) {
               </span>
             </div>
           )}
+          {team.destacado ? <DestacadoBadge /> : null}
           <div className="absolute bottom-2 left-2 h-12 w-12 shrink-0 overflow-hidden border-2 border-solid border-white bg-[#111111]">
             {team.logo_url ? (
               <img

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DestacadoBadge, isDestacadoTrue } from '@/app/campos/components/DestacadoBadge'
 import { createDashboardSupabaseServerClient } from './supabase-server'
 import { Carrusel } from './components/Carrusel'
 import { SectionHeader } from './components/SectionHeader'
@@ -15,6 +16,7 @@ type TeamFeedRow = {
   ciudad: string | null
   logo_url: string | null
   foto_portada_url: string | null
+  destacado: boolean
 }
 
 export function EquiposSkeleton() {
@@ -42,14 +44,18 @@ export async function EquiposSection() {
   const supabase = createDashboardSupabaseServerClient()
   const { data, error } = await supabase
     .from('teams')
-    .select('id, nombre, slug, ciudad, logo_url, foto_portada_url')
+    .select('id, nombre, slug, ciudad, logo_url, foto_portada_url, destacado')
     .eq('status', 'activo')
+    .order('destacado', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(10)
 
   if (error || !data?.length) return null
 
-  const teams = data as TeamFeedRow[]
+  const teams = (data as TeamFeedRow[]).map((row) => ({
+    ...row,
+    destacado: isDestacadoTrue(row.destacado),
+  }))
 
   return (
     <section>
@@ -69,6 +75,7 @@ export async function EquiposSection() {
                   className="h-full w-full object-cover"
                 />
               ) : null}
+              {team.destacado ? <DestacadoBadge /> : null}
             </div>
             <div
               className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/25"
