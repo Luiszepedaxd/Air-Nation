@@ -26,20 +26,20 @@ type UserRowWithTeam = {
 export default async function CredencialPage() {
   const supabase = createDashboardSupabaseServerClient()
   const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser()
+    data: { session },
+  } = await supabase.auth.getSession()
 
-  if (!authUser) redirect('/login')
+  if (!session?.user) redirect('/login')
 
   const { data: row, error } = await supabase
     .from('users')
     .select(
       'id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at, teams(nombre)'
     )
-    .eq('id', authUser.id)
+    .eq('id', session.user.id)
     .maybeSingle()
 
-  if (error || !row) redirect('/login')
+  if (error || !row) redirect('/dashboard')
 
   const r = row as UserRowWithTeam
   let teamNombre: string | null = null
