@@ -29,6 +29,12 @@ export default async function CredencialPage() {
     data: { session },
   } = await supabase.auth.getSession()
 
+  console.error('[credencial:session]', {
+    sessionExists: !!session,
+    userId: session?.user?.id ?? null,
+    email: session?.user?.email ?? null,
+  })
+
   if (!session?.user) {
     console.error('[credencial] NO SESSION', { session })
     redirect('/login')
@@ -41,6 +47,12 @@ export default async function CredencialPage() {
     )
     .eq('id', session.user.id)
     .maybeSingle()
+
+  console.error('[credencial:query]', {
+    error: error?.message ?? null,
+    rowExists: !!row,
+    userId: session.user.id,
+  })
 
   if (error || !row) {
     console.error('[credencial] QUERY FAILED', {
