@@ -348,13 +348,13 @@ export async function generateMetadata({
     `Equipo de airsoft en ${team.ciudad || 'México'} — AirNation`
 
   return {
-    title: `${team.nombre} — AirNation`,
+    title: `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`,
     description: desc,
     alternates: {
       canonical: `https://airnation.online/equipos/${team.slug}`,
     },
     openGraph: {
-      title: `${team.nombre} — AirNation`,
+      title: `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`,
       description: desc,
       url: `https://airnation.online/equipos/${team.slug}`,
       type: 'website',

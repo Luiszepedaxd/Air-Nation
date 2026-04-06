@@ -171,13 +171,13 @@ export async function generateMetadata({
     `Campo de airsoft en ${field.ciudad || 'México'} — AirNation`
 
   return {
-    title: `${field.nombre} — AirNation`,
+    title: `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`,
     description: desc,
     alternates: {
       canonical: `https://airnation.online/campos/${field.slug}`,
     },
     openGraph: {
-      title: `${field.nombre} — AirNation`,
+      title: `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`,
       description: desc,
       url: `https://airnation.online/campos/${field.slug}`,
       type: 'website',

@@ -131,13 +131,13 @@ export async function generateMetadata({
     `Evento de airsoft${fechaTxt ? ` el ${fechaTxt}` : ''} — AirNation`
 
   return {
-    title: `${row.title} — AirNation`,
+    title: `${row.title} — Airsoft en ${fMeta.ciudad ?? 'México'} | AirNation`,
     description: desc.slice(0, 160),
     alternates: {
       canonical: `https://airnation.online/eventos/${id}`,
     },
     openGraph: {
-      title: `${row.title} — AirNation`,
+      title: `${row.title} — Airsoft en ${fMeta.ciudad ?? 'México'} | AirNation`,
       description: desc.slice(0, 160),
       url: `https://airnation.online/eventos/${id}`,
       type: 'website',
