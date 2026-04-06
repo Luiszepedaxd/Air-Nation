@@ -6,7 +6,7 @@ import { getSiteAssets } from "@/lib/site-assets";
 
 const STATS = [
   { num: "100%",  label: "Gratis para empezar"            },
-  { num: "5",     label: "Herramientas en una plataforma" },
+  { num: "7",     label: "Herramientas en una plataforma" },
   { num: "MX",    label: "Lanzamiento inicial"            },
 ];
 
