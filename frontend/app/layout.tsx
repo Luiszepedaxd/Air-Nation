@@ -48,6 +48,24 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png" />
       </head>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'AirNation',
+              url: 'https://airnation.online',
+              logo: 'https://airnation.online/icons/icon-180.png',
+              sameAs: [],
+              knowsAbout: ['airsoft', 'paintball', 'milsim'],
+              description:
+                'Plataforma central del airsoft en México. Equipos, campos, eventos, credencial digital y registro de réplicas.',
+              areaServed: 'MX',
+              foundingDate: '2024',
+            }),
+          }}
+        />
         {children}
         <GoogleAnalytics />
         <PwaRegister />

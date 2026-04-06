@@ -141,14 +141,30 @@ export default async function BlogPostPage({
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
+    description: post.meta_description?.trim() || post.excerpt?.trim() || '',
     datePublished: post.created_at,
-    publisher: {
+    dateModified: post.created_at,
+    url: `https://airnation.online/blog/${post.slug}`,
+    author: {
       '@type': 'Organization',
       name: 'AirNation',
       url: 'https://airnation.online',
     },
+    publisher: {
+      '@type': 'Organization',
+      name: 'AirNation',
+      url: 'https://airnation.online',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://airnation.online/icons/icon-180.png',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://airnation.online/blog/${post.slug}`,
+    },
+    ...(post.cover_url ? { image: post.cover_url } : {}),
   }
-  if (post.cover_url) jsonLd.image = post.cover_url
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
