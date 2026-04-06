@@ -1,4 +1,5 @@
 import type { MemberDisplay, PublicTeam } from '../types'
+import { ClickableImage } from '@/components/ui/ClickableImage'
 import { TeamEditLink } from './TeamEditLink'
 
 const jost = {
@@ -22,22 +23,22 @@ export function TeamHero({
         <div
           className="relative h-[240px] w-full overflow-hidden bg-[#111111] md:h-[360px]"
         >
-          {team.foto_portada_url ? (
-            <img
-              src={team.foto_portada_url}
-              alt=""
-              width={1920}
-              height={720}
-              className="h-full w-full object-cover"
-            />
-          ) : null}
+          <ClickableImage
+            src={team.foto_portada_url}
+            alt=""
+            width={1920}
+            height={720}
+            className="h-full w-full object-cover"
+          >
+            <div className="h-full w-full bg-[#111111]" />
+          </ClickableImage>
         </div>
         <div className="pointer-events-none absolute bottom-0 left-1/2 z-[1] flex w-full -translate-x-1/2 translate-y-1/2 justify-center">
           <div
             className="pointer-events-auto flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden bg-[#F4F4F4] [border:3px_solid_#FFFFFF]"
           >
             {team.logo_url ? (
-              <img
+              <ClickableImage
                 src={team.logo_url}
                 alt=""
                 width={80}

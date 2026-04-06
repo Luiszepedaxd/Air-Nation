@@ -1,4 +1,5 @@
 import type { CampoDetailRow } from '../../types'
+import { ClickableImage } from '@/components/ui/ClickableImage'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -16,13 +17,13 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
   return (
     <div className="relative w-full">
       <div className="relative w-full overflow-hidden bg-[#111111] h-[240px] md:h-[360px]">
-        {field.foto_portada_url ? (
-          <img
-            src={field.foto_portada_url}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : null}
+        <ClickableImage
+          src={field.foto_portada_url}
+          alt=""
+          className="h-full w-full object-cover"
+        >
+          <div className="h-full w-full bg-[#111111]" />
+        </ClickableImage>
         <span
           className={`absolute left-3 top-3 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] md:left-4 md:top-4 ${
             tipo === 'privado'

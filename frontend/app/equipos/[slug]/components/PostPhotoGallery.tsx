@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useState } from 'react'
+import { LightboxPortal } from '@/components/ui/LightboxPortal'
 
 type PostPhotoGalleryProps = {
   urls: string[]
@@ -42,22 +42,6 @@ export function PostPhotoGallery({
       return i === n - 1 ? 0 : i + 1
     })
   }, [n])
-
-  useEffect(() => {
-    if (lightbox === null) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
-      if (e.key === 'ArrowLeft' && n > 1) prev()
-      if (e.key === 'ArrowRight' && n > 1) next()
-    }
-    window.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-    }
-  }, [lightbox, n, close, prev, next])
 
   if (n === 0) return null
 
@@ -232,94 +216,5 @@ export function PostPhotoGallery({
       </div>
       {lightboxNode}
     </>
-  )
-}
-
-function LightboxPortal(props: {
-  urls: string[]
-  index: number
-  onClose: () => void
-  onPrev: () => void
-  onNext: () => void
-}) {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  if (!mounted || typeof document === 'undefined') return null
-  return createPortal(<LightboxOverlay {...props} />, document.body)
-}
-
-function LightboxOverlay({
-  urls,
-  index,
-  onClose,
-  onPrev,
-  onNext,
-}: {
-  urls: string[]
-  index: number
-  onClose: () => void
-  onPrev: () => void
-  onNext: () => void
-}) {
-  const n = urls.length
-  const src = urls[index]
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Vista ampliada de foto"
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 p-4"
-      onClick={onClose}
-    >
-      <button
-        type="button"
-        className="absolute right-4 top-4 z-[10001] border-0 bg-transparent p-2 text-3xl leading-none text-white hover:opacity-80"
-        onClick={(e) => {
-          e.stopPropagation()
-          onClose()
-        }}
-        aria-label="Cerrar"
-      >
-        ×
-      </button>
-      {n > 1 ? (
-        <>
-          <button
-            type="button"
-            className="absolute left-4 top-1/2 z-[10001] -translate-y-1/2 border-0 bg-transparent p-3 text-4xl text-white hover:opacity-80"
-            onClick={(e) => {
-              e.stopPropagation()
-              onPrev()
-            }}
-            aria-label="Foto anterior"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            className="absolute right-3 top-1/2 z-[10001] -translate-y-1/2 border-0 bg-transparent p-3 text-4xl text-white hover:opacity-80"
-            onClick={(e) => {
-              e.stopPropagation()
-              onNext()
-            }}
-            aria-label="Foto siguiente"
-          >
-            ›
-          </button>
-        </>
-      ) : null}
-      <div
-        className="flex max-h-[90vh] max-w-[90vw] items-center justify-center"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <img
-          src={src}
-          alt=""
-          className="max-h-[90vh] max-w-[90vw] object-contain"
-          draggable={false}
-        />
-      </div>
-    </div>
   )
 }
