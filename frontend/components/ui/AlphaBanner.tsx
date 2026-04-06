@@ -30,8 +30,8 @@ const inputClass =
 export default function AlphaBanner() {
   const pathname = usePathname() || ''
   const fabBottomClass = pathname.startsWith('/dashboard')
-    ? 'bottom-[calc(4.5rem+env(safe-area-inset-bottom)+24px)] md:bottom-6'
-    : 'bottom-[max(1rem,env(safe-area-inset-bottom)+12px)] md:bottom-6'
+    ? 'bottom-24 md:bottom-6'
+    : 'bottom-6 md:bottom-6'
 
   const [storageReady, setStorageReady] = useState(false)
   const [sessionDismissed, setSessionDismissed] = useState(false)
