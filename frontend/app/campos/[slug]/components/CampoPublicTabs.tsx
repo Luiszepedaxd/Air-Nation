@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 import { formatEventoFechaCorta } from '@/app/eventos/lib/format-evento-fecha'
@@ -9,6 +9,7 @@ import {
   FIELD_DAY_LABELS,
   weekScheduleFromJson,
 } from '@/lib/field-schedule'
+import { supabase } from '@/lib/supabase'
 import type { CampoDetailRow, FieldReviewPublic } from '../../types'
 import { CampoReviews } from './CampoReviews'
 import { SolicitarCampoButton } from './SolicitarCampoButton'
@@ -99,6 +100,25 @@ export type CampoEventoListItem = {
   imagen_url: string | null
 }
 
+export type CampoFieldPostPublic = {
+  id: string
+  content: string
+  fotos_urls: string[]
+  created_at: string
+}
+
+function formatPostFecha(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
+}
+
 export function CampoPublicTabs({
   field,
   fieldSlug,
@@ -117,8 +137,11 @@ export function CampoPublicTabs({
   eventos: CampoEventoListItem[]
 }) {
   const [tab, setTab] = useState<
-    'info' | 'ubicacion' | 'galeria' | 'eventos' | 'resenas'
+    'info' | 'publicaciones' | 'eventos' | 'galeria' | 'resenas'
   >('info')
+  const [publicaciones, setPublicaciones] = useState<CampoFieldPostPublic[]>([])
+  const [publicacionesLoading, setPublicacionesLoading] = useState(true)
+
   const tipo = normalizeTipo(field.tipo)
   const team = field.teams
   const mapsUrl = field.maps_url?.trim() ?? ''
@@ -128,6 +151,49 @@ export function CampoPublicTabs({
   const galeriaUrls = (field.galeria_urls ?? []).filter(
     (u) => typeof u === 'string' && u.trim().length > 0
   )
+
+  const showUbicacionBlock = Boolean(direccion || mapsUrl)
+  const showTelefono = Boolean(field.telefono?.trim())
+  const showContactSeparator = showUbicacionBlock || showTelefono
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setPublicacionesLoading(true)
+      const { data, error } = await supabase
+        .from('field_posts')
+        .select('id, content, fotos_urls, created_at')
+        .eq('field_id', field.id)
+        .order('created_at', { ascending: false })
+
+      if (cancelled) return
+
+      if (error) {
+        console.error('[CampoPublicTabs] field_posts:', error.message)
+        setPublicaciones([])
+      } else {
+        const rows = (data ?? []) as Record<string, unknown>[]
+        setPublicaciones(
+          rows.map((r) => {
+            const raw = r.fotos_urls
+            const urls = Array.isArray(raw)
+              ? raw.filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+              : []
+            return {
+              id: String(r.id ?? ''),
+              content: String(r.content ?? ''),
+              fotos_urls: urls,
+              created_at: String(r.created_at ?? ''),
+            }
+          })
+        )
+      }
+      setPublicacionesLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [field.id])
 
   return (
     <div>
@@ -140,9 +206,9 @@ export function CampoPublicTabs({
             {(
               [
                 ['info', 'Info'],
-                ['ubicacion', 'Ubicación'],
-                ['galeria', 'Galería'],
+                ['publicaciones', 'Publicaciones'],
                 ['eventos', 'Eventos'],
+                ['galeria', 'Galería'],
                 ['resenas', 'Reseñas'],
               ] as const
             ).map(([id, label]) => {
@@ -169,21 +235,48 @@ export function CampoPublicTabs({
       <div className="mx-auto max-w-[960px] px-4 py-6 md:px-6 md:py-8">
         {tab === 'info' ? (
           <div className="space-y-8">
-            {field.descripcion?.trim() ? (
+            {showUbicacionBlock ? (
+              <section className="space-y-4">
+                {direccion ? (
+                  <p
+                    className="flex items-start gap-3 text-sm text-[#111111]"
+                    style={lato}
+                  >
+                    <PinMapIcon />
+                    <span>{direccion}</span>
+                  </p>
+                ) : null}
+                {mapsUrl ? (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center justify-center bg-[#111111] px-4 py-4 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-white transition-opacity hover:opacity-90"
+                    style={{ ...jost, borderRadius: 2 }}
+                  >
+                    VER EN GOOGLE MAPS →
+                  </a>
+                ) : null}
+              </section>
+            ) : null}
+
+            {showTelefono && field.telefono ? (
               <section>
-                <h2
-                  className="mb-3 text-[11px] tracking-[0.14em] text-[#111111]"
-                  style={jostHeading}
-                >
-                  DESCRIPCIÓN
-                </h2>
-                <p
-                  className="whitespace-pre-wrap text-sm leading-relaxed text-[#111111]"
+                <a
+                  href={`tel:${field.telefono.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center gap-2 text-sm text-[#111111] underline-offset-2 hover:text-[#CC4B37] hover:underline"
                   style={lato}
                 >
-                  {field.descripcion.trim()}
-                </p>
+                  <span className="text-[#666666]">
+                    <PhoneIcon />
+                  </span>
+                  {field.telefono.trim()}
+                </a>
               </section>
+            ) : null}
+
+            {showContactSeparator ? (
+              <div className="border-t border-[#EEEEEE] my-6" aria-hidden />
             ) : null}
 
             <section>
@@ -254,24 +347,20 @@ export function CampoPublicTabs({
               </div>
             </section>
 
-            {field.telefono?.trim() ? (
+            {field.descripcion?.trim() ? (
               <section>
                 <h2
-                  className="mb-2 text-[11px] tracking-[0.14em] text-[#999999]"
+                  className="mb-3 text-[11px] tracking-[0.14em] text-[#111111]"
                   style={jostHeading}
                 >
-                  TELÉFONO
+                  DESCRIPCIÓN
                 </h2>
-                <a
-                  href={`tel:${field.telefono.replace(/\s+/g, '')}`}
-                  className="inline-flex items-center gap-2 text-sm text-[#111111] underline-offset-2 hover:text-[#CC4B37] hover:underline"
+                <p
+                  className="whitespace-pre-wrap text-sm leading-relaxed text-[#111111]"
                   style={lato}
                 >
-                  <span className="text-[#666666]">
-                    <PhoneIcon />
-                  </span>
-                  {field.telefono.trim()}
-                </a>
+                  {field.descripcion.trim()}
+                </p>
               </section>
             ) : null}
 
@@ -349,31 +438,58 @@ export function CampoPublicTabs({
           </div>
         ) : null}
 
-        {tab === 'ubicacion' ? (
-          <div className="space-y-6">
-            {direccion ? (
-              <p
-                className="flex items-start gap-3 text-sm text-[#111111]"
-                style={lato}
-              >
-                <PinMapIcon />
-                <span>{direccion}</span>
+        {tab === 'publicaciones' ? (
+          <div>
+            {publicacionesLoading ? (
+              <p className="text-sm text-[#AAAAAA]" style={lato}>
+                Cargando…
               </p>
-            ) : null}
-            {mapsUrl ? (
-              <a
-                href={mapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex w-full items-center justify-center bg-[#111111] px-4 py-4 text-center text-xs font-extrabold uppercase tracking-[0.14em] text-white transition-opacity hover:opacity-90"
-                style={{ ...jost, borderRadius: 2 }}
-              >
-                VER EN GOOGLE MAPS →
-              </a>
+            ) : publicaciones.length === 0 ? (
+              <p className="text-sm text-[#AAAAAA]" style={lato}>
+                No hay publicaciones aún
+              </p>
             ) : (
-              <p className="text-sm text-dim" style={lato}>
-                Ubicación no disponible
-              </p>
+              <ul className="m-0 list-none p-0">
+                {publicaciones.map((p, idx) => {
+                  const photos = p.fotos_urls.slice(0, 4)
+                  const isLast = idx === publicaciones.length - 1
+                  return (
+                    <li
+                      key={p.id}
+                      className={`pb-6 ${isLast ? '' : 'mb-6 border-b border-[#EEEEEE]'}`}
+                    >
+                      {photos.length > 0 ? (
+                        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {photos.map((url) => (
+                            <div
+                              key={url}
+                              className="aspect-square overflow-hidden bg-[#F4F4F4]"
+                            >
+                              <img
+                                src={url}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      <p
+                        className="whitespace-pre-wrap text-sm text-[#444444]"
+                        style={lato}
+                      >
+                        {p.content}
+                      </p>
+                      <p
+                        className="mt-2 text-xs text-[#AAAAAA]"
+                        style={lato}
+                      >
+                        {formatPostFecha(p.created_at)}
+                      </p>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
           </div>
         ) : null}
