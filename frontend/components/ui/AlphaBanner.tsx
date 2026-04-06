@@ -282,6 +282,23 @@ export default function AlphaBanner() {
         )
       : null
 
+  const fab = (
+    <button
+      type="button"
+      onClick={openModal}
+      className={`fixed left-4 z-[60] rounded-none px-3 py-2 text-[11px] uppercase text-white shadow-md transition-opacity hover:opacity-90 ${fabBottomClass}`}
+      style={{
+        fontFamily: "'Jost', sans-serif",
+        fontWeight: 800,
+        backgroundColor: '#111111',
+      }}
+    >
+      Feedback
+    </button>
+  )
+
+  const fabPortal = portalEl ? createPortal(fab, portalEl) : fab
+
   return (
     <>
       {showStrip ? (
@@ -344,18 +361,7 @@ export default function AlphaBanner() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onClick={openModal}
-        className={`fixed left-4 z-[60] rounded-none px-3 py-2 text-[11px] uppercase text-white shadow-md transition-opacity hover:opacity-90 ${fabBottomClass}`}
-        style={{
-          fontFamily: "'Jost', sans-serif",
-          fontWeight: 800,
-          backgroundColor: '#111111',
-        }}
-      >
-        Feedback
-      </button>
+      {fabPortal}
 
       {modal}
     </>
