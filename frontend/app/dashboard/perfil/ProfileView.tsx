@@ -157,6 +157,9 @@ export function ProfileView({
     { id: string; nombre: string }[]
   >([])
   const [profileSuccessMsg, setProfileSuccessMsg] = useState('')
+  const [portadaUrl, setPortadaUrl] = useState<string | null>(
+    () => initialUser.foto_portada_url ?? null
+  )
 
   const displayPendingJoins = useMemo(() => {
     const seen = new Set(pendingJoinPending.map((p) => p.id))
@@ -324,6 +327,7 @@ export function ProfileView({
         const body = (await patch.json()) as { user?: ProfileUserRow }
         if (body.user) setUser(body.user)
         else setUser((s) => ({ ...s, foto_portada_url: json.url ?? null }))
+        setPortadaUrl(json.url ?? null)
       } catch {
         setPortadaError('Error de red. Intenta de nuevo.')
       } finally {
@@ -337,6 +341,7 @@ export function ProfileView({
     setFormError('')
     setProfileSuccessMsg('')
     setForm(initialFromUser(user))
+    setPortadaUrl(user.foto_portada_url ?? null)
     setTeamIdDraft(user.team_id)
     setTeamSearchText(user.team_id ? readTeamNombre : '')
     setTeamLockedName(user.team_id ? readTeamNombre : null)
@@ -389,6 +394,7 @@ export function ProfileView({
           ciudad: form.ciudad.trim(),
           rol: form.rol,
           bio: form.bio.trim() || null,
+          foto_portada_url: portadaUrl ?? null,
           instagram: form.instagram.trim() || null,
           tiktok: form.tiktok.trim() || null,
           youtube: form.youtube.trim() || null,
@@ -401,8 +407,10 @@ export function ProfileView({
         return
       }
       const body = (await res.json()) as { user?: ProfileUserRow }
-      if (body.user) setUser(body.user)
-      else
+      if (body.user) {
+        setUser(body.user)
+        setPortadaUrl(body.user.foto_portada_url ?? null)
+      } else
         setUser((s) => ({
           ...s,
           nombre: form.nombre.trim(),
@@ -410,6 +418,7 @@ export function ProfileView({
           ciudad: form.ciudad.trim(),
           rol: form.rol,
           bio: form.bio.trim() || null,
+          foto_portada_url: portadaUrl ?? null,
           instagram: form.instagram.trim() || null,
           tiktok: form.tiktok.trim() || null,
           youtube: form.youtube.trim() || null,
@@ -544,6 +553,16 @@ export function ProfileView({
 
       {!editMode ? (
         <>
+          {user.bio ? (
+            <div className={`${fieldShell} md:col-span-2 mt-6`}>
+              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                BIO
+              </p>
+              <p className="mt-1 text-[14px] leading-relaxed text-[#111111]" style={lato}>
+                {user.bio}
+              </p>
+            </div>
+          ) : null}
           <div className="mt-6 grid grid-cols-1 gap-0 md:grid-cols-2">
             <div className={fieldShell}>
               <p
@@ -661,16 +680,6 @@ export function ProfileView({
                 {formatDMY(user.created_at)}
               </p>
             </div>
-            {user.bio ? (
-              <div className={`${fieldShell} md:col-span-2`}>
-                <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
-                  BIO
-                </p>
-                <p className="mt-1 text-[14px] leading-relaxed text-[#111111]" style={lato}>
-                  {user.bio}
-                </p>
-              </div>
-            ) : null}
             {(user.instagram || user.tiktok || user.youtube || user.facebook) ? (
               <div className={`${fieldShell} md:col-span-2`}>
                 <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">

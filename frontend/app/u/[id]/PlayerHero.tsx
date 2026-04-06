@@ -178,6 +178,15 @@ export function PlayerHero({
           </p>
         ) : null}
 
+        {user.bio ? (
+          <p
+            className="mx-auto mt-3 max-w-[480px] text-[14px] leading-relaxed text-[#666666]"
+            style={lato}
+          >
+            {user.bio}
+          </p>
+        ) : null}
+
         {ig || tt || yt || fb ? (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
             {ig ? (
