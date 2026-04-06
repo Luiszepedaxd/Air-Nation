@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { api } from '@/lib/api'
 
@@ -28,11 +27,6 @@ const inputClass =
   'w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[#111111] outline-none focus:border-[#CC4B37]'
 
 export default function AlphaBanner() {
-  const pathname = usePathname() || ''
-  const fabBottomClass = pathname.startsWith('/dashboard')
-    ? 'bottom-24 md:bottom-6'
-    : 'bottom-6 md:bottom-6'
-
   const [storageReady, setStorageReady] = useState(false)
   const [sessionDismissed, setSessionDismissed] = useState(false)
   const [thanksPhase, setThanksPhase] = useState(false)
@@ -282,23 +276,6 @@ export default function AlphaBanner() {
         )
       : null
 
-  const fab = (
-    <button
-      type="button"
-      onClick={openModal}
-      className={`fixed left-4 z-[60] rounded-none px-3 py-2 text-[11px] uppercase text-white shadow-md transition-opacity hover:opacity-90 ${fabBottomClass}`}
-      style={{
-        fontFamily: "'Jost', sans-serif",
-        fontWeight: 800,
-        backgroundColor: '#111111',
-      }}
-    >
-      Feedback
-    </button>
-  )
-
-  const fabPortal = portalEl ? createPortal(fab, portalEl) : fab
-
   return (
     <>
       {showStrip ? (
@@ -360,8 +337,6 @@ export default function AlphaBanner() {
           )}
         </div>
       ) : null}
-
-      {fabPortal}
 
       {modal}
     </>
