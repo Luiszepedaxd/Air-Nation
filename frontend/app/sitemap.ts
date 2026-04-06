@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 
