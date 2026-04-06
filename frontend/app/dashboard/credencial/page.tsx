@@ -11,7 +11,7 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-type UserRowWithTeam = {
+type UserRow = {
   id: string
   nombre: string | null
   alias: string | null
@@ -20,7 +20,6 @@ type UserRowWithTeam = {
   avatar_url: string | null
   member_number: string | number | null
   created_at: string
-  teams: { nombre: string } | { nombre: string }[] | null
 }
 
 export default async function CredencialPage() {
@@ -43,7 +42,7 @@ export default async function CredencialPage() {
   const { data: row, error } = await supabase
     .from('users')
     .select(
-      'id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at, teams(nombre)'
+      'id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at'
     )
     .eq('id', session.user.id)
     .maybeSingle()
@@ -63,11 +62,21 @@ export default async function CredencialPage() {
     redirect('/dashboard')
   }
 
-  const r = row as UserRowWithTeam
   let teamNombre: string | null = null
-  if (r.teams) {
-    teamNombre = Array.isArray(r.teams) ? r.teams[0]?.nombre ?? null : r.teams.nombre
+  if (row) {
+    const { data: userWithTeam } = await supabase
+      .from('users')
+      .select('teams(nombre)')
+      .eq('id', session.user.id)
+      .maybeSingle()
+
+    const teams = (userWithTeam as any)?.teams
+    if (teams) {
+      teamNombre = Array.isArray(teams) ? teams[0]?.nombre ?? null : teams.nombre
+    }
   }
+
+  const r = row as UserRow
 
   const data: CredentialUserData = {
     id: r.id,
