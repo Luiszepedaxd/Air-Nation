@@ -79,6 +79,7 @@ export function FieldPostsAlbumsClient({
   const [albums, setAlbums] = useState(initialAlbums)
   const [postContent, setPostContent] = useState('')
   const [postFiles, setPostFiles] = useState<File[]>([])
+  const [postPreviewUrls, setPostPreviewUrls] = useState<string[]>([])
   const [albumName, setAlbumName] = useState('')
   const [albumFiles, setAlbumFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false)
@@ -94,10 +95,30 @@ export function FieldPostsAlbumsClient({
     setAlbums(initialAlbums)
   }, [initialAlbums])
 
+  useEffect(() => {
+    const next = postFiles.map((f) => URL.createObjectURL(f))
+    setPostPreviewUrls(next)
+    return () => {
+      next.forEach((u) => URL.revokeObjectURL(u))
+    }
+  }, [postFiles])
+
   const onPostFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []).slice(0, MAX_POST_PHOTOS)
+    const picked = Array.from(e.target.files ?? [])
     e.target.value = ''
-    setPostFiles(files)
+    if (picked.length === 0) return
+    setPostFiles((prev) => {
+      const merged = [...prev]
+      for (const f of picked) {
+        if (merged.length >= MAX_POST_PHOTOS) break
+        merged.push(f)
+      }
+      return merged
+    })
+  }
+
+  const removePostFileAt = (index: number) => {
+    setPostFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
   const onAlbumFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -260,6 +281,31 @@ export function FieldPostsAlbumsClient({
               className="mt-1 text-sm"
               onChange={onPostFiles}
             />
+            {postPreviewUrls.length > 0 ? (
+              <div className="mt-3 grid max-w-[280px] grid-cols-4 gap-2">
+                {postPreviewUrls.map((src, i) => (
+                  <div
+                    key={`${src}-${i}`}
+                    className="relative aspect-square overflow-hidden border border-[#EEEEEE] bg-[#F4F4F4]"
+                  >
+                    <img
+                      src={src}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePostFileAt(i)}
+                      disabled={busy}
+                      className="absolute right-0 top-0 flex h-6 w-6 items-center justify-center bg-[#111111] text-[13px] font-bold leading-none text-white disabled:opacity-50"
+                      aria-label="Quitar foto"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={() => void submitPost()}

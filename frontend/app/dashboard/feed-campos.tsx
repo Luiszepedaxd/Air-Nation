@@ -12,6 +12,7 @@ type FieldRow = {
   slug: string
   ciudad: string | null
   foto_portada_url: string | null
+  logo_url: string | null
   destacado: boolean
   orden_destacado: number | null
 }
@@ -70,7 +71,7 @@ export async function CamposSection() {
   const { data, error } = await supabase
     .from('fields')
     .select(
-      'id, nombre, slug, ciudad, foto_portada_url, destacado, orden_destacado'
+      'id, nombre, slug, ciudad, foto_portada_url, logo_url, destacado, orden_destacado'
     )
     .eq('status', 'aprobado')
     .order('destacado', { ascending: false })
@@ -120,6 +121,17 @@ export async function CamposSection() {
                       </div>
                     )}
                     {isDestacadoTrue(field.destacado) ? <DestacadoBadge /> : null}
+                    {field.logo_url?.trim() ? (
+                      <div className="absolute bottom-2 left-2 h-12 w-12 shrink-0 overflow-hidden border-2 border-solid border-white bg-[#111111]">
+                        <img
+                          src={field.logo_url.trim()}
+                          alt=""
+                          width={48}
+                          height={48}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : null}
                   </div>
                   <div className="p-[10px]">
                     <h3

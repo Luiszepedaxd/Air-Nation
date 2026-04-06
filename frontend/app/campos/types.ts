@@ -5,6 +5,7 @@ export type CampoListRow = {
   ciudad: string | null
   tipo: string | null
   foto_portada_url: string | null
+  logo_url: string | null
   promedio_rating: number | string | null
   destacado: boolean
   orden_destacado: number | null

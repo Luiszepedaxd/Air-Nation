@@ -9,14 +9,9 @@ function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
   return 'publico'
 }
 
-function initialNombre(nombre: string): string {
-  const t = nombre.trim()
-  if (!t) return '?'
-  return t.charAt(0).toUpperCase()
-}
-
 export function CampoHero({ field }: { field: CampoDetailRow }) {
   const tipo = normalizeTipo(field.tipo)
+  const logo = field.logo_url?.trim()
 
   return (
     <div className="relative w-full">
@@ -47,30 +42,20 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
           </span>
         ) : null}
 
-        <div className="absolute bottom-0 left-4 z-10 translate-y-1/2 md:left-6">
-          {field.logo_url?.trim() ? (
-            <div className="h-20 w-20 overflow-hidden rounded-full border-[3px] border-white bg-[#F4F4F4] md:h-24 md:w-24">
-              <img
-                src={field.logo_url.trim()}
-                alt=""
-                width={96}
-                height={96}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ) : (
-            <div
-              className="flex h-20 w-20 items-center justify-center border-[3px] border-white bg-[#EEEEEE] text-2xl font-extrabold text-[#666666] md:h-24 md:w-24 md:text-3xl"
-              style={jost}
-              aria-hidden
-            >
-              {initialNombre(field.nombre)}
-            </div>
-          )}
-        </div>
+        {logo ? (
+          <div className="absolute bottom-2 left-2 z-10 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden bg-[#F4F4F4] border-2 border-solid border-white md:h-24 md:w-24">
+            <img
+              src={logo}
+              alt=""
+              width={96}
+              height={96}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : null}
       </div>
 
-      <div className="border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 pb-6 pt-12 md:px-6 md:pb-8 md:pt-14">
+      <div className="border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 pb-6 pt-6 md:px-6 md:pb-8">
         <h1
           className="text-[28px] font-extrabold uppercase leading-tight text-[#111111] md:text-[36px]"
           style={jost}
