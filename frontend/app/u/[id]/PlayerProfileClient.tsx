@@ -7,7 +7,7 @@ import type {
   PlayerEventRow,
   PlayerPostRow,
   PublicUserProfile,
-} from './page'
+} from './types'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",

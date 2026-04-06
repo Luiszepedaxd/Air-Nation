@@ -1,7 +1,7 @@
 'use client'
 
 import { ClickableImage } from '@/components/ui/ClickableImage'
-import type { PublicUserProfile } from './page'
+import type { PublicUserProfile } from './types'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",

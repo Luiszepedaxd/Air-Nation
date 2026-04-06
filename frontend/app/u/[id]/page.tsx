@@ -3,6 +3,11 @@ import { notFound } from 'next/navigation'
 import { createPublicSupabaseClient } from '../supabase-public'
 import { PlayerProfileClient } from './PlayerProfileClient'
 import { PlayerHero } from './PlayerHero'
+import type { PlayerEventRow, PlayerPostRow, PublicUserProfile } from './types'
+
+export const revalidate = 0
+
+export type { PlayerEventRow, PlayerPostRow, PublicUserProfile }
 
 const ROL_LABELS: Record<string, string> = {
   rifleman: 'Jugador',
@@ -17,40 +22,6 @@ const ROL_LABELS: Record<string, string> = {
 function rolLabel(rol: string | null) {
   if (!rol) return ''
   return ROL_LABELS[rol] || rol
-}
-
-export type PublicUserProfile = {
-  id: string
-  alias: string | null
-  nombre: string | null
-  ciudad: string | null
-  rol: string | null
-  avatar_url: string | null
-  foto_portada_url: string | null
-  bio: string | null
-  instagram: string | null
-  tiktok: string | null
-  youtube: string | null
-  facebook: string | null
-  member_number: string | number | null
-  created_at: string
-  perfil_publico: boolean | null
-  teams: { id: string; nombre: string; slug: string } | null
-}
-
-export type PlayerPostRow = {
-  id: string
-  content: string | null
-  fotos_urls: string[] | null
-  created_at: string
-}
-
-export type PlayerEventRow = {
-  id: string
-  title: string | null
-  fecha: string | null
-  imagen_url: string | null
-  status: string | null
 }
 
 async function fetchPublicProfile(id: string) {
