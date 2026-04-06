@@ -56,6 +56,12 @@ export type ProfileUserRow = {
   avatar_url: string | null
   member_number: string | number | null
   created_at: string
+  bio: string | null
+  foto_portada_url: string | null
+  instagram: string | null
+  tiktok: string | null
+  youtube: string | null
+  facebook: string | null
 }
 
 function formatDMY(iso: string) {
@@ -79,6 +85,11 @@ function initialFromUser(u: ProfileUserRow) {
     alias: u.alias ?? '',
     ciudad: u.ciudad ?? '',
     rol: (rolOk ? u.rol : 'rifleman') as string,
+    bio: u.bio ?? '',
+    instagram: u.instagram ?? '',
+    tiktok: u.tiktok ?? '',
+    youtube: u.youtube ?? '',
+    facebook: u.facebook ?? '',
   }
 }
 
@@ -133,10 +144,13 @@ export function ProfileView({
   const teamWrapRef = useRef<HTMLDivElement>(null)
   const teamSearchAbortRef = useRef<AbortController | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
+  const [portadaUploading, setPortadaUploading] = useState(false)
   const [saveLoading, setSaveLoading] = useState(false)
   const [avatarError, setAvatarError] = useState('')
+  const [portadaError, setPortadaError] = useState('')
   const [formError, setFormError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const portadaFileRef = useRef<HTMLInputElement>(null)
   const [shareLabel, setShareLabel] = useState('COMPARTIR PERFIL')
   const shareCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [localPendingJoins, setLocalPendingJoins] = useState<
@@ -267,6 +281,58 @@ export function ProfileView({
     [user.id]
   )
 
+  const onPortadaChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (!file) return
+      setPortadaError('')
+      if (!MIME_OK.has(file.type)) {
+        setPortadaError('Usa JPEG, PNG o WebP.')
+        return
+      }
+      if (file.size > MAX_BYTES) {
+        setPortadaError('Máximo 10 MB.')
+        return
+      }
+      setPortadaUploading(true)
+      try {
+        const fd = new FormData()
+        fd.append('file', file)
+        const up = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          body: fd,
+        })
+        if (!up.ok) {
+          setPortadaError('No se pudo subir la imagen.')
+          return
+        }
+        const json = (await up.json()) as { url?: string }
+        if (!json?.url) {
+          setPortadaError('Respuesta inválida del servidor.')
+          return
+        }
+        const patch = await fetch(`${API_URL}/users/${user.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ foto_portada_url: json.url }),
+        })
+        if (!patch.ok) {
+          setPortadaError('No se pudo guardar la portada.')
+          return
+        }
+        const body = (await patch.json()) as { user?: ProfileUserRow }
+        if (body.user) setUser(body.user)
+        else setUser((s) => ({ ...s, foto_portada_url: json.url ?? null }))
+      } catch {
+        setPortadaError('Error de red. Intenta de nuevo.')
+      } finally {
+        setPortadaUploading(false)
+      }
+    },
+    [user.id]
+  )
+
   const startEdit = () => {
     setFormError('')
     setProfileSuccessMsg('')
@@ -322,6 +388,11 @@ export function ProfileView({
           alias: form.alias.trim(),
           ciudad: form.ciudad.trim(),
           rol: form.rol,
+          bio: form.bio.trim() || null,
+          instagram: form.instagram.trim() || null,
+          tiktok: form.tiktok.trim() || null,
+          youtube: form.youtube.trim() || null,
+          facebook: form.facebook.trim() || null,
         }),
       })
       if (!res.ok) {
@@ -338,6 +409,11 @@ export function ProfileView({
           alias: form.alias.trim(),
           ciudad: form.ciudad.trim(),
           rol: form.rol,
+          bio: form.bio.trim() || null,
+          instagram: form.instagram.trim() || null,
+          tiktok: form.tiktok.trim() || null,
+          youtube: form.youtube.trim() || null,
+          facebook: form.facebook.trim() || null,
         }))
 
       if (wantsNewTeam && teamIdDraft) {
@@ -585,6 +661,85 @@ export function ProfileView({
                 {formatDMY(user.created_at)}
               </p>
             </div>
+            {user.bio ? (
+              <div className={`${fieldShell} md:col-span-2`}>
+                <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                  BIO
+                </p>
+                <p className="mt-1 text-[14px] leading-relaxed text-[#111111]" style={lato}>
+                  {user.bio}
+                </p>
+              </div>
+            ) : null}
+            {(user.instagram || user.tiktok || user.youtube || user.facebook) ? (
+              <div className={`${fieldShell} md:col-span-2`}>
+                <p style={jost} className="text-[10px] font-extrabold uppercase text-[#666666]">
+                  REDES SOCIALES
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {user.instagram ? (
+                    <a
+                      href={user.instagram.startsWith('http') ? user.instagram : `https://instagram.com/${user.instagram.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 border border-[#EEEEEE] px-3 py-2 text-[13px] text-[#111111] transition-colors hover:border-[#CCCCCC]"
+                      style={lato}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" />
+                        <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+                        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+                      </svg>
+                      <span>Instagram</span>
+                    </a>
+                  ) : null}
+                  {user.tiktok ? (
+                    <a
+                      href={user.tiktok.startsWith('http') ? user.tiktok : `https://tiktok.com/@${user.tiktok.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 border border-[#EEEEEE] px-3 py-2 text-[13px] text-[#111111] transition-colors hover:border-[#CCCCCC]"
+                      style={lato}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <span>TikTok</span>
+                    </a>
+                  ) : null}
+                  {user.youtube ? (
+                    <a
+                      href={user.youtube.startsWith('http') ? user.youtube : `https://youtube.com/${user.youtube}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 border border-[#EEEEEE] px-3 py-2 text-[13px] text-[#111111] transition-colors hover:border-[#CCCCCC]"
+                      style={lato}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <rect x="2" y="4" width="20" height="16" rx="4" stroke="currentColor" strokeWidth="1.6" />
+                        <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
+                      </svg>
+                      <span>YouTube</span>
+                    </a>
+                  ) : null}
+                  {user.facebook ? (
+                    <a
+                      href={user.facebook.startsWith('http') ? user.facebook : `https://facebook.com/${user.facebook.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 border border-[#EEEEEE] px-3 py-2 text-[13px] text-[#111111] transition-colors hover:border-[#CCCCCC]"
+                      style={lato}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                        <rect x="3" y="3" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                        <path d="M13.5 10.5h-2v-1c0-.5.3-.6.8-.6h1.2V6.2h-2.1c-2 0-2.9 1-2.9 2.6V10.5H7v2.8h1.5V22h3.2v-8.7h2.2l.3-2.8z" fill="currentColor" />
+                      </svg>
+                      <span>Facebook</span>
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {profileSuccessMsg ? (
@@ -597,11 +752,22 @@ export function ProfileView({
             </p>
           ) : null}
 
+          <Link
+            href={`/u/${user.id}`}
+            style={jost}
+            className="mt-8 flex h-12 w-full items-center justify-center gap-2 border border-solid border-[#EEEEEE] text-[11px] font-extrabold uppercase tracking-wide text-[#111111] md:w-auto md:min-w-[200px]"
+          >
+            VER MI PERFIL PÚBLICO
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+
           <button
             type="button"
             onClick={startEdit}
             style={jost}
-            className="mt-8 w-full rounded-[2px] bg-[#111111] py-3 text-[12px] font-extrabold uppercase text-[#FFFFFF] md:w-auto md:min-w-[200px]"
+            className="mt-4 w-full rounded-[2px] bg-[#111111] py-3 text-[12px] font-extrabold uppercase text-[#FFFFFF] md:w-auto md:min-w-[200px]"
           >
             EDITAR PERFIL
           </button>
@@ -640,6 +806,113 @@ export function ProfileView({
               style={lato}
               value={form.ciudad}
               onChange={(e) => setForm((f) => ({ ...f, ciudad: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              BIO
+            </label>
+            <div className="relative mt-2">
+              <textarea
+                className={`${inputClass} min-h-[80px] resize-y pb-6`}
+                style={lato}
+                value={form.bio}
+                maxLength={300}
+                placeholder="Cuéntale a la comunidad quién eres..."
+                onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value.slice(0, 300) }))}
+              />
+              <span
+                className="pointer-events-none absolute bottom-2 right-2 text-[11px] text-[#999999]"
+                style={lato}
+              >
+                {300 - form.bio.length}
+              </span>
+            </div>
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              FOTO DE PORTADA
+            </label>
+            {user.foto_portada_url ? (
+              <div className="mt-2 h-[100px] w-full overflow-hidden bg-[#F4F4F4]">
+                <img
+                  src={user.foto_portada_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : null}
+            <input
+              ref={portadaFileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={onPortadaChange}
+            />
+            <button
+              type="button"
+              onClick={() => portadaFileRef.current?.click()}
+              disabled={portadaUploading}
+              style={jost}
+              className="mt-2 flex min-h-[40px] items-center justify-center gap-2 rounded-[2px] border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 text-[11px] font-extrabold uppercase text-[#111111] disabled:opacity-60"
+            >
+              {portadaUploading ? (
+                <Spinner className="text-[#111111]" />
+              ) : null}
+              {portadaUploading ? 'SUBIENDO…' : 'CAMBIAR PORTADA'}
+            </button>
+            {portadaError ? (
+              <p className="mt-2 text-[13px] text-[#CC4B37]" style={lato}>
+                {portadaError}
+              </p>
+            ) : null}
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              INSTAGRAM
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.instagram}
+              placeholder="@tu_usuario"
+              onChange={(e) => setForm((f) => ({ ...f, instagram: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              TIKTOK
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.tiktok}
+              placeholder="@tu_usuario"
+              onChange={(e) => setForm((f) => ({ ...f, tiktok: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              YOUTUBE
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.youtube}
+              placeholder="URL de tu canal"
+              onChange={(e) => setForm((f) => ({ ...f, youtube: e.target.value }))}
+            />
+          </div>
+          <div className={fieldShell}>
+            <label style={jost} className="block text-[10px] font-extrabold uppercase text-[#666666]">
+              FACEBOOK
+            </label>
+            <input
+              className={`${inputClass} mt-2`}
+              style={lato}
+              value={form.facebook}
+              placeholder="URL de tu perfil"
+              onChange={(e) => setForm((f) => ({ ...f, facebook: e.target.value }))}
             />
           </div>
           <div className={fieldShell}>

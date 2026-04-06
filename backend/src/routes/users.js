@@ -124,6 +124,26 @@ router.patch("/:id", async (req, res) => {
       }
       updates.avatar_url = body.avatar_url;
     }
+    if (body.bio !== undefined) {
+      if (body.bio !== null && typeof body.bio !== "string") {
+        return res.status(400).json({ error: "bio debe ser string o null" });
+      }
+      updates.bio = typeof body.bio === "string" ? body.bio.slice(0, 300) : body.bio;
+    }
+    if (body.foto_portada_url !== undefined) {
+      if (body.foto_portada_url !== null && typeof body.foto_portada_url !== "string") {
+        return res.status(400).json({ error: "foto_portada_url debe ser string o null" });
+      }
+      updates.foto_portada_url = body.foto_portada_url;
+    }
+    for (const field of ["instagram", "tiktok", "youtube", "facebook"]) {
+      if (body[field] !== undefined) {
+        if (body[field] !== null && typeof body[field] !== "string") {
+          return res.status(400).json({ error: `${field} debe ser string o null` });
+        }
+        updates[field] = typeof body[field] === "string" ? body[field].slice(0, 200) : body[field];
+      }
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No hay campos para actualizar" });

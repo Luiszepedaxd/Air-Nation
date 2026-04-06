@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import type { RefObject } from 'react'
 import { useState } from 'react'
 import html2canvas from 'html2canvas'
@@ -109,6 +110,14 @@ export function CredentialActions({
           COMPARTIR
         </button>
       ) : null}
+
+      <Link
+        href={`/u/${data.id}`}
+        style={jost}
+        className="flex h-10 w-full items-center justify-center gap-2 rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+      >
+        VER PERFIL PÚBLICO
+      </Link>
 
       <div className="mt-2">
         <p style={jost} className="text-[12px] font-extrabold uppercase text-[#666666]">

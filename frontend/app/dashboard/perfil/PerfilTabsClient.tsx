@@ -14,6 +14,7 @@ import {
 import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { NotificacionesTab } from './NotificacionesTab'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
+import { PlayerPostsTab } from './PlayerPostsTab'
 import { ProfileView, type ProfileUserRow } from './ProfileView'
 
 const jost = {
@@ -22,7 +23,7 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
-type TabId = 'perfil' | 'equipos' | 'campos' | 'eventos' | 'notificaciones'
+type TabId = 'perfil' | 'misposts' | 'equipos' | 'campos' | 'eventos' | 'notificaciones'
 
 const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
@@ -130,6 +131,14 @@ export function PerfilTabsClient({
             className={`${tabBase} ${tabClass('perfil')}`}
           >
             MI PERFIL
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('misposts')}
+            style={jost}
+            className={`${tabBase} ${tabClass('misposts')}`}
+          >
+            MIS POSTS
           </button>
           <button
             type="button"
@@ -241,6 +250,10 @@ export function PerfilTabsClient({
               </div>
             </div>
           </>
+        ) : null}
+
+        {activeTab === 'misposts' ? (
+          <PlayerPostsTab userId={user.id} />
         ) : null}
 
         {activeTab === 'equipos' ? (
