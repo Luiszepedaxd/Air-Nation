@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '../supabase-server'
 import { cancelEvent, deleteEvent, toggleEventPublished } from './actions'
 import { getSupabaseForEventosModule } from './eventos-supabase'
+import { TransferEventTrigger } from './TransferModal'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -35,14 +36,6 @@ type AdminEventoRow = {
   placeholder_owner_contacto: string | null
   transferred_to: string | null
   transferred_at: string | null
-}
-
-type UserSearchRow = {
-  id: string
-  nombre: string | null
-  alias: string | null
-  email: string | null
-  avatar_url: string | null
 }
 
 const TABS: { id: FilterTab; label: string }[] = [
@@ -249,31 +242,6 @@ async function actionEventPlaceholder(formData: FormData) {
   redirect('/admin/eventos' + tabQuery(tab))
 }
 
-async function actionTransferEvent(formData: FormData) {
-  'use server'
-  const eventId = String(formData.get('event_id') ?? '').trim()
-  const newUserId = String(formData.get('new_user_id') ?? '').trim()
-  const tab = tabFromParam(String(formData.get('tab') ?? ''))
-  if (!eventId || !newUserId) return
-  const supabase = createAdminClient()
-  const now = new Date().toISOString()
-  const { error } = await supabase
-    .from('events')
-    .update({
-      organizador_id: newUserId,
-      created_by: newUserId,
-      transferred_to: newUserId,
-      transferred_at: now,
-    })
-    .eq('id', eventId)
-  if (error) {
-    console.error(error)
-    return
-  }
-  revalidatePath('/admin/eventos')
-  redirect('/admin/eventos' + tabQuery(tab))
-}
-
 export default async function AdminEventosPage({
   searchParams,
 }: {
@@ -287,19 +255,8 @@ export default async function AdminEventosPage({
     : searchParams.tab
   const tab = tabFromParam(tabParam)
 
-  const transferEventRaw = searchParams.transferEvent
-  const transferEventId = Array.isArray(transferEventRaw)
-    ? transferEventRaw[0]
-    : transferEventRaw
-
-  const qRaw = searchParams.q
-  const q = (Array.isArray(qRaw) ? qRaw[0] : qRaw)?.trim() ?? ''
-
   const askDeleteRaw = searchParams.askDelete
   const askDelete = Array.isArray(askDeleteRaw) ? askDeleteRaw[0] : askDeleteRaw
-
-  const pickUserRaw = searchParams.pickUser
-  const pickUser = Array.isArray(pickUserRaw) ? pickUserRaw[0] : pickUserRaw
 
   const { data, error } = await ctx.supabase
     .from('events')
@@ -358,28 +315,8 @@ export default async function AdminEventosPage({
 
   const filtered = filterRows(rows, tab)
 
-  const supabaseSearch = createAdminClient()
-  let searchResults: UserSearchRow[] = []
-  if (transferEventId && q.length >= 2) {
-    const raw = q.replace(/[%_,]/g, '').trim()
-    if (raw.length >= 2) {
-      const term = `%${raw}%`
-      const { data: udata } = await supabaseSearch
-        .from('users')
-        .select('id, nombre, alias, email, avatar_url')
-        .or(`alias.ilike.${term},email.ilike.${term}`)
-        .limit(20)
-      searchResults = (udata as UserSearchRow[]) ?? []
-    }
-  }
-
   const base = '/admin/eventos'
   const tabQs = tabQuery(tab)
-
-  const transferEventTitle =
-    transferEventId && rows.length > 0
-      ? rows.find((r) => r.id === transferEventId)?.title?.trim() || 'EVENTO'
-      : 'EVENTO'
 
   return (
     <div className="p-6">
@@ -398,134 +335,6 @@ export default async function AdminEventosPage({
           NUEVO EVENTO
         </Link>
       </div>
-
-      {transferEventId ? (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="transfer-event-title"
-        >
-          <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-4">
-              <h2
-                id="transfer-event-title"
-                className="text-base font-black uppercase leading-tight text-[#111111]"
-                style={{ fontFamily: "'Jost', sans-serif" }}
-              >
-                TRANSFERIR {transferEventTitle}
-              </h2>
-              <Link
-                href={base + tabQs}
-                className="shrink-0 text-[12px] text-[#666666] hover:text-[#111111]"
-                style={latoBody}
-              >
-                Cerrar
-              </Link>
-            </div>
-            <label className="mt-4 block text-[12px] text-[#666666]" style={latoBody}>
-              Buscar por alias o email
-              <input
-                id="transfer-q-eventos"
-                type="search"
-                name="q"
-                defaultValue={q}
-                placeholder="Buscar por alias o email..."
-                autoComplete="off"
-                className="mt-1 w-full border border-solid border-[#EEEEEE] px-3 py-2 text-sm text-[#111111]"
-                style={{ ...latoBody, borderRadius: 2 }}
-              />
-            </label>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `(function(){var inp=document.getElementById("transfer-q-eventos");if(!inp)return;var tm=setTimeout(function(){},0);var tab=${JSON.stringify(tab)};var eid=${JSON.stringify(transferEventId)};inp.addEventListener("input",function(e){clearTimeout(tm);var v=e.target.value;tm=setTimeout(function(){var u=new URL(window.location.href);u.searchParams.set("q",v);u.searchParams.delete("pickUser");if(eid)u.searchParams.set("transferEvent",eid);if(tab&&tab!=="todos")u.searchParams.set("tab",tab);else u.searchParams.delete("tab");window.location.href=u.toString();},300);});})();`,
-              }}
-            />
-
-            {q.length > 0 && q.length < 2 ? (
-              <p className="mt-3 text-[12px] text-[#666666]" style={latoBody}>
-                Escribe al menos 2 caracteres.
-              </p>
-            ) : null}
-
-            {transferEventId && q.length >= 2 ? (
-              <ul className="mt-4 flex flex-col gap-2">
-                {searchResults.length === 0 ? (
-                  <li className="text-[13px] text-[#666666]" style={latoBody}>
-                    Sin resultados.
-                  </li>
-                ) : (
-                  searchResults.map((u) => {
-                    const selected = pickUser === u.id
-                    const href = `${base}${tabQs ? tabQs + '&' : '?'}transferEvent=${encodeURIComponent(transferEventId)}&q=${encodeURIComponent(q)}&pickUser=${encodeURIComponent(u.id)}`
-                    return (
-                      <li key={u.id}>
-                        <Link
-                          href={href}
-                          className={`flex items-center gap-3 border border-solid p-3 transition-colors ${
-                            selected
-                              ? 'border-[#CC4B37] bg-[#FFF8F7]'
-                              : 'border-[#EEEEEE] bg-[#FFFFFF] hover:bg-[#F9F9F9]'
-                          }`}
-                        >
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
-                            {u.avatar_url ? (
-                              <img
-                                src={u.avatar_url}
-                                alt=""
-                                width={40}
-                                height={40}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div
-                                className="flex h-full w-full items-center justify-center text-[11px] text-[#CC4B37]"
-                                style={jostHeading}
-                              >
-                                {(u.alias?.[0] || u.nombre?.[0] || '?').toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className="truncate text-[13px] font-bold text-[#111111]"
-                              style={latoBody}
-                            >
-                              {u.alias?.trim()
-                                ? `@${u.alias.trim()}`
-                                : u.nombre?.trim() || '—'}
-                            </p>
-                            <p className="truncate text-xs text-[#666666]" style={latoBody}>
-                              {u.email ?? '—'}
-                            </p>
-                          </div>
-                        </Link>
-                      </li>
-                    )
-                  })
-                )}
-              </ul>
-            ) : null}
-
-            {pickUser &&
-            transferEventId &&
-            searchResults.some((u) => u.id === pickUser) ? (
-              <form action={actionTransferEvent} className="mt-4 border-t border-solid border-[#EEEEEE] pt-4">
-                <input type="hidden" name="event_id" value={transferEventId} />
-                <input type="hidden" name="new_user_id" value={pickUser} />
-                <input type="hidden" name="tab" value={tab} />
-                <button
-                  type="submit"
-                  className="w-full bg-[#1B5E20] px-3 py-2.5 text-[10px] text-[#FFFFFF] transition-opacity hover:opacity-90"
-                  style={{ ...jostHeading, borderRadius: 2 }}
-                >
-                  CONFIRMAR TRANSFERENCIA
-                </button>
-              </form>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
 
       <div>
         <div
@@ -607,8 +416,6 @@ export default async function AdminEventosPage({
                 filtered.map((r) => {
                   const isCanceled = r.status.toLowerCase() === 'cancelado'
                   const transferred = !!r.transferred_to
-                  const transferHref =
-                    `${base}${tabQs ? tabQs + '&' : '?'}transferEvent=${encodeURIComponent(r.id)}`
 
                   return (
                     <tr
@@ -728,13 +535,10 @@ export default async function AdminEventosPage({
                           >
                             EDITAR
                           </Link>
-                          <Link
-                            href={transferHref}
-                            className="inline-block border border-[#111111] px-3 py-1.5 text-center font-bold text-[0.7rem] uppercase tracking-[0.15em] text-[#111111] transition-colors hover:bg-[#111111] hover:text-white"
-                            style={jostHeading}
-                          >
-                            TRANSFERIR
-                          </Link>
+                          <TransferEventTrigger
+                            eventId={r.id}
+                            resourceName={r.title}
+                          />
                           <form action={listTogglePublished}>
                             <input type="hidden" name="id" value={r.id} />
                             <input type="hidden" name="tab" value={tab} />

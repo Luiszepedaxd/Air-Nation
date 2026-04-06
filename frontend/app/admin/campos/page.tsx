@@ -8,6 +8,7 @@ import {
   updateFieldStatus,
   updateOrdenDestacado,
 } from './actions'
+import { TransferFieldTrigger } from './TransferModal'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -36,14 +37,6 @@ type FieldRow = {
 }
 
 type FilterTab = 'todos' | 'pendiente' | 'aprobado' | 'rechazado'
-
-type UserSearchRow = {
-  id: string
-  nombre: string | null
-  alias: string | null
-  email: string | null
-  avatar_url: string | null
-}
 
 function StatusBadge({ status }: { status: FieldStatus }) {
   if (status === 'pendiente') {
@@ -206,32 +199,6 @@ async function actionFieldPlaceholder(formData: FormData) {
   )
 }
 
-async function actionTransferField(formData: FormData) {
-  'use server'
-  const fieldId = String(formData.get('field_id') ?? '').trim()
-  const newUserId = String(formData.get('new_user_id') ?? '').trim()
-  const tab = String(formData.get('tab') ?? '')
-  if (!fieldId || !newUserId) return
-  const supabase = createAdminClient()
-  const now = new Date().toISOString()
-  const { error } = await supabase
-    .from('fields')
-    .update({
-      created_by: newUserId,
-      transferred_to: newUserId,
-      transferred_at: now,
-    })
-    .eq('id', fieldId)
-  if (error) {
-    console.error(error)
-    return
-  }
-  revalidatePath('/admin/campos')
-  redirect(
-    '/admin/campos' + (tab ? `?tab=${encodeURIComponent(tab)}` : '')
-  )
-}
-
 export default async function AdminCamposPage({
   searchParams,
 }: {
@@ -244,19 +211,8 @@ export default async function AdminCamposPage({
     : searchParams.tab
   const tab = tabFromParam(tabParam)
 
-  const transferFieldRaw = searchParams.transferField
-  const transferFieldId = Array.isArray(transferFieldRaw)
-    ? transferFieldRaw[0]
-    : transferFieldRaw
-
-  const qRaw = searchParams.q
-  const q = (Array.isArray(qRaw) ? qRaw[0] : qRaw)?.trim() ?? ''
-
   const askDeleteRaw = searchParams.askDelete
   const askDelete = Array.isArray(askDeleteRaw) ? askDeleteRaw[0] : askDeleteRaw
-
-  const pickUserRaw = searchParams.pickUser
-  const pickUser = Array.isArray(pickUserRaw) ? pickUserRaw[0] : pickUserRaw
 
   const { data, error } = await supabase
     .from('fields')
@@ -289,20 +245,6 @@ export default async function AdminCamposPage({
   const filtered =
     tab === 'todos' ? fields : fields.filter((f) => f.status === tab)
 
-  let searchResults: UserSearchRow[] = []
-  if (transferFieldId && q.length >= 2) {
-    const raw = q.replace(/[%_,]/g, '').trim()
-    if (raw.length >= 2) {
-      const term = `%${raw}%`
-      const { data: udata } = await supabase
-        .from('users')
-        .select('id, nombre, alias, email, avatar_url')
-        .or(`alias.ilike.${term},email.ilike.${term}`)
-        .limit(20)
-      searchResults = (udata as UserSearchRow[]) ?? []
-    }
-  }
-
   const base = '/admin/campos'
   const tabQs = tab !== 'todos' ? `?tab=${encodeURIComponent(tab)}` : ''
 
@@ -312,11 +254,6 @@ export default async function AdminCamposPage({
     { id: 'aprobado', label: 'APROBADOS' },
     { id: 'rechazado', label: 'RECHAZADOS' },
   ]
-
-  const transferFieldName =
-    transferFieldId && fields.length > 0
-      ? fields.find((f) => f.id === transferFieldId)?.nombre?.trim() || 'CAMPO'
-      : 'CAMPO'
 
   return (
     <div className="p-6">
@@ -397,135 +334,6 @@ export default async function AdminCamposPage({
         </div>
       </div>
 
-      {transferFieldId ? (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="transfer-field-title"
-        >
-          <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-5 shadow-lg">
-            <div className="flex items-start justify-between gap-4">
-              <h2
-                id="transfer-field-title"
-                className="text-base font-black uppercase leading-tight text-[#111111]"
-                style={{ fontFamily: "'Jost', sans-serif" }}
-              >
-                TRANSFERIR {transferFieldName}
-              </h2>
-              <Link
-                href={base + tabQs}
-                className="shrink-0 text-[12px] text-[#666666] hover:text-[#111111]"
-                style={latoBody}
-              >
-                Cerrar
-              </Link>
-            </div>
-            <label className="mt-4 block text-[12px] text-[#666666]" style={latoBody}>
-              Buscar por alias o email
-              <input
-                id="transfer-q-campos"
-                type="search"
-                name="q"
-                defaultValue={q}
-                placeholder="Buscar por alias o email..."
-                autoComplete="off"
-                className="mt-1 w-full border border-solid border-[#EEEEEE] px-3 py-2 text-sm text-[#111111]"
-                style={{ ...latoBody, borderRadius: 2 }}
-              />
-            </label>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `(function(){var inp=document.getElementById("transfer-q-campos");if(!inp)return;var tm=setTimeout(function(){},0);var tab=${JSON.stringify(tab)};var fid=${JSON.stringify(transferFieldId)};inp.addEventListener("input",function(e){clearTimeout(tm);var v=e.target.value;tm=setTimeout(function(){var u=new URL(window.location.href);u.searchParams.set("q",v);u.searchParams.delete("pickUser");if(fid)u.searchParams.set("transferField",fid);if(tab&&tab!=="todos")u.searchParams.set("tab",tab);else u.searchParams.delete("tab");window.location.href=u.toString();},300);});})();`,
-              }}
-            />
-
-            {q.length > 0 && q.length < 2 ? (
-              <p className="mt-3 text-[12px] text-[#666666]" style={latoBody}>
-                Escribe al menos 2 caracteres.
-              </p>
-            ) : null}
-
-            {transferFieldId && q.length >= 2 ? (
-              <ul className="mt-4 flex flex-col gap-2">
-                {searchResults.length === 0 ? (
-                  <li className="text-[13px] text-[#666666]" style={latoBody}>
-                    Sin resultados.
-                  </li>
-                ) : (
-                  searchResults.map((u) => {
-                    const selected = pickUser === u.id
-                    const href =
-                      `${base}${tabQs ? tabQs + '&' : '?'}transferField=${encodeURIComponent(transferFieldId)}&q=${encodeURIComponent(q)}&pickUser=${encodeURIComponent(u.id)}`
-                    return (
-                      <li key={u.id}>
-                        <Link
-                          href={href}
-                          className={`flex items-center gap-3 border border-solid p-3 transition-colors ${
-                            selected
-                              ? 'border-[#CC4B37] bg-[#FFF8F7]'
-                              : 'border-[#EEEEEE] bg-[#FFFFFF] hover:bg-[#F9F9F9]'
-                          }`}
-                        >
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
-                            {u.avatar_url ? (
-                              <img
-                                src={u.avatar_url}
-                                alt=""
-                                width={40}
-                                height={40}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div
-                                className="flex h-full w-full items-center justify-center text-[11px] text-[#CC4B37]"
-                                style={jostHeading}
-                              >
-                                {(u.alias?.[0] || u.nombre?.[0] || '?').toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className="truncate text-[13px] font-bold text-[#111111]"
-                              style={latoBody}
-                            >
-                              {u.alias?.trim()
-                                ? `@${u.alias.trim()}`
-                                : u.nombre?.trim() || '—'}
-                            </p>
-                            <p className="truncate text-xs text-[#666666]" style={latoBody}>
-                              {u.email ?? '—'}
-                            </p>
-                          </div>
-                        </Link>
-                      </li>
-                    )
-                  })
-                )}
-              </ul>
-            ) : null}
-
-            {pickUser &&
-            transferFieldId &&
-            searchResults.some((u) => u.id === pickUser) ? (
-              <form action={actionTransferField} className="mt-4 border-t border-solid border-[#EEEEEE] pt-4">
-                <input type="hidden" name="field_id" value={transferFieldId} />
-                <input type="hidden" name="new_user_id" value={pickUser} />
-                <input type="hidden" name="tab" value={tab} />
-                <button
-                  type="submit"
-                  className="w-full bg-[#1B5E20] px-3 py-2.5 text-[10px] text-[#FFFFFF] transition-opacity hover:opacity-90"
-                  style={{ ...jostHeading, borderRadius: 2 }}
-                >
-                  CONFIRMAR TRANSFERENCIA
-                </button>
-              </form>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
       <div className="flex flex-col gap-4" style={latoBody}>
         <div className="flex flex-wrap gap-2 border-b border-solid border-[#EEEEEE] pb-3">
           {TABS.map((t) => {
@@ -585,8 +393,6 @@ export default async function AdminCamposPage({
               <tbody>
                 {filtered.map((f, i) => {
                   const transferred = !!f.transferred_to
-                  const transferHref =
-                    `${base}${tabQs ? tabQs + '&' : '?'}transferField=${encodeURIComponent(f.id)}`
 
                   return (
                     <tr
@@ -788,13 +594,10 @@ export default async function AdminCamposPage({
                               </button>
                             </form>
                           ) : null}
-                          <Link
-                            href={transferHref}
-                            className="inline-flex items-center justify-center border border-[#111111] px-3 py-1.5 font-bold text-[0.7rem] uppercase tracking-[0.15em] text-[#111111] transition-colors hover:bg-[#111111] hover:text-white"
-                            style={jostHeading}
-                          >
-                            TRANSFERIR
-                          </Link>
+                          <TransferFieldTrigger
+                            fieldId={f.id}
+                            resourceName={f.nombre}
+                          />
                           {askDelete === f.id ? (
                             <form action={listDeleteField} className="inline-flex items-center gap-2">
                               <input type="hidden" name="id" value={f.id} />
