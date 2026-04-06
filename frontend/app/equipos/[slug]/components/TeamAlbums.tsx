@@ -31,19 +31,42 @@ function ImagePlaceholderIcon() {
   )
 }
 
-export function TeamAlbums({ albums }: { albums: AlbumWithPhotos[] }) {
+export function TeamAlbums({
+  albums,
+  variant = 'section',
+}: {
+  albums: AlbumWithPhotos[]
+  variant?: 'section' | 'tab'
+}) {
   const [active, setActive] = useState<AlbumWithPhotos | null>(null)
 
-  if (!albums.length) return null
+  if (!albums.length) {
+    if (variant === 'tab') {
+      return (
+        <p className="text-sm text-dim" style={lato}>
+          No hay álbumes aún.
+        </p>
+      )
+    }
+    return null
+  }
 
   return (
-    <section className="mx-auto w-full max-w-[960px] px-4 py-8">
-      <h2
-        style={jost}
-        className="mb-6 text-[14px] font-extrabold uppercase tracking-wide text-[#111111] md:text-[16px]"
-      >
-        Álbumes
-      </h2>
+    <section
+      className={
+        variant === 'section'
+          ? 'mx-auto w-full max-w-[960px] px-4 py-8'
+          : 'w-full'
+      }
+    >
+      {variant === 'section' ? (
+        <h2
+          style={jost}
+          className="mb-6 text-[14px] font-extrabold uppercase tracking-wide text-[#111111] md:text-[16px]"
+        >
+          Álbumes
+        </h2>
+      ) : null}
 
       <div className="flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
         {albums.map((album) => {

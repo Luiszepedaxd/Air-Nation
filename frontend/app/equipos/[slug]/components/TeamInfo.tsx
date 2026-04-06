@@ -33,9 +33,9 @@ export function TeamInfo({
         <div className={descripcion ? 'mt-8' : ''}>
           <h2
             style={jost}
-            className="text-[11px] font-extrabold uppercase tracking-wide text-[#666666]"
+            className="text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
           >
-            Historia
+            HISTORIA
           </h2>
           <div className="my-3 h-px w-full bg-[#EEEEEE]" aria-hidden />
           <p

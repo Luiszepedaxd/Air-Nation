@@ -43,17 +43,40 @@ function postPhotoUrls(post: TeamPostRow): string[] {
     .slice(0, 4)
 }
 
-export function TeamPosts({ posts }: { posts: TeamPostRow[] }) {
-  if (!posts.length) return null
+export function TeamPosts({
+  posts,
+  variant = 'section',
+}: {
+  posts: TeamPostRow[]
+  variant?: 'section' | 'tab'
+}) {
+  if (!posts.length) {
+    if (variant === 'tab') {
+      return (
+        <p className="text-sm text-dim" style={lato}>
+          No hay publicaciones aún.
+        </p>
+      )
+    }
+    return null
+  }
 
   return (
-    <section className="mx-auto w-full max-w-[960px] px-4 py-8">
-      <h2
-        style={jost}
-        className="mb-6 text-[14px] font-extrabold uppercase tracking-wide text-[#111111] md:text-[16px]"
-      >
-        Publicaciones
-      </h2>
+    <section
+      className={
+        variant === 'section'
+          ? 'mx-auto w-full max-w-[960px] px-4 py-8'
+          : 'w-full'
+      }
+    >
+      {variant === 'section' ? (
+        <h2
+          style={jost}
+          className="mb-6 text-[14px] font-extrabold uppercase tracking-wide text-[#111111] md:text-[16px]"
+        >
+          Publicaciones
+        </h2>
+      ) : null}
       <div className="flex flex-col">
         {posts.map((post) => {
           const urls = postPhotoUrls(post)

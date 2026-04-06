@@ -23,6 +23,8 @@ export type MemberDisplay = {
   nombre: string | null
   alias: string | null
   avatar_url: string | null
+  /** Ordenación: `team_members.created_at` */
+  created_at: string
 }
 
 export type TeamPostRow = {
@@ -59,4 +61,7 @@ export type TeamEventoPastRow = {
   fecha: string
   imagen_url: string | null
   field_foto: string | null
+  field_nombre: string | null
+  field_slug: string | null
+  cupo: number
 }

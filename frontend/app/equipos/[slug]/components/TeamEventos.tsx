@@ -52,13 +52,140 @@ function cupoDisponiblesLine(cupo: number, rsvpCount: number): string {
   return `${left} lugares disponibles`
 }
 
+function cupoLinePast(cupo: number): string {
+  if (!cupo || cupo <= 0) return 'Cupo: sin límite'
+  return `Cupo: ${cupo}`
+}
+
 export function TeamEventos({
   upcoming,
   past,
+  variant = 'section',
 }: {
   upcoming: TeamEventoUpcomingRow[]
   past: TeamEventoPastRow[]
+  variant?: 'section' | 'tab'
 }) {
+  if (variant === 'tab') {
+    if (!upcoming.length && !past.length) {
+      return (
+        <p className="text-sm text-dim" style={lato}>
+          No hay eventos del equipo aún.
+        </p>
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {upcoming.map((evento) => {
+          const campo = evento.field_nombre?.trim() || null
+          const fechaTxt = formatEventoFechaDiaMesHora(evento.fecha)
+          const imagenFinal =
+            evento.imagen_url?.trim() || evento.field_foto?.trim() || null
+          return (
+            <Link
+              key={evento.id}
+              href={`/eventos/${evento.id}`}
+              className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC]"
+            >
+              <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+                {imagenFinal ? (
+                  <img
+                    src={imagenFinal}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[#AAAAAA]">
+                    <CalendarioPlaceholderIcon size={48} />
+                  </div>
+                )}
+                <span
+                  style={jost}
+                  className="absolute left-2 top-2 bg-[#111111]/85 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+                >
+                  {tipoBadge(evento.tipo)}
+                </span>
+              </div>
+              <div className="flex flex-1 flex-col gap-2 p-3">
+                <h3
+                  style={jost}
+                  className="line-clamp-2 text-[14px] font-bold leading-snug text-[#111111]"
+                >
+                  {evento.title}
+                </h3>
+                {campo ? (
+                  <p
+                    className="flex items-center gap-1.5 text-[12px] text-[#666666]"
+                    style={lato}
+                  >
+                    <PinIcon />
+                    <span className="min-w-0 truncate">{campo}</span>
+                  </p>
+                ) : null}
+                <p className="text-[13px] text-[#666666]" style={lato}>
+                  {fechaTxt}
+                </p>
+                <p className="mt-auto text-[12px] text-[#999999]" style={lato}>
+                  {cupoDisponiblesLine(evento.cupo, evento.rsvp_count)}
+                </p>
+              </div>
+            </Link>
+          )
+        })}
+        {past.map((evento) => {
+          const campo = evento.field_nombre?.trim() || null
+          const imagenFinal =
+            evento.imagen_url?.trim() || evento.field_foto?.trim() || null
+          return (
+            <Link
+              key={evento.id}
+              href={`/eventos/${evento.id}`}
+              className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-left opacity-60 transition-opacity hover:opacity-100"
+            >
+              <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+                {imagenFinal ? (
+                  <img
+                    src={imagenFinal}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[#AAAAAA]">
+                    <CalendarioPlaceholderIcon size={48} />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col gap-2 p-3">
+                <h3
+                  style={jost}
+                  className="line-clamp-2 text-[14px] font-bold leading-snug text-[#111111]"
+                >
+                  {evento.title}
+                </h3>
+                {campo ? (
+                  <p
+                    className="flex items-center gap-1.5 text-[12px] text-[#666666]"
+                    style={lato}
+                  >
+                    <PinIcon />
+                    <span className="min-w-0 truncate">{campo}</span>
+                  </p>
+                ) : null}
+                <p className="text-[13px] text-[#666666]" style={lato}>
+                  {formatEventoFechaPasadaCompacta(evento.fecha)}
+                </p>
+                <p className="mt-auto text-[12px] text-[#999999]" style={lato}>
+                  {cupoLinePast(evento.cupo)}
+                </p>
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+    )
+  }
+
   if (!upcoming.length && !past.length) return null
 
   return (

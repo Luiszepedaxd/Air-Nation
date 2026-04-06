@@ -9,11 +9,11 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-function StarIcon() {
+function StarWhiteIcon() {
   return (
     <svg
-      width="12"
-      height="12"
+      width="11"
+      height="11"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden
@@ -21,34 +21,93 @@ function StarIcon() {
     >
       <path
         d="M12 2l2.9 6.26L22 9.27l-5 4.9L18.18 22 12 18.56 5.82 22 7 14.17l-5-4.9 7.1-1.01L12 2z"
-        fill="#CC4B37"
+        fill="#FFFFFF"
       />
     </svg>
   )
 }
 
-function isFounderRole(rol: string | null) {
-  if (!rol) return false
-  const r = rol.toLowerCase()
-  return r === 'founder' || r === 'fundador'
+function normalizeRol(rol: string | null): 'founder' | 'admin' | 'member' {
+  const r = (rol ?? '').toLowerCase().trim()
+  if (r === 'founder' || r === 'fundador') return 'founder'
+  if (r === 'admin') return 'admin'
+  return 'member'
 }
 
-export function TeamMembers({ members }: { members: MemberDisplay[] }) {
+function MemberRoleLine({ m }: { m: MemberDisplay }) {
+  const kind = normalizeRol(m.rol_plataforma)
+
+  if (kind === 'founder') {
+    return (
+      <span
+        className="inline-flex items-center justify-center gap-1 bg-[#111111] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white"
+        style={jost}
+      >
+        <StarWhiteIcon />
+        FUNDADOR
+      </span>
+    )
+  }
+
+  if (kind === 'admin') {
+    return (
+      <span
+        className="inline-flex items-center justify-center border border-[#111111] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#111111]"
+        style={jost}
+      >
+        ADMIN
+      </span>
+    )
+  }
+
+  const rank = m.rango_militar?.trim() || 'MIEMBRO'
+  return (
+    <p
+      style={lato}
+      className="text-center text-[11px] font-normal uppercase text-dim"
+    >
+      {rank}
+    </p>
+  )
+}
+
+export function TeamMembers({
+  members,
+  variant = 'section',
+}: {
+  members: MemberDisplay[]
+  variant?: 'section' | 'tab'
+}) {
   const n = members.length
 
+  if (!n) {
+    return (
+      <p className="text-sm text-dim" style={lato}>
+        No hay integrantes públicos aún.
+      </p>
+    )
+  }
+
   return (
-    <section className="mx-auto w-full max-w-[960px] px-4 py-8">
-      <h2
-        style={jost}
-        className="mb-6 text-[14px] font-extrabold uppercase tracking-wide text-[#111111] md:text-[16px]"
-      >
-        Integrantes ({n})
-      </h2>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <section
+      className={
+        variant === 'section'
+          ? 'mx-auto w-full max-w-[960px] px-4 py-8'
+          : 'w-full'
+      }
+    >
+      {variant === 'section' ? (
+        <h2
+          style={jost}
+          className="mb-6 text-[14px] font-extrabold uppercase tracking-wide text-[#111111] md:text-[16px]"
+        >
+          Integrantes ({n})
+        </h2>
+      ) : null}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {members.map((m) => {
           const displayName = (m.alias || m.nombre || '—').trim()
           const initial = (displayName[0] || '?').toUpperCase()
-          const founder = isFounderRole(m.rol_plataforma)
 
           return (
             <Link
@@ -56,7 +115,7 @@ export function TeamMembers({ members }: { members: MemberDisplay[] }) {
               href={`/u/${m.user_id}`}
               className="border border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-colors hover:bg-[#F4F4F4]"
             >
-              <div className="mx-auto h-16 w-16 overflow-hidden bg-[#F4F4F4]">
+              <div className="mx-auto h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
                 {m.avatar_url ? (
                   <img
                     src={m.avatar_url}
@@ -74,27 +133,17 @@ export function TeamMembers({ members }: { members: MemberDisplay[] }) {
                   </div>
                 )}
               </div>
-              <div className="mt-3 flex items-start justify-center gap-1">
+              <div className="mt-3">
                 <p
                   style={{ ...jost, fontWeight: 700, textTransform: 'none' }}
                   className="line-clamp-2 text-center text-[14px] text-[#111111]"
                 >
                   {displayName}
                 </p>
-                {founder ? (
-                  <span className="pt-0.5" title="Fundador">
-                    <StarIcon />
-                  </span>
-                ) : null}
+                <div className="mt-2 flex justify-center">
+                  <MemberRoleLine m={m} />
+                </div>
               </div>
-              {m.rango_militar ? (
-                <p
-                  style={lato}
-                  className="mt-1 line-clamp-2 text-center text-[12px] font-normal uppercase text-[#666666]"
-                >
-                  {m.rango_militar}
-                </p>
-              ) : null}
             </Link>
           )
         })}

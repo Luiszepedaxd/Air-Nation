@@ -3,13 +3,8 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { TeamHero } from './components/TeamHero'
-import { TeamInfo } from './components/TeamInfo'
 import { TeamStats } from './components/TeamStats'
-import { JoinButton } from './components/JoinButton'
-import { TeamPosts } from './components/TeamPosts'
-import { TeamAlbums } from './components/TeamAlbums'
-import { TeamEventos } from './components/TeamEventos'
-import { TeamMembers } from './components/TeamMembers'
+import { TeamPublicTabs } from './components/TeamPublicTabs'
 import type {
   AlbumWithPhotos,
   MemberDisplay,
@@ -18,6 +13,26 @@ import type {
   TeamEventoUpcomingRow,
   TeamPostRow,
 } from './types'
+
+function memberRoleRank(rol: string | null): number {
+  const r = (rol ?? '').toLowerCase().trim()
+  if (r === 'founder' || r === 'fundador') return 0
+  if (r === 'admin') return 1
+  return 2
+}
+
+function sortMembersByRoleAndDate(members: MemberDisplay[]): MemberDisplay[] {
+  return [...members].sort((a, b) => {
+    const ra = memberRoleRank(a.rol_plataforma)
+    const rb = memberRoleRank(b.rol_plataforma)
+    if (ra !== rb) return ra - rb
+    const ta = new Date(a.created_at).getTime()
+    const tb = new Date(b.created_at).getTime()
+    const taN = Number.isNaN(ta) ? 0 : ta
+    const tbN = Number.isNaN(tb) ? 0 : tb
+    return taN - tbN
+  })
+}
 
 export const revalidate = 0
 
@@ -67,7 +82,7 @@ async function fetchMembers(teamId: string): Promise<MemberDisplay[]> {
   const supabase = createPublicSupabaseClient()
   const { data: rows, error } = await supabase
     .from('team_members')
-    .select('id, user_id, rol_plataforma, rango_militar')
+    .select('id, user_id, rol_plataforma, rango_militar, created_at')
     .eq('team_id', teamId)
     .eq('status', 'activo')
 
@@ -96,16 +111,11 @@ async function fetchMembers(teamId: string): Promise<MemberDisplay[]> {
       nombre: u?.nombre ?? null,
       alias: u?.alias ?? null,
       avatar_url: u?.avatar_url ?? null,
+      created_at: String((r as { created_at?: string }).created_at ?? ''),
     }
   })
 
-  merged.sort((a, b) => {
-    const an = (a.alias || a.nombre || '').toLowerCase()
-    const bn = (b.alias || b.nombre || '').toLowerCase()
-    return an.localeCompare(bn, 'es')
-  })
-
-  return merged
+  return sortMembersByRoleAndDate(merged)
 }
 
 async function fetchPosts(teamId: string): Promise<TeamPostRow[]> {
@@ -116,7 +126,6 @@ async function fetchPosts(teamId: string): Promise<TeamPostRow[]> {
     .eq('team_id', teamId)
     .eq('published', true)
     .order('created_at', { ascending: false })
-    .limit(6)
 
   if (error || !data) return []
   return data as TeamPostRow[]
@@ -280,12 +289,15 @@ async function fetchTeamPastEvents(
   const nowIso = new Date().toISOString()
   const { data, error } = await supabase
     .from('events')
-    .select('id, title, fecha, imagen_url, fields ( foto_portada_url )')
+    .select(
+      'id, title, fecha, imagen_url, cupo, fields ( nombre, slug, foto_portada_url )'
+    )
     .eq('published', true)
+    .eq('status', 'publicado')
     .lt('fecha', nowIso)
     .or(orF)
     .order('fecha', { ascending: false })
-    .limit(4)
+    .limit(12)
 
   if (error) {
     console.error('[equipos/slug] past events:', error.message)
@@ -300,12 +312,23 @@ async function fetchTeamPastEvents(
       fo && typeof fo === 'object' && 'foto_portada_url' in fo
         ? String((fo as { foto_portada_url?: string }).foto_portada_url ?? '')
         : ''
+    const fieldNombre =
+      fo && typeof fo === 'object' && 'nombre' in fo
+        ? String((fo as { nombre?: string }).nombre ?? '').trim() || null
+        : null
+    const fieldSlug =
+      fo && typeof fo === 'object' && 'slug' in fo
+        ? String((fo as { slug?: string }).slug ?? '').trim() || null
+        : null
     return {
       id: String(row.id ?? ''),
       title: String(row.title ?? ''),
       fecha: String(row.fecha ?? ''),
       imagen_url: (row.imagen_url as string | null) ?? null,
       field_foto: fieldFoto.trim() || null,
+      field_nombre: fieldNombre,
+      field_slug: fieldSlug,
+      cupo: Number(row.cupo ?? 0),
     }
   })
 }
@@ -356,19 +379,15 @@ export default async function EquipoPublicPage({
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <TeamHero team={team} members={members} />
       <TeamStats memberCount={members.length} createdAt={team.created_at} />
-      <TeamInfo team={team} />
-      <div className="mx-auto max-w-[960px] px-4 py-4">
-        <JoinButton
-          teamId={team.id}
-          slug={params.slug}
-          teamNombre={team.nombre}
-          members={members}
-        />
-      </div>
-      <TeamPosts posts={posts} />
-      <TeamAlbums albums={albums} />
-      <TeamEventos upcoming={upcomingEvents} past={pastEvents} />
-      <TeamMembers members={members} />
+      <TeamPublicTabs
+        team={team}
+        slug={params.slug}
+        members={members}
+        posts={posts}
+        albums={albums}
+        upcoming={upcomingEvents}
+        past={pastEvents}
+      />
     </div>
   )
 }
