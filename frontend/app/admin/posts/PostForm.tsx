@@ -190,6 +190,8 @@ export default function PostForm({
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, setPending] = useState<'draft' | 'publish' | null>(null)
   const [togglePending, setTogglePending] = useState(false)
+  const [htmlModalOpen, setHtmlModalOpen] = useState(false)
+  const [htmlModalValue, setHtmlModalValue] = useState('')
 
   const coverInputRef = useRef<HTMLInputElement>(null)
   const editorImageInputRef = useRef<HTMLInputElement>(null)
@@ -216,6 +218,13 @@ export default function PostForm({
       },
     },
   })
+
+  const applyHtml = () => {
+    if (!editor) return
+    editor.commands.setContent(htmlModalValue, { emitUpdate: true })
+    setHtmlModalOpen(false)
+    setHtmlModalValue('')
+  }
 
   const handleTitleChange = (v: string) => {
     setTitle(v)
@@ -651,6 +660,16 @@ export default function PostForm({
               </svg>
             )}
           </ToolbarButton>
+          <ToolbarButton
+            label="Importar HTML"
+            onClick={() => setHtmlModalOpen(true)}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" 
+              stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" 
+                strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </ToolbarButton>
         </div>
         <div
           className="post-form-tiptap border border-solid border-[#EEEEEE] bg-[#FFFFFF]"
@@ -747,6 +766,44 @@ export default function PostForm({
           {pending === 'publish' ? 'PUBLICANDO…' : 'PUBLICAR'}
         </button>
       </div>
+
+      {htmlModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-2xl bg-[#FFFFFF] p-6 shadow-xl"
+            style={{ borderRadius: 2 }}>
+            <p className="mb-3 text-[0.65rem] tracking-[0.12em] text-[#666666]"
+              style={jostHeading}>
+              PEGAR HTML
+            </p>
+            <textarea
+              value={htmlModalValue}
+              onChange={(e) => setHtmlModalValue(e.target.value)}
+              rows={12}
+              className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-3 font-mono text-xs text-[#111111] outline-none focus:border-[#CC4B37]"
+              style={{ borderRadius: 2, resize: 'vertical' }}
+              placeholder="Pega el HTML aquí..."
+            />
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={applyHtml}
+                className="border border-solid border-[#CC4B37] bg-[#CC4B37] px-4 py-2 text-[0.65rem] tracking-[0.12em] text-white"
+                style={{ ...jostHeading, borderRadius: 2 }}
+              >
+                APLICAR
+              </button>
+              <button
+                type="button"
+                onClick={() => { setHtmlModalOpen(false); setHtmlModalValue('') }}
+                className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 text-[0.65rem] tracking-[0.12em] text-[#111111]"
+                style={{ ...jostHeading, borderRadius: 2 }}
+              >
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
