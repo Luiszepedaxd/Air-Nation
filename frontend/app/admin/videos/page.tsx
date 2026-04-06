@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { createAdminClient } from '../supabase-server'
 import VideosList, { type VideoListItem } from './VideosList'

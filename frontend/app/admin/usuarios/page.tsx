@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createAdminClient, createAdminSupabaseServerClient } from '../supabase-server'
 import UsersTable, { type User } from './UsersTable'
 
