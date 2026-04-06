@@ -173,10 +173,17 @@ export async function generateMetadata({
   return {
     title: `${field.nombre} — AirNation`,
     description: desc,
+    alternates: {
+      canonical: `https://airnation.online/campos/${field.slug}`,
+    },
     openGraph: {
       title: `${field.nombre} — AirNation`,
       description: desc,
-      images: field.foto_portada_url ? [{ url: field.foto_portada_url }] : [],
+      url: `https://airnation.online/campos/${field.slug}`,
+      type: 'website',
+      images: field.foto_portada_url
+        ? [{ url: field.foto_portada_url, width: 1200, height: 630 }]
+        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }

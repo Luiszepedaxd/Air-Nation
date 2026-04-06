@@ -97,12 +97,19 @@ export async function generateMetadata({
 
   return {
     title: post.meta_title?.trim() || `${post.title} — AirNation`,
-    description,
+    description: description,
+    alternates: {
+      canonical: `https://airnation.online/blog/${post.slug}`,
+    },
     openGraph: {
       title: post.meta_title?.trim() || post.title,
-      description,
+      description: description,
+      url: `https://airnation.online/blog/${post.slug}`,
       type: 'article',
-      images: post.cover_url ? [{ url: post.cover_url }] : [],
+      publishedTime: post.created_at,
+      images: post.cover_url
+        ? [{ url: post.cover_url, width: 1200, height: 630 }]
+        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }

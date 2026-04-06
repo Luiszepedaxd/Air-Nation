@@ -133,7 +133,18 @@ export async function generateMetadata({
   return {
     title: `${row.title} — AirNation`,
     description: desc.slice(0, 160),
-    openGraph: imagenOg ? { images: [{ url: imagenOg }] } : undefined,
+    alternates: {
+      canonical: `https://airnation.online/eventos/${id}`,
+    },
+    openGraph: {
+      title: `${row.title} — AirNation`,
+      description: desc.slice(0, 160),
+      url: `https://airnation.online/eventos/${id}`,
+      type: 'website',
+      images: imagenOg
+        ? [{ url: imagenOg, width: 1200, height: 630 }]
+        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
+    },
   }
 }
 
