@@ -5,6 +5,10 @@ import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import StarterKit from '@tiptap/starter-kit'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 import {
@@ -129,6 +133,26 @@ const editorProseCss = `
 .post-form-tiptap .ProseMirror.is-editor-empty:first-child::before {
   color: #999999;
 }
+.post-form-tiptap .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 1em;
+}
+.post-form-tiptap .ProseMirror th,
+.post-form-tiptap .ProseMirror td {
+  border: 1px solid #EEEEEE;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 14px;
+}
+.post-form-tiptap .ProseMirror th {
+  background: #F4F4F4;
+  font-family: 'Jost', sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
 `
 
 function ToolbarButton({
@@ -209,6 +233,10 @@ export default function PostForm({
       Placeholder.configure({
         placeholder: 'Escribe el contenido del post aquí...',
       }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: post?.content ?? '',
     immediatelyRender: false,
@@ -546,7 +574,7 @@ export default function PostForm({
           onChange={onEditorImageInput}
         />
         <div
-          className="mb-2 flex flex-wrap gap-1 border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-2"
+          className="sticky top-0 z-10 mb-2 flex flex-wrap gap-1 border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-2"
           style={{ borderRadius: 0 }}
         >
           <ToolbarButton
