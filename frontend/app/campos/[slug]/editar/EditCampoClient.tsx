@@ -4,6 +4,7 @@ import { useCallback, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+import { updateFieldAdmin } from '@/app/admin/campos/field-edit-actions'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 
 const supabaseUrl =
@@ -125,11 +126,13 @@ export function EditCampoClient({
   publicSlug,
   field,
   teamsForSelect,
+  adminReturnPath,
 }: {
   fieldId: string
   publicSlug: string
   field: EditableFieldPayload
   teamsForSelect: { id: string; nombre: string }[]
+  adminReturnPath?: string | null
 }) {
   const router = useRouter()
   const [nombre, setNombre] = useState(field.nombre)
@@ -251,6 +254,32 @@ export function EditCampoClient({
       team_id,
     }
 
+    if (adminReturnPath) {
+      const result = await updateFieldAdmin({
+        fieldId,
+        nombre: payload.nombre,
+        descripcion: payload.descripcion,
+        horarios: payload.horarios,
+        ubicacion_lat: payload.ubicacion_lat,
+        ubicacion_lng: payload.ubicacion_lng,
+        telefono: payload.telefono,
+        instagram: payload.instagram,
+        foto_portada_url: payload.foto_portada_url,
+        galeria_urls: mergedGallery.length > 0 ? mergedGallery : null,
+        team_id,
+      })
+      setSaving(false)
+      if ('error' in result) {
+        setError(result.error)
+        return
+      }
+      newGalleryPreviews.forEach((u) => URL.revokeObjectURL(u))
+      setNewGalleryFiles([])
+      setNewGalleryPreviews([])
+      router.push(adminReturnPath)
+      return
+    }
+
     const { error: upErr } = await supabase
       .from('fields')
       .update(payload)
@@ -284,6 +313,7 @@ export function EditCampoClient({
     newGalleryPreviews,
     teamId,
     fieldId,
+    adminReturnPath,
     router,
     activeUploads,
   ])
@@ -297,13 +327,23 @@ export function EditCampoClient({
         >
           Editar campo
         </h1>
-        <Link
-          href={`/campos/${encodeURIComponent(publicSlug)}`}
-          className="text-[12px] text-[#666666] underline"
-          style={lato}
-        >
-          Ver ficha pública
-        </Link>
+        {adminReturnPath ? (
+          <Link
+            href={adminReturnPath}
+            className="text-[12px] text-[#666666] underline"
+            style={lato}
+          >
+            Volver al listado
+          </Link>
+        ) : (
+          <Link
+            href={`/campos/${encodeURIComponent(publicSlug)}`}
+            className="text-[12px] text-[#666666] underline"
+            style={lato}
+          >
+            Ver ficha pública
+          </Link>
+        )}
       </div>
 
       <FormSection title="INFORMACIÓN BÁSICA" first>
@@ -499,7 +539,7 @@ export function EditCampoClient({
           {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
         <Link
-          href={`/mi-campo/${encodeURIComponent(fieldId)}`}
+          href={adminReturnPath ?? `/mi-campo/${encodeURIComponent(fieldId)}`}
           style={jost}
           className="inline-flex items-center rounded-[2px] border border-[#EEEEEE] px-6 py-3 text-[12px] font-extrabold uppercase text-[#666666]"
         >

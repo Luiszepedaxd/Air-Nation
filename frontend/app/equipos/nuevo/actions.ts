@@ -1,6 +1,8 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/app/admin/supabase-server'
+import { requireAppAdminUserId } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { generateTeamSlug } from '@/lib/team-slug'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -37,14 +39,7 @@ export async function createTeamAction(
   _prevState: CreateTeamState,
   formData: FormData
 ): Promise<CreateTeamState> {
-  const supabase = createDashboardSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login?redirect=/equipos/nuevo')
-  }
+  const adminContext = String(formData.get('admin_context') ?? '') === '1'
 
   const nombre = String(formData.get('nombre') ?? '').trim()
   const ciudad = String(formData.get('ciudad') ?? '').trim()
@@ -56,6 +51,74 @@ export async function createTeamAction(
     return {
       error: 'Nombre y ciudad (mínimo 2 caracteres) son obligatorios.',
     }
+  }
+
+  if (adminContext) {
+    const adminId = await requireAppAdminUserId()
+    if (!adminId) {
+      return { error: 'No autorizado.' }
+    }
+
+    const db = createAdminClient()
+    let uniqueSlug: string
+    try {
+      const baseSlug = generateTeamSlug(rawSlug || undefined, nombre)
+      uniqueSlug = await resolveUniqueTeamSlug(db, baseSlug)
+    } catch (e) {
+      console.error('[createTeamAction] slug generation (admin):', e)
+      return {
+        error:
+          e instanceof Error
+            ? e.message
+            : 'No se pudo generar la URL del equipo.',
+      }
+    }
+
+    const { data: team, error: teamErr } = await db
+      .from('teams')
+      .insert({
+        nombre,
+        ciudad,
+        created_by: adminId,
+        slug: uniqueSlug,
+        status: 'activo',
+        logo_url: logoUrl || null,
+        foto_portada_url: fotoPortadaUrl || null,
+      })
+      .select()
+      .single()
+
+    if (teamErr) {
+      console.error('[createTeamAction] teams INSERT (admin):', teamErr)
+      return { error: teamErr.message }
+    }
+
+    if (!team?.id) {
+      return { error: 'No se pudo crear el equipo.' }
+    }
+
+    const { error: memberErr } = await db.from('team_members').insert({
+      team_id: team.id,
+      user_id: adminId,
+      rol_plataforma: 'founder',
+      rango_militar: 'fundador',
+      status: 'activo',
+    })
+
+    if (memberErr) {
+      console.error('[createTeamAction] team_members INSERT (admin):', memberErr)
+    }
+
+    redirect('/admin/equipos')
+  }
+
+  const supabase = createDashboardSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?redirect=/equipos/nuevo')
   }
 
   let uniqueSlug: string

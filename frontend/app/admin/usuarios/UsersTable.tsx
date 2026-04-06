@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { deleteUser, updateUserRole } from './actions'
+import { UserTeamAssignSection } from './UserTeamAssignSection'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -87,6 +88,7 @@ export default function UsersTable({
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [teamAssignUserId, setTeamAssignUserId] = useState<string | null>(null)
 
   useEffect(() => {
     setUsers(initialUsers)
@@ -197,6 +199,7 @@ export default function UsersTable({
                   'Nº MIEMBRO',
                   'REGISTRO',
                   'ACCIONES',
+                  '',
                 ] as const
               ).map((col) => (
                 <th
@@ -211,61 +214,91 @@ export default function UsersTable({
           </thead>
           <tbody>
             {filtered.map((u, i) => (
-              <tr
-                key={u.id}
-                className={
-                  i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'
-                }
-              >
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  {u.nombre ?? '—'}
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  {u.alias ?? '—'}
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  {u.ciudad ?? '—'}
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  {u.rol ?? '—'}
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  <AppRoleBadge role={u.app_role} />
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  {u.member_number != null ? String(u.member_number) : '—'}
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  {formatRegistro(u.created_at)}
-                </td>
-                <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openModal(u)}
-                      className="bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
-                      style={{
-                        ...jostHeading,
-                        fontSize: 11,
-                        padding: '4px 10px',
-                        borderRadius: 2,
-                      }}
-                    >
-                      CAMBIAR ROL
-                    </button>
-                    {currentUserId && u.id !== currentUserId ? (
+              <Fragment key={u.id}>
+                <tr
+                  className={
+                    i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'
+                  }
+                >
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    {u.nombre ?? '—'}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    {u.alias ?? '—'}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    {u.ciudad ?? '—'}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    {u.rol ?? '—'}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    <AppRoleBadge role={u.app_role} />
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    {u.member_number != null ? String(u.member_number) : '—'}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    {formatRegistro(u.created_at)}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={() => openDeleteModal(u)}
-                        className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white"
-                        style={{ borderRadius: 2 }}
+                        onClick={() => openModal(u)}
+                        className="bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+                        style={{
+                          ...jostHeading,
+                          fontSize: 11,
+                          padding: '4px 10px',
+                          borderRadius: 2,
+                        }}
                       >
-                        ELIMINAR
+                        CAMBIAR ROL
                       </button>
-                    ) : null}
-                  </div>
-                </td>
-              </tr>
+                      {currentUserId && u.id !== currentUserId ? (
+                        <button
+                          type="button"
+                          onClick={() => openDeleteModal(u)}
+                          className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white"
+                          style={{ borderRadius: 2 }}
+                        >
+                          ELIMINAR
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-2 py-2 align-top">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTeamAssignUserId((prev) =>
+                          prev === u.id ? null : u.id
+                        )
+                      }
+                      className="whitespace-nowrap border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-1.5 text-[10px] text-[#111111] transition-colors hover:bg-[#EEEEEE]"
+                      style={{ ...jostHeading, borderRadius: 2 }}
+                      aria-expanded={teamAssignUserId === u.id}
+                    >
+                      {teamAssignUserId === u.id ? 'CERRAR' : 'EQUIPO'}
+                    </button>
+                  </td>
+                </tr>
+                {teamAssignUserId === u.id ? (
+                  <tr
+                    className={
+                      i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'
+                    }
+                  >
+                    <td
+                      colSpan={9}
+                      className="border border-solid border-[#EEEEEE] px-3 py-3"
+                    >
+                      <UserTeamAssignSection userId={u.id} />
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>

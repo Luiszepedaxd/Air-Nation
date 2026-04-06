@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '../supabase-server'
+import { requireAppAdminUserId } from '../require-app-admin'
 
 export async function deleteTeam(
   id: string
@@ -45,4 +46,59 @@ export async function deleteTeam(
   revalidatePath('/admin/equipos')
   revalidatePath('/equipos')
   return { success: true as const }
+}
+
+export type UpdateTeamAdminPayload = {
+  teamId: string
+  nombre: string
+  ciudad: string | null
+  descripcion: string | null
+  historia: string | null
+  instagram: string | null
+  facebook: string | null
+  whatsapp_url: string | null
+  foto_portada_url: string | null
+  logo_url: string | null
+}
+
+export async function updateTeamAdmin(
+  payload: UpdateTeamAdminPayload
+): Promise<{ success: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) {
+    return { error: 'No autorizado.' }
+  }
+
+  const teamId = payload.teamId?.trim()
+  if (!teamId) {
+    return { error: 'Equipo no válido.' }
+  }
+
+  const n = payload.nombre.trim()
+  if (n.length < 2) {
+    return { error: 'El nombre debe tener al menos 2 caracteres.' }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('teams')
+    .update({
+      nombre: n,
+      ciudad: payload.ciudad?.trim() || null,
+      descripcion: payload.descripcion?.trim() || null,
+      historia: payload.historia?.trim() || null,
+      instagram: payload.instagram?.trim() || null,
+      facebook: payload.facebook?.trim() || null,
+      whatsapp_url: payload.whatsapp_url?.trim() || null,
+      foto_portada_url: payload.foto_portada_url?.trim() || null,
+      logo_url: payload.logo_url?.trim() || null,
+    })
+    .eq('id', teamId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/equipos')
+  return { success: true }
 }

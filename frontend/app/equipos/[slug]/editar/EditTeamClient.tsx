@@ -9,6 +9,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+import { updateTeamAdmin } from '@/app/admin/equipos/actions'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 
 const supabaseUrl =
@@ -46,11 +47,14 @@ export function EditTeamClient({
   teamId,
   team,
   slug,
+  adminReturnPath,
 }: {
   /** UUID del equipo — obligatorio para el WHERE del UPDATE */
   teamId: string
   team: EditableTeam
   slug: string
+  /** Si está definido, el guardado usa service role y redirige aquí (panel admin). */
+  adminReturnPath?: string | null
 }) {
   const router = useRouter()
   const [nombre, setNombre] = useState(team.nombre)
@@ -97,6 +101,20 @@ export function EditTeamClient({
       logo_url: logoUrl.trim() || null,
     }
 
+    if (adminReturnPath) {
+      const result = await updateTeamAdmin({
+        teamId,
+        ...payload,
+      })
+      setSaving(false)
+      if ('error' in result) {
+        setError(result.error)
+        return
+      }
+      router.push(adminReturnPath)
+      return
+    }
+
     const { error: upErr } = await supabase
       .from('teams')
       .update(payload)
@@ -124,6 +142,7 @@ export function EditTeamClient({
     logoUrl,
     teamId,
     slug,
+    adminReturnPath,
     router,
     activeUploads,
   ])
@@ -140,13 +159,23 @@ export function EditTeamClient({
         >
           Editar equipo
         </h1>
-        <Link
-          href={`/equipos/${encodeURIComponent(slug)}`}
-          className="text-[12px] text-[#666666] underline"
-          style={lato}
-        >
-          Ver perfil público
-        </Link>
+        {adminReturnPath ? (
+          <Link
+            href={adminReturnPath}
+            className="text-[12px] text-[#666666] underline"
+            style={lato}
+          >
+            Volver al listado
+          </Link>
+        ) : (
+          <Link
+            href={`/equipos/${encodeURIComponent(slug)}`}
+            className="text-[12px] text-[#666666] underline"
+            style={lato}
+          >
+            Ver perfil público
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-col gap-5">
@@ -249,7 +278,7 @@ export function EditTeamClient({
           {saving ? 'Guardando…' : 'Guardar cambios'}
         </button>
         <Link
-          href={`/equipos/${encodeURIComponent(slug)}`}
+          href={adminReturnPath ?? `/equipos/${encodeURIComponent(slug)}`}
           style={jost}
           className="inline-flex items-center rounded-[2px] border border-[#EEEEEE] px-6 py-3 text-[12px] font-extrabold uppercase text-[#666666]"
         >

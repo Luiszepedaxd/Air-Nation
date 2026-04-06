@@ -320,12 +320,21 @@ export default async function AdminEquiposPage({
 
   return (
     <div className="p-6">
-      <h1
-        className="mb-8 text-2xl tracking-[0.12em] text-[#111111] md:text-3xl"
-        style={jostHeading}
-      >
-        EQUIPOS
-      </h1>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <h1
+          className="text-2xl tracking-[0.12em] text-[#111111] md:text-3xl"
+          style={jostHeading}
+        >
+          EQUIPOS
+        </h1>
+        <Link
+          href={`${base}/nuevo`}
+          className="inline-flex items-center justify-center bg-[#111111] px-4 py-2.5 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+          style={{ ...jostHeading, borderRadius: 2 }}
+        >
+          NUEVO EQUIPO
+        </Link>
+      </div>
 
       {transferTeamId ? (
         <div
@@ -487,6 +496,13 @@ export default async function AdminEquiposPage({
 
                 <div className="space-y-4 border-t border-solid border-[#EEEEEE] px-3 pb-4 pt-2">
                   <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`${base}/${encodeURIComponent(t.id)}/editar`}
+                      className="inline-flex items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[10px] text-[#111111]"
+                      style={{ ...jostHeading, borderRadius: 2 }}
+                    >
+                      EDITAR
+                    </Link>
                     {showTransferBtn ? (
                       <Link
                         href={`${base}?transferTeam=${encodeURIComponent(t.id)}`}

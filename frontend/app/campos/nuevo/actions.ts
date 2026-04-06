@@ -1,6 +1,8 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/app/admin/supabase-server'
+import { requireAppAdminUserId } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { generateFieldSlug } from '@/lib/field-slug'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -10,6 +12,35 @@ export type CreateCampoState = { error: string } | null
 export type PrepareCampoSlugResult =
   | { ok: true; slug: string }
   | { ok: false; error: string }
+
+/** Resuelve slug único con service role (formulario admin). */
+export async function prepareCampoSlugAdminAction(
+  nombre: string,
+  clientBaseSlug: string
+): Promise<PrepareCampoSlugResult> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) {
+    return { ok: false, error: 'No autorizado.' }
+  }
+
+  const n = nombre.trim()
+  if (!n) {
+    return { ok: false, error: 'Indica el nombre del campo.' }
+  }
+
+  try {
+    const db = createAdminClient()
+    const base = generateFieldSlug(clientBaseSlug || undefined, n)
+    const unique = await resolveUniqueFieldSlug(db, base)
+    return { ok: true, slug: unique }
+  } catch (e) {
+    return {
+      ok: false,
+      error:
+        e instanceof Error ? e.message : 'No se pudo comprobar el enlace.',
+    }
+  }
+}
 
 /** Resuelve slug único antes de subir archivos y de ejecutar el INSERT. */
 export async function prepareCampoSlugAction(
@@ -80,14 +111,7 @@ export async function createCampoAction(
   _prevState: CreateCampoState,
   formData: FormData
 ): Promise<CreateCampoState> {
-  const supabase = createDashboardSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login?redirect=/campos/nuevo')
-  }
+  const adminContext = String(formData.get('admin_context') ?? '') === '1'
 
   const nombre = String(formData.get('nombre') ?? '').trim()
   const ciudad = String(formData.get('ciudad') ?? '').trim()
@@ -132,6 +156,82 @@ export async function createCampoAction(
   }
   if (horarios.length > 200) {
     return { error: 'Los horarios no pueden superar 200 caracteres.' }
+  }
+
+  if (adminContext) {
+    const adminId = await requireAppAdminUserId()
+    if (!adminId) {
+      return { error: 'No autorizado.' }
+    }
+
+    const db = createAdminClient()
+
+    if (team_id) {
+      const { data: t } = await db
+        .from('teams')
+        .select('id')
+        .eq('id', team_id)
+        .maybeSingle()
+      if (!t) {
+        return { error: 'Equipo no válido.' }
+      }
+    }
+
+    let uniqueSlug: string
+    try {
+      const baseSlug = generateFieldSlug(rawSlug || undefined, nombre)
+      uniqueSlug = await resolveUniqueFieldSlug(db, baseSlug)
+    } catch (e) {
+      console.error('[createCampoAction] slug generation (admin):', e)
+      return {
+        error:
+          e instanceof Error
+            ? e.message
+            : 'No se pudo generar la URL del campo.',
+      }
+    }
+
+    const { data: field, error: insErr } = await db
+      .from('fields')
+      .insert({
+        nombre,
+        slug: uniqueSlug,
+        ciudad,
+        tipo,
+        descripcion: descripcion || null,
+        horarios: horarios || null,
+        ubicacion_lat: lat,
+        ubicacion_lng: lng,
+        telefono: telefono || null,
+        instagram: instagram || null,
+        foto_portada_url: fotoPortadaUrl || null,
+        galeria_urls: galeria_urls.length > 0 ? galeria_urls : null,
+        team_id,
+        status: 'aprobado',
+        created_by: adminId,
+      })
+      .select('id')
+      .single()
+
+    if (insErr) {
+      console.error('[createCampoAction] fields INSERT (admin):', insErr)
+      return { error: insErr.message }
+    }
+
+    if (!field?.id) {
+      return { error: 'No se pudo registrar el campo.' }
+    }
+
+    redirect('/admin/campos')
+  }
+
+  const supabase = createDashboardSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/login?redirect=/campos/nuevo')
   }
 
   if (team_id) {

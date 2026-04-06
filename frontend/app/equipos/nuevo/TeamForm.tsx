@@ -32,7 +32,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-export function TeamForm() {
+export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
   const [nombre, setNombre] = useState("");
   const [ciudad, setCiudad] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -61,6 +61,9 @@ export function TeamForm() {
       onSubmit={handleSubmit}
       noValidate
     >
+      {adminContext ? (
+        <input type="hidden" name="admin_context" value="1" readOnly aria-hidden />
+      ) : null}
       <input type="hidden" name="slug" value={slug} readOnly aria-hidden />
       <input type="hidden" name="logo_url" value={logoUrl} readOnly aria-hidden />
       <input

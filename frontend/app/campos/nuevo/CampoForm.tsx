@@ -12,7 +12,11 @@ import Link from 'next/link'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import { CIUDADES } from '@/lib/ciudades'
 import { generateFieldSlug } from '@/lib/field-slug'
-import { createCampoAction, prepareCampoSlugAction } from './actions'
+import {
+  createCampoAction,
+  prepareCampoSlugAction,
+  prepareCampoSlugAdminAction,
+} from './actions'
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -80,8 +84,10 @@ function FormSection({
 
 export function CampoForm({
   teamsForSelect,
+  adminContext = false,
 }: {
   teamsForSelect: { id: string; nombre: string }[]
+  adminContext?: boolean
 }) {
   const [nombre, setNombre] = useState('')
   const [ciudad, setCiudad] = useState('')
@@ -167,10 +173,9 @@ export function CampoForm({
 
     startTransition(async () => {
       const form = e.currentTarget
-      const slugPrep = await prepareCampoSlugAction(
-        nombre.trim(),
-        baseSlug
-      )
+      const slugPrep = adminContext
+        ? await prepareCampoSlugAdminAction(nombre.trim(), baseSlug)
+        : await prepareCampoSlugAction(nombre.trim(), baseSlug)
       if (!slugPrep.ok) {
         setServerError(slugPrep.error)
         return
@@ -201,6 +206,9 @@ export function CampoForm({
       onSubmit={(ev) => void handleSubmit(ev)}
       noValidate
     >
+      {adminContext ? (
+        <input type="hidden" name="admin_context" value="1" readOnly aria-hidden />
+      ) : null}
       <input type="hidden" name="slug" value={baseSlug} readOnly aria-hidden />
       <input
         type="hidden"

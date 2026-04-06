@@ -320,12 +320,21 @@ export default async function AdminCamposPage({
   return (
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4">
-        <h1
-          className="text-2xl tracking-[0.12em] text-[#111111] md:text-3xl"
-          style={jostHeading}
-        >
-          CAMPOS
-        </h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1
+            className="text-2xl tracking-[0.12em] text-[#111111] md:text-3xl"
+            style={jostHeading}
+          >
+            CAMPOS
+          </h1>
+          <Link
+            href={`${base}/nuevo`}
+            className="inline-flex items-center justify-center bg-[#111111] px-4 py-2.5 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            style={{ ...jostHeading, borderRadius: 2 }}
+          >
+            NUEVO CAMPO
+          </Link>
+        </div>
         <div
           className="flex flex-wrap items-center gap-3 text-sm text-[#666666]"
           style={latoBody}
@@ -730,6 +739,18 @@ export default async function AdminCamposPage({
                             }}
                           >
                             VER
+                          </Link>
+                          <Link
+                            href={`/admin/campos/${encodeURIComponent(f.id)}/editar`}
+                            className="inline-flex items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
+                            style={{
+                              ...jostHeading,
+                              fontSize: 11,
+                              padding: '4px 10px',
+                              borderRadius: 2,
+                            }}
+                          >
+                            EDITAR
                           </Link>
                           {f.status === 'pendiente' ? (
                             <form action={listFieldStatus}>
