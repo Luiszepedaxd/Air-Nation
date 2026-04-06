@@ -40,10 +40,10 @@ function RoleBadge({ rol }: { rol: string | null }) {
     k === 'founder' ? 'FUNDADOR' : k === 'admin' ? 'ADMIN' : 'MIEMBRO'
   const cls =
     k === 'founder'
-      ? 'bg-[#CC4B37] text-[#FFFFFF]'
+      ? 'bg-[#111111] text-[#FFFFFF]'
       : k === 'admin'
-        ? 'bg-[#111111] text-[#FFFFFF]'
-        : 'bg-[#F4F4F4] text-[#666666]'
+        ? 'border border-solid border-[#111111] bg-transparent text-[#111111]'
+        : 'border border-solid border-[#EEEEEE] bg-transparent text-[#444444]'
   return (
     <span
       style={jost}
@@ -61,6 +61,24 @@ function canEditTeam(rol: string | null) {
 
 function isFounder(rol: string | null) {
   return (rol || '').toLowerCase().trim() === 'founder'
+}
+
+function HexPlaceholder() {
+  return (
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
+      <svg
+        className="absolute inset-0 h-full w-full text-[#EEEEEE]"
+        viewBox="0 0 40 40"
+        fill="none"
+        aria-hidden
+      >
+        <path
+          fill="currentColor"
+          d="M20 2l16.66 9.6v19.2L20 40.4 3.34 30.8V11.6L20 2z"
+        />
+      </svg>
+    </div>
+  )
 }
 
 export function MisEquiposSection({
@@ -113,8 +131,8 @@ export function MisEquiposSection({
 
   const sectionTop =
     variant === 'tab'
-      ? 'mx-auto max-w-[640px]'
-      : 'mx-auto mt-8 max-w-[640px] border-t border-solid border-[#EEEEEE] pt-8'
+      ? 'mx-auto max-w-[960px]'
+      : 'mx-auto mt-8 max-w-[960px] border-t border-solid border-[#EEEEEE] pt-8'
 
   if (teams.length === 0) {
     return (
@@ -148,7 +166,7 @@ export function MisEquiposSection({
         Mis equipos
       </h2>
 
-      <ul className="mt-6 flex flex-col gap-4">
+      <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {teams.map((t) => {
           const initial = (t.nombre?.trim()?.[0] || '?').toUpperCase()
           const showLeave = !isFounder(t.rol_plataforma)
@@ -157,39 +175,39 @@ export function MisEquiposSection({
           return (
             <li
               key={t.id}
-              className="flex flex-wrap items-center gap-4 border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+              className="flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
             >
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                <div className="h-12 w-12 shrink-0 overflow-hidden bg-[#F4F4F4]">
+              <div className="flex min-w-0 flex-1 gap-3">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden bg-[#F4F4F4]">
                   {t.logo_url ? (
                     <img
                       src={t.logo_url}
                       alt=""
-                      width={48}
-                      height={48}
+                      width={56}
+                      height={56}
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div
-                      className="flex h-full w-full items-center justify-center text-[16px] text-[#CC4B37]"
-                      style={jost}
-                    >
-                      {initial}
-                    </div>
+                    <>
+                      <HexPlaceholder />
+                      <span
+                        className="absolute inset-0 flex items-center justify-center text-[16px] text-[#CC4B37]"
+                        style={jost}
+                      >
+                        {initial}
+                      </span>
+                    </>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p
-                    className="truncate text-[14px] text-[#111111]"
+                    className="truncate text-[15px] text-[#111111]"
                     style={jost700}
                   >
                     {t.nombre}
                   </p>
-                  <p
-                    className="mt-0.5 text-[12px] text-[#666666]"
-                    style={lato}
-                  >
-                    {t.ciudad || '—'}
+                  <p className="text-dim mt-0.5 text-xs" style={lato}>
+                    {t.ciudad?.trim() || '—'}
                   </p>
                   <div className="mt-2">
                     <RoleBadge rol={t.rol_plataforma} />
@@ -197,34 +215,36 @@ export function MisEquiposSection({
                 </div>
               </div>
 
-              <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+              <div className="mt-4 flex flex-col gap-2">
                 <Link
                   href={`/equipos/${encodeURIComponent(t.slug)}`}
                   style={jost}
-                  className="inline-flex min-h-[36px] min-w-[72px] items-center justify-center rounded-[2px] bg-[#CC4B37] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+                  className="inline-flex min-h-[40px] w-full items-center justify-center rounded-[2px] bg-[#CC4B37] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
                 >
-                  Ver
+                  Ver equipo
                 </Link>
-                {canEditTeam(t.rol_plataforma) ? (
-                  <>
-                    <Link
-                      href={`/equipos/${encodeURIComponent(t.slug)}/admin`}
-                      style={jost}
-                      className="inline-flex min-h-[36px] items-center justify-center rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
-                    >
-                      Administrar
-                    </Link>
-                    <Link
-                      href={`/equipos/${encodeURIComponent(t.slug)}/editar`}
-                      style={jost}
-                      className="inline-flex min-h-[36px] items-center justify-center rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
-                    >
-                      Editar
-                    </Link>
-                  </>
-                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  {canEditTeam(t.rol_plataforma) ? (
+                    <>
+                      <Link
+                        href={`/equipos/${encodeURIComponent(t.slug)}/admin`}
+                        style={jost}
+                        className="inline-flex min-h-[36px] flex-1 items-center justify-center rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#111111] sm:flex-none"
+                      >
+                        Administrar
+                      </Link>
+                      <Link
+                        href={`/equipos/${encodeURIComponent(t.slug)}/editar`}
+                        style={jost}
+                        className="inline-flex min-h-[36px] flex-1 items-center justify-center rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#111111] sm:flex-none"
+                      >
+                        Editar
+                      </Link>
+                    </>
+                  ) : null}
+                </div>
                 {showLeave ? (
-                  <div className="w-full sm:w-auto">
+                  <div className="w-full">
                     {leaveConfirmId === t.id ? (
                       <div className="flex flex-wrap items-center gap-2">
                         <p
@@ -257,9 +277,9 @@ export function MisEquiposSection({
                         type="button"
                         style={jost}
                         onClick={() => setLeaveConfirmId(t.id)}
-                        className="border-0 bg-transparent p-0 text-[11px] font-extrabold uppercase text-[#999999] hover:text-[#666666]"
+                        className="w-full border-0 bg-transparent p-0 text-center text-[11px] font-extrabold uppercase text-[#999999] hover:text-[#666666]"
                       >
-                        SALIR
+                        Salir del equipo
                       </button>
                     )}
                   </div>

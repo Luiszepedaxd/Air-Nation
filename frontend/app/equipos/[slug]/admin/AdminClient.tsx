@@ -825,7 +825,6 @@ function IntegrantesTab({
   const canShowRolToggle = (m: TeamMemberAdminRow) => {
     if (!viewerIsFounder) return false
     if (m.user_id === viewerUserId) return false
-    if (isFounderRol(m.rol_plataforma)) return false
     return true
   }
 
@@ -862,7 +861,10 @@ function IntegrantesTab({
     }
   }
 
-  const toggleRol = async (memberId: string, next: 'admin' | 'member') => {
+  const toggleRol = async (
+    memberId: string,
+    next: 'founder' | 'admin' | 'member'
+  ) => {
     setBusyMemberId(memberId)
     try {
       const { error } = await supabase
@@ -1031,7 +1033,20 @@ function IntegrantesTab({
                     <span style={jost} className="text-[10px] text-[#666666]">
                       Rol:
                     </span>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void toggleRol(m.id, 'founder')}
+                        style={jost}
+                        className={`min-h-[32px] px-3 text-[10px] font-extrabold uppercase ${
+                          (m.rol_plataforma || '').toLowerCase() === 'founder'
+                            ? 'bg-[#111111] text-[#FFFFFF]'
+                            : 'border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[#444444]'
+                        }`}
+                      >
+                        FUNDADOR
+                      </button>
                       <button
                         type="button"
                         disabled={busy}
@@ -1039,8 +1054,8 @@ function IntegrantesTab({
                         style={jost}
                         className={`min-h-[32px] px-3 text-[10px] font-extrabold uppercase ${
                           (m.rol_plataforma || '').toLowerCase() === 'admin'
-                            ? 'bg-[#CC4B37] text-[#FFFFFF]'
-                            : 'border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
+                            ? 'bg-[#111111] text-[#FFFFFF]'
+                            : 'border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[#444444]'
                         }`}
                       >
                         ADMIN
@@ -1052,8 +1067,8 @@ function IntegrantesTab({
                         style={jost}
                         className={`min-h-[32px] px-3 text-[10px] font-extrabold uppercase ${
                           (m.rol_plataforma || '').toLowerCase() === 'member'
-                            ? 'bg-[#CC4B37] text-[#FFFFFF]'
-                            : 'border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
+                            ? 'bg-[#111111] text-[#FFFFFF]'
+                            : 'border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-[#444444]'
                         }`}
                       >
                         MIEMBRO
