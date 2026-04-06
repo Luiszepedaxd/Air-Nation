@@ -89,7 +89,9 @@ async function uploadImageFile(file: File): Promise<string> {
 
 const editorProseCss = `
 .post-form-tiptap .ProseMirror {
-  min-height: 300px;
+  min-height: 500px;
+  max-height: min(70vh, 900px);
+  overflow-y: auto;
   padding: 16px;
   outline: none;
   font-family: 'Lato', sans-serif;
@@ -575,8 +577,9 @@ export default function PostForm({
           className="hidden"
           onChange={onEditorImageInput}
         />
+        <div className="relative">
         <div
-          className="sticky top-0 z-10 mb-2 flex flex-wrap gap-1 border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-2"
+          className="sticky top-4 z-20 mb-2 flex flex-wrap gap-1 border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-2 shadow-sm"
           style={{ borderRadius: 0 }}
         >
           <ToolbarButton
@@ -706,6 +709,7 @@ export default function PostForm({
           style={{ borderRadius: 0 }}
         >
           <EditorContent editor={editor} />
+        </div>
         </div>
       </div>
 
