@@ -29,7 +29,10 @@ export default async function CredencialPage() {
     data: { session },
   } = await supabase.auth.getSession()
 
-  if (!session?.user) redirect('/login')
+  if (!session?.user) {
+    console.error('[credencial] NO SESSION', { session })
+    redirect('/login')
+  }
 
   const { data: row, error } = await supabase
     .from('users')
@@ -39,7 +42,14 @@ export default async function CredencialPage() {
     .eq('id', session.user.id)
     .maybeSingle()
 
-  if (error || !row) redirect('/dashboard')
+  if (error || !row) {
+    console.error('[credencial] QUERY FAILED', {
+      error,
+      row,
+      userId: session.user.id,
+    })
+    redirect('/dashboard')
+  }
 
   const r = row as UserRowWithTeam
   let teamNombre: string | null = null
