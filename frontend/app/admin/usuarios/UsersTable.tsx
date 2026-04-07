@@ -95,6 +95,8 @@ export default function UsersTable({
   )
   const [sendingMail, setSendingMail] = useState(false)
   const [mailResult, setMailResult] = useState<string | null>(null)
+  const [sendingMailId, setSendingMailId] = useState<string | null>(null)
+  const [mailResultId, setMailResultId] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setUsers(initialUsers)
@@ -235,6 +237,37 @@ export default function UsersTable({
       setMailResult('Error al enviar. Intenta de nuevo.')
     } finally {
       setSendingMail(false)
+    }
+  }
+
+  const handleSendReminderOne = async (u: User) => {
+    if (!u.email || sendingMailId) return
+    setSendingMailId(u.id)
+    try {
+      const API_URL = (
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://air-nation-production.up.railway.app/api/v1'
+      ).replace(/\/$/, '')
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const res = await fetch(`${API_URL}/admin/send-onboarding-reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ users: [{ email: u.email }] }),
+      })
+      const data = (await res.json()) as { sent?: number }
+      setMailResultId((prev) => ({
+        ...prev,
+        [u.id]: data.sent === 1 ? 'Enviado' : 'Error',
+      }))
+    } catch {
+      setMailResultId((prev) => ({ ...prev, [u.id]: 'Error' }))
+    } finally {
+      setSendingMailId(null)
     }
   }
 
@@ -389,6 +422,31 @@ export default function UsersTable({
                           ELIMINAR
                         </button>
                       ) : null}
+                      {activeTab === 'pendientes' && u.email && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            disabled={!!sendingMailId}
+                            onClick={() => void handleSendReminderOne(u)}
+                            style={jostHeading}
+                            className="border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-1.5 text-[10px] font-extrabold uppercase text-[#111111] hover:bg-[#EEEEEE] disabled:opacity-50"
+                          >
+                            {sendingMailId === u.id ? '...' : 'RECORDATORIO'}
+                          </button>
+                          {mailResultId[u.id] && (
+                            <span
+                              style={jostHeading}
+                              className={`text-[10px] ${
+                                mailResultId[u.id] === 'Enviado'
+                                  ? 'text-[#2E7D32]'
+                                  : 'text-[#CC4B37]'
+                              }`}
+                            >
+                              {mailResultId[u.id]}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-2 py-2 align-top">
