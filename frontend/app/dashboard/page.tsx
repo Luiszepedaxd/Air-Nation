@@ -2,12 +2,8 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from './supabase-server'
 import { SaludoSection, SaludoSkeleton } from './feed-saludo'
-import { NoticiasSection, NoticiasSkeleton } from './feed-noticias'
-import { VideosSection, VideosSkeleton } from './feed-videos'
-import { CamposSection, CamposSkeleton } from './feed-campos'
-import { EquiposSection, EquiposSkeleton } from './feed-equipos'
-import { EventosSection, EventosSkeleton } from './feed-eventos'
 import { ClearOnboardingParam } from './clear-onboarding-param'
+import { FeedHome } from './FeedHome'
 
 function fromOnboardingParam(
   from: string | string[] | undefined
@@ -41,32 +37,13 @@ export default async function DashboardHomePage({
       <Suspense fallback={null}>
         <ClearOnboardingParam />
       </Suspense>
-      <div className="flex flex-col gap-6 py-4 md:py-6">
-        <div className="w-full px-4 md:mx-auto md:max-w-[1200px] md:px-6">
-          <Suspense fallback={<SaludoSkeleton />}>
-            <SaludoSection />
-          </Suspense>
-        </div>
-
-        <Suspense fallback={<EventosSkeleton />}>
-          <EventosSection />
+      <div className="w-full px-4 pt-4 pb-2 md:mx-auto md:max-w-[680px] md:px-6">
+        <Suspense fallback={<SaludoSkeleton />}>
+          <SaludoSection />
         </Suspense>
-
-        <Suspense fallback={<CamposSkeleton />}>
-          <CamposSection />
-        </Suspense>
-
-        <Suspense fallback={<EquiposSkeleton />}>
-          <EquiposSection />
-        </Suspense>
-
-        <Suspense fallback={<NoticiasSkeleton />}>
-          <NoticiasSection />
-        </Suspense>
-
-        <Suspense fallback={<VideosSkeleton />}>
-          <VideosSection />
-        </Suspense>
+      </div>
+      <div className="w-full px-4 md:mx-auto md:max-w-[680px] md:px-6 pb-10">
+        <FeedHome />
       </div>
     </main>
   )
