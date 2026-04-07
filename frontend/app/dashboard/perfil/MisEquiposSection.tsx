@@ -93,6 +93,7 @@ export function MisEquiposSection({
   const [teams, setTeams] = useState(initialTeams)
   const [leaveConfirmId, setLeaveConfirmId] = useState<string | null>(null)
   const [leavingId, setLeavingId] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   useEffect(() => {
     setTeams(initialTeams)
@@ -128,6 +129,16 @@ export function MisEquiposSection({
     },
     [userId]
   )
+
+  const handleInvite = useCallback((t: MisEquipoItem) => {
+    const link = `https://airnation.online/unirte/${t.slug}`
+    const mensaje = encodeURIComponent(
+      `Te invito a unirte a ${t.nombre} en AirNation — la plataforma del airsoft en México.\n\n${link}`
+    )
+    window.open(`https://wa.me/?text=${mensaje}`, '_blank')
+    setCopiedId(t.id)
+    setTimeout(() => setCopiedId(null), 3000)
+  }, [])
 
   const sectionTop =
     variant === 'tab'
@@ -240,6 +251,31 @@ export function MisEquiposSection({
                       >
                         Editar
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleInvite(t)}
+                        style={jost}
+                        className="inline-flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-[2px] border border-solid border-[#CC4B37] bg-[#FFFFFF] px-2 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden
+                        >
+                          <path
+                            d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {copiedId === t.id
+                          ? 'ABRIENDO WHATSAPP…'
+                          : 'INVITAR'}
+                      </button>
                     </>
                   ) : null}
                 </div>
