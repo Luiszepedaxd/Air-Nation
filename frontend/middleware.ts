@@ -57,6 +57,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session && (
+    pathname === '/' ||
     pathname === '/login' ||
     pathname === '/register'
   )) return NextResponse.redirect(new URL('/dashboard', request.url))
@@ -89,6 +90,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/',
     '/dashboard/:path*',
     '/onboarding/:path*',
     '/admin',
