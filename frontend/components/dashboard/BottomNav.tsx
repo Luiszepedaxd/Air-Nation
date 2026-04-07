@@ -157,9 +157,11 @@ function isNavItemActive(pathname: string, href: string): boolean {
 function ProfileIconWithBadge({
   active,
   badgeCount,
+  showDot,
 }: {
   active: boolean
   badgeCount: number
+  showDot: boolean
 }) {
   return (
     <span className="relative inline-flex">
@@ -186,6 +188,9 @@ function ProfileIconWithBadge({
           {badgeCount > 99 ? '99+' : badgeCount}
         </span>
       ) : null}
+      {showDot && badgeCount === 0 ? (
+        <span className="absolute -right-0.5 -top-0.5 w-2 h-2 rounded-full bg-[#CC4B37] border border-white" />
+      ) : null}
     </span>
   )
 }
@@ -196,6 +201,7 @@ export default function BottomNav() {
   const [panicModal, setPanicModal] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingJoinCount, setPendingJoinCount] = useState(0)
+  const [hasAvatar, setHasAvatar] = useState(true)
 
   const refreshPendingJoinCount = useCallback(async () => {
     const {
@@ -230,6 +236,13 @@ export default function BottomNav() {
         .eq('id', user.id)
         .maybeSingle()
       if (data?.app_role === 'admin') setIsAdmin(true)
+
+      const { data: perfil } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .maybeSingle()
+      setHasAvatar(!!(perfil?.avatar_url))
     })
   }, [])
 
@@ -270,6 +283,7 @@ export default function BottomNav() {
                   <ProfileIconWithBadge
                     active={active}
                     badgeCount={pendingJoinCount}
+                    showDot={!hasAvatar}
                   />
                 ) : (
                   item.icon(active)
@@ -338,6 +352,7 @@ export default function BottomNav() {
                   <ProfileIconWithBadge
                     active={active}
                     badgeCount={pendingJoinCount}
+                    showDot={!hasAvatar}
                   />
                 ) : (
                   item.icon(active)

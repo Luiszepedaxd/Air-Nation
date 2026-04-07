@@ -479,6 +479,26 @@ export function ProfileView({
 
   return (
     <div className="mt-8 max-w-[640px]">
+      {!user.avatar_url && (
+        <div className="w-full bg-[#FFF5F4] border-b border-[#FFCCC7] px-4 py-3 flex items-center gap-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <circle cx="12" cy="12" r="9" stroke="#CC4B37" strokeWidth="1.8" />
+            <path
+              d="M12 8v4M12 16h.01"
+              stroke="#CC4B37"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+          <p
+            className="text-[#CC4B37] text-xs leading-snug flex-1"
+            style={{ fontFamily: "'Lato', sans-serif" }}
+          >
+            <strong>Tu perfil está incompleto.</strong> Sin foto de perfil no puedes acceder a tu
+            credencial digital.
+          </p>
+        </div>
+      )}
       <section className="flex flex-col items-center border-b border-solid border-[#EEEEEE] pb-8">
         <div
           className="relative shrink-0 overflow-hidden rounded-full bg-[#CC4B37] md:h-[120px] md:w-[120px] h-24 w-24"

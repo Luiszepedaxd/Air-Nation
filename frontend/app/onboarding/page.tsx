@@ -876,7 +876,10 @@ export default function OnboardingPage() {
               >
                 TU EQUIPO
               </h1>
-              <p className="text-sm text-[#666] mt-2">¿Con quién juegas?</p>
+              <p className="text-sm text-[#666] mt-2">
+                El airsoft se juega en equipo. Busca el tuyo o créalo ahora — tú serás el fundador y
+                podrás invitar al resto desde tu perfil.
+              </p>
             </div>
 
             <div>
@@ -893,6 +896,14 @@ export default function OnboardingPage() {
                     value={teamSearchInput}
                     onChange={(e) => setTeamSearchInput(e.target.value)}
                   />
+                  {teamSearchInput === '' && (
+                    <p
+                      className="text-xs text-[#999] mt-2"
+                      style={{ fontFamily: "'Lato', sans-serif" }}
+                    >
+                      ¿Eres capitán? Escribe el nombre de tu equipo y créalo en segundos.
+                    </p>
+                  )}
                   {searchLoading && (
                     <p className="text-[11px] text-[#999] mt-2">Buscando…</p>
                   )}
@@ -946,7 +957,7 @@ export default function OnboardingPage() {
                       setTeamSearchInput("");
                     }}
                   >
-                    Juego sin equipo por ahora →
+                    Prefiero unirme a un equipo después →
                   </button>
                 </>
               ) : (
