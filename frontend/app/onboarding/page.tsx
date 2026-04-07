@@ -14,7 +14,7 @@ const API_URL = (
 ).replace(/\/$/, "");
 
 type OnboardingState = {
-  paso: 1 | 2 | 3;
+  paso: 1 | 2 | 3 | 4;
   nombre: string;
   alias: string;
   ciudad: string;
@@ -29,14 +29,8 @@ type OnboardingState = {
     | "";
   team_id: string | null;
   team_nombre: string;
-  como_se_entero:
-    | "instagram"
-    | "facebook"
-    | "amigo"
-    | "google"
-    | "evento"
-    | "otro"
-    | "";
+  avatar_url: string;
+  bio: string;
   /** true si eligió un equipo existente (búsqueda); solicitud join, sin users.team_id */
   team_join_via_request: boolean;
 };
@@ -49,7 +43,8 @@ const DEFAULT_STATE: OnboardingState = {
   rol: "",
   team_id: null,
   team_nombre: "",
-  como_se_entero: "",
+  avatar_url: "",
+  bio: "",
   team_join_via_request: false,
 };
 
@@ -61,15 +56,6 @@ const VALID_ROLES = new Set<string>([
   "scout",
   "team_leader",
   "rookie",
-]);
-
-const VALID_COMO = new Set<string>([
-  "instagram",
-  "facebook",
-  "amigo",
-  "google",
-  "evento",
-  "otro",
 ]);
 
 const ROLES_CONFIG: {
@@ -85,18 +71,6 @@ const ROLES_CONFIG: {
   { id: "rookie", label: "Rookie / Novato" },
 ];
 
-const COMO_OPTIONS: {
-  id: NonNullable<Exclude<OnboardingState["como_se_entero"], "">>;
-  label: string;
-}[] = [
-  { id: "instagram", label: "Instagram" },
-  { id: "facebook", label: "Facebook" },
-  { id: "amigo", label: "Un amigo me invitó" },
-  { id: "google", label: "Google / búsqueda" },
-  { id: "evento", label: "En un evento de airsoft" },
-  { id: "otro", label: "Otro" },
-];
-
 type TeamRow = { id: string; nombre: string; ciudad: string };
 
 function parseStoredState(raw: string): OnboardingState | null {
@@ -104,14 +78,12 @@ function parseStoredState(raw: string): OnboardingState | null {
     const p = JSON.parse(raw) as Record<string, unknown>;
     if (typeof p !== "object" || p === null) return null;
     const paso =
-      p.paso === 1 || p.paso === 2 || p.paso === 3 ? p.paso : 1;
+      p.paso === 1 || p.paso === 2 || p.paso === 3 || p.paso === 4
+        ? p.paso
+        : 1;
     const rol =
       typeof p.rol === "string" && VALID_ROLES.has(p.rol)
         ? (p.rol as OnboardingState["rol"])
-        : "";
-    const como =
-      typeof p.como_se_entero === "string" && VALID_COMO.has(p.como_se_entero)
-        ? (p.como_se_entero as OnboardingState["como_se_entero"])
         : "";
     return {
       paso,
@@ -126,7 +98,8 @@ function parseStoredState(raw: string): OnboardingState | null {
             ? p.team_id
             : null,
       team_nombre: typeof p.team_nombre === "string" ? p.team_nombre : "",
-      como_se_entero: como,
+      avatar_url: typeof p.avatar_url === "string" ? p.avatar_url : "",
+      bio: typeof p.bio === "string" ? p.bio : "",
       team_join_via_request:
         p.team_join_via_request === true ? true : false,
     };
@@ -267,6 +240,10 @@ export default function OnboardingPage() {
   const [allowCreate, setAllowCreate] = useState(true);
   const [creatingTeam, setCreatingTeam] = useState(false);
 
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -340,7 +317,7 @@ export default function OnboardingPage() {
   }, [teamSearchInput]);
 
   useEffect(() => {
-    if (state.paso !== 3 || state.team_id !== null) {
+    if (state.paso !== 4 || state.team_id !== null) {
       setSearchTeams([]);
       setSearchLoading(false);
       return;
@@ -397,10 +374,17 @@ export default function OnboardingPage() {
   const step1Ok =
     state.nombre.trim().length > 0 && aliasValid;
   const step2Ok = state.ciudad !== "" && state.rol !== "";
-  const step3Ok = state.como_se_entero !== "";
+  const step3Ok = true;
+  const step4Ok = true;
 
   const canContinue =
-    state.paso === 1 ? step1Ok : state.paso === 2 ? step2Ok : step3Ok;
+    state.paso === 1
+      ? step1Ok
+      : state.paso === 2
+        ? step2Ok
+        : state.paso === 3
+          ? step3Ok
+          : step4Ok;
 
   const update = useCallback((patch: Partial<OnboardingState>) => {
     setState((s) => ({ ...s, ...patch }));
@@ -409,8 +393,8 @@ export default function OnboardingPage() {
   const goNext = useCallback(() => {
     setSubmitError("");
     setState((s) => {
-      if (s.paso >= 3) return s;
-      return { ...s, paso: (s.paso + 1) as 1 | 2 | 3 };
+      if (s.paso >= 4) return s;
+      return { ...s, paso: (s.paso + 1) as 1 | 2 | 3 | 4 };
     });
   }, []);
 
@@ -418,12 +402,12 @@ export default function OnboardingPage() {
     setSubmitError("");
     setState((s) => {
       if (s.paso <= 1) return s;
-      return { ...s, paso: (s.paso - 1) as 1 | 2 | 3 };
+      return { ...s, paso: (s.paso - 1) as 1 | 2 | 3 | 4 };
     });
   }, []);
 
   const handleFinish = useCallback(async () => {
-    if (!userId || !canContinue || state.paso !== 3) return;
+    if (!userId || !canContinue || state.paso !== 4) return;
     setSubmitting(true);
     setSubmitError("");
     try {
@@ -458,7 +442,8 @@ export default function OnboardingPage() {
           ciudad: state.ciudad,
           rol: state.rol,
           team_id: patchTeamId,
-          como_se_entero: state.como_se_entero,
+          avatar_url: state.avatar_url || null,
+          bio: state.bio.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -542,8 +527,50 @@ export default function OnboardingPage() {
     update({ alias: v });
   };
 
+  const onAvatarChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      setAvatarError("");
+      const MIME_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
+      if (!MIME_OK.has(file.type)) {
+        setAvatarError("Usa JPEG, PNG o WebP.");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setAvatarError("Máximo 10 MB.");
+        return;
+      }
+      setAvatarUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const up = await fetch(`${API_URL}/upload`, {
+          method: "POST",
+          body: fd,
+        });
+        if (!up.ok) {
+          setAvatarError("No se pudo subir.");
+          return;
+        }
+        const json = (await up.json()) as { url?: string };
+        if (!json?.url) {
+          setAvatarError("Error del servidor.");
+          return;
+        }
+        update({ avatar_url: json.url });
+      } catch {
+        setAvatarError("Error al subir la imagen.");
+      } finally {
+        setAvatarUploading(false);
+      }
+    },
+    [update]
+  );
+
   const handlePrimary = () => {
-    if (state.paso === 3) void handleFinish();
+    if (state.paso === 4) void handleFinish();
     else goNext();
   };
 
@@ -594,7 +621,7 @@ export default function OnboardingPage() {
           </div>
         </div>
         <div className="flex gap-1 px-4 pb-3">
-          {([1, 2, 3] as const).map((s) => (
+          {([1, 2, 3, 4] as const).map((s) => (
             <div
               key={s}
               className={`h-[3px] flex-1 ${
@@ -610,7 +637,7 @@ export default function OnboardingPage() {
         style={{ paddingTop: "calc(56px + 12px + 3px + 16px)" }}
       >
         <p className="text-center font-mono text-[11px] text-[#999] mb-6">
-          PASO {state.paso} DE 3
+          PASO {state.paso} DE 4
         </p>
 
         {state.paso === 1 && (
@@ -743,6 +770,104 @@ export default function OnboardingPage() {
         )}
 
         {state.paso === 3 && (
+          <section className="space-y-6">
+            <div>
+              <h1
+                className="text-[32px] font-bold uppercase leading-tight text-[#111111]"
+                style={{ fontFamily: "'Jost', sans-serif" }}
+              >
+                TU FOTO Y BIO
+              </h1>
+              <p className="text-sm text-[#666] mt-2">
+                Puedes saltarte esto y completarlo después desde tu perfil.
+              </p>
+            </div>
+
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                Foto de perfil
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 border border-[#EEEEEE] bg-[#F4F4F4] flex items-center justify-center overflow-hidden shrink-0">
+                  {state.avatar_url ? (
+                    <img
+                      src={state.avatar_url}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden
+                    >
+                      <circle
+                        cx="12"
+                        cy="8"
+                        r="4"
+                        stroke="#AAAAAA"
+                        strokeWidth="1.5"
+                      />
+                      <path
+                        d="M4 20c0-4 3.6-7 8-7s8 3 8 7"
+                        stroke="#AAAAAA"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={onAvatarChange}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="px-4 py-2 border border-[#EEEEEE] bg-[#F4F4F4] text-sm text-[#111111] disabled:opacity-50"
+                    style={{ borderRadius: 2 }}
+                  >
+                    {avatarUploading ? "Subiendo…" : "Elegir foto"}
+                  </button>
+                  {avatarError && (
+                    <p className="text-xs text-[#CC4B37]">{avatarError}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass} style={labelStyle}>
+                Bio{" "}
+                <span className="text-[#AAAAAA] normal-case tracking-normal font-normal">
+                  (opcional)
+                </span>
+              </label>
+              <textarea
+                value={state.bio}
+                onChange={(e) => update({ bio: e.target.value.slice(0, 100) })}
+                rows={3}
+                maxLength={100}
+                placeholder="¿Qué estilo de juego tienes? ¿Cuánto llevas jugando?"
+                className={`${inputShell} resize-none`}
+              />
+              <div className="flex justify-end mt-1">
+                <span className="text-[11px] text-[#999]">
+                  {state.bio.length}/100
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {state.paso === 4 && (
           <section className="space-y-8">
             <div>
               <h1
@@ -796,9 +921,9 @@ export default function OnboardingPage() {
                           type="button"
                           disabled={creatingTeam}
                           onClick={() => void createTeamFromQuery()}
-                          className="mt-3 w-full py-3 px-3 border border-[#CC4B37] text-[#CC4B37] bg-white text-sm font-medium rounded-[2px] disabled:opacity-50"
+                          className="mt-3 w-full py-3 px-3 bg-[#CC4B37] text-white font-bold text-sm rounded-[2px] disabled:opacity-50"
                         >
-                          Crear equipo &apos;{debouncedTeamQuery.trim()}&apos; →
+                          + Crear equipo &apos;{debouncedTeamQuery.trim()}&apos;
                         </button>
                       )}
                       {searchTeams.length === 0 && !allowCreate && (
@@ -856,44 +981,6 @@ export default function OnboardingPage() {
                 </div>
               )}
             </div>
-
-            <div>
-              <label className={labelClass} style={labelStyle}>
-                ¿Cómo nos encontraste?
-              </label>
-              <ul className="border border-[#EEEEEE] bg-white">
-                {COMO_OPTIONS.map(({ id, label }) => {
-                  const sel = state.como_se_entero === id;
-                  return (
-                    <li
-                      key={id}
-                      className="border-b border-[#EEEEEE] last:border-b-0"
-                    >
-                      <label className="flex items-center gap-3 px-3 py-3 cursor-pointer">
-                        <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center border border-[#EEEEEE] rounded-full ${
-                            sel ? "border-[#CC4B37] bg-[#CC4B37]" : "bg-white"
-                          }`}
-                          style={{ borderRadius: "9999px" }}
-                        >
-                          {sel && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-white block" />
-                          )}
-                        </span>
-                        <input
-                          type="radio"
-                          name="como_se_entero"
-                          className="sr-only"
-                          checked={sel}
-                          onChange={() => update({ como_se_entero: id })}
-                        />
-                        <span className="text-sm text-[#111111]">{label}</span>
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
           </section>
         )}
 
@@ -905,7 +992,7 @@ export default function OnboardingPage() {
             disabled={!canContinue || submitting}
             onClick={handlePrimary}
           >
-            {state.paso === 3 && submitting ? "Guardando…" : "Continuar"}
+            {state.paso === 4 && submitting ? "Guardando…" : "Continuar"}
           </button>
           {submitError && (
             <p className="text-sm text-center text-[#CC4B37]">{submitError}</p>
@@ -921,7 +1008,7 @@ export default function OnboardingPage() {
           disabled={!canContinue || submitting}
           onClick={handlePrimary}
         >
-          {state.paso === 3 && submitting ? "Guardando…" : "Continuar"}
+          {state.paso === 4 && submitting ? "Guardando…" : "Continuar"}
         </button>
         {submitError && (
           <p className="text-sm text-center text-[#CC4B37]">{submitError}</p>
