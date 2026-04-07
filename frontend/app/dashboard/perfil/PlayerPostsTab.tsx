@@ -216,6 +216,8 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
   }
 
   const softDeletePost = async (id: string) => {
+    // Primero actualizar en Supabase, luego actualizar UI
+    // NO hacer cambio optimista
     try {
       const { error } = await supabase
         .from('player_posts')
@@ -225,10 +227,12 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
 
       if (error) throw error
 
+      // Solo actualizar UI si Supabase confirma el cambio
       setPosts((prev) => prev.filter((x) => x.id !== id))
       setConfirmDeleteId(null)
     } catch {
-      /* noop */
+      // Si falla, cerrar confirmación sin borrar de UI
+      setConfirmDeleteId(null)
     }
   }
 
