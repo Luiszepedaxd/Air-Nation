@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import DeleteConfirmModal from '../components/DeleteConfirmModal'
 import { deleteUser, updateUserRole } from './actions'
 import { UserTeamAssignSection } from './UserTeamAssignSection'
@@ -89,20 +90,49 @@ export default function UsersTable({
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [teamAssignUserId, setTeamAssignUserId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'verificados' | 'pendientes'>(
+    'verificados'
+  )
+  const [sendingMail, setSendingMail] = useState(false)
+  const [mailResult, setMailResult] = useState<string | null>(null)
 
   useEffect(() => {
     setUsers(initialUsers)
   }, [initialUsers])
 
-  const filtered = useMemo(() => {
+  const verificados = useMemo(
+    () => users.filter((u) => u.nombre && u.nombre.trim() !== ''),
+    [users]
+  )
+
+  const pendientes = useMemo(
+    () => users.filter((u) => !u.nombre || u.nombre.trim() === ''),
+    [users]
+  )
+
+  const filteredVerificados = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return users
-    return users.filter((u) => {
+    if (!q) return verificados
+    return verificados.filter((u) => {
       const nombre = (u.nombre ?? '').toLowerCase()
       const alias = (u.alias ?? '').toLowerCase()
       return nombre.includes(q) || alias.includes(q)
     })
-  }, [users, search])
+  }, [verificados, search])
+
+  const filteredPendientes = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return pendientes
+    return pendientes.filter((u) => {
+      const nombre = (u.nombre ?? '').toLowerCase()
+      const alias = (u.alias ?? '').toLowerCase()
+      const email = (u.email ?? '').toLowerCase()
+      return nombre.includes(q) || alias.includes(q) || email.includes(q)
+    })
+  }, [pendientes, search])
+
+  const tableRows =
+    activeTab === 'verificados' ? filteredVerificados : filteredPendientes
 
   const openModal = (u: User) => {
     setModalUser(u)
@@ -169,6 +199,45 @@ export default function UsersTable({
     closeModal()
   }
 
+  const handleSendReminders = async () => {
+    const targets = filteredPendientes.filter((u) => u.email)
+    if (targets.length === 0) return
+    setSendingMail(true)
+    setMailResult(null)
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) {
+        setMailResult('Sesión expirada. Recarga la página.')
+        return
+      }
+      const API_URL = (
+        process.env.NEXT_PUBLIC_API_URL ||
+        'https://air-nation-production.up.railway.app/api/v1'
+      ).replace(/\/$/, '')
+      const res = await fetch(`${API_URL}/admin/send-onboarding-reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          users: targets.map((u) => ({ email: u.email })),
+        }),
+      })
+      const data = (await res.json()) as { sent?: number; failed?: number }
+      setMailResult(
+        `Enviados: ${data.sent ?? 0} · Fallidos: ${data.failed ?? 0}`
+      )
+    } catch {
+      setMailResult('Error al enviar. Intenta de nuevo.')
+    } finally {
+      setSendingMail(false)
+    }
+  }
+
   return (
     <div style={latoBody}>
       <input
@@ -184,6 +253,56 @@ export default function UsersTable({
           padding: '8px 12px',
         }}
       />
+
+      <div className="mb-6 flex gap-0 border-b border-[#EEEEEE]">
+        <button
+          type="button"
+          onClick={() => setActiveTab('verificados')}
+          style={jostHeading}
+          className={`border-b-2 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
+            activeTab === 'verificados'
+              ? 'border-[#CC4B37] text-[#111111]'
+              : 'border-transparent text-[#999999]'
+          }`}
+        >
+          VERIFICADOS ({verificados.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('pendientes')}
+          style={jostHeading}
+          className={`border-b-2 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
+            activeTab === 'pendientes'
+              ? 'border-[#CC4B37] text-[#111111]'
+              : 'border-transparent text-[#999999]'
+          }`}
+        >
+          PENDIENTES ({pendientes.length})
+        </button>
+      </div>
+
+      {activeTab === 'pendientes' && (
+        <div className="mb-4 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => void handleSendReminders()}
+            disabled={
+              sendingMail || filteredPendientes.filter((u) => u.email).length === 0
+            }
+            style={jostHeading}
+            className="bg-[#CC4B37] px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
+          >
+            {sendingMail
+              ? 'ENVIANDO...'
+              : `ENVIAR RECORDATORIO A ${filteredPendientes.filter((u) => u.email).length} USUARIOS`}
+          </button>
+          {mailResult && (
+            <p style={jostHeading} className="text-[11px] text-[#666666]">
+              {mailResult}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
         <table className="w-full border-collapse text-left text-sm text-[#111111]">
@@ -213,7 +332,7 @@ export default function UsersTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u, i) => (
+            {tableRows.map((u, i) => (
               <Fragment key={u.id}>
                 <tr
                   className={
@@ -221,7 +340,11 @@ export default function UsersTable({
                   }
                 >
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                    {u.nombre ?? '—'}
+                    {activeTab === 'pendientes'
+                      ? u.nombre && u.nombre.trim() !== ''
+                        ? u.nombre
+                        : (u.email ?? '—')
+                      : (u.nombre ?? '—')}
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {u.alias ?? '—'}
