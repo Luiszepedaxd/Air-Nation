@@ -13,7 +13,7 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 // Tipos de items del feed
 type FeedItem =
   | { kind: 'team_post'; id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'player_post'; id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | { kind: 'player_post'; id: string; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
   | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
@@ -87,17 +87,17 @@ function PlayerPostCard({ item }: { item: Extract<FeedItem, { kind: 'player_post
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
   return (
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
-          {item.user.avatar_url
-            ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
-          }
-        </div>
-        <div>
-          <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">{name}</p>
-          <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(item.created_at)}</p>
-        </div>
+      <div className="mb-3">
+        <Link href={`/u/${item.user_id}`} className="flex items-center gap-3 min-w-0 w-fit max-w-full">
+          <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
+            {item.user.avatar_url
+              ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
+            }
+          </div>
+          <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+        </Link>
+        <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
       </div>
       {item.content?.trim() && (
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
@@ -155,30 +155,43 @@ function NewTeamCard({ item }: { item: Extract<FeedItem, { kind: 'new_team' }> }
 }
 
 function VideoCard({ item }: { item: Extract<FeedItem, { kind: 'video' }> }) {
+  const [playing, setPlaying] = useState(false)
   const videoId = item.youtube_url?.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
   )?.[1]
   const thumb = item.thumbnail_url ||
     (videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null)
 
+  if (!videoId) return null
+
   return (
-    <a
-      href={item.youtube_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden"
-    >
-      <div className="relative aspect-video w-full bg-[#111111] overflow-hidden">
-        {thumb && (
-          <img src={thumb} alt="" className="w-full h-full object-cover opacity-90"/>
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      <div className="relative aspect-video w-full bg-[#111111]">
+        {playing ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPlaying(true)}
+            className="w-full h-full relative"
+          >
+            {thumb && (
+              <img src={thumb} alt="" className="w-full h-full object-cover opacity-90"/>
+            )}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-14 h-14 bg-[#CC4B37] flex items-center justify-center hover:opacity-90 transition-opacity">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" aria-hidden>
+                  <path d="M8 5.14v14l11-7-11-7z"/>
+                </svg>
+              </div>
+            </div>
+          </button>
         )}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-12 h-12 bg-[#CC4B37] flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden>
-              <path d="M8 5.14v14l11-7-11-7z"/>
-            </svg>
-          </div>
-        </div>
       </div>
       <div className="p-3">
         <p style={lato} className="text-[11px] text-[#999999] mb-1">Video</p>
@@ -186,7 +199,7 @@ function VideoCard({ item }: { item: Extract<FeedItem, { kind: 'video' }> }) {
           {item.title}
         </h3>
       </div>
-    </a>
+    </div>
   )
 }
 
@@ -241,7 +254,7 @@ function FeedTab() {
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('player_posts')
-          .select('id, content, fotos_urls, created_at, users(alias, nombre, avatar_url)')
+          .select('id, user_id, content, fotos_urls, created_at, users(alias, nombre, avatar_url)')
           .eq('published', true)
           .order('created_at', { ascending: false })
           .limit(10),
@@ -291,6 +304,7 @@ function FeedTab() {
         feedItems.push({
           kind: 'player_post',
           id: String(r.id),
+          user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
