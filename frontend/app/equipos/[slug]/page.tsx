@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
+import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 import { TeamHero } from './components/TeamHero'
 import { TeamStats } from './components/TeamStats'
 import { TeamPublicTabs } from './components/TeamPublicTabs'
@@ -384,6 +385,7 @@ export default async function EquipoPublicPage({
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
+      <PublicSiteHeader />
       <TeamHero team={team} members={members} />
       <TeamStats memberCount={members.length} createdAt={team.created_at} />
       <TeamPublicTabs

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 import { formatEventoFechaCorta } from '../lib/format-evento-fecha'
 import { EventoHero } from './components/EventoHero'
 import { EventoInfo } from './components/EventoInfo'
@@ -185,6 +186,7 @@ export default async function EventoDetailPage({
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
+      <PublicSiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
