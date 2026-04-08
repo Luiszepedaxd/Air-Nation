@@ -104,6 +104,8 @@ export function PerfilTabsClient({
     joinRequests.length +
     approvedFieldNotices.length +
     ownerPendingFieldRequests.length
+  const showCamposTab =
+    misCampos.length > 0 || campoRegistradoNotice === true
 
   const tabClass = (tabId: TabId) =>
     activeTab === tabId
@@ -136,6 +138,12 @@ export function PerfilTabsClient({
     }
   }, [user.id])
 
+  useEffect(() => {
+    if (!showCamposTab && activeTab === 'campos') {
+      setActiveTab('perfil')
+    }
+  }, [showCamposTab, activeTab])
+
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pb-10 pt-6 md:px-6">
       <h1
@@ -154,38 +162,6 @@ export function PerfilTabsClient({
             className={`${tabBase} ${tabClass('perfil')}`}
           >
             MI PERFIL
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('misposts')}
-            style={jost}
-            className={`${tabBase} ${tabClass('misposts')}`}
-          >
-            MIS POSTS
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('equipos')}
-            style={jost}
-            className={`${tabBase} ${tabClass('equipos')}`}
-          >
-            MIS EQUIPOS
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('campos')}
-            style={jost}
-            className={`${tabBase} ${tabClass('campos')}`}
-          >
-            MIS CAMPOS
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('eventos')}
-            style={jost}
-            className={`${tabBase} ${tabClass('eventos')}`}
-          >
-            MIS EVENTOS
           </button>
           <button
             type="button"
@@ -210,6 +186,40 @@ export function PerfilTabsClient({
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('eventos')}
+            style={jost}
+            className={`${tabBase} ${tabClass('eventos')}`}
+          >
+            MIS EVENTOS
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('misposts')}
+            style={jost}
+            className={`${tabBase} ${tabClass('misposts')}`}
+          >
+            MIS POSTS
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('equipos')}
+            style={jost}
+            className={`${tabBase} ${tabClass('equipos')}`}
+          >
+            MIS EQUIPOS
+          </button>
+          {showCamposTab ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab('campos')}
+              style={jost}
+              className={`${tabBase} ${tabClass('campos')}`}
+            >
+              MIS CAMPOS
+            </button>
+          ) : null}
         </div>
       </div>
 
