@@ -216,27 +216,32 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
   }
 
   const softDeletePost = async (id: string) => {
-    // Primero actualizar en Supabase, luego actualizar UI
-    // NO hacer cambio optimista
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         setConfirmDeleteId(null)
         return
       }
-      const { error } = await supabase
-        .from('player_posts')
-        .update({ published: false })
-        .eq('id', id)
-        .eq('user_id', userId)
 
-      if (error) throw error
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/player_posts?id=eq.${id}&user_id=eq.${userId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${session.access_token}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ published: false }),
+        }
+      )
 
-      // Solo actualizar UI si Supabase confirma el cambio
+      if (!res.ok) throw new Error(`${res.status}`)
+
       setPosts((prev) => prev.filter((x) => x.id !== id))
       setConfirmDeleteId(null)
     } catch {
-      // Si falla, cerrar confirmación sin borrar de UI
       setConfirmDeleteId(null)
     }
   }
