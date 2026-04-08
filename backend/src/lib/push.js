@@ -1,12 +1,6 @@
 const webpush = require('web-push')
 const { createClient } = require('@supabase/supabase-js')
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-)
-
 function getServiceClient() {
   return createClient(
     process.env.SUPABASE_URL,
@@ -14,12 +8,20 @@ function getServiceClient() {
   )
 }
 
-/**
- * Envía un push a todos los dispositivos suscritos de un usuario.
- * @param {string} userId
- * @param {{ title: string, body: string, url?: string, icon?: string }} payload
- */
 async function sendPushToUser(userId, payload) {
+  const subject = process.env.VAPID_SUBJECT
+  const publicKey = process.env.VAPID_PUBLIC_KEY
+  const privateKey = process.env.VAPID_PRIVATE_KEY
+
+  console.log('[push] VAPID check - subject:', subject ? 'OK' : 'MISSING', 'public:', publicKey ? 'OK' : 'MISSING', 'private:', privateKey ? 'OK' : 'MISSING')
+
+  if (!subject || !publicKey || !privateKey) {
+    console.error('[push] VAPID keys missing, aborting push for user', userId)
+    return
+  }
+
+  webpush.setVapidDetails(subject, publicKey, privateKey)
+
   const supabase = getServiceClient()
 
   const { data: subs, error } = await supabase
