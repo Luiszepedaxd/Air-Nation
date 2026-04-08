@@ -219,6 +219,11 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
     // Primero actualizar en Supabase, luego actualizar UI
     // NO hacer cambio optimista
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setConfirmDeleteId(null)
+        return
+      }
       const { error } = await supabase
         .from('player_posts')
         .update({ published: false })
