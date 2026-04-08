@@ -37,6 +37,7 @@ export type UserNotifRow = {
   post_type: 'player' | 'team' | 'field' | 'comment' | null
   post_id: string | null
   comment_id: string | null
+  href: string | null
   read: boolean
   created_at: string
   actor: {
@@ -54,7 +55,7 @@ export async function fetchUserNotifs(
   const { data } = await supabase
     .from('user_notifications')
     .select(`
-      id, type, post_type, post_id, comment_id, read, created_at,
+      id, type, post_type, post_id, comment_id, href, read, created_at,
       actor:users!actor_id ( alias, nombre, avatar_url )
     `)
     .eq('recipient_id', userId)
@@ -71,6 +72,7 @@ export async function fetchUserNotifs(
       post_type: (r.post_type as UserNotifRow['post_type']) ?? null,
       post_id: r.post_id ? String(r.post_id) : null,
       comment_id: r.comment_id ? String(r.comment_id) : null,
+      href: r.href ? String(r.href) : null,
       read: Boolean(r.read),
       created_at: String(r.created_at),
       actor: {

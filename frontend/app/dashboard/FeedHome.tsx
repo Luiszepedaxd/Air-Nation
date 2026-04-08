@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState, type TouchEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type TouchEvent } from 'react'
 import { notifyNotifUpdated } from '@/lib/user-notifications'
 import { supabase } from '@/lib/supabase'
 
@@ -13,7 +13,7 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 
 // Tipos de items del feed
 type FeedItem =
-  | { kind: 'team_post'; id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
+  | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
   | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
   | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
@@ -621,6 +621,122 @@ function HeartIcon({ filled, size = 18 }: { filled: boolean; size?: number }) {
   )
 }
 
+function LikesModal({
+  postType,
+  postId,
+  onClose,
+}: {
+  postType: 'player' | 'team' | 'field'
+  postId: string
+  onClose: () => void
+}) {
+  const [users, setUsers] = useState<{
+    id: string
+    alias: string | null
+    nombre: string | null
+    avatar_url: string | null
+  }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      const { data } = await supabase
+        .from('post_reactions')
+        .select(`
+          user_id,
+          users ( id, alias, nombre, avatar_url )
+        `)
+        .eq('post_type', postType)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      const rows = (data ?? []) as Record<string, unknown>[]
+      setUsers(rows.map(r => {
+        const u = Array.isArray(r.users) ? r.users[0] : r.users
+        const uo = (u ?? {}) as Record<string, unknown>
+        return {
+          id: String(uo.id ?? r.user_id),
+          alias: uo.alias ? String(uo.alias) : null,
+          nombre: uo.nombre ? String(uo.nombre) : null,
+          avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
+        }
+      }))
+      setLoading(false)
+    })()
+  }, [postType, postId])
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-end md:items-center justify-center bg-black/60"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-sm bg-white md:rounded-none"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[#EEEEEE] px-4 py-3">
+          <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+            Reacciones
+          </p>
+          <button type="button" onClick={onClose} className="text-[#999999] hover:text-[#111111]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="flex flex-col gap-3 p-4">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#F4F4F4] animate-pulse shrink-0" />
+                  <div className="h-3 w-32 bg-[#F4F4F4] animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : users.length === 0 ? (
+            <p style={lato} className="py-8 text-center text-[13px] text-[#999999]">
+              Sin reacciones aún
+            </p>
+          ) : (
+            <ul className="divide-y divide-[#EEEEEE]">
+              {users.map(u => {
+                const name = u.alias?.trim() || u.nombre?.trim() || 'Jugador'
+                return (
+                  <li key={u.id}>
+                    <Link
+                      href={`/u/${u.id}`}
+                      onClick={onClose}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-[#F4F4F4] transition-colors"
+                    >
+                      <div className="w-9 h-9 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+                        {u.avatar_url
+                          ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-[11px] font-bold text-[#CC4B37]" style={jost}>
+                              {name[0].toUpperCase()}
+                            </div>
+                        }
+                      </div>
+                      <span style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">
+                        {name}
+                      </span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="ml-auto text-[#CCCCCC]" aria-hidden>
+                        <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const COMMENTS_PAGE_SIZE = 3
 
 function CommentsSection({
@@ -630,6 +746,7 @@ function CommentsSection({
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
+  postHref,
 }: {
   postType: 'player' | 'team' | 'field'
   postId: string
@@ -637,6 +754,7 @@ function CommentsSection({
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  postHref: string
 }) {
   const [comments, setComments] = useState<PostComment[]>([])
   const [total, setTotal] = useState(0)
@@ -769,6 +887,7 @@ function CommentsSection({
           type: 'comment_post',
           post_type: postType,
           post_id: postId,
+          href: postHref,
         })
         notifyNotifUpdated()
       }
@@ -805,6 +924,7 @@ function CommentsSection({
             post_type: 'comment',
             post_id: commentId,
             comment_id: commentId,
+            href: postHref,
           })
           notifyNotifUpdated()
         }
@@ -914,6 +1034,7 @@ function PostActions({
   currentUserAvatar,
   shareUrl,
   shareTitle,
+  postHref,
 }: {
   postType: 'player' | 'team' | 'field'
   postId: string
@@ -923,12 +1044,14 @@ function PostActions({
   currentUserAvatar: string | null
   shareUrl: string
   shareTitle: string
+  postHref: string
 }) {
   const [likeCount, setLikeCount] = useState(0)
   const [liked, setLiked] = useState(false)
   const [commentCount, setCommentCount] = useState(0)
   const [showComments, setShowComments] = useState(false)
   const [copying, setCopying] = useState(false)
+  const [showLikesModal, setShowLikesModal] = useState(false)
 
   useEffect(() => {
     if (!postId) return
@@ -989,6 +1112,7 @@ function PostActions({
           type: 'like_post',
           post_type: postType,
           post_id: postId,
+          href: postHref,
         })
         notifyNotifUpdated()
       }
@@ -1013,17 +1137,26 @@ function PostActions({
       {/* Barra de acciones */}
       <div className="flex items-center gap-1 pt-3 border-t border-[#EEEEEE]">
         {/* Like */}
-        <button
-          type="button"
-          onClick={() => void handleLike()}
-          disabled={!currentUserId}
-          className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-[#F4F4F4] transition-colors disabled:opacity-30"
-        >
-          <HeartIcon filled={liked} size={18} />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => void handleLike()}
+            disabled={!currentUserId}
+            className="flex items-center p-1.5 rounded hover:bg-[#F4F4F4] transition-colors disabled:opacity-30"
+          >
+            <HeartIcon filled={liked} size={18} />
+          </button>
           {likeCount > 0 && (
-            <span style={lato} className="text-[12px] text-[#666666] font-semibold">{likeCount}</span>
+            <button
+              type="button"
+              onClick={() => setShowLikesModal(true)}
+              style={lato}
+              className="text-[12px] font-semibold text-[#666666] hover:text-[#CC4B37] hover:underline transition-colors"
+            >
+              {likeCount}
+            </button>
           )}
-        </button>
+        </div>
 
         {/* Comentar */}
         <button
@@ -1078,6 +1211,15 @@ function PostActions({
           currentUserId={currentUserId}
           currentUserAlias={currentUserAlias}
           currentUserAvatar={currentUserAvatar}
+          postHref={postHref}
+        />
+      )}
+
+      {showLikesModal && (
+        <LikesModal
+          postType={postType}
+          postId={postId}
+          onClose={() => setShowLikesModal(false)}
         />
       )}
     </div>
@@ -1086,13 +1228,104 @@ function PostActions({
 
 // ─── CARD COMPONENTS ───
 
-function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar }: {
+function PostMenu({
+  canDelete,
+  onDelete,
+}: {
+  canDelete: boolean
+  onDelete: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+
+  if (!canDelete) return null
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(v => !v); setConfirming(false) }}
+        className="flex items-center justify-center w-8 h-8 rounded hover:bg-[#F4F4F4] transition-colors text-[#999999] hover:text-[#666666]"
+        aria-label="Opciones"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <circle cx="12" cy="5" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-[90]"
+            onClick={() => { setOpen(false); setConfirming(false) }}
+            aria-hidden
+          />
+          <div className="absolute right-0 top-8 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg">
+            {!confirming ? (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                style={lato}
+                className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#CC4B37] hover:bg-[#FFF8F7] transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Eliminar publicación
+              </button>
+            ) : (
+              <div className="px-4 py-3">
+                <p style={lato} className="text-[12px] text-[#111111] mb-2">
+                  ¿Eliminar este post?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { onDelete(); setOpen(false); setConfirming(false) }}
+                    style={jost}
+                    className="bg-[#CC4B37] px-3 py-1.5 text-[10px] font-extrabold uppercase text-white"
+                  >
+                    SÍ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    style={jost}
+                    className="border border-[#EEEEEE] px-3 py-1.5 text-[10px] font-extrabold uppercase text-[#666666]"
+                  >
+                    NO
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole }: {
   item: Extract<FeedItem, { kind: 'team_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  userTeamRole: 'founder' | 'admin' | null
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
+
+  const handleDelete = async () => {
+    const { error } = await supabase
+      .from('team_posts')
+      .delete()
+      .eq('id', item.id)
+    if (!error) {
+      window.dispatchEvent(new Event('airnation:post-deleted'))
+    }
+  }
+
   return (
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
       <div className="flex items-center gap-3 mb-3">
@@ -1110,6 +1343,12 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
           </Link>
           <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(item.created_at)}</p>
         </div>
+        <div className="ml-auto">
+          <PostMenu
+            canDelete={userTeamRole === 'founder' || userTeamRole === 'admin'}
+            onDelete={handleDelete}
+          />
+        </div>
       </div>
       {item.content?.trim() && (
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
@@ -1124,31 +1363,51 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         currentUserAvatar={currentUserAvatar}
         shareUrl={`/equipos/${item.team.slug}`}
         shareTitle={`${item.team.nombre} en AirNation`}
+        postHref={`/equipos/${item.team.slug}`}
       />
     </div>
   )
 }
 
-function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar }: {
+function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner }: {
   item: Extract<FeedItem, { kind: 'player_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  isOwner: boolean
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
+
+  const handleDelete = async () => {
+    const { error } = await supabase
+      .from('player_posts')
+      .delete()
+      .eq('id', item.id)
+      .eq('user_id', item.user_id)
+    if (!error) {
+      window.dispatchEvent(new Event('airnation:post-deleted'))
+    }
+  }
+
   return (
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
       <div className="mb-3">
-        <Link href={`/u/${item.user_id}`} className="flex items-center gap-3 min-w-0 w-fit max-w-full">
-          <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
-            {item.user.avatar_url
-              ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
-              : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
-            }
-          </div>
-          <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
+            <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
+              {item.user.avatar_url
+                ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
+              }
+            </div>
+            <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+          </Link>
+          <PostMenu
+            canDelete={isOwner}
+            onDelete={handleDelete}
+          />
+        </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
       </div>
       {item.content?.trim() && (
@@ -1164,6 +1423,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         currentUserAvatar={currentUserAvatar}
         shareUrl={`/u/${item.user_id}`}
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
+        postHref={`/u/${item.user_id}`}
       />
     </div>
   )
@@ -1321,20 +1581,21 @@ function FeedTab({
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
+  userTeams,
 }: {
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  userTeams: { id: string; slug: string; rol: 'founder' | 'admin' }[]
 }) {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const load = async () => {
+  const load = useCallback(async () => {
       setLoading(true)
       const [teamPostsRes, playerPostsRes, eventsRes, teamsRes, videosRes, noticiasRes] = await Promise.all([
         supabase.from('team_posts')
-          .select('id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
+          .select('id, team_id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
           .eq('published', true)
           .order('created_at', { ascending: false })
           .limit(10),
@@ -1376,6 +1637,7 @@ function FeedTab({
         feedItems.push({
           kind: 'team_post',
           id: String(r.id),
+          team_id: String(r.team_id ?? ''),
           post_owner_id: r.created_by ? String(r.created_by) : null,
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
@@ -1463,9 +1725,19 @@ function FeedTab({
 
       setItems(feedItems)
       setLoading(false)
-    }
-    void load()
   }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  useEffect(() => {
+    const onDeleted = () => {
+      void load()
+    }
+    window.addEventListener('airnation:post-deleted', onDeleted)
+    return () => window.removeEventListener('airnation:post-deleted', onDeleted)
+  }, [load])
 
   if (loading) return (
     <div className="flex flex-col gap-3">
@@ -1502,6 +1774,7 @@ function FeedTab({
             currentUserId={currentUserId}
             currentUserAlias={currentUserAlias}
             currentUserAvatar={currentUserAvatar}
+            userTeamRole={userTeams.find(t => t.id === item.team_id)?.rol ?? null}
           />
         )
         if (item.kind === 'player_post') return (
@@ -1511,6 +1784,7 @@ function FeedTab({
             currentUserId={currentUserId}
             currentUserAlias={currentUserAlias}
             currentUserAvatar={currentUserAvatar}
+            isOwner={currentUserId === item.user_id}
           />
         )
         if (item.kind === 'event') return <EventCard key={`ev-${item.id}`} item={item} />
@@ -1890,6 +2164,7 @@ export function FeedHome({
             currentUserId={userId}
             currentUserAlias={userAlias}
             currentUserAvatar={userAvatar}
+            userTeams={userTeams.map(t => ({ id: t.id, slug: t.slug, rol: 'founder' as const }))}
           />
         )}
         {activeTab === 'eventos' && <EventosTab />}

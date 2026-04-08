@@ -13,6 +13,11 @@ import {
 } from './MisEventosRsvpSection'
 import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { NotificacionesTab } from './NotificacionesTab'
+import { supabase } from '@/lib/supabase'
+import {
+  fetchUnreadNotifCount,
+  NOTIF_UPDATED_EVENT,
+} from '@/lib/user-notifications'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
 import { PlayerPostsTab } from './PlayerPostsTab'
 import { ProfileView, type ProfileUserRow } from './ProfileView'
@@ -94,6 +99,7 @@ export function PerfilTabsClient({
     initialTabFromParam(initialTab)
   )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const pendingCount =
     joinRequests.length +
     approvedFieldNotices.length +
@@ -112,6 +118,23 @@ export function PerfilTabsClient({
     const el = document.getElementById('dashboard-scroll-root')
     el?.scrollTo({ top: 0 })
   }, [activeTab])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchUnreadNotifCount(supabase, user.id).then((n) => {
+      if (!cancelled) setUnreadNotifCount(n)
+    })
+    const onUpd = () => {
+      fetchUnreadNotifCount(supabase, user.id).then((n) => {
+        if (!cancelled) setUnreadNotifCount(n)
+      })
+    }
+    window.addEventListener(NOTIF_UPDATED_EVENT, onUpd)
+    return () => {
+      cancelled = true
+      window.removeEventListener(NOTIF_UPDATED_EVENT, onUpd)
+    }
+  }, [user.id])
 
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pb-10 pt-6 md:px-6">
@@ -166,21 +189,26 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('notificaciones')}
+            onClick={() => {
+              setActiveTab('notificaciones')
+              setUnreadNotifCount(0)
+            }}
             style={jost}
             className={`${tabBase} inline-flex items-center gap-1.5 ${tabClass(
               'notificaciones'
             )}`}
           >
             <span>NOTIFICACIONES</span>
-            {pendingCount > 0 ? (
+            {(pendingCount + unreadNotifCount) > 0 && (
               <span
                 style={jost}
                 className="inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#CC4B37] px-1 text-[10px] font-extrabold leading-none text-[#FFFFFF]"
               >
-                {pendingCount > 99 ? '99+' : pendingCount}
+                {pendingCount + unreadNotifCount > 99
+                  ? '99+'
+                  : pendingCount + unreadNotifCount}
               </span>
-            ) : null}
+            )}
           </button>
         </div>
       </div>

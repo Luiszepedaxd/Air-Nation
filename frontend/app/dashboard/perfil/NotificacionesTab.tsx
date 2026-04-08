@@ -114,12 +114,13 @@ function SocialNotifsSection({ userId }: { userId: string }) {
       {notifs.map((n) => {
         const name = n.actor.alias?.trim() || n.actor.nombre?.trim() || '?'
         return (
-          <div
+          <Link
             key={n.id}
-            className={`flex items-center gap-3 border px-3 py-3 transition-colors ${
+            href={n.href ?? '/dashboard'}
+            className={`flex items-center gap-3 border px-3 py-3 transition-colors cursor-pointer ${
               !n.read
-                ? 'border-[#CC4B37]/20 bg-[#FFF8F7]'
-                : 'border-[#EEEEEE] bg-[#FFFFFF]'
+                ? 'border-[#CC4B37]/20 bg-[#FFF8F7] hover:bg-[#FFF0EE]'
+                : 'border-[#EEEEEE] bg-[#FFFFFF] hover:bg-[#F4F4F4]'
             }`}
           >
             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
@@ -155,7 +156,7 @@ function SocialNotifsSection({ userId }: { userId: string }) {
             {!n.read ? (
               <div className="h-2 w-2 shrink-0 rounded-full bg-[#CC4B37]" />
             ) : null}
-          </div>
+          </Link>
         )
       })}
     </div>
