@@ -41,6 +41,17 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+      window.__beforeInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__beforeInstallPrompt = e;
+      }, { once: true });
+    `,
+          }}
+        />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#CC4B37" />
         <meta name="apple-mobile-web-app-capable" content="yes" />

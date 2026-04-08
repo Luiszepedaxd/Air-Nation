@@ -214,24 +214,35 @@ export default function PwaInstallPrompt() {
       };
     }
 
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPromptSingleton(e as unknown as BeforeInstallPromptLike);
-      clearTimer();
+    const alreadyCaptured = (window as unknown as Record<string, unknown>).__beforeInstallPrompt
+    if (alreadyCaptured) {
+      setDeferredPromptSingleton(alreadyCaptured as unknown as BeforeInstallPromptLike)
+      ;(window as unknown as Record<string, unknown>).__beforeInstallPrompt = null
       timerRef.current = window.setTimeout(() => {
         if (!cancelled) {
-          setVariant("android");
-          setOpen(true);
+          setVariant("android")
+          setOpen(true)
         }
-      }, SHOW_DELAY_MS);
-    };
+      }, SHOW_DELAY_MS)
+    }
 
-    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault()
+      setDeferredPromptSingleton(e as unknown as BeforeInstallPromptLike)
+      clearTimer()
+      timerRef.current = window.setTimeout(() => {
+        if (!cancelled) {
+          setVariant("android")
+          setOpen(true)
+        }
+      }, SHOW_DELAY_MS)
+    }
+    window.addEventListener("beforeinstallprompt", onBeforeInstall)
     return () => {
-      cancelled = true;
-      clearTimer();
-      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-    };
+      cancelled = true
+      clearTimer()
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall)
+    }
   }, [pathname]);
 
   const onInstallAndroid = async () => {

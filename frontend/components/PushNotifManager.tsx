@@ -32,7 +32,12 @@ export function PushNotifManager({ userId }: { userId: string }) {
       }
     }
 
-    // Pequeño delay para no bloquear el render inicial
+    // En standalone (PWA) ejecutar inmediato, en browser esperar 3s
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    if (isStandalone) {
+      void run()
+      return
+    }
     const t = window.setTimeout(() => void run(), 3000)
     return () => window.clearTimeout(t)
   }, [])
