@@ -24,13 +24,9 @@ export function PushNotifManager({ userId }: { userId: string }) {
       if (!session?.access_token) return
 
       const { subscribeToPush } = await import('@/lib/push-client')
-      const ok = await subscribeToPush(session.access_token)
-      if (ok) {
-        try { sessionStorage.setItem('an_push_subscribed', '1') } catch { /* ignore */ }
-      }
+      await subscribeToPush(session.access_token)
     }
 
-    // En standalone (PWA) ejecutar inmediato, en browser esperar 3s
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     if (isStandalone) {
       void run()
