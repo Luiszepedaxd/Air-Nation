@@ -1318,7 +1318,7 @@ export function FeedHome({
   return (
     <div>
       <div
-        className="z-30 border-b border-[#EEEEEE] bg-[#FFFFFF] -mx-4 px-4 md:-mx-6 md:px-6"
+        className="z-30 border-b border-[#EEEEEE] bg-[#FFFFFF] -mx-4 px-4 md:-mx-6 md:px-6 md:!relative"
         style={{ position: 'sticky', top: stickyTabsTopPx }}
       >
         <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
