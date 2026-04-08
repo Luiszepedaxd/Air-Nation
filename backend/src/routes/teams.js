@@ -138,17 +138,18 @@ router.post("/:teamId/notify-join-request", async (req, res) => {
 
     const slug = teamRow.slug ? String(teamRow.slug) : "";
 
-    const { data: founderMember, error: fmErr } = await supabase
+    const { data: founderMembers, error: fmErr } = await supabase
       .from("team_members")
       .select("user_id")
       .eq("team_id", teamId)
       .eq("rol_plataforma", "founder")
-      .eq("status", "activo")
-      .maybeSingle();
+      .eq("status", "activo");
 
-    if (fmErr || !founderMember?.user_id) {
+    if (fmErr || !founderMembers || founderMembers.length === 0) {
       return res.json({ ok: true, skipped: true, reason: "no_founder" });
     }
+
+    const founderMember = founderMembers[0];
 
     const { data: founderUser, error: fuErr } = await supabase
       .from("users")
@@ -201,13 +202,17 @@ router.post("/:teamId/notify-join-request", async (req, res) => {
     // Enviar push al founder además del email
     try {
       const { sendPushToUser } = require('../lib/push')
-      await sendPushToUser(founderMember.user_id, {
-        title: 'Nueva solicitud de membresía',
-        body: `${nombreStr || 'Alguien'} quiere unirse a ${teamNombreStr}`,
-        url: slug
-          ? `/equipos/${encodeURIComponent(slug)}/admin`
-          : `/dashboard/perfil?tab=notificaciones`,
-      })
+      await Promise.all(
+        founderMembers.map(fm =>
+          sendPushToUser(fm.user_id, {
+            title: 'Nueva solicitud de membresía',
+            body: `${nombreStr || 'Alguien'} quiere unirse a ${teamNombreStr}`,
+            url: slug
+              ? `/equipos/${encodeURIComponent(slug)}/admin`
+              : `/dashboard/perfil?tab=notificaciones`,
+          })
+        )
+      )
     } catch (pushErr) {
       console.warn('[notify-join-request] push error (non-fatal):', pushErr.message)
     }
