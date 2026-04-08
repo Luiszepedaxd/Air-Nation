@@ -444,24 +444,15 @@ function PostBox({
   )
 }
 
-function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole }: {
+function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole, onPostDeleted }: {
   item: Extract<FeedItem, { kind: 'team_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
   userTeamRole: 'founder' | 'admin' | null
+  onPostDeleted: (id: string) => void
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
-
-  const handleDelete = async () => {
-    const { error } = await supabase
-      .from('team_posts')
-      .delete()
-      .eq('id', item.id)
-    if (!error) {
-      window.dispatchEvent(new Event('airnation:post-deleted'))
-    }
-  }
 
   return (
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
@@ -483,7 +474,14 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         <div className="ml-auto">
           <PostMenu
             canDelete={userTeamRole === 'founder' || userTeamRole === 'admin'}
-            onDelete={handleDelete}
+            onDelete={async () => {
+              const { error } = await supabase
+                .from('team_posts')
+                .delete()
+                .eq('id', item.id)
+                .eq('team_id', item.team_id)
+              if (!error) onPostDeleted(item.id)
+            }}
           />
         </div>
       </div>
@@ -571,11 +569,13 @@ function FieldPostCard({
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
+  onPostDeleted,
 }: {
   item: Extract<FeedItem, { kind: 'field_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  onPostDeleted: (id: string) => void
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const initial = (item.field.nombre.trim()[0] || '?').toUpperCase()
@@ -620,9 +620,7 @@ function FieldPostCard({
               .from('field_posts')
               .delete()
               .eq('id', item.id)
-            if (!error) {
-              window.dispatchEvent(new Event('airnation:post-deleted'))
-            }
+            if (!error) onPostDeleted(item.id)
           }}
         />
       </div>
@@ -1038,6 +1036,7 @@ function FeedTab({
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}
               userTeamRole={teamRole}
+              onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
             />
           )
         }
@@ -1059,6 +1058,7 @@ function FeedTab({
               currentUserId={currentUserId}
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}
+              onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
             />
           )
         if (item.kind === 'event') return <EventCard key={`ev-${item.id}`} item={item} />
