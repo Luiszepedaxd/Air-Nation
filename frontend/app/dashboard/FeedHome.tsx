@@ -14,7 +14,7 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 type FeedItem =
   | { kind: 'team_post'; id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
   | { kind: 'player_post'; id: string; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
-  | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
+  | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
   | { kind: 'noticia'; id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
@@ -417,6 +417,128 @@ function PostBox({
   )
 }
 
+function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: number; onClose: () => void }) {
+  const [idx, setIdx] = useState(startIndex)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight') setIdx(i => Math.min(i + 1, urls.length - 1))
+      if (e.key === 'ArrowLeft') setIdx(i => Math.max(i - 1, 0))
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [urls.length, onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
+      onClick={onClose}
+    >
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-white p-2"
+        aria-label="Cerrar"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      </button>
+
+      {urls.length > 1 && idx > 0 && (
+        <button
+          onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18l-6-6 6-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
+
+      <img
+        src={urls[idx]}
+        alt=""
+        className="max-h-[90vh] max-w-[95vw] object-contain"
+        onClick={e => e.stopPropagation()}
+      />
+
+      {urls.length > 1 && idx < urls.length - 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 18l6-6-6-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      )}
+
+      {urls.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {urls.map((_, i) => (
+            <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/40'}`} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PhotoGrid({ urls }: { urls: string[] }) {
+  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
+  if (!urls.length) return null
+
+  const open = (i: number) => setLightbox({ open: true, index: i })
+
+  return (
+    <>
+      {lightbox.open && (
+        <Lightbox urls={urls} startIndex={lightbox.index} onClose={() => setLightbox({ open: false, index: 0 })} />
+      )}
+      {urls.length === 1 && (
+        <div className="aspect-[4/3] w-full overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(0)}>
+          <img src={urls[0]} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+      {urls.length === 2 && (
+        <div className="grid grid-cols-2 gap-[2px]">
+          {urls.map((url, i) => (
+            <div key={i} className="aspect-square overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(i)}>
+              <img src={url} alt="" className="w-full h-full object-cover" />
+            </div>
+          ))}
+        </div>
+      )}
+      {urls.length === 3 && (
+        <div className="grid grid-cols-2 gap-[2px]">
+          <div className="row-span-2 aspect-[2/3] overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(0)}>
+            <img src={urls[0]} alt="" className="w-full h-full object-cover" />
+          </div>
+          {urls.slice(1).map((url, i) => (
+            <div key={i} className="aspect-square overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(i + 1)}>
+              <img src={url} alt="" className="w-full h-full object-cover" />
+            </div>
+          ))}
+        </div>
+      )}
+      {urls.length >= 4 && (
+        <div className="grid grid-cols-2 gap-[2px]">
+          {urls.slice(0, 4).map((url, i) => (
+            <div key={i} className="relative aspect-square overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(i)}>
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              {i === 3 && urls.length > 4 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <span className="text-white text-[18px] font-extrabold" style={jost}>+{urls.length - 4}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 // ─── CARD COMPONENTS ───
 
 function TeamPostCard({ item }: { item: Extract<FeedItem, { kind: 'team_post' }> }) {
@@ -442,15 +564,7 @@ function TeamPostCard({ item }: { item: Extract<FeedItem, { kind: 'team_post' }>
       {item.content?.trim() && (
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
       )}
-      {fotos.length > 0 && (
-        <div className={`grid gap-1 ${fotos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          {fotos.map((url, i) => (
-            <div key={i} className="aspect-video overflow-hidden bg-[#F4F4F4]">
-              <img src={url} alt="" className="w-full h-full object-cover" />
-            </div>
-          ))}
-        </div>
-      )}
+      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
     </div>
   )
 }
@@ -475,35 +589,40 @@ function PlayerPostCard({ item }: { item: Extract<FeedItem, { kind: 'player_post
       {item.content?.trim() && (
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
       )}
-      {fotos.length > 0 && (
-        <div className={`grid gap-1 ${fotos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          {fotos.map((url, i) => (
-            <div key={i} className="aspect-video overflow-hidden bg-[#F4F4F4]">
-              <img src={url} alt="" className="w-full h-full object-cover" />
-            </div>
-          ))}
-        </div>
-      )}
+      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
     </div>
   )
 }
 
 function EventCard({ item }: { item: Extract<FeedItem, { kind: 'event' }> }) {
   const sub = [item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')
+  const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
   return (
-    <Link href={`/eventos/${item.id}`} className="flex gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
-      <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
-        {item.imagen_url
-          ? <img src={item.imagen_url} alt="" className="w-full h-full object-cover" />
+    <Link href={`/eventos/${item.id}`}
+      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      {/* Banner */}
+      <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+        {imagenFinal
+          ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" />
           : <div className="w-full h-full flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#AAAAAA" strokeWidth="1.4" /><path d="M3 9h18M8 5V3M16 5V3" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" /></svg>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#444" strokeWidth="1.4"/>
+                <path d="M3 9h18M8 5V3M16 5V3" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
             </div>
         }
-      </div>
-      <div className="min-w-0 flex-1">
-        <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">{formatEventDate(item.fecha)}</p>
-        <h3 style={jost} className="mt-0.5 line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">{item.title}</h3>
-        {sub && <p style={lato} className="mt-1 text-[11px] text-[#666666] truncate">{sub}</p>}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-3">
+          <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">
+            {formatEventDate(item.fecha)}
+          </p>
+          <h3 style={jost} className="mt-0.5 text-[14px] font-extrabold uppercase leading-snug text-white line-clamp-2">
+            {item.title}
+          </h3>
+          {sub && (
+            <p style={lato} className="mt-1 text-[11px] text-white/70 truncate">{sub}</p>
+          )}
+        </div>
       </div>
     </Link>
   )
@@ -593,34 +712,29 @@ function VideoCard({ item }: { item: Extract<FeedItem, { kind: 'video' }> }) {
 function NoticiaFeedCard({ item }: { item: Extract<FeedItem, { kind: 'noticia' }> }) {
   return (
     <Link href={`/blog/${item.slug}`}
-      className="flex gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
-      <div className="w-20 h-20 shrink-0 overflow-hidden bg-[#F4F4F4]">
-        {item.cover_url
-          ? <img src={item.cover_url} alt="" className="w-full h-full object-cover"/>
-          : <div className="w-full h-full flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M7 3h8l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1Z"
-                  stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
-                <path d="M15 3v4h4M9 11h6M9 15h4"
-                  stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
-              </svg>
-            </div>
-        }
-      </div>
-      <div className="min-w-0 flex-1">
+      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      {item.cover_url && (
+        <div className="aspect-[16/7] w-full overflow-hidden bg-[#F4F4F4]">
+          <img src={item.cover_url} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-3">
         {item.category && (
-          <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-0.5">
+          <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-1">
             {item.category}
           </p>
         )}
-        <h3 style={jost} className="line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">
+        <h3 style={jost} className="text-[13px] font-extrabold uppercase leading-snug text-[#111111] line-clamp-2">
           {item.title}
         </h3>
         {item.excerpt && (
-          <p style={lato} className="mt-1 line-clamp-2 text-[11px] text-[#666666]">
+          <p style={lato} className="mt-1 text-[12px] text-[#666666] line-clamp-2">
             {item.excerpt}
           </p>
         )}
+        <p style={jost} className="mt-2 text-[10px] font-extrabold uppercase text-[#CC4B37]">
+          LEER MÁS →
+        </p>
       </div>
     </Link>
   )
@@ -647,7 +761,7 @@ function FeedTab() {
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('events')
-          .select('id, title, fecha, imagen_url, created_at, fields(nombre, ciudad)')
+          .select('id, title, fecha, imagen_url, created_at, fields(nombre, ciudad, foto_portada_url)')
           .eq('published', true)
           .eq('status', 'publicado')
           .gte('fecha', new Date().toISOString())
@@ -709,6 +823,7 @@ function FeedTab() {
           title: String(r.title ?? ''),
           fecha: String(r.fecha ?? ''),
           imagen_url: (r.imagen_url as string | null) ?? null,
+          field_foto: f ? (f as Record<string, unknown>).foto_portada_url as string | null : null,
           field_nombre: f ? String((f as Record<string, unknown>).nombre ?? '') || null : null,
           field_ciudad: f ? String((f as Record<string, unknown>).ciudad ?? '') || null : null,
           created_at: String(r.created_at),
