@@ -13,6 +13,7 @@ export type CampoListRow = {
 
 export type CampoDetailRow = {
   id: string
+  created_by: string | null
   nombre: string
   slug: string
   ciudad: string | null

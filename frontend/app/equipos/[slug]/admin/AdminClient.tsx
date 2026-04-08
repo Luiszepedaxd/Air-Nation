@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
-import { PostPhotoGallery } from '../components/PostPhotoGallery'
 import type {
   TeamAlbumAdminRow,
   TeamJoinRequestAdminRow,
@@ -544,6 +545,7 @@ export function AdminClient({
 
         {activeTab === 'posts' ? (
           <PostsTab
+            slug={slug}
             teamId={teamId}
             viewerUserId={viewerUserId}
             posts={posts}
@@ -1232,12 +1234,14 @@ function postUrls(row: TeamPostAdminRow): string[] {
 }
 
 function PostsTab({
+  slug,
   teamId,
   viewerUserId,
   posts,
   setPosts,
   loading,
 }: {
+  slug: string
   teamId: string
   viewerUserId: string
   posts: TeamPostAdminRow[]
@@ -1247,7 +1251,6 @@ function PostsTab({
   const [postText, setPostText] = useState('')
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
   const [publishing, setPublishing] = useState(false)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [pickErr, setPickErr] = useState('')
   const postInputRef = useRef<HTMLInputElement>(null)
   const pendingRef = useRef(pendingPhotos)
@@ -1335,23 +1338,6 @@ function PostsTab({
       /* noop */
     } finally {
       setPublishing(false)
-    }
-  }
-
-  const softDeletePost = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('team_posts')
-        .update({ published: false })
-        .eq('id', id)
-        .eq('team_id', teamId)
-
-      if (error) throw error
-
-      setPosts((prev) => prev.filter((x) => x.id !== id))
-      setConfirmDeleteId(null)
-    } catch {
-      /* noop */
     }
   }
 
@@ -1467,57 +1453,44 @@ function PostsTab({
             return (
               <li key={post.id} className="list-none">
                 <div className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] text-[#999999]" style={lato}>
+                      {relativeTime(post.created_at)}
+                    </p>
+                    <PostMenu
+                      canDelete={true}
+                      onDelete={async () => {
+                        const { error } = await supabase
+                          .from('team_posts')
+                          .delete()
+                          .eq('id', post.id)
+                          .eq('team_id', teamId)
+                        if (!error) {
+                          setPosts((prev) => prev.filter((x) => x.id !== post.id))
+                        }
+                      }}
+                    />
+                  </div>
                   {post.content?.trim() ? (
                     <p
-                      className="mb-3 min-w-0 max-w-full break-words whitespace-pre-wrap text-[14px] text-[#111111]"
+                      className="mb-3 break-words whitespace-pre-wrap text-[14px] text-[#111111]"
                       style={lato}
                     >
                       {post.content.trim()}
                     </p>
                   ) : null}
-                  {urls.length > 0 ? <PostPhotoGallery urls={urls} /> : null}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="text-[11px] text-[#999999]" style={lato}>
-                      {relativeTime(post.created_at)}
-                    </p>
-                    <div className="shrink-0">
-                      {confirmDeleteId === post.id ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p
-                            style={lato}
-                            className="text-[13px] text-[#111111]"
-                          >
-                            ¿Eliminar este post?
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => void softDeletePost(post.id)}
-                            style={jost}
-                            className="min-h-[32px] bg-[#CC4B37] px-3 text-[10px] font-extrabold uppercase text-[#FFFFFF]"
-                          >
-                            SÍ
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            style={jost}
-                            className="min-h-[32px] border border-solid border-[#EEEEEE] px-3 text-[10px] font-extrabold uppercase text-[#666666]"
-                          >
-                            NO
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(post.id)}
-                          className="inline-flex items-center gap-1 text-[#999999] transition-colors hover:text-[#666666]"
-                          aria-label="Eliminar publicación"
-                        >
-                          <IconTrash />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  {urls.length > 0 && <PhotoGrid urls={urls} />}
+                  <PostActions
+                    postType="team"
+                    postId={post.id}
+                    postOwnerId={post.created_by ?? viewerUserId}
+                    postHref={`/equipos/${slug}`}
+                    currentUserId={viewerUserId}
+                    currentUserAlias={null}
+                    currentUserAvatar={null}
+                    shareUrl={`/equipos/${slug}`}
+                    shareTitle="Publicación del equipo en AirNation"
+                  />
                 </div>
               </li>
             )

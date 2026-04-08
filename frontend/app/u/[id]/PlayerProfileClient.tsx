@@ -1,8 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
+import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { supabase } from '@/lib/supabase'
 import type {
   PlayerEventRow,
   PlayerPostRow,
@@ -43,20 +46,6 @@ function formatDMY(iso: string) {
   }
 }
 
-function stripHtml(html: string) {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function excerpt(content: string | null, max: number) {
-  if (!content) return ''
-  const text = stripHtml(content)
-  if (text.length <= max) return text
-  return `${text.slice(0, max).trim()}…`
-}
-
 function postPhotoUrls(post: PlayerPostRow): string[] {
   const raw = post.fotos_urls
   if (!Array.isArray(raw)) return []
@@ -87,11 +76,13 @@ export function PlayerProfileClient({
   posts,
   events,
   rolLabels,
+  currentUserId,
 }: {
   user: PublicUserProfile
   posts: PlayerPostRow[]
   events: PlayerEventRow[]
   rolLabels: Record<string, string>
+  currentUserId: string | null
 }) {
   const [tab, setTab] = useState<TabId>('posts')
 
@@ -137,7 +128,11 @@ export function PlayerProfileClient({
 
       <div className="mx-auto max-w-[960px] px-4 py-6 md:px-6 md:py-8">
         {tab === 'posts' ? (
-          <PostsPanel posts={posts} />
+          <PostsPanel
+            posts={posts}
+            profileUserId={user.id}
+            currentUserId={currentUserId}
+          />
         ) : null}
 
         {tab === 'info' ? (
@@ -156,7 +151,17 @@ export function PlayerProfileClient({
   )
 }
 
-function PostsPanel({ posts }: { posts: PlayerPostRow[] }) {
+function PostsPanel({
+  posts,
+  profileUserId,
+  currentUserId,
+}: {
+  posts: PlayerPostRow[]
+  profileUserId: string
+  currentUserId: string | null
+}) {
+  const router = useRouter()
+
   if (!posts.length) {
     return (
       <p className="py-12 text-center text-[14px] text-[#666666]" style={lato}>
@@ -169,29 +174,58 @@ function PostsPanel({ posts }: { posts: PlayerPostRow[] }) {
     <div className="flex flex-col">
       {posts.map((post) => {
         const urls = postPhotoUrls(post)
-        const ex = excerpt(post.content, 120)
+        const isOwner = currentUserId === profileUserId
 
         return (
           <article
             key={post.id}
             className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
           >
-            {ex ? (
+            <div className="flex items-center justify-between mb-2">
               <p
-                className="mb-3 text-[14px] leading-relaxed text-[#111111] line-clamp-4"
-                style={lato}
+                className="text-[11px] text-[#999999]"
+                style={{ fontFamily: "'Lato', sans-serif" }}
               >
-                {ex}
+                {new Intl.DateTimeFormat('es-MX', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                }).format(new Date(post.created_at))}
+              </p>
+              <PostMenu
+                canDelete={isOwner}
+                onDelete={async () => {
+                  const { error } = await supabase
+                    .from('player_posts')
+                    .delete()
+                    .eq('id', post.id)
+                    .eq('user_id', profileUserId)
+                  if (!error) {
+                    router.refresh()
+                  }
+                }}
+              />
+            </div>
+            {post.content?.trim() ? (
+              <p
+                className="mb-3 text-[14px] leading-relaxed text-[#111111]"
+                style={{ fontFamily: "'Lato', sans-serif" }}
+              >
+                {post.content.trim()}
               </p>
             ) : null}
-            {urls.length > 0 ? <PostPhotoGallery urls={urls} /> : null}
-            <time
-              className="mt-3 block text-[12px] text-[#666666]"
-              style={lato}
-              dateTime={post.created_at}
-            >
-              {formatDate(post.created_at)}
-            </time>
+            {urls.length > 0 && <PhotoGrid urls={urls} />}
+            <PostActions
+              postType="player"
+              postId={post.id}
+              postOwnerId={profileUserId}
+              postHref={`/u/${profileUserId}`}
+              currentUserId={currentUserId}
+              currentUserAlias={null}
+              currentUserAvatar={null}
+              shareUrl={`/u/${profileUserId}`}
+              shareTitle="Publicación en AirNation"
+            />
           </article>
         )
       })}

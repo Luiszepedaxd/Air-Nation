@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
+import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { formatEventoFechaCorta } from '@/app/eventos/lib/format-evento-fecha'
 import {
   FIELD_DAY_KEYS,
@@ -107,16 +109,17 @@ export type CampoFieldPostPublic = {
   created_at: string
 }
 
-function formatPostFecha(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return new Intl.DateTimeFormat('es-MX', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d)
+function formatRelative(iso: string): string {
+  try {
+    const diff = Date.now() - new Date(iso).getTime()
+    const h = Math.floor(diff / (1000 * 60 * 60))
+    if (h < 1) return 'hace unos minutos'
+    if (h < 24) return `hace ${h}h`
+    const d = Math.floor(h / 24)
+    return d === 1 ? 'hace 1 día' : `hace ${d} días`
+  } catch {
+    return ''
+  }
 }
 
 export function CampoPublicTabs({
@@ -453,39 +456,54 @@ export function CampoPublicTabs({
                 {publicaciones.map((p, idx) => {
                   const photos = p.fotos_urls.slice(0, 4)
                   const isLast = idx === publicaciones.length - 1
+                  const isFieldOwner =
+                    currentUserId != null &&
+                    currentUserId === field.created_by
                   return (
                     <li
                       key={p.id}
                       className={`pb-6 ${isLast ? '' : 'mb-6 border-b border-[#EEEEEE]'}`}
                     >
-                      {photos.length > 0 ? (
-                        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                          {photos.map((url) => (
-                            <div
-                              key={url}
-                              className="aspect-square overflow-hidden bg-[#F4F4F4]"
-                            >
-                              <img
-                                src={url}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[11px] text-[#999999]" style={lato}>
+                          {formatRelative(p.created_at)}
+                        </p>
+                        <PostMenu
+                          canDelete={isFieldOwner}
+                          onDelete={async () => {
+                            const { error } = await supabase
+                              .from('field_posts')
+                              .delete()
+                              .eq('id', p.id)
+                              .eq('field_id', field.id)
+                            if (!error) {
+                              setPublicaciones((prev) =>
+                                prev.filter((x) => x.id !== p.id)
+                              )
+                            }
+                          }}
+                        />
+                      </div>
+                      {p.content?.trim() ? (
+                        <p
+                          className="mb-3 text-[14px] text-[#111111] leading-relaxed whitespace-pre-wrap"
+                          style={lato}
+                        >
+                          {p.content.trim()}
+                        </p>
                       ) : null}
-                      <p
-                        className="whitespace-pre-wrap text-sm text-[#444444]"
-                        style={lato}
-                      >
-                        {p.content}
-                      </p>
-                      <p
-                        className="mt-2 text-xs text-[#AAAAAA]"
-                        style={lato}
-                      >
-                        {formatPostFecha(p.created_at)}
-                      </p>
+                      {photos.length > 0 && <PhotoGrid urls={photos} />}
+                      <PostActions
+                        postType="field"
+                        postId={p.id}
+                        postOwnerId={field.created_by ?? null}
+                        postHref={`/campos/${field.slug}`}
+                        currentUserId={currentUserId}
+                        currentUserAlias={null}
+                        currentUserAvatar={null}
+                        shareUrl={`/campos/${field.slug}`}
+                        shareTitle={`${field.nombre} en AirNation`}
+                      />
                     </li>
                   )
                 })}

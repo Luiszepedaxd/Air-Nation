@@ -43,6 +43,7 @@ const getCampoBySlug = cache(async (slug: string): Promise<CampoDetailRow | null
     .select(
       `
       id,
+      created_by,
       nombre,
       slug,
       ciudad,

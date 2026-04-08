@@ -1,8 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
-import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -98,27 +99,12 @@ function IconCamera() {
   )
 }
 
-function IconTrash() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M9 3h6M5 6h14M8 6l1 14h6l1-14M10 11v6M14 11v6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
 export function PlayerPostsTab({ userId }: { userId: string }) {
   const [posts, setPosts] = useState<PlayerPost[]>([])
   const [loading, setLoading] = useState(true)
   const [postText, setPostText] = useState('')
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
   const [publishing, setPublishing] = useState(false)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [pickErr, setPickErr] = useState('')
   const postInputRef = useRef<HTMLInputElement>(null)
   const pendingRef = useRef(pendingPhotos)
@@ -212,23 +198,6 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
       /* noop */
     } finally {
       setPublishing(false)
-    }
-  }
-
-  const softDeletePost = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('player_posts')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', userId)
-
-      if (error) throw error
-
-      setPosts((prev) => prev.filter((x) => x.id !== id))
-      setConfirmDeleteId(null)
-    } catch {
-      setConfirmDeleteId(null)
     }
   }
 
@@ -350,7 +319,25 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
             const urls = normalizeFotoUrls(post.fotos_urls).slice(0, 4)
             return (
               <li key={post.id} className="list-none">
-                <div className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] p-4">
+                <div className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] text-[#999999]" style={lato}>
+                      {formatDate(post.created_at)}
+                    </p>
+                    <PostMenu
+                      canDelete={true}
+                      onDelete={async () => {
+                        const { error } = await supabase
+                          .from('player_posts')
+                          .delete()
+                          .eq('id', post.id)
+                          .eq('user_id', userId)
+                        if (!error) {
+                          setPosts((prev) => prev.filter((x) => x.id !== post.id))
+                        }
+                      }}
+                    />
+                  </div>
                   {post.content?.trim() ? (
                     <p
                       className="mb-3 min-w-0 max-w-full break-words whitespace-pre-wrap text-[14px] text-[#111111]"
@@ -359,46 +346,18 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                       {post.content.trim()}
                     </p>
                   ) : null}
-                  {urls.length > 0 ? <PostPhotoGallery urls={urls} /> : null}
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="text-[11px] text-[#999999]" style={lato}>
-                      {formatDate(post.created_at)}
-                    </p>
-                    <div className="shrink-0">
-                      {confirmDeleteId === post.id ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p style={lato} className="text-[13px] text-[#111111]">
-                            ¿Eliminar este post?
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => void softDeletePost(post.id)}
-                            style={jost}
-                            className="min-h-[32px] bg-[#CC4B37] px-3 text-[10px] font-extrabold uppercase text-[#FFFFFF]"
-                          >
-                            SÍ
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(null)}
-                            style={jost}
-                            className="min-h-[32px] border border-solid border-[#EEEEEE] px-3 text-[10px] font-extrabold uppercase text-[#666666]"
-                          >
-                            NO
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(post.id)}
-                          className="inline-flex items-center gap-1 text-[#999999] transition-colors hover:text-[#666666]"
-                          aria-label="Eliminar publicación"
-                        >
-                          <IconTrash />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  {urls.length > 0 && <PhotoGrid urls={urls} />}
+                  <PostActions
+                    postType="player"
+                    postId={post.id}
+                    postOwnerId={userId}
+                    postHref={`/u/${userId}`}
+                    currentUserId={userId}
+                    currentUserAlias={null}
+                    currentUserAvatar={null}
+                    shareUrl={`/u/${userId}`}
+                    shareTitle="Publicación en AirNation"
+                  />
                 </div>
               </li>
             )

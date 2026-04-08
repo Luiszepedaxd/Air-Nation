@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { createPublicSupabaseClient } from '../supabase-public'
 import { PlayerProfileClient } from './PlayerProfileClient'
 import { PlayerHero } from './PlayerHero'
@@ -127,6 +128,11 @@ export default async function PublicProfilePage({
 
   const { user, posts, events } = result
 
+  const supabaseServer = createDashboardSupabaseServerClient()
+  const {
+    data: { user: currentUser },
+  } = await supabaseServer.auth.getUser()
+
   if (user.perfil_publico === false) {
     return (
       <main className="flex min-h-screen min-w-[375px] items-center justify-center bg-[#FFFFFF] px-8 py-8 text-[#111111]">
@@ -158,6 +164,7 @@ export default async function PublicProfilePage({
         posts={posts}
         events={events}
         rolLabels={ROL_LABELS}
+        currentUserId={currentUser?.id ?? null}
       />
     </main>
   )
