@@ -1,0 +1,60 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { subscribeToPush, updateAppBadge } from '@/lib/push-client'
+import { fetchUnreadNotifCount, NOTIF_UPDATED_EVENT } from '@/lib/user-notifications'
+
+const STORAGE_KEY = 'an_push_subscribed'
+
+export function PushNotifManager({ userId }: { userId: string }) {
+  const subscribedRef = useRef(false)
+
+  // ── Suscripción automática al montar ─────────────────────────────────────
+  useEffect(() => {
+    if (subscribedRef.current) return
+    if (typeof window === 'undefined') return
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'denied') return
+
+    // Solo intentar una vez por sesión
+    if (sessionStorage.getItem(STORAGE_KEY) === '1') return
+
+    subscribedRef.current = true
+
+    const run = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const ok = await subscribeToPush(session.access_token)
+      if (ok) {
+        try { sessionStorage.setItem(STORAGE_KEY, '1') } catch { /* ignore */ }
+      }
+    }
+
+    // Pequeño delay para no bloquear el render inicial
+    const t = window.setTimeout(() => void run(), 3000)
+    return () => window.clearTimeout(t)
+  }, [])
+
+  // ── Badge en ícono de la app ──────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+
+    const refresh = async () => {
+      const count = await fetchUnreadNotifCount(supabase, userId)
+      if (!cancelled) updateAppBadge(count)
+    }
+
+    void refresh()
+
+    const handler = () => void refresh()
+    window.addEventListener(NOTIF_UPDATED_EVENT, handler)
+    return () => {
+      cancelled = true
+      window.removeEventListener(NOTIF_UPDATED_EVENT, handler)
+    }
+  }, [userId])
+
+  return null
+}

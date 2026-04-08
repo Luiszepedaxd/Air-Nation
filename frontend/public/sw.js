@@ -1,4 +1,4 @@
-const CACHE_NAME = "airnation-v1";
+const CACHE_NAME = "airnation-v2";
 const PRECACHE_URLS = ["/", "/register", "/login", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
@@ -6,9 +6,11 @@ self.addEventListener("install", (event) => {
     caches
       .open(CACHE_NAME)
       .then((cache) =>
-        Promise.allSettled(PRECACHE_URLS.map((url) => cache.add(url).catch(() => undefined))),
+        Promise.allSettled(
+          PRECACHE_URLS.map((url) => cache.add(url).catch(() => undefined))
+        )
       )
-      .then(() => self.skipWaiting()),
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -17,17 +19,16 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))),
+        Promise.all(
+          keys
+            .filter((name) => name !== CACHE_NAME)
+            .map((name) => caches.delete(name))
+        )
       )
-      .then(() => self.clients.claim()),
+      .then(() => self.clients.claim())
   );
 });
 
-/**
- * Do not intercept Next.js internal traffic or non-GET requests.
- * RSC and /_next/ must reach the network without cache fallbacks that can
- * yield a non-Response and break respondWith.
- */
 function shouldPassthroughFetch(request) {
   if (request.method !== "GET") return true;
   let url;
@@ -43,7 +44,6 @@ function shouldPassthroughFetch(request) {
 
 self.addEventListener("fetch", (event) => {
   if (shouldPassthroughFetch(event.request)) return;
-
   event.respondWith(
     fetch(event.request)
       .then((response) => response)
@@ -51,7 +51,49 @@ self.addEventListener("fetch", (event) => {
         caches.match(event.request).then((cached) => {
           if (cached) return cached;
           return fetch(event.request);
-        }),
-      ),
+        })
+      )
+  );
+});
+
+// ─── Push Notifications ───────────────────────────────────────────────────────
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "AirNation", body: event.data.text(), url: "/dashboard/perfil?tab=notificaciones" };
+  }
+
+  const title = payload.title || "AirNation";
+  const options = {
+    body: payload.body || "",
+    icon: payload.icon || "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    data: { url: payload.url || "/dashboard/perfil?tab=notificaciones" },
+    vibrate: [100, 50, 100],
+    requireInteraction: false,
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/dashboard/perfil?tab=notificaciones";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes("airnation.online") && "focus" in client) {
+          client.focus();
+          client.navigate(url);
+          return;
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
   );
 });

@@ -1,11 +1,19 @@
 import BottomNav from '@/components/dashboard/BottomNav'
+import { PushNotifManager } from '@/components/PushNotifManager'
 import AlphaBanner from '@/components/ui/AlphaBanner'
+import { createClient } from '@/lib/supabase/server'
 
-export default function AppShell({
+export default async function AppShell({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const userId = user?.id
+
   return (
     <div className="h-[100dvh] flex flex-col bg-[#F4F4F4]">
       <div
@@ -17,6 +25,9 @@ export default function AppShell({
         {children}
       </div>
       <BottomNav />
+      {userId != null && userId !== '' ? (
+        <PushNotifManager userId={userId} />
+      ) : null}
     </div>
   )
 }
