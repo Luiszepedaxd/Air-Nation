@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
@@ -42,6 +42,369 @@ function formatEventDate(iso: string) {
     const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
     return `${dias[d.getDay()]} ${d.getDate()} ${meses[d.getMonth()]}`
   } catch { return '' }
+}
+
+type PostAs =
+  | { type: 'player'; id: string; nombre: string; avatar: string | null }
+  | { type: 'team'; id: string; nombre: string; avatar: string | null; slug: string }
+  | { type: 'field'; id: string; nombre: string; avatar: string | null; slug: string }
+
+function PostBox({
+  userId,
+  userAlias,
+  userAvatar,
+  userTeams,
+  userFields,
+  onPublished,
+}: {
+  userId: string
+  userAlias: string | null
+  userAvatar: string | null
+  userTeams: { id: string; nombre: string; slug: string; logo_url: string | null }[]
+  userFields: { id: string; nombre: string; slug: string; foto_portada_url: string | null }[]
+  onPublished: () => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const [postAs, setPostAs] = useState<PostAs>({
+    type: 'player',
+    id: userId,
+    nombre: userAlias || 'Tú',
+    avatar: userAvatar,
+  })
+  const [text, setText] = useState('')
+  const [pendingPhotos, setPendingPhotos] = useState<
+    { id: string; file: File; preview: string }[]
+  >([])
+  const [publishing, setPublishing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const API_URL = (
+    process.env.NEXT_PUBLIC_API_URL ||
+    'https://air-nation-production.up.railway.app/api/v1'
+  ).replace(/\/$/, '')
+
+  const postAsOptions: PostAs[] = [
+    {
+      type: 'player',
+      id: userId,
+      nombre: userAlias || 'Tú',
+      avatar: userAvatar,
+    },
+    ...userTeams.map((t) => ({
+      type: 'team' as const,
+      id: t.id,
+      nombre: t.nombre,
+      avatar: t.logo_url,
+      slug: t.slug,
+    })),
+    ...userFields.map((f) => ({
+      type: 'field' as const,
+      id: f.id,
+      nombre: f.nombre,
+      avatar: f.foto_portada_url,
+      slug: f.slug,
+    })),
+  ]
+
+  const addFiles = (files: FileList | null) => {
+    if (!files?.length) return
+    const next: { id: string; file: File; preview: string }[] = []
+    for (const file of Array.from(files)) {
+      if (pendingPhotos.length + next.length >= 4) break
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
+        continue
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`
+      next.push({ id, file, preview: URL.createObjectURL(file) })
+    }
+    setPendingPhotos((p) => [...p, ...next])
+  }
+
+  const clearPendingPhotos = () => {
+    for (const p of pendingPhotos) URL.revokeObjectURL(p.preview)
+    setPendingPhotos([])
+  }
+
+  const handlePublish = async () => {
+    if ((!text.trim() && pendingPhotos.length === 0) || publishing) return
+    setPublishing(true)
+    try {
+      const urls: string[] = []
+      for (const p of pendingPhotos) {
+        const fd = new FormData()
+        fd.append('file', p.file)
+        const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: fd })
+        const json = (await res.json()) as { url?: string }
+        if (json.url) urls.push(json.url)
+      }
+
+      const content = text.trim() || null
+
+      if (postAs.type === 'player') {
+        const { error } = await supabase.from('player_posts').insert({
+          user_id: userId,
+          content,
+          fotos_urls: urls,
+          published: true,
+        })
+        if (error) throw error
+      } else if (postAs.type === 'team') {
+        const { error } = await supabase.from('team_posts').insert({
+          team_id: postAs.id,
+          content,
+          fotos_urls: urls,
+          published: true,
+          created_by: userId,
+        })
+        if (error) throw error
+      } else if (postAs.type === 'field') {
+        const { error } = await supabase.from('field_posts').insert({
+          field_id: postAs.id,
+          content,
+          fotos_urls: urls,
+          created_by: userId,
+        })
+        if (error) throw error
+      }
+
+      setText('')
+      for (const p of pendingPhotos) URL.revokeObjectURL(p.preview)
+      setPendingPhotos([])
+      setExpanded(false)
+      onPublished()
+    } catch {
+      /* noop */
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  if (!expanded) {
+    return (
+      <div className="mb-4 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-xs font-bold text-[#CC4B37]"
+                style={jost}
+              >
+                {(userAlias || 'T')[0].toUpperCase()}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            className="flex-1 bg-[#F4F4F4] px-3 py-2 text-left text-[13px] text-[#AAAAAA]"
+            style={lato}
+          >
+            ¿Qué estás pensando, {userAlias || 'jugador'}?
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(true)
+            }}
+            className="shrink-0 p-2"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <rect
+                x="3"
+                y="3"
+                width="7"
+                height="7"
+                stroke="#666666"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="14"
+                y="3"
+                width="7"
+                height="7"
+                stroke="#666666"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="3"
+                y="14"
+                width="7"
+                height="7"
+                stroke="#666666"
+                strokeWidth="1.5"
+              />
+              <rect
+                x="14"
+                y="14"
+                width="7"
+                height="7"
+                stroke="#666666"
+                strokeWidth="1.5"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-4 border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+      {postAsOptions.length > 1 && (
+        <div className="mb-3">
+          <p
+            style={jost}
+            className="mb-2 text-[10px] font-extrabold uppercase text-[#999999]"
+          >
+            Publicar como
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {postAsOptions.map((opt) => (
+              <button
+                key={`${opt.type}-${opt.id}`}
+                type="button"
+                onClick={() => setPostAs(opt)}
+                className={`flex items-center gap-2 border px-3 py-1.5 text-[11px] transition-colors ${
+                  postAs.id === opt.id && postAs.type === opt.type
+                    ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]'
+                    : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#111111]'
+                }`}
+                style={jost}
+              >
+                <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
+                  {opt.avatar ? (
+                    <img
+                      src={opt.avatar}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[8px] font-bold text-[#CC4B37]">
+                      {opt.nombre[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                {opt.nombre}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value.slice(0, 500))}
+        placeholder="¿Qué quieres compartir?"
+        rows={3}
+        className="w-full resize-none border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[14px] text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
+        style={lato}
+        autoFocus
+      />
+
+      {pendingPhotos.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {pendingPhotos.map((p) => (
+            <div
+              key={p.id}
+              className="relative h-16 w-16 overflow-hidden bg-[#F4F4F4]"
+            >
+              <img src={p.preview} alt="" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => {
+                  URL.revokeObjectURL(p.preview)
+                  setPendingPhotos((prev) => prev.filter((x) => x.id !== p.id))
+                }}
+                className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center bg-black/50 text-xs text-white"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between">
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => addFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={pendingPhotos.length >= 4}
+            className="p-2 text-[#666666] hover:text-[#111111] disabled:opacity-40"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <path
+                d="M4 7h3l1.5-2h7L17 7h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx="12"
+                cy="13"
+                r="3.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+            </svg>
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(false)
+              setText('')
+              clearPendingPhotos()
+            }}
+            style={jost}
+            className="border border-[#EEEEEE] px-3 py-2 text-[11px] text-[#666666]"
+          >
+            CANCELAR
+          </button>
+          <button
+            type="button"
+            onClick={() => void handlePublish()}
+            disabled={
+              (!text.trim() && pendingPhotos.length === 0) || publishing
+            }
+            style={jost}
+            className="bg-[#CC4B37] px-4 py-2 text-[11px] text-white disabled:opacity-50"
+          >
+            {publishing ? 'PUBLICANDO...' : 'PUBLICAR'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ─── CARD COMPONENTS ───
@@ -240,6 +603,7 @@ function NoticiaFeedCard({ item }: { item: Extract<FeedItem, { kind: 'noticia' }
 }
 
 // ─── FEED TAB ───
+/** Recarga con `key` desde el padre tras publicar. Paginación / scroll infinito: ampliar límites y cursores aquí. */
 function FeedTab() {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -610,21 +974,60 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'videos', label: 'VIDEOS' },
 ]
 
-export function FeedHome() {
+/** Alineado con AppShell md:pt-16 (navbar desktop); en móvil top 0. */
+function useDashboardStickyTabsTopPx() {
+  const [topPx, setTopPx] = useState(0)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const sync = () => setTopPx(mq.matches ? 64 : 0)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+  return topPx
+}
+
+export function FeedHome({
+  userId,
+  userAlias,
+  userAvatar,
+  userTeams,
+  userFields,
+}: {
+  userId: string
+  userAlias: string | null
+  userAvatar: string | null
+  userTeams: {
+    id: string
+    nombre: string
+    slug: string
+    logo_url: string | null
+  }[]
+  userFields: {
+    id: string
+    nombre: string
+    slug: string
+    foto_portada_url: string | null
+  }[]
+}) {
   const [activeTab, setActiveTab] = useState<Tab>('feed')
+  const [feedKey, setFeedKey] = useState(0)
+  const stickyTabsTopPx = useDashboardStickyTabsTopPx()
 
   return (
     <div>
-      {/* Tabs sticky */}
-      <div className="sticky top-0 z-30 bg-[#FFFFFF] border-b border-[#EEEEEE] -mx-4 px-4 md:-mx-6 md:px-6">
+      <div
+        className="z-30 border-b border-[#EEEEEE] bg-[#FFFFFF] -mx-4 px-4 md:-mx-6 md:px-6"
+        style={{ position: 'sticky', top: stickyTabsTopPx }}
+      >
         <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {TABS.map(tab => (
+          {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
               style={jost}
-              className={`shrink-0 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide border-b-2 transition-colors ${
+              className={`shrink-0 border-b-2 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
                 activeTab === tab.id
                   ? 'border-[#CC4B37] text-[#111111]'
                   : 'border-transparent text-[#999999]'
@@ -636,9 +1039,21 @@ export function FeedHome() {
         </div>
       </div>
 
-      {/* Content */}
+      {activeTab === 'feed' && (
+        <PostBox
+          userId={userId}
+          userAlias={userAlias}
+          userAvatar={userAvatar}
+          userTeams={userTeams}
+          userFields={userFields}
+          onPublished={() => {
+            setFeedKey((prev) => prev + 1)
+          }}
+        />
+      )}
+
       <div className="mt-4">
-        {activeTab === 'feed' && <FeedTab />}
+        {activeTab === 'feed' && <FeedTab key={feedKey} />}
         {activeTab === 'eventos' && <EventosTab />}
         {activeTab === 'equipos' && <EquiposTab />}
         {activeTab === 'noticias' && <NoticiasTab />}

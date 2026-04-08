@@ -23,14 +23,51 @@ export default async function DashboardHomePage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: access } = await supabase
+  const { data: profile } = await supabase
     .from('users')
-    .select('alias')
+    .select('alias, avatar_url')
     .eq('id', user.id)
     .maybeSingle()
 
   const skipOnboardingGate = fromOnboardingParam(searchParams.from)
-  if (!access?.alias && !skipOnboardingGate) redirect('/onboarding')
+  if (!profile?.alias && !skipOnboardingGate) redirect('/onboarding')
+
+  const { data: membershipRows } = await supabase
+    .from('team_members')
+    .select('team_id, rol_plataforma')
+    .eq('user_id', user.id)
+    .eq('status', 'activo')
+    .in('rol_plataforma', ['founder', 'admin'])
+
+  const teamIds = (membershipRows ?? []).map((m) => m.team_id as string)
+
+  let userTeams: {
+    id: string
+    nombre: string
+    slug: string
+    logo_url: string | null
+  }[] = []
+  if (teamIds.length > 0) {
+    const { data: teamsData } = await supabase
+      .from('teams')
+      .select('id, nombre, slug, logo_url')
+      .in('id', teamIds)
+      .eq('status', 'activo')
+    userTeams = (teamsData ?? []) as typeof userTeams
+  }
+
+  const { data: fieldsData } = await supabase
+    .from('fields')
+    .select('id, nombre, slug, foto_portada_url')
+    .eq('created_by', user.id)
+    .eq('status', 'aprobado')
+
+  const userFields = (fieldsData ?? []) as {
+    id: string
+    nombre: string
+    slug: string
+    foto_portada_url: string | null
+  }[]
 
   return (
     <main className="min-h-full bg-[#FFFFFF]">
@@ -43,7 +80,13 @@ export default async function DashboardHomePage({
         </Suspense>
       </div>
       <div className="w-full px-4 md:mx-auto md:max-w-[680px] md:px-6 pb-10">
-        <FeedHome />
+        <FeedHome
+          userId={user.id}
+          userAlias={profile?.alias ?? null}
+          userAvatar={profile?.avatar_url ?? null}
+          userTeams={userTeams}
+          userFields={userFields}
+        />
       </div>
     </main>
   )
