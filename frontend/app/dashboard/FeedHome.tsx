@@ -91,7 +91,13 @@ function PostBox({
   userId: string
   userAlias: string | null
   userAvatar: string | null
-  userTeams: { id: string; nombre: string; slug: string; logo_url: string | null }[]
+  userTeams: {
+    id: string
+    nombre: string
+    slug: string
+    logo_url: string | null
+    rol: 'founder' | 'admin'
+  }[]
   userFields: { id: string; nombre: string; slug: string; foto_portada_url: string | null }[]
   onPublished: () => void
 }) {
@@ -1018,16 +1024,23 @@ function FeedTab({
   return (
     <div className="flex flex-col gap-3">
       {items.map(item => {
-        if (item.kind === 'team_post') return (
-          <TeamPostCard
-            key={`tp-${item.id}`}
-            item={item}
-            currentUserId={currentUserId}
-            currentUserAlias={currentUserAlias}
-            currentUserAvatar={currentUserAvatar}
-            userTeamRole={userTeams.find(t => t.id === item.team_id)?.rol ?? null}
-          />
-        )
+        if (item.kind === 'team_post') {
+          const teamRole =
+            userTeams.find(
+              (t) => String(t.id) === String(item.team_id)
+            )?.rol ?? null
+          console.log('teamRole', item.team_id, userTeams, teamRole)
+          return (
+            <TeamPostCard
+              key={`tp-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+              userTeamRole={teamRole}
+            />
+          )
+        }
         if (item.kind === 'player_post') return (
           <PlayerPostCard
             key={`pp-${item.id}`}
@@ -1370,6 +1383,7 @@ export function FeedHome({
     nombre: string
     slug: string
     logo_url: string | null
+    rol: 'founder' | 'admin'
   }[]
   userFields: {
     id: string
@@ -1425,7 +1439,11 @@ export function FeedHome({
             currentUserId={userId}
             currentUserAlias={userAlias}
             currentUserAvatar={userAvatar}
-            userTeams={userTeams.map(t => ({ id: t.id, slug: t.slug, rol: 'founder' as const }))}
+            userTeams={userTeams.map((t) => ({
+              id: t.id,
+              slug: t.slug,
+              rol: t.rol,
+            }))}
           />
         )}
         {activeTab === 'eventos' && <EventosTab />}

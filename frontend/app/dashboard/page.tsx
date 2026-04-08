@@ -40,12 +40,19 @@ export default async function DashboardHomePage({
     .in('rol_plataforma', ['founder', 'admin'])
 
   const teamIds = (membershipRows ?? []).map((m) => m.team_id as string)
+  const rolByTeamId = new Map(
+    (membershipRows ?? []).map((m) => [
+      m.team_id as string,
+      m.rol_plataforma as 'founder' | 'admin',
+    ])
+  )
 
   let userTeams: {
     id: string
     nombre: string
     slug: string
     logo_url: string | null
+    rol: 'founder' | 'admin'
   }[] = []
   if (teamIds.length > 0) {
     const { data: teamsData } = await supabase
@@ -53,7 +60,19 @@ export default async function DashboardHomePage({
       .select('id, nombre, slug, logo_url')
       .in('id', teamIds)
       .eq('status', 'activo')
-    userTeams = (teamsData ?? []) as typeof userTeams
+    userTeams = (teamsData ?? []).map((t) => {
+      const row = t as {
+        id: string
+        nombre: string
+        slug: string
+        logo_url: string | null
+      }
+      const rol = rolByTeamId.get(row.id)
+      return {
+        ...row,
+        rol: rol ?? 'admin',
+      }
+    })
   }
 
   const { data: fieldsData } = await supabase
