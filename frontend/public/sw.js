@@ -59,7 +59,7 @@ self.addEventListener("fetch", (event) => {
 // ─── Push Notifications ───────────────────────────────────────────────────────
 
 self.addEventListener("push", (event) => {
-  console.log("[SW] push recibido", event.data?.text?.() ?? "sin data");
+  console.log("[SW] push recibido", event.data ? "con data" : "sin data");
 
   if (!event.data) {
     console.log("[SW] push sin data, ignorando");
