@@ -290,6 +290,7 @@ export function PerfilTabsClient({
 
         {activeTab === 'notificaciones' ? (
           <NotificacionesTab
+            userId={user.id}
             requests={joinRequests}
             approvedFieldNotices={approvedFieldNotices}
             ownerPendingFieldRequests={ownerPendingFieldRequests}

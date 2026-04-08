@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState, type TouchEvent } from 'react'
+import { notifyNotifUpdated } from '@/lib/user-notifications'
 import { supabase } from '@/lib/supabase'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
@@ -12,8 +13,8 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 
 // Tipos de items del feed
 type FeedItem =
-  | { kind: 'team_post'; id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'player_post'; id: string; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | { kind: 'team_post'; id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
+  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
   | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
@@ -625,12 +626,14 @@ const COMMENTS_PAGE_SIZE = 3
 function CommentsSection({
   postType,
   postId,
+  postOwnerId,
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
 }: {
   postType: 'player' | 'team' | 'field'
   postId: string
+  postOwnerId: string | null
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
@@ -759,6 +762,16 @@ function CommentsSection({
       setComments(prev => [newComment, ...prev])
       setTotal(t => t + 1)
       setText('')
+      if (postOwnerId && postOwnerId !== currentUserId) {
+        await supabase.from('user_notifications').insert({
+          recipient_id: postOwnerId,
+          actor_id: currentUserId,
+          type: 'comment_post',
+          post_type: postType,
+          post_id: postId,
+        })
+        notifyNotifUpdated()
+      }
     }
     setPosting(false)
   }
@@ -776,12 +789,26 @@ function CommentsSection({
         .eq('post_id', commentId)
         .eq('user_id', currentUserId)
     } else {
-      await supabase.from('post_reactions').insert({
+      const { error } = await supabase.from('post_reactions').insert({
         user_id: currentUserId,
         post_type: 'comment',
         post_id: commentId,
         reaction: 'fire',
       })
+      if (!error) {
+        const comment = comments.find(c => c.id === commentId)
+        if (comment && comment.user_id !== currentUserId) {
+          await supabase.from('user_notifications').insert({
+            recipient_id: comment.user_id,
+            actor_id: currentUserId,
+            type: 'like_comment',
+            post_type: 'comment',
+            post_id: commentId,
+            comment_id: commentId,
+          })
+          notifyNotifUpdated()
+        }
+      }
     }
   }
 
@@ -881,6 +908,7 @@ function CommentsSection({
 function PostActions({
   postType,
   postId,
+  postOwnerId,
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
@@ -889,6 +917,7 @@ function PostActions({
 }: {
   postType: 'player' | 'team' | 'field'
   postId: string
+  postOwnerId: string | null
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
@@ -947,12 +976,22 @@ function PostActions({
     } else {
       setLiked(true)
       setLikeCount(c => c + 1)
-      await supabase.from('post_reactions').insert({
+      const { error } = await supabase.from('post_reactions').insert({
         user_id: currentUserId,
         post_type: postType,
         post_id: postId,
         reaction: 'fire',
       })
+      if (!error && postOwnerId && postOwnerId !== currentUserId) {
+        await supabase.from('user_notifications').insert({
+          recipient_id: postOwnerId,
+          actor_id: currentUserId,
+          type: 'like_post',
+          post_type: postType,
+          post_id: postId,
+        })
+        notifyNotifUpdated()
+      }
     }
   }
 
@@ -1035,6 +1074,7 @@ function PostActions({
         <CommentsSection
           postType={postType}
           postId={postId}
+          postOwnerId={postOwnerId}
           currentUserId={currentUserId}
           currentUserAlias={currentUserAlias}
           currentUserAvatar={currentUserAvatar}
@@ -1078,6 +1118,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
       <PostActions
         postType="team"
         postId={item.id}
+        postOwnerId={item.post_owner_id}
         currentUserId={currentUserId}
         currentUserAlias={currentUserAlias}
         currentUserAvatar={currentUserAvatar}
@@ -1117,6 +1158,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       <PostActions
         postType="player"
         postId={item.id}
+        postOwnerId={item.post_owner_id}
         currentUserId={currentUserId}
         currentUserAlias={currentUserAlias}
         currentUserAvatar={currentUserAvatar}
@@ -1292,7 +1334,7 @@ function FeedTab({
       setLoading(true)
       const [teamPostsRes, playerPostsRes, eventsRes, teamsRes, videosRes, noticiasRes] = await Promise.all([
         supabase.from('team_posts')
-          .select('id, content, fotos_urls, created_at, teams(nombre, slug, logo_url)')
+          .select('id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
           .eq('published', true)
           .order('created_at', { ascending: false })
           .limit(10),
@@ -1334,6 +1376,7 @@ function FeedTab({
         feedItems.push({
           kind: 'team_post',
           id: String(r.id),
+          post_owner_id: r.created_by ? String(r.created_by) : null,
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
@@ -1347,6 +1390,7 @@ function FeedTab({
         feedItems.push({
           kind: 'player_post',
           id: String(r.id),
+          post_owner_id: String(r.user_id ?? ''),
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,

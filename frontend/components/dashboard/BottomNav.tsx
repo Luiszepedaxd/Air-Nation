@@ -6,6 +6,10 @@ import {
   fetchPendingJoinRequestCount,
   PENDING_JOIN_UPDATED_EVENT,
 } from '@/lib/pending-join-requests'
+import {
+  fetchUnreadNotifCount,
+  NOTIF_UPDATED_EVENT,
+} from '@/lib/user-notifications'
 import { supabase } from '@/lib/supabase'
 
 const NAV_ITEMS = [
@@ -201,6 +205,7 @@ export default function BottomNav() {
   const [panicModal, setPanicModal] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingJoinCount, setPendingJoinCount] = useState(0)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const [hasAvatar, setHasAvatar] = useState(true)
 
   const refreshPendingJoinCount = useCallback(async () => {
@@ -215,9 +220,25 @@ export default function BottomNav() {
     setPendingJoinCount(n)
   }, [])
 
+  const refreshUnreadNotifCount = useCallback(async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      setUnreadNotifCount(0)
+      return
+    }
+    const n = await fetchUnreadNotifCount(supabase, user.id)
+    setUnreadNotifCount(n)
+  }, [])
+
   useEffect(() => {
     void refreshPendingJoinCount()
   }, [pathname, refreshPendingJoinCount])
+
+  useEffect(() => {
+    void refreshUnreadNotifCount()
+  }, [pathname, refreshUnreadNotifCount])
 
   useEffect(() => {
     const onUpd = () => {
@@ -226,6 +247,37 @@ export default function BottomNav() {
     window.addEventListener(PENDING_JOIN_UPDATED_EVENT, onUpd)
     return () => window.removeEventListener(PENDING_JOIN_UPDATED_EVENT, onUpd)
   }, [refreshPendingJoinCount])
+
+  useEffect(() => {
+    const onUpd = () => void refreshUnreadNotifCount()
+    window.addEventListener(NOTIF_UPDATED_EVENT, onUpd)
+    return () => window.removeEventListener(NOTIF_UPDATED_EVENT, onUpd)
+  }, [refreshUnreadNotifCount])
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      channel = supabase
+        .channel('user-notifs-badge')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          () => {
+            void refreshUnreadNotifCount()
+          }
+        )
+        .subscribe()
+    })
+    return () => {
+      if (channel) void supabase.removeChannel(channel)
+    }
+  }, [refreshUnreadNotifCount])
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -282,7 +334,7 @@ export default function BottomNav() {
                 {isPerfil ? (
                   <ProfileIconWithBadge
                     active={active}
-                    badgeCount={pendingJoinCount}
+                    badgeCount={pendingJoinCount + unreadNotifCount}
                     showDot={!hasAvatar}
                   />
                 ) : (
@@ -351,7 +403,7 @@ export default function BottomNav() {
                 {isPerfil ? (
                   <ProfileIconWithBadge
                     active={active}
-                    badgeCount={pendingJoinCount}
+                    badgeCount={pendingJoinCount + unreadNotifCount}
                     showDot={!hasAvatar}
                   />
                 ) : (
