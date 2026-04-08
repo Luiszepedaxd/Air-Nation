@@ -59,13 +59,22 @@ self.addEventListener("fetch", (event) => {
 // ─── Push Notifications ───────────────────────────────────────────────────────
 
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
+  console.log("[SW] push recibido", event.data?.text?.() ?? "sin data");
+
+  if (!event.data) {
+    console.log("[SW] push sin data, ignorando");
+    return;
+  }
 
   let payload;
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: "AirNation", body: event.data.text(), url: "/dashboard/perfil?tab=notificaciones" };
+    payload = {
+      title: "AirNation",
+      body: event.data.text(),
+      url: "/dashboard/perfil?tab=notificaciones",
+    };
   }
 
   const title = payload.title || "AirNation";
@@ -76,9 +85,16 @@ self.addEventListener("push", (event) => {
     data: { url: payload.url || "/dashboard/perfil?tab=notificaciones" },
     vibrate: [100, 50, 100],
     requireInteraction: false,
+    tag: "airnation-push",
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  console.log("[SW] mostrando notificacion:", title, options.body);
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+      .then(() => console.log("[SW] notificacion mostrada OK"))
+      .catch((err) => console.error("[SW] error mostrando notificacion:", err))
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
