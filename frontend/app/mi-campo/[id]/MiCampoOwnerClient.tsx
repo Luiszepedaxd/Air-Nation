@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import type { FieldReviewPublic } from '@/app/campos/types'
 import { supabase } from '@/lib/supabase'
 import { EventosTab, type MiCampoEventRow } from './components/EventosTab'
@@ -295,10 +296,17 @@ export function MiCampoOwnerClient({
       </h1>
 
       <div className="sticky top-0 z-40 -mx-4 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6 md:top-16">
-        <div className="flex overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <ScrollableTabsNav>
           <button
             type="button"
-            onClick={() => setActiveTab('info')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('info')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('info')}`}
           >
@@ -306,7 +314,14 @@ export function MiCampoOwnerClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('reviews')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('reviews')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('reviews')}`}
           >
@@ -314,7 +329,14 @@ export function MiCampoOwnerClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('events')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('events')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('events')}`}
           >
@@ -322,7 +344,14 @@ export function MiCampoOwnerClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('requests')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('requests')
+            }}
             style={jost}
             className={`${tabBase} inline-flex items-center gap-1.5 ${tabClass('requests')}`}
           >
@@ -336,7 +365,7 @@ export function MiCampoOwnerClient({
               </span>
             ) : null}
           </button>
-        </div>
+        </ScrollableTabsNav>
       </div>
 
       <div className="mt-6">

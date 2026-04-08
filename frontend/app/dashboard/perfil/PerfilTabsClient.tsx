@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { usePwaInstall } from '@/components/PwaInstallPrompt'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
 import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
@@ -154,10 +155,17 @@ export function PerfilTabsClient({
       </h1>
 
       <div className="sticky top-0 z-40 -mx-4 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6 md:top-16">
-        <div className="flex overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <ScrollableTabsNav>
           <button
             type="button"
-            onClick={() => setActiveTab('perfil')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('perfil')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('perfil')}`}
           >
@@ -165,7 +173,12 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
-            onClick={() => {
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
               setActiveTab('notificaciones')
               setUnreadNotifCount(0)
             }}
@@ -188,7 +201,14 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('eventos')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('eventos')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('eventos')}`}
           >
@@ -196,7 +216,14 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('misposts')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('misposts')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('misposts')}`}
           >
@@ -204,7 +231,14 @@ export function PerfilTabsClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('equipos')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('equipos')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('equipos')}`}
           >
@@ -213,14 +247,21 @@ export function PerfilTabsClient({
           {showCamposTab ? (
             <button
               type="button"
-              onClick={() => setActiveTab('campos')}
+              onClick={(e) => {
+                e.currentTarget.scrollIntoView({
+                  behavior: 'smooth',
+                  inline: 'nearest',
+                  block: 'nearest',
+                })
+                setActiveTab('campos')
+              }}
               style={jost}
               className={`${tabBase} ${tabClass('campos')}`}
             >
               MIS CAMPOS
             </button>
           ) : null}
-        </div>
+        </ScrollableTabsNav>
       </div>
 
       <div className="mt-6">

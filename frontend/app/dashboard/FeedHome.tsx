@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
@@ -1510,12 +1511,19 @@ export function FeedHome({
       <div
         className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-[#FFFFFF] -mx-4 px-4 md:-mx-6 md:px-6 md:relative md:z-auto"
       >
-        <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ScrollableTabsNav>
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={(e) => {
+                e.currentTarget.scrollIntoView({
+                  behavior: 'smooth',
+                  inline: 'nearest',
+                  block: 'nearest',
+                })
+                setActiveTab(tab.id)
+              }}
               style={jost}
               className={`shrink-0 border-b-2 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
                 activeTab === tab.id
@@ -1526,7 +1534,7 @@ export function FeedHome({
               {tab.label}
             </button>
           ))}
-        </div>
+        </ScrollableTabsNav>
       </div>
 
       {activeTab === 'feed' && (

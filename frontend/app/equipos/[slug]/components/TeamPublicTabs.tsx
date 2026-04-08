@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import type {
   AlbumWithPhotos,
   MemberDisplay,
@@ -141,7 +142,7 @@ export function TeamPublicTabs({
   return (
     <div>
       <div className="sticky top-0 z-20 border-b border-[#EEEEEE] bg-[#FFFFFF]">
-        <div className="overflow-x-auto">
+        <ScrollableTabsNav>
           <nav
             className="flex min-w-max gap-6 px-4 md:mx-auto md:max-w-[960px] md:gap-8 md:px-6"
             aria-label="Secciones del equipo"
@@ -160,7 +161,14 @@ export function TeamPublicTabs({
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setTab(id)}
+                  onClick={(e) => {
+                    e.currentTarget.scrollIntoView({
+                      behavior: 'smooth',
+                      inline: 'nearest',
+                      block: 'nearest',
+                    })
+                    setTab(id)
+                  }}
                   className={`shrink-0 border-b-2 py-3 font-body text-[0.75rem] uppercase tracking-[0.15em] transition-colors ${
                     active
                       ? 'border-[#CC4B37] font-bold text-[#111111]'
@@ -172,7 +180,7 @@ export function TeamPublicTabs({
               )
             })}
           </nav>
-        </div>
+        </ScrollableTabsNav>
       </div>
 
       <div className="mx-auto max-w-[960px] px-4 py-6 md:px-6 md:py-8">

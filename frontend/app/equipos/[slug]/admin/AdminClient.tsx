@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
@@ -469,10 +470,17 @@ export function AdminClient({
       </h1>
 
       <div className="sticky top-0 z-40 -mx-4 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6">
-        <div className="flex overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <ScrollableTabsNav>
           <button
             type="button"
-            onClick={() => setActiveTab('solicitudes')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('solicitudes')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('solicitudes')} inline-flex items-center gap-1.5`}
           >
@@ -488,7 +496,14 @@ export function AdminClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('integrantes')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('integrantes')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('integrantes')}`}
           >
@@ -496,7 +511,14 @@ export function AdminClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('posts')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('posts')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('posts')}`}
           >
@@ -504,7 +526,14 @@ export function AdminClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('albumes')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('albumes')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('albumes')}`}
           >
@@ -512,13 +541,20 @@ export function AdminClient({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('perfil')}
+            onClick={(e) => {
+              e.currentTarget.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'nearest',
+                block: 'nearest',
+              })
+              setActiveTab('perfil')
+            }}
             style={jost}
             className={`${tabBase} ${tabClass('perfil')}`}
           >
             PERFIL DEL EQUIPO
           </button>
-        </div>
+        </ScrollableTabsNav>
       </div>
 
       <div className="mt-6">
