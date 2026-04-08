@@ -68,9 +68,13 @@ export function usePushNotifButton() {
   const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [permission, setPermission] = useState<NotificationPermission>('default')
 
   useEffect(() => {
     setMounted(true)
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setPermission(Notification.permission)
+    }
   }, [])
 
   const canShow =
@@ -79,12 +83,9 @@ export function usePushNotifButton() {
     'Notification' in window &&
     'serviceWorker' in navigator &&
     'PushManager' in window &&
-    Notification.permission !== 'granted' &&
-    Notification.permission !== 'denied' &&
-    !done &&
-    (() => {
-      try { return sessionStorage.getItem('an_push_subscribed') !== '1' } catch { return true }
-    })()
+    permission !== 'denied' &&
+    permission !== 'granted' &&
+    !done
 
   const trigger = useCallback(async () => {
     if (loading) return
@@ -97,6 +98,10 @@ export function usePushNotifButton() {
     if (ok) {
       try { sessionStorage.setItem('an_push_subscribed', '1') } catch { /* ignore */ }
       setDone(true)
+      setPermission('granted')
+    } else {
+      // Actualizar el estado real del permiso después del intento
+      if ('Notification' in window) setPermission(Notification.permission)
     }
     setLoading(false)
   }, [loading])
