@@ -1275,19 +1275,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'videos', label: 'VIDEOS' },
 ]
 
-/** Alineado con AppShell md:pt-16 (navbar desktop); en móvil top 0. */
-function useDashboardStickyTabsTopPx() {
-  const [topPx, setTopPx] = useState(0)
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)')
-    const sync = () => setTopPx(mq.matches ? 64 : 0)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
-  return topPx
-}
-
 export function FeedHome({
   userId,
   userAlias,
@@ -1313,13 +1300,11 @@ export function FeedHome({
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('feed')
   const [feedKey, setFeedKey] = useState(0)
-  const stickyTabsTopPx = useDashboardStickyTabsTopPx()
 
   return (
     <div>
       <div
-        className="z-30 border-b border-[#EEEEEE] bg-[#FFFFFF] -mx-4 px-4 md:-mx-6 md:px-6 md:!relative"
-        style={{ position: 'sticky', top: stickyTabsTopPx }}
+        className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-[#FFFFFF] -mx-4 px-4 md:-mx-6 md:px-6 md:relative md:z-auto"
       >
         <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map((tab) => (
