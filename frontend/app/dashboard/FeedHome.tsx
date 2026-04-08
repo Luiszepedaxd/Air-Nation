@@ -24,6 +24,16 @@ type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] |
 type NoticiaItem = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
 type VideoItem = { id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
 
+type TeamDirItem = {
+  id: string
+  nombre: string
+  slug: string
+  ciudad: string | null
+  logo_url: string | null
+  foto_portada_url: string | null
+  destacado: boolean
+}
+
 function formatRelativeTime(iso: string) {
   try {
     const diff = Date.now() - new Date(iso).getTime()
@@ -838,41 +848,147 @@ function EventosTab() {
 
 // ─── EQUIPOS TAB ───
 function EquiposTab() {
-  const [items, setItems] = useState<TeamPostItem[]>([])
+  const [items, setItems] = useState<TeamDirItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [ciudadFilter, setCiudadFilter] = useState<string>('todas')
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from('team_posts')
-        .select('id, content, fotos_urls, created_at, teams(nombre, slug, logo_url)')
-        .eq('published', true)
+      const { data } = await supabase
+        .from('teams')
+        .select('id, nombre, slug, ciudad, logo_url, foto_portada_url, destacado')
+        .eq('status', 'activo')
+        .order('destacado', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(20)
-
-      setItems((data ?? []).map(row => {
-        const r = row as Record<string, unknown>
-        const t = Array.isArray(r.teams) ? r.teams[0] : r.teams
-        return {
-          id: String(r.id),
-          content: (r.content as string | null) ?? null,
-          fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
-          created_at: String(r.created_at),
-          team: { nombre: t ? String((t as Record<string, unknown>).nombre ?? '') : '', slug: t ? String((t as Record<string, unknown>).slug ?? '') : '', logo_url: t ? (t as Record<string, unknown>).logo_url as string | null : null },
-        }
-      }))
+      setItems((data ?? []) as TeamDirItem[])
       setLoading(false)
     }
     void load()
   }, [])
 
-  if (loading) return <div className="flex flex-col gap-3">{[0, 1, 2].map(i => <div key={i} className="h-24 border border-[#EEEEEE] animate-pulse" />)}</div>
-  if (!items.length) return <p style={lato} className="py-12 text-center text-[13px] text-[#999999]">Los equipos aún no han publicado</p>
+  const ciudades = ['todas', ...Array.from(
+    new Set(items.map(t => t.ciudad?.trim()).filter(Boolean) as string[])
+  ).sort()]
+
+  const filtered = ciudadFilter === 'todas'
+    ? items
+    : items.filter(t => t.ciudad?.trim() === ciudadFilter)
+
+  if (loading) return (
+    <div className="grid grid-cols-2 gap-3">
+      {[0,1,2,3].map(i => (
+        <div key={i} className="h-[200px] animate-pulse border border-[#EEEEEE] bg-[#F4F4F4]" />
+      ))}
+    </div>
+  )
 
   return (
-    <div className="flex flex-col gap-3">
-      {items.map(item => (
-        <TeamPostCard key={item.id} item={{ kind: 'team_post', ...item }} />
-      ))}
+    <div>
+      {/* Filtro ciudades */}
+      {ciudades.length > 1 && (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {ciudades.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCiudadFilter(c)}
+              style={jost}
+              className={`shrink-0 border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
+                ciudadFilter === c
+                  ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                  : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
+              }`}
+            >
+              {c === 'todas' ? 'TODAS' : c}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Sin resultados para esa ciudad */}
+      {filtered.length === 0 && (
+        <div className="flex flex-col items-center gap-4 py-12 text-center">
+          <p style={lato} className="text-[13px] text-[#999999]">
+            No hay equipos registrados en {ciudadFilter === 'todas' ? 'México' : ciudadFilter} aún.
+          </p>
+          <Link
+            href="/equipos/nuevo"
+            style={jost}
+            className="border border-[#CC4B37] bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+          >
+            CREAR EQUIPO
+          </Link>
+        </div>
+      )}
+
+      {/* Grid de cards */}
+      {filtered.length > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          {filtered.map(team => {
+            const initial = (team.nombre.trim()[0] || '?').toUpperCase()
+            return (
+              <Link
+                key={team.id}
+                href={`/equipos/${encodeURIComponent(team.slug)}`}
+                className="group block border border-[#EEEEEE] bg-[#FFFFFF] transition-colors hover:border-[#CCCCCC]"
+              >
+                {/* Portada */}
+                <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+                  {team.foto_portada_url ? (
+                    <img src={team.foto_portada_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <span className="text-3xl font-extrabold text-white/90" style={jost}>{initial}</span>
+                    </div>
+                  )}
+                  {team.destacado && (
+                    <span
+                      className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+                      style={jost}
+                    >
+                      DESTACADO
+                    </span>
+                  )}
+                  {/* Logo */}
+                  <div className="absolute bottom-2 left-2 h-10 w-10 shrink-0 overflow-hidden border-2 border-white bg-[#111111]">
+                    {team.logo_url ? (
+                      <img src={team.logo_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-[#CC4B37]" style={jost}>
+                        {initial}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Info */}
+                <div className="p-2">
+                  <p className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]" style={jost}>
+                    {team.nombre}
+                  </p>
+                  {team.ciudad?.trim() ? (
+                    <p className="mt-0.5 truncate text-[11px] text-[#666666]" style={lato}>
+                      {team.ciudad.trim()}
+                    </p>
+                  ) : null}
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
+      {/* CTA al final siempre */}
+      {filtered.length > 0 && (
+        <div className="mt-6 flex justify-center">
+          <Link
+            href="/equipos/nuevo"
+            style={jost}
+            className="border border-[#111111] px-4 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-[#FFFFFF]"
+          >
+            + CREAR EQUIPO
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
