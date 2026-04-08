@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
@@ -417,8 +417,15 @@ function PostBox({
   )
 }
 
-function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: number; onClose: () => void }) {
+function Lightbox({ urls, startIndex, onClose }: {
+  urls: string[]
+  startIndex: number
+  onClose: () => void
+}) {
   const [idx, setIdx] = useState(startIndex)
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -429,14 +436,36 @@ function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: n
     return () => window.removeEventListener('keydown', handler)
   }, [urls.length, onClose])
 
+  const handleTouchStart = (e: TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    // Solo swipe horizontal si el movimiento horizontal supera al vertical
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+      if (dx < 0) setIdx(i => Math.min(i + 1, urls.length - 1)) // swipe izquierda → siguiente
+      else setIdx(i => Math.max(i - 1, 0))                       // swipe derecha → anterior
+    } else if (Math.abs(dy) > 80 && Math.abs(dy) > Math.abs(dx)) {
+      onClose() // swipe hacia abajo → cerrar
+    }
+    touchStartX.current = null
+    touchStartY.current = null
+  }
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
       onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-white p-2"
+        className="absolute top-4 right-4 text-white p-2 z-10"
         aria-label="Cerrar"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -447,7 +476,7 @@ function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: n
       {urls.length > 1 && idx > 0 && (
         <button
           onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 z-10 hidden md:block"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M15 18l-6-6 6-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -460,12 +489,14 @@ function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: n
         alt=""
         className="max-h-[90vh] max-w-[95vw] object-contain"
         onClick={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
+        onTouchEnd={e => e.stopPropagation()}
       />
 
       {urls.length > 1 && idx < urls.length - 1 && (
         <button
           onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 z-10 hidden md:block"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -476,7 +507,11 @@ function Lightbox({ urls, startIndex, onClose }: { urls: string[]; startIndex: n
       {urls.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
           {urls.map((_, i) => (
-            <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === idx ? 'bg-white' : 'bg-white/40'}`} />
+            <div key={i}
+              className={`w-1.5 h-1.5 rounded-full transition-all ${
+                i === idx ? 'bg-white scale-125' : 'bg-white/40'
+              }`}
+            />
           ))}
         </div>
       )}
