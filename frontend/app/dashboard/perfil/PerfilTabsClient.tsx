@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { usePwaInstall } from '@/components/PwaInstallPrompt'
+import { usePushNotifButton } from '@/components/PushNotifManager'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
 import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
@@ -101,6 +102,7 @@ export function PerfilTabsClient({
   )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const { canShow: canShowPush, trigger: triggerPush, loading: pushLoading } = usePushNotifButton()
   const pendingCount =
     joinRequests.length +
     approvedFieldNotices.length +
@@ -324,6 +326,21 @@ export function PerfilTabsClient({
                 </Link>
               ) : null}
               <PerfilPwaInstallBlock />
+              {canShowPush ? (
+                <button
+                  type="button"
+                  onClick={() => void triggerPush()}
+                  disabled={pushLoading}
+                  style={jost}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-[2px] bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] transition-opacity disabled:opacity-60"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  {pushLoading ? 'ACTIVANDO...' : 'ACTIVAR NOTIFICACIONES'}
+                </button>
+              ) : null}
               <div className="border-t border-solid border-[#EEEEEE] pt-8">
                 <PerfilLogoutButton />
               </div>
