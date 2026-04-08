@@ -337,7 +337,7 @@ export default function BottomNav() {
 
       {/* Bottom Nav — mobile (5 ítems: sin Docs ni Admin; SOS enlaza a /dashboard/sos) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
-           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
         <div className="grid h-14 w-full grid-cols-6 items-stretch">
           {NAV_ITEMS_MOBILE.map((item) => {
             const active = isNavItemActive(pathname, item.href)

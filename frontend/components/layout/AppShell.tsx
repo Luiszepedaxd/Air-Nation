@@ -10,7 +10,8 @@ export default function AppShell({
     <div className="min-h-screen min-h-dvh flex flex-col bg-[#F4F4F4]">
       <div
         id="dashboard-scroll-root"
-        className="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0 md:pt-16"
+        className="flex-1 overflow-y-auto md:pb-0 md:pt-16"
+        style={{ paddingBottom: 'max(calc(3.5rem + env(safe-area-inset-bottom)), calc(3.5rem + 12px))' }}
       >
         <AlphaBanner />
         {children}
