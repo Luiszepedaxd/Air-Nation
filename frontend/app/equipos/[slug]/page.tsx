@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cache } from 'react'
+import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 import { TeamHero } from './components/TeamHero'
@@ -42,7 +43,7 @@ const getTeamBySlug = cache(async (slug: string): Promise<PublicTeam | null> => 
   const { data, error } = await supabase
     .from('teams')
     .select(
-      'id, nombre, slug, ciudad, descripcion, historia, foto_portada_url, logo_url, galeria_urls, instagram, facebook, whatsapp_url, created_at, status'
+      'id, nombre, slug, ciudad, descripcion, historia, foto_portada_url, logo_url, galeria_urls, instagram, facebook, whatsapp_url, created_at, created_by, status'
     )
     .eq('slug', slug)
     .eq('status', 'activo')
@@ -66,6 +67,7 @@ const getTeamBySlug = cache(async (slug: string): Promise<PublicTeam | null> => 
     id: row.id,
     nombre: row.nombre,
     slug: row.slug,
+    created_by: (row as { created_by?: string | null }).created_by ?? null,
     ciudad: row.ciudad,
     descripcion: row.descripcion ?? null,
     historia: row.historia ?? null,
@@ -123,7 +125,7 @@ async function fetchPosts(teamId: string): Promise<TeamPostRow[]> {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('team_posts')
-    .select('id, content, fotos_urls, created_at')
+    .select('id, content, fotos_urls, created_at, created_by')
     .eq('team_id', teamId)
     .eq('published', true)
     .order('created_at', { ascending: false })
@@ -374,6 +376,34 @@ export default async function EquipoPublicPage({
   const team = await getTeamBySlug(params.slug)
   if (!team) notFound()
 
+  let currentUserId: string | null = null
+  let userTeamRole: 'founder' | 'admin' | null = null
+
+  try {
+    const authSupabase = createDashboardSupabaseServerClient()
+    const {
+      data: { user: authUser },
+    } = await authSupabase.auth.getUser()
+    if (authUser) {
+      currentUserId = authUser.id
+      const { data: memberRow } = await authSupabase
+        .from('team_members')
+        .select('rol_plataforma')
+        .eq('team_id', team.id)
+        .eq('user_id', authUser.id)
+        .eq('status', 'activo')
+        .maybeSingle()
+      if (
+        memberRow?.rol_plataforma === 'founder' ||
+        memberRow?.rol_plataforma === 'admin'
+      ) {
+        userTeamRole = memberRow.rol_plataforma as 'founder' | 'admin'
+      }
+    }
+  } catch {
+    // usuario no autenticado, continuar como público
+  }
+
   const scope = await fetchTeamEventScope(team.id)
   const [members, posts, albums, upcomingEvents, pastEvents] = await Promise.all([
     fetchMembers(team.id),
@@ -396,6 +426,8 @@ export default async function EquipoPublicPage({
         albums={albums}
         upcoming={upcomingEvents}
         past={pastEvents}
+        currentUserId={currentUserId}
+        userTeamRole={userTeamRole}
       />
     </div>
   )

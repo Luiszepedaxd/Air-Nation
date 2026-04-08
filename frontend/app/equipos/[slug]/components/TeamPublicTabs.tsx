@@ -116,6 +116,8 @@ export function TeamPublicTabs({
   albums,
   upcoming,
   past,
+  currentUserId = null,
+  userTeamRole = null,
 }: {
   team: PublicTeam
   slug: string
@@ -124,6 +126,8 @@ export function TeamPublicTabs({
   albums: AlbumWithPhotos[]
   upcoming: TeamEventoUpcomingRow[]
   past: TeamEventoPastRow[]
+  currentUserId?: string | null
+  userTeamRole?: 'founder' | 'admin' | null
 }) {
   const [tab, setTab] = useState<
     'info' | 'integrantes' | 'publicaciones' | 'albumes' | 'eventos'
@@ -243,7 +247,14 @@ export function TeamPublicTabs({
         ) : null}
 
         {tab === 'publicaciones' ? (
-          <TeamPosts posts={posts} variant="tab" />
+          <TeamPosts
+            posts={posts}
+            variant="tab"
+            currentUserId={currentUserId}
+            userTeamRole={userTeamRole}
+            teamSlug={slug}
+            teamOwnerId={team.created_by ?? null}
+          />
         ) : null}
 
         {tab === 'albumes' ? (

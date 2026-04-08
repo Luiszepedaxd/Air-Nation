@@ -1,5 +1,9 @@
+'use client'
+
 import type { TeamPostRow } from '../types'
-import { PostPhotoGallery } from './PostPhotoGallery'
+import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { supabase } from '@/lib/supabase'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -46,9 +50,17 @@ function postPhotoUrls(post: TeamPostRow): string[] {
 export function TeamPosts({
   posts,
   variant = 'section',
+  currentUserId = null,
+  userTeamRole = null,
+  teamSlug = '',
+  teamOwnerId = null,
 }: {
   posts: TeamPostRow[]
   variant?: 'section' | 'tab'
+  currentUserId?: string | null
+  userTeamRole?: 'founder' | 'admin' | null
+  teamSlug?: string
+  teamOwnerId?: string | null
 }) {
   if (!posts.length) {
     if (variant === 'tab') {
@@ -87,22 +99,49 @@ export function TeamPosts({
               key={post.id}
               className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
             >
+              <div className="mb-2 flex items-center justify-between">
+                <time
+                  className="text-[12px] text-[#666666]"
+                  style={lato}
+                  dateTime={post.created_at}
+                >
+                  {formatDate(post.created_at)}
+                </time>
+                <PostMenu
+                  canDelete={
+                    userTeamRole === 'founder' || userTeamRole === 'admin'
+                  }
+                  onDelete={async () => {
+                    const { error } = await supabase
+                      .from('team_posts')
+                      .delete()
+                      .eq('id', post.id)
+                    if (!error) {
+                      window.location.reload()
+                    }
+                  }}
+                />
+              </div>
               {ex ? (
                 <p
-                  className="mb-3 text-[14px] leading-relaxed text-[#111111] line-clamp-4"
+                  className="mb-3 text-[14px] leading-relaxed text-[#111111]"
                   style={lato}
                 >
                   {ex}
                 </p>
               ) : null}
-              {urls.length > 0 ? <PostPhotoGallery urls={urls} /> : null}
-              <time
-                className="mt-3 block text-[12px] text-[#666666]"
-                style={lato}
-                dateTime={post.created_at}
-              >
-                {formatDate(post.created_at)}
-              </time>
+              {urls.length > 0 && <PhotoGrid urls={urls} />}
+              <PostActions
+                postType="team"
+                postId={post.id}
+                postOwnerId={post.created_by ?? teamOwnerId}
+                postHref={`/equipos/${teamSlug}`}
+                currentUserId={currentUserId}
+                currentUserAlias={null}
+                currentUserAvatar={null}
+                shareUrl={`/equipos/${teamSlug}`}
+                shareTitle="Publicación del equipo en AirNation"
+              />
             </article>
           )
         })}

@@ -2,6 +2,8 @@ export type PublicTeam = {
   id: string
   nombre: string
   slug: string
+  /** Dueño del equipo (teams.created_by) */
+  created_by?: string | null
   ciudad: string | null
   descripcion: string | null
   historia: string | null
@@ -32,6 +34,7 @@ export type TeamPostRow = {
   content: string | null
   fotos_urls: string[] | null
   created_at: string
+  created_by?: string | null
 }
 
 /** URLs de fotos desde la columna `fotos_urls` (TEXT[]) de `team_albums`. */

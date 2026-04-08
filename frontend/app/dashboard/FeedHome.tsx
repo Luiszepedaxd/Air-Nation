@@ -16,6 +16,16 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 type FeedItem =
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
   | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | {
+      kind: 'field_post'
+      id: string
+      content: string | null
+      fotos_urls: string[] | null
+      created_at: string
+      created_by: string | null
+      post_owner_id: string | null
+      field: { nombre: string; slug: string; foto_portada_url: string | null }
+    }
   | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
@@ -25,6 +35,15 @@ type EventItem = { id: string; title: string; fecha: string; imagen_url: string 
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
 type NoticiaItem = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
 type VideoItem = { id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
+
+type FieldPostItem = {
+  id: string
+  content: string | null
+  fotos_urls: string[] | null
+  created_at: string
+  field: { nombre: string; slug: string; foto_portada_url: string | null }
+  created_by: string | null
+}
 
 type TeamDirItem = {
   id: string
@@ -541,6 +560,90 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   )
 }
 
+function FieldPostCard({
+  item,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  item: Extract<FeedItem, { kind: 'field_post' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
+  const fotos = (item.fotos_urls ?? []).slice(0, 4)
+  const initial = (item.field.nombre.trim()[0] || '?').toUpperCase()
+  return (
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+      <div className="mb-3 flex items-center gap-3">
+        <Link href={`/campos/${item.field.slug}`}>
+          <div className="h-9 w-9 shrink-0 overflow-hidden bg-[#F4F4F4]">
+            {item.field.foto_portada_url ? (
+              <img
+                src={item.field.foto_portada_url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center text-sm font-bold text-[#CC4B37]"
+                style={jost}
+              >
+                {initial}
+              </div>
+            )}
+          </div>
+        </Link>
+        <div className="min-w-0 flex-1">
+          <Link href={`/campos/${item.field.slug}`}>
+            <p
+              style={jost}
+              className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37]"
+            >
+              {item.field.nombre}
+            </p>
+          </Link>
+          <p style={lato} className="text-[11px] text-[#999999]">
+            {formatRelativeTime(item.created_at)}
+          </p>
+        </div>
+        <PostMenu
+          canDelete={currentUserId === item.created_by}
+          onDelete={async () => {
+            const { error } = await supabase
+              .from('field_posts')
+              .delete()
+              .eq('id', item.id)
+            if (!error) {
+              window.dispatchEvent(new Event('airnation:post-deleted'))
+            }
+          }}
+        />
+      </div>
+      {item.content?.trim() && (
+        <p
+          style={lato}
+          className="mb-3 text-[14px] leading-relaxed text-[#111111]"
+        >
+          {item.content}
+        </p>
+      )}
+      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+      <PostActions
+        postType="field"
+        postId={item.id}
+        postOwnerId={item.post_owner_id}
+        postHref={`/campos/${item.field.slug}`}
+        currentUserId={currentUserId}
+        currentUserAlias={currentUserAlias}
+        currentUserAvatar={currentUserAvatar}
+        shareUrl={`/campos/${item.field.slug}`}
+        shareTitle={`${item.field.nombre} en AirNation`}
+      />
+    </div>
+  )
+}
+
 function EventCard({ item }: { item: Extract<FeedItem, { kind: 'event' }> }) {
   const sub = [item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')
   const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
@@ -705,7 +808,15 @@ function FeedTab({
 
   const load = useCallback(async () => {
       setLoading(true)
-      const [teamPostsRes, playerPostsRes, eventsRes, teamsRes, videosRes, noticiasRes] = await Promise.all([
+      const [
+        teamPostsRes,
+        playerPostsRes,
+        fieldPostsRes,
+        eventsRes,
+        teamsRes,
+        videosRes,
+        noticiasRes,
+      ] = await Promise.all([
         supabase.from('team_posts')
           .select('id, team_id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
           .eq('published', true)
@@ -714,6 +825,13 @@ function FeedTab({
         supabase.from('player_posts')
           .select('id, user_id, content, fotos_urls, created_at, users(alias, nombre, avatar_url)')
           .eq('published', true)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        supabase
+          .from('field_posts')
+          .select(
+            'id, content, fotos_urls, created_at, created_by, fields(nombre, slug, foto_portada_url)'
+          )
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('events')
@@ -770,6 +888,27 @@ function FeedTab({
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
           user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
+        })
+      }
+
+      for (const row of fieldPostsRes.data ?? []) {
+        const r = row as Record<string, unknown>
+        const f = Array.isArray(r.fields) ? r.fields[0] : r.fields
+        feedItems.push({
+          kind: 'field_post',
+          id: String(r.id),
+          content: (r.content as string | null) ?? null,
+          fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+          created_at: String(r.created_at),
+          created_by: r.created_by ? String(r.created_by) : null,
+          post_owner_id: r.created_by ? String(r.created_by) : null,
+          field: {
+            nombre: f ? String((f as Record<string, unknown>).nombre ?? '') : '',
+            slug: f ? String((f as Record<string, unknown>).slug ?? '') : '',
+            foto_portada_url: f
+              ? ((f as Record<string, unknown>).foto_portada_url as string | null)
+              : null,
+          },
         })
       }
 
@@ -899,6 +1038,16 @@ function FeedTab({
             isOwner={currentUserId === item.user_id}
           />
         )
+        if (item.kind === 'field_post')
+          return (
+            <FieldPostCard
+              key={`fp-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+            />
+          )
         if (item.kind === 'event') return <EventCard key={`ev-${item.id}`} item={item} />
         if (item.kind === 'new_team') return <NewTeamCard key={`nt-${item.id}`} item={item} />
         if (item.kind === 'video') return <VideoCard key={`vid-${item.id}`} item={item}/>
