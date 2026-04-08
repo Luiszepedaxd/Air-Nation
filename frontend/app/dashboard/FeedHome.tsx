@@ -425,6 +425,7 @@ function Lightbox({ urls, startIndex, onClose }: {
   const [idx, setIdx] = useState(startIndex)
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
+  const dragging = useRef(false)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -436,35 +437,53 @@ function Lightbox({ urls, startIndex, onClose }: {
     return () => window.removeEventListener('keydown', handler)
   }, [urls.length, onClose])
 
-  const handleTouchStart = (e: TouchEvent) => {
+  const onTouchStart = (e: TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
     touchStartY.current = e.touches[0].clientY
+    dragging.current = false
   }
 
-  const handleTouchEnd = (e: TouchEvent) => {
+  const onTouchMove = (e: TouchEvent) => {
+    if (touchStartX.current === null) return
+    const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
+    if (dx > 10) dragging.current = true
+  }
+
+  const onTouchEnd = (e: TouchEvent) => {
     if (touchStartX.current === null || touchStartY.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
-    // Solo swipe horizontal si el movimiento horizontal supera al vertical
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
-      if (dx < 0) setIdx(i => Math.min(i + 1, urls.length - 1)) // swipe izquierda → siguiente
-      else setIdx(i => Math.max(i - 1, 0))                       // swipe derecha → anterior
-    } else if (Math.abs(dy) > 80 && Math.abs(dy) > Math.abs(dx)) {
-      onClose() // swipe hacia abajo → cerrar
+    const absDx = Math.abs(dx)
+    const absDy = Math.abs(dy)
+
+    if (absDx > absDy && absDx > 40) {
+      // swipe horizontal
+      if (dx < 0) setIdx(i => Math.min(i + 1, urls.length - 1))
+      else setIdx(i => Math.max(i - 1, 0))
+    } else if (absDy > absDx && absDy > 80) {
+      // swipe vertical hacia abajo → cerrar
+      if (dy > 0) onClose()
     }
+
     touchStartX.current = null
     touchStartY.current = null
   }
 
+  const handleOverlayClick = () => {
+    if (!dragging.current) onClose()
+  }
+
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
-      onClick={onClose}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 touch-none"
+      onClick={handleOverlayClick}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
+      {/* Botón cerrar */}
       <button
-        onClick={onClose}
+        onClick={e => { e.stopPropagation(); onClose() }}
         className="absolute top-4 right-4 text-white p-2 z-10"
         aria-label="Cerrar"
       >
@@ -473,6 +492,7 @@ function Lightbox({ urls, startIndex, onClose }: {
         </svg>
       </button>
 
+      {/* Flecha anterior — solo desktop */}
       {urls.length > 1 && idx > 0 && (
         <button
           onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }}
@@ -484,15 +504,14 @@ function Lightbox({ urls, startIndex, onClose }: {
         </button>
       )}
 
+      {/* Imagen — SIN stopPropagation en touch */}
       <img
         src={urls[idx]}
         alt=""
-        className="max-h-[90vh] max-w-[95vw] object-contain"
-        onClick={e => e.stopPropagation()}
-        onTouchStart={e => e.stopPropagation()}
-        onTouchEnd={e => e.stopPropagation()}
+        className="max-h-[90vh] max-w-[95vw] object-contain select-none pointer-events-none"
       />
 
+      {/* Flecha siguiente — solo desktop */}
       {urls.length > 1 && idx < urls.length - 1 && (
         <button
           onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }}
@@ -504,11 +523,13 @@ function Lightbox({ urls, startIndex, onClose }: {
         </button>
       )}
 
+      {/* Dots indicadores */}
       {urls.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
           {urls.map((_, i) => (
-            <div key={i}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${
+            <div
+              key={i}
+              className={`w-2 h-2 rounded-full transition-all ${
                 i === idx ? 'bg-white scale-125' : 'bg-white/40'
               }`}
             />
