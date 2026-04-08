@@ -15,7 +15,8 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 // Tipos de items del feed
 type FeedItem =
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; pinned?: boolean; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
   | {
       kind: 'field_post'
       id: string
@@ -531,10 +532,9 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       .from('player_posts')
       .update({ pinned: false })
       .eq('pinned', true)
-    const newPinned = !item.pinned
     await supabase
       .from('player_posts')
-      .update({ pinned: newPinned })
+      .update({ pinned: true })
       .eq('id', item.id)
     window.dispatchEvent(new Event('airnation:post-deleted'))
   }
@@ -556,7 +556,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             canDelete={isOwner}
             onDelete={handleDelete}
             canPin={isAdmin}
-            isPinned={Boolean(item.pinned)}
+            isPinned={false}
             onPin={handlePin}
           />
         </div>
@@ -582,7 +582,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
 }
 
 function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isAdmin }: {
-  item: Extract<FeedItem, { kind: 'player_post' }>
+  item: Extract<FeedItem, { kind: 'pinned_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
@@ -600,7 +600,18 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   }
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+    <div className="border-2 border-[#CC4B37] bg-[#FFFFFF] p-4">
+      <div className="mb-2 flex items-center gap-1.5">
+        <span
+          style={jost}
+          className="inline-flex items-center gap-1 rounded-sm bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+          </svg>
+          Fijado
+        </span>
+      </div>
       <div className="mb-3">
         <div className="flex items-center gap-3">
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
@@ -962,17 +973,20 @@ function FeedTab({
       for (const row of playerPostsRes.data ?? []) {
         const r = row as Record<string, unknown>
         const u = Array.isArray(r.users) ? r.users[0] : r.users
-        feedItems.push({
-          kind: 'player_post',
+        const common = {
           id: String(r.id),
           post_owner_id: String(r.user_id ?? ''),
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
-          pinned: Boolean((r as Record<string, unknown>).pinned),
           user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
-        })
+        }
+        if (Boolean(r.pinned)) {
+          feedItems.push({ kind: 'pinned_post', ...common })
+        } else {
+          feedItems.push({ kind: 'player_post', ...common })
+        }
       }
 
       for (const row of fieldPostsRes.data ?? []) {
@@ -1053,12 +1067,16 @@ function FeedTab({
         })
       }
 
-      // Mezclar por created_at DESC
-      feedItems.sort((a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      const pinnedRows = feedItems.filter(
+        (i): i is Extract<FeedItem, { kind: 'pinned_post' }> => i.kind === 'pinned_post'
+      )
+      const rest = feedItems.filter(i => i.kind !== 'pinned_post')
+      rest.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
-      setItems(feedItems)
+      setItems([...pinnedRows, ...rest])
       setLoading(false)
   }, [])
 
@@ -1099,27 +1117,19 @@ function FeedTab({
     </div>
   )
 
-  const pinnedPlayer = items.find(
-    (i): i is Extract<FeedItem, { kind: 'player_post' }> =>
-      i.kind === 'player_post' && Boolean(i.pinned)
-  )
-  const feedList = pinnedPlayer
-    ? items.filter(i => !(i.kind === 'player_post' && i.id === pinnedPlayer.id))
-    : items
-
   return (
     <div className="flex flex-col gap-3">
-      {pinnedPlayer && (
-        <PinnedPostCard
-          key={`pinned-pp-${pinnedPlayer.id}`}
-          item={pinnedPlayer}
-          currentUserId={currentUserId}
-          currentUserAlias={currentUserAlias}
-          currentUserAvatar={currentUserAvatar}
-          isAdmin={isAdmin}
-        />
-      )}
-      {feedList.map(item => {
+      {items.map(item => {
+        if (item.kind === 'pinned_post') return (
+          <PinnedPostCard
+            key={`pin-${item.id}`}
+            item={item}
+            currentUserId={currentUserId}
+            currentUserAlias={currentUserAlias}
+            currentUserAvatar={currentUserAvatar}
+            isAdmin={isAdmin}
+          />
+        )
         if (item.kind === 'team_post') {
           const teamRole =
             userTeams.find(
