@@ -198,6 +198,20 @@ router.post("/:teamId/notify-join-request", async (req, res) => {
       return res.status(500).json({ error: sendErr.message || "Error al enviar email" });
     }
 
+    // Enviar push al founder además del email
+    try {
+      const { sendPushToUser } = require('../lib/push')
+      await sendPushToUser(founderMember.user_id, {
+        title: 'Nueva solicitud de membresía',
+        body: `${nombreStr || 'Alguien'} quiere unirse a ${teamNombreStr}`,
+        url: slug
+          ? `/equipos/${encodeURIComponent(slug)}/admin`
+          : `/dashboard/perfil?tab=notificaciones`,
+      })
+    } catch (pushErr) {
+      console.warn('[notify-join-request] push error (non-fatal):', pushErr.message)
+    }
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

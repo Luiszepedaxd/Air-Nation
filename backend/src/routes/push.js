@@ -61,4 +61,20 @@ return res.status(500).json({ error: 'No se pudo eliminar la suscripción' })
 }
 res.json({ ok: true })
 })
+// POST /api/v1/push/notify
+// Envía push a un usuario. Llamado desde el frontend tras eventos sociales.
+router.post('/notify', requireAuth, async (req, res) => {
+  const { recipientId, title, body, url } = req.body
+  if (!recipientId || !title || !body) {
+    return res.status(400).json({ error: 'Faltan datos' })
+  }
+  const { sendPushToUser } = require('../lib/push')
+  try {
+    await sendPushToUser(recipientId, { title, body, url })
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[push/notify]', err)
+    res.status(500).json({ error: 'Error al enviar push' })
+  }
+})
 module.exports = router

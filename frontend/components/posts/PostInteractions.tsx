@@ -5,6 +5,38 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { notifyNotifUpdated } from '@/lib/user-notifications'
 
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://air-nation-production.up.railway.app/api/v1'
+).replace(/\/$/, '')
+
+async function sendPushNotif(
+  recipientId: string,
+  title: string,
+  body: string,
+  url: string
+) {
+  try {
+    const { createClient } = await import('@supabase/supabase-js')
+    const s = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const { data: { session } } = await s.auth.getSession()
+    if (!session?.access_token) return
+    await fetch(`${API_URL}/push/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ recipientId, title, body, url }),
+    })
+  } catch {
+    // push es no-crítico, ignorar errores
+  }
+}
+
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -354,6 +386,12 @@ export function PostActions({
           href: postHref,
         })
         notifyNotifUpdated()
+        void sendPushNotif(
+          postOwnerId,
+          'Nueva reacción',
+          `Alguien reaccionó a tu publicación`,
+          postHref
+        )
       }
     }
   }
@@ -618,6 +656,12 @@ export function CommentsSection({
           href: postHref,
         })
         notifyNotifUpdated()
+        void sendPushNotif(
+          postOwnerId,
+          'Nuevo comentario',
+          `Alguien comentó tu publicación`,
+          postHref
+        )
       }
     }
     setPosting(false)
@@ -655,6 +699,12 @@ export function CommentsSection({
             href: postHref,
           })
           notifyNotifUpdated()
+          void sendPushNotif(
+            comment.user_id,
+            'Nueva reacción',
+            `Alguien reaccionó a tu comentario`,
+            postHref
+          )
         }
       }
     }

@@ -13,6 +13,34 @@ import {
   type UserNotifRow,
 } from '@/lib/user-notifications'
 
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://air-nation-production.up.railway.app/api/v1'
+).replace(/\/$/, '')
+
+async function sendPushNotif(
+  recipientId: string,
+  title: string,
+  body: string,
+  url: string
+) {
+  try {
+    const { supabase } = await import('@/lib/supabase')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    await fetch(`${API_URL}/push/notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ recipientId, title, body, url }),
+    })
+  } catch {
+    // push es no-crítico
+  }
+}
+
 const jost = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
@@ -230,6 +258,12 @@ export function NotificacionesTab({
 
       onRemove(row.id)
       notifyPendingJoinUpdated()
+      void sendPushNotif(
+        row.user_id,
+        'Solicitud aprobada',
+        `Tu solicitud para unirte a ${row.team_nombre} fue aprobada`,
+        `/equipos/${encodeURIComponent(row.team_slug)}`
+      )
     } catch {
       // revert optimistic: refetch could go here
     } finally {
@@ -249,6 +283,12 @@ export function NotificacionesTab({
 
       onRemove(row.id)
       notifyPendingJoinUpdated()
+      void sendPushNotif(
+        row.user_id,
+        'Solicitud rechazada',
+        `Tu solicitud para unirte a ${row.team_nombre} no fue aprobada`,
+        '/dashboard/perfil?tab=notificaciones'
+      )
     } catch {
       /* keep row */
     } finally {
