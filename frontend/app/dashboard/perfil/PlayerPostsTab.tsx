@@ -217,27 +217,13 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
 
   const softDeletePost = async (id: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setConfirmDeleteId(null)
-        return
-      }
+      const { error } = await supabase
+        .from('player_posts')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/player_posts?id=eq.${id}&user_id=eq.${userId}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            'Authorization': `Bearer ${session.access_token}`,
-            'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({ published: false }),
-        }
-      )
-
-      if (!res.ok) throw new Error(`${res.status}`)
+      if (error) throw error
 
       setPosts((prev) => prev.filter((x) => x.id !== id))
       setConfirmDeleteId(null)
