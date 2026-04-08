@@ -445,7 +445,7 @@ function TeamPostCard({ item }: { item: Extract<FeedItem, { kind: 'team_post' }>
       {fotos.length > 0 && (
         <div className={`grid gap-1 ${fotos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {fotos.map((url, i) => (
-            <div key={i} className="aspect-square overflow-hidden bg-[#F4F4F4]">
+            <div key={i} className="aspect-video overflow-hidden bg-[#F4F4F4]">
               <img src={url} alt="" className="w-full h-full object-cover" />
             </div>
           ))}
@@ -478,7 +478,7 @@ function PlayerPostCard({ item }: { item: Extract<FeedItem, { kind: 'player_post
       {fotos.length > 0 && (
         <div className={`grid gap-1 ${fotos.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {fotos.map((url, i) => (
-            <div key={i} className="aspect-square overflow-hidden bg-[#F4F4F4]">
+            <div key={i} className="aspect-video overflow-hidden bg-[#F4F4F4]">
               <img src={url} alt="" className="w-full h-full object-cover" />
             </div>
           ))}
@@ -510,18 +510,32 @@ function EventCard({ item }: { item: Extract<FeedItem, { kind: 'event' }> }) {
 }
 
 function NewTeamCard({ item }: { item: Extract<FeedItem, { kind: 'new_team' }> }) {
+  const initial = (item.nombre.trim()[0] || '?').toUpperCase()
   return (
-    <Link href={`/equipos/${item.slug}`} className="flex gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-3 items-center">
-      <div className="w-12 h-12 shrink-0 overflow-hidden bg-[#F4F4F4]">
-        {item.logo_url
-          ? <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-lg font-bold" style={jost}>{item.nombre[0]}</div>
-        }
-      </div>
-      <div className="min-w-0 flex-1">
-        <p style={lato} className="text-[11px] text-[#999999] mb-0.5">Nuevo equipo</p>
-        <h3 style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">{item.nombre}</h3>
-        {item.ciudad && <p style={lato} className="text-[11px] text-[#666666]">{item.ciudad}</p>}
+    <Link href={`/equipos/${encodeURIComponent(item.slug)}`}
+      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      {/* Foto portada si existe */}
+      {item.foto_portada_url && (
+        <div className="relative h-[140px] w-full overflow-hidden bg-[#111111]">
+          <img src={item.foto_portada_url} alt="" className="w-full h-full object-cover opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        </div>
+      )}
+      <div className="flex items-center gap-3 p-3">
+        <div className="w-12 h-12 shrink-0 overflow-hidden bg-[#F4F4F4] border border-[#EEEEEE]">
+          {item.logo_url
+            ? <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-lg font-bold" style={jost}>{initial}</div>
+          }
+        </div>
+        <div className="min-w-0 flex-1">
+          <p style={lato} className="text-[10px] text-[#999999] mb-0.5 uppercase tracking-wide">Nuevo equipo</p>
+          <h3 style={jost} className="text-[13px] font-extrabold uppercase text-[#111111] line-clamp-1">{item.nombre}</h3>
+          {item.ciudad && <p style={lato} className="text-[11px] text-[#666666]">{item.ciudad}</p>}
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#CCCCCC]">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
       </div>
     </Link>
   )

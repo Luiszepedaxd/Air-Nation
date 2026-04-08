@@ -7,7 +7,7 @@ export default function AppShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen min-h-dvh flex flex-col bg-[#F4F4F4]">
+    <div className="h-[100dvh] flex flex-col bg-[#F4F4F4]">
       <div
         id="dashboard-scroll-root"
         className="flex-1 overflow-y-auto md:pb-0 md:pt-16"
