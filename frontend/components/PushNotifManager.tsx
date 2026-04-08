@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { subscribeToPush, updateAppBadge } from '@/lib/push-client'
 import { fetchUnreadNotifCount, NOTIF_UPDATED_EVENT } from '@/lib/user-notifications'
@@ -62,4 +62,48 @@ export function PushNotifManager({ userId }: { userId: string }) {
   }, [userId])
 
   return null
+}
+
+export function usePushNotifButton() {
+  const [done, setDone] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const canShow =
+    mounted &&
+    typeof window !== 'undefined' &&
+    'Notification' in window &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window &&
+    Notification.permission !== 'granted' &&
+    Notification.permission !== 'denied' &&
+    !done &&
+    (() => {
+      try { return sessionStorage.getItem('an_push_subscribed') !== '1' } catch { return true }
+    })()
+
+  const trigger = useCallback(async () => {
+    if (loading) return
+    setLoading(true)
+    const { supabase } = await import('@/lib/supabase')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) { setLoading(false); return }
+    const { subscribeToPush } = await import('@/lib/push-client')
+    const ok = await subscribeToPush(session.access_token)
+    if (ok) {
+      try { sessionStorage.setItem('an_push_subscribed', '1') } catch { /* ignore */ }
+      setDone(true)
+    }
+    setLoading(false)
+  }, [loading])
+
+  const isIOS =
+    typeof navigator !== 'undefined' &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent)
+
+  return { canShow, isIOS, trigger, loading }
 }
