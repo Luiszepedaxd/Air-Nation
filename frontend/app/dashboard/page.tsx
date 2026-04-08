@@ -29,6 +29,13 @@ export default async function DashboardHomePage({
     .eq('id', user.id)
     .maybeSingle()
 
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('app_role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const isAdmin = userRow?.app_role === 'admin'
+
   const skipOnboardingGate = fromOnboardingParam(searchParams.from)
   if (!profile?.alias && !skipOnboardingGate) redirect('/onboarding')
 
@@ -105,6 +112,7 @@ export default async function DashboardHomePage({
           userAvatar={profile?.avatar_url ?? null}
           userTeams={userTeams}
           userFields={userFields}
+          isAdmin={isAdmin}
         />
       </div>
     </main>

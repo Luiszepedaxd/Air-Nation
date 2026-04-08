@@ -163,14 +163,20 @@ export function LikesModal({
 export function PostMenu({
   canDelete,
   onDelete,
+  canPin = false,
+  isPinned = false,
+  onPin,
 }: {
   canDelete: boolean
   onDelete: () => void
+  canPin?: boolean
+  isPinned?: boolean
+  onPin?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
-  if (!canDelete) return null
+  if (!canDelete && !canPin) return null
 
   return (
     <div className="relative">
@@ -195,19 +201,7 @@ export function PostMenu({
             aria-hidden
           />
           <div className="absolute right-0 top-8 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg">
-            {!confirming ? (
-              <button
-                type="button"
-                onClick={() => setConfirming(true)}
-                style={lato}
-                className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#CC4B37] hover:bg-[#FFF8F7] transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Eliminar publicación
-              </button>
-            ) : (
+            {confirming && canDelete ? (
               <div className="px-4 py-3">
                 <p style={lato} className="text-[12px] text-[#111111] mb-2">
                   ¿Eliminar este post?
@@ -231,6 +225,37 @@ export function PostMenu({
                   </button>
                 </div>
               </div>
+            ) : (
+              <>
+                {canPin && onPin && (
+                  <button
+                    type="button"
+                    onClick={() => { onPin(); setOpen(false); setConfirming(false) }}
+                    style={lato}
+                    className={`flex w-full items-center gap-2 px-4 py-3 text-[13px] transition-colors hover:bg-[#F4F4F4] ${
+                      isPinned ? 'text-[#CC4B37]' : 'text-[#111111]'
+                    }`}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+                    </svg>
+                    {isPinned ? 'Desfijar publicación' : 'Fijar en el feed'}
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(true)}
+                    style={lato}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#CC4B37] hover:bg-[#FFF8F7] transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Eliminar publicación
+                  </button>
+                )}
+              </>
             )}
           </div>
         </>

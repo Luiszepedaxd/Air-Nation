@@ -15,7 +15,7 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 // Tipos de items del feed
 type FeedItem =
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; pinned?: boolean; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
   | {
       kind: 'field_post'
       id: string
@@ -504,12 +504,13 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
   )
 }
 
-function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner }: {
+function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner, isAdmin }: {
   item: Extract<FeedItem, { kind: 'player_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
   isOwner: boolean
+  isAdmin: boolean
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
@@ -523,6 +524,19 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
     if (!error) {
       window.dispatchEvent(new Event('airnation:post-deleted'))
     }
+  }
+
+  const handlePin = async () => {
+    await supabase
+      .from('player_posts')
+      .update({ pinned: false })
+      .eq('pinned', true)
+    const newPinned = !item.pinned
+    await supabase
+      .from('player_posts')
+      .update({ pinned: newPinned })
+      .eq('id', item.id)
+    window.dispatchEvent(new Event('airnation:post-deleted'))
   }
 
   return (
@@ -541,6 +555,69 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
           <PostMenu
             canDelete={isOwner}
             onDelete={handleDelete}
+            canPin={isAdmin}
+            isPinned={Boolean(item.pinned)}
+            onPin={handlePin}
+          />
+        </div>
+        <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
+      </div>
+      {item.content?.trim() && (
+        <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+      )}
+      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+      <PostActions
+        postType="player"
+        postId={item.id}
+        postOwnerId={item.post_owner_id}
+        currentUserId={currentUserId}
+        currentUserAlias={currentUserAlias}
+        currentUserAvatar={currentUserAvatar}
+        shareUrl={`/u/${item.user_id}`}
+        shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
+        postHref={`/u/${item.user_id}`}
+      />
+    </div>
+  )
+}
+
+function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isAdmin }: {
+  item: Extract<FeedItem, { kind: 'player_post' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+  isAdmin: boolean
+}) {
+  const fotos = (item.fotos_urls ?? []).slice(0, 4)
+  const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
+
+  const handleUnpin = async () => {
+    await supabase
+      .from('player_posts')
+      .update({ pinned: false })
+      .eq('id', item.id)
+    window.dispatchEvent(new Event('airnation:post-deleted'))
+  }
+
+  return (
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+      <div className="mb-3">
+        <div className="flex items-center gap-3">
+          <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
+            <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
+              {item.user.avatar_url
+                ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
+              }
+            </div>
+            <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+          </Link>
+          <PostMenu
+            canPin={isAdmin}
+            isPinned={true}
+            onPin={handleUnpin}
+            canDelete={isAdmin}
+            onDelete={handleUnpin}
           />
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
@@ -801,11 +878,13 @@ function FeedTab({
   currentUserAlias,
   currentUserAvatar,
   userTeams,
+  isAdmin,
 }: {
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
   userTeams: { id: string; slug: string; rol: 'founder' | 'admin' }[]
+  isAdmin: boolean
 }) {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -827,7 +906,7 @@ function FeedTab({
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, created_at, users(alias, nombre, avatar_url)')
+          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
           .eq('published', true)
           .order('created_at', { ascending: false })
           .limit(10),
@@ -891,6 +970,7 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
+          pinned: Boolean((r as Record<string, unknown>).pinned),
           user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
         })
       }
@@ -1019,15 +1099,32 @@ function FeedTab({
     </div>
   )
 
+  const pinnedPlayer = items.find(
+    (i): i is Extract<FeedItem, { kind: 'player_post' }> =>
+      i.kind === 'player_post' && Boolean(i.pinned)
+  )
+  const feedList = pinnedPlayer
+    ? items.filter(i => !(i.kind === 'player_post' && i.id === pinnedPlayer.id))
+    : items
+
   return (
     <div className="flex flex-col gap-3">
-      {items.map(item => {
+      {pinnedPlayer && (
+        <PinnedPostCard
+          key={`pinned-pp-${pinnedPlayer.id}`}
+          item={pinnedPlayer}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+          isAdmin={isAdmin}
+        />
+      )}
+      {feedList.map(item => {
         if (item.kind === 'team_post') {
           const teamRole =
             userTeams.find(
               (t) => String(t.id) === String(item.team_id)
             )?.rol ?? null
-          console.log('teamRole', item.team_id, userTeams, teamRole)
           return (
             <TeamPostCard
               key={`tp-${item.id}`}
@@ -1048,6 +1145,7 @@ function FeedTab({
             currentUserAlias={currentUserAlias}
             currentUserAvatar={currentUserAvatar}
             isOwner={currentUserId === item.user_id}
+            isAdmin={isAdmin}
           />
         )
         if (item.kind === 'field_post')
@@ -1374,6 +1472,7 @@ export function FeedHome({
   userAvatar,
   userTeams,
   userFields,
+  isAdmin,
 }: {
   userId: string
   userAlias: string | null
@@ -1391,6 +1490,7 @@ export function FeedHome({
     slug: string
     foto_portada_url: string | null
   }[]
+  isAdmin: boolean
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('feed')
   const [feedKey, setFeedKey] = useState(0)
@@ -1444,6 +1544,7 @@ export function FeedHome({
               slug: t.slug,
               rol: t.rol,
             }))}
+            isAdmin={isAdmin}
           />
         )}
         {activeTab === 'eventos' && <EventosTab />}
