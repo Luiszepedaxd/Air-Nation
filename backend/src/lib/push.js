@@ -27,7 +27,17 @@ async function sendPushToUser(userId, payload) {
     .select('id, endpoint, p256dh, auth')
     .eq('user_id', userId)
 
-  if (error || !subs || subs.length === 0) return
+  if (error) {
+    console.error('[push] error fetching subs for', userId, error.message)
+    return
+  }
+
+  if (!subs || subs.length === 0) {
+    console.warn('[push] no subs found for', userId)
+    return
+  }
+
+  console.log('[push] sending to', subs.length, 'devices for user', userId)
 
   const notification = JSON.stringify({
     title: payload.title,
@@ -48,11 +58,14 @@ async function sendPushToUser(userId, payload) {
     )
   )
 
-  // Limpiar suscripciones expiradas o inválidas (410 Gone o 404)
   const toDelete = []
   results.forEach((result, i) => {
-    if (result.status === 'rejected') {
+    if (result.status === 'fulfilled') {
+      console.log('[push] sent OK to', subs[i].endpoint.slice(0, 60))
+    } else {
       const status = result.reason?.statusCode
+      const msg = result.reason?.message || 'unknown error'
+      console.error('[push] failed to', subs[i].endpoint.slice(0, 60), 'status:', status, 'msg:', msg)
       if (status === 410 || status === 404) {
         toDelete.push(subs[i].id)
       }
@@ -60,6 +73,7 @@ async function sendPushToUser(userId, payload) {
   })
 
   if (toDelete.length > 0) {
+    console.log('[push] cleaning up', toDelete.length, 'expired subs')
     await supabase
       .from('push_subscriptions')
       .delete()
