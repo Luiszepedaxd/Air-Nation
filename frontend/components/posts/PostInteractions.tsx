@@ -17,14 +17,13 @@ async function sendPushNotif(
   url: string
 ) {
   try {
-    const { createClient } = await import('@supabase/supabase-js')
-    const s = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { data: { session } } = await s.auth.getSession()
-    if (!session?.access_token) return
-    await fetch(`${API_URL}/push/notify`, {
+    const { supabase } = await import('@/lib/supabase')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) {
+      console.warn('[push] no session token')
+      return
+    }
+    const res = await fetch(`${API_URL}/push/notify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -32,8 +31,13 @@ async function sendPushNotif(
       },
       body: JSON.stringify({ recipientId, title, body, url }),
     })
-  } catch {
-    // push es no-crítico, ignorar errores
+    if (!res.ok) {
+      console.warn('[push] notify failed:', res.status, await res.text())
+    } else {
+      console.log('[push] notify ok para', recipientId)
+    }
+  } catch (err) {
+    console.warn('[push] sendPushNotif error:', err)
   }
 }
 
