@@ -19,6 +19,16 @@ type FeedItem =
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
   | { kind: 'noticia'; id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
 
+type PostComment = {
+  id: string
+  user_id: string
+  content: string
+  created_at: string
+  user: { alias: string | null; nombre: string | null; avatar_url: string | null }
+  likeCount: number
+  likedByMe: boolean
+}
+
 type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; field_nombre: string | null; field_ciudad: string | null }
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
 type NoticiaItem = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
@@ -595,9 +605,453 @@ function PhotoGrid({ urls }: { urls: string[] }) {
   )
 }
 
+function HeartIcon({ filled, size = 18 }: { filled: boolean; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21C12 21 3 15.5 3 9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6.5-9 12-9 12Z"
+        fill={filled ? '#CC4B37' : 'none'}
+        stroke={filled ? '#CC4B37' : '#999999'}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+const COMMENTS_PAGE_SIZE = 3
+
+function CommentsSection({
+  postType,
+  postId,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  postType: 'player' | 'team' | 'field'
+  postId: string
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
+  const [comments, setComments] = useState<PostComment[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [text, setText] = useState('')
+  const [posting, setPosting] = useState(false)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  const loadComments = async (pageNum: number, append = false) => {
+    const from = 0
+    const to = pageNum * COMMENTS_PAGE_SIZE - 1
+
+    const { data, count } = await supabase
+      .from('post_comments')
+      .select(`
+        id, user_id, content, created_at,
+        users ( alias, nombre, avatar_url )
+      `, { count: 'exact' })
+      .eq('post_type', postType)
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+
+    if (!data) return
+
+    const rows = data as Record<string, unknown>[]
+
+    let likedIds: string[] = []
+    if (currentUserId && rows.length > 0) {
+      const ids = rows.map(r => String(r.id))
+      const { data: likedData } = await supabase
+        .from('post_reactions')
+        .select('post_id')
+        .eq('post_type', 'comment')
+        .eq('user_id', currentUserId)
+        .in('post_id', ids)
+      likedIds = (likedData ?? []).map((x: Record<string, unknown>) => String(x.post_id))
+    }
+
+    let likeMap: Record<string, number> = {}
+    if (rows.length > 0) {
+      const { data: likeCounts } = await supabase
+        .from('post_reactions')
+        .select('post_id')
+        .eq('post_type', 'comment')
+        .in('post_id', rows.map(r => String(r.id)))
+
+      likeMap = {}
+      for (const lc of likeCounts ?? []) {
+        const pid = String((lc as Record<string, unknown>).post_id)
+        likeMap[pid] = (likeMap[pid] ?? 0) + 1
+      }
+    }
+
+    const parsed: PostComment[] = rows.map(r => {
+      const u = Array.isArray(r.users) ? r.users[0] : r.users
+      const uo = (u ?? {}) as Record<string, unknown>
+      return {
+        id: String(r.id),
+        user_id: String(r.user_id),
+        content: String(r.content),
+        created_at: String(r.created_at),
+        user: {
+          alias: uo.alias ? String(uo.alias) : null,
+          nombre: uo.nombre ? String(uo.nombre) : null,
+          avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
+        },
+        likeCount: likeMap[String(r.id)] ?? 0,
+        likedByMe: likedIds.includes(String(r.id)),
+      }
+    })
+
+    setTotal(count ?? 0)
+    setComments(append ? prev => [...prev, ...parsed.slice(prev.length)] : parsed)
+  }
+
+  useEffect(() => {
+    setPage(1)
+    void loadComments(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload comments when post identity or user changes
+  }, [postId, postType, currentUserId])
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true)
+    const next = page + 1
+    setPage(next)
+    await loadComments(next, true)
+    setLoadingMore(false)
+  }
+
+  const handlePost = async () => {
+    if (!currentUserId || !text.trim() || posting) return
+    setPosting(true)
+    const { data, error } = await supabase
+      .from('post_comments')
+      .insert({
+        user_id: currentUserId,
+        post_type: postType,
+        post_id: postId,
+        content: text.trim(),
+      })
+      .select(`id, user_id, content, created_at, users(alias, nombre, avatar_url)`)
+      .single()
+
+    if (!error && data) {
+      const r = data as Record<string, unknown>
+      const u = Array.isArray(r.users) ? r.users[0] : r.users
+      const uo = (u ?? {}) as Record<string, unknown>
+      const newComment: PostComment = {
+        id: String(r.id),
+        user_id: String(r.user_id),
+        content: String(r.content),
+        created_at: String(r.created_at),
+        user: {
+          alias: uo.alias ? String(uo.alias) : null,
+          nombre: uo.nombre ? String(uo.nombre) : null,
+          avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
+        },
+        likeCount: 0,
+        likedByMe: false,
+      }
+      setComments(prev => [newComment, ...prev])
+      setTotal(t => t + 1)
+      setText('')
+    }
+    setPosting(false)
+  }
+
+  const handleLikeComment = async (commentId: string, likedByMe: boolean) => {
+    if (!currentUserId) return
+    setComments(prev => prev.map(c =>
+      c.id === commentId
+        ? { ...c, likedByMe: !likedByMe, likeCount: likedByMe ? c.likeCount - 1 : c.likeCount + 1 }
+        : c
+    ))
+    if (likedByMe) {
+      await supabase.from('post_reactions').delete()
+        .eq('post_type', 'comment')
+        .eq('post_id', commentId)
+        .eq('user_id', currentUserId)
+    } else {
+      await supabase.from('post_reactions').insert({
+        user_id: currentUserId,
+        post_type: 'comment',
+        post_id: commentId,
+        reaction: 'fire',
+      })
+    }
+  }
+
+  const displayedComments = comments.slice(0, page * COMMENTS_PAGE_SIZE)
+  const hasMore = total > displayedComments.length
+
+  return (
+    <div className="mt-3 border-t border-[#EEEEEE] pt-3 space-y-3">
+      {/* Input nuevo comentario */}
+      {currentUserId && (
+        <div className="flex gap-2 items-start">
+          <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+            {currentUserAvatar
+              ? <img src={currentUserAvatar} alt="" className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#CC4B37] font-bold" style={jost}>
+                  {(currentUserAlias ?? 'U')[0].toUpperCase()}
+                </div>
+            }
+          </div>
+          <div className="flex-1 flex gap-2">
+            <textarea
+              ref={inputRef}
+              value={text}
+              onChange={e => setText(e.target.value.slice(0, 500))}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handlePost() } }}
+              placeholder="Escribe un comentario…"
+              rows={1}
+              style={lato}
+              className="flex-1 resize-none border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[13px] text-[#111111] placeholder:text-[#AAAAAA] focus:outline-none focus:border-[#CC4B37] rounded-[2px]"
+            />
+            <button
+              type="button"
+              onClick={() => void handlePost()}
+              disabled={!text.trim() || posting}
+              style={jost}
+              className="shrink-0 bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-40"
+            >
+              {posting ? '…' : 'OK'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista comentarios — más recientes primero */}
+      {displayedComments.map(c => {
+        const name = c.user.alias?.trim() || c.user.nombre?.trim() || 'Jugador'
+        return (
+          <div key={c.id} className="flex gap-2">
+            <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+              {c.user.avatar_url
+                ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#CC4B37] font-bold" style={jost}>
+                    {name[0].toUpperCase()}
+                  </div>
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
+                <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">{name}</p>
+                <p style={lato} className="text-[13px] text-[#111111] mt-0.5 break-words">{c.content}</p>
+              </div>
+              <div className="flex items-center gap-3 mt-1 ml-1">
+                <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(c.created_at)}</p>
+                <button
+                  type="button"
+                  onClick={() => void handleLikeComment(c.id, c.likedByMe)}
+                  disabled={!currentUserId}
+                  className="flex items-center gap-1 disabled:opacity-30"
+                >
+                  <HeartIcon filled={c.likedByMe} size={13} />
+                  {c.likeCount > 0 && (
+                    <span style={lato} className="text-[11px] text-[#999999]">{c.likeCount}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Ver más */}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => void handleLoadMore()}
+          disabled={loadingMore}
+          style={lato}
+          className="text-[12px] text-[#CC4B37] font-semibold disabled:opacity-40"
+        >
+          {loadingMore ? 'Cargando…' : `Ver más comentarios (${total - displayedComments.length} restantes)`}
+        </button>
+      )}
+    </div>
+  )
+}
+
+function PostActions({
+  postType,
+  postId,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+  shareUrl,
+  shareTitle,
+}: {
+  postType: 'player' | 'team' | 'field'
+  postId: string
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+  shareUrl: string
+  shareTitle: string
+}) {
+  const [likeCount, setLikeCount] = useState(0)
+  const [liked, setLiked] = useState(false)
+  const [commentCount, setCommentCount] = useState(0)
+  const [showComments, setShowComments] = useState(false)
+  const [copying, setCopying] = useState(false)
+
+  useEffect(() => {
+    if (!postId) return
+    let cancelled = false
+    ;(async () => {
+      const [{ count: lc }, { count: cc }] = await Promise.all([
+        supabase.from('post_reactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('post_type', postType)
+          .eq('post_id', postId),
+        supabase.from('post_comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('post_type', postType)
+          .eq('post_id', postId),
+      ])
+      if (cancelled) return
+      setLikeCount(lc ?? 0)
+      setCommentCount(cc ?? 0)
+
+      if (currentUserId) {
+        const { data } = await supabase
+          .from('post_reactions')
+          .select('id')
+          .eq('post_type', postType)
+          .eq('post_id', postId)
+          .eq('user_id', currentUserId)
+          .maybeSingle()
+        if (!cancelled) setLiked(!!data)
+      } else if (!cancelled) {
+        setLiked(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [postId, postType, currentUserId])
+
+  const handleLike = async () => {
+    if (!currentUserId) return
+    if (liked) {
+      setLiked(false)
+      setLikeCount(c => Math.max(0, c - 1))
+      await supabase.from('post_reactions').delete()
+        .eq('post_type', postType)
+        .eq('post_id', postId)
+        .eq('user_id', currentUserId)
+    } else {
+      setLiked(true)
+      setLikeCount(c => c + 1)
+      await supabase.from('post_reactions').insert({
+        user_id: currentUserId,
+        post_type: postType,
+        post_id: postId,
+        reaction: 'fire',
+      })
+    }
+  }
+
+  const handleShare = async () => {
+    const fullUrl = `https://airnation.online${shareUrl}`
+    if (navigator.share) {
+      try { await navigator.share({ title: shareTitle, url: fullUrl }) } catch { /* cancelado */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(fullUrl)
+        setCopying(true)
+        setTimeout(() => setCopying(false), 2000)
+      } catch { /* ignore */ }
+    }
+  }
+
+  return (
+    <div className="mt-3">
+      {/* Barra de acciones */}
+      <div className="flex items-center gap-1 pt-3 border-t border-[#EEEEEE]">
+        {/* Like */}
+        <button
+          type="button"
+          onClick={() => void handleLike()}
+          disabled={!currentUserId}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-[#F4F4F4] transition-colors disabled:opacity-30"
+        >
+          <HeartIcon filled={liked} size={18} />
+          {likeCount > 0 && (
+            <span style={lato} className="text-[12px] text-[#666666] font-semibold">{likeCount}</span>
+          )}
+        </button>
+
+        {/* Comentar */}
+        <button
+          type="button"
+          onClick={() => setShowComments(v => !v)}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-[#F4F4F4] transition-colors"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              stroke={showComments ? '#CC4B37' : '#999999'}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {commentCount > 0 && (
+            <span style={lato} className={`text-[12px] font-semibold ${showComments ? 'text-[#CC4B37]' : 'text-[#666666]'}`}>
+              {commentCount}
+            </span>
+          )}
+        </button>
+
+        {/* Compartir */}
+        <button
+          type="button"
+          onClick={() => void handleShare()}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded hover:bg-[#F4F4F4] transition-colors ml-auto"
+        >
+          {copying ? (
+            <span style={lato} className="text-[11px] text-[#CC4B37] font-semibold">¡Copiado!</span>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v12M8 7l4-4 4 4"
+                stroke="#999999"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* Sección comentarios — toggle */}
+      {showComments && (
+        <CommentsSection
+          postType={postType}
+          postId={postId}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── CARD COMPONENTS ───
 
-function TeamPostCard({ item }: { item: Extract<FeedItem, { kind: 'team_post' }> }) {
+function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar }: {
+  item: Extract<FeedItem, { kind: 'team_post' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   return (
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
@@ -621,11 +1075,25 @@ function TeamPostCard({ item }: { item: Extract<FeedItem, { kind: 'team_post' }>
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
       )}
       {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+      <PostActions
+        postType="team"
+        postId={item.id}
+        currentUserId={currentUserId}
+        currentUserAlias={currentUserAlias}
+        currentUserAvatar={currentUserAvatar}
+        shareUrl={`/equipos/${item.team.slug}`}
+        shareTitle={`${item.team.nombre} en AirNation`}
+      />
     </div>
   )
 }
 
-function PlayerPostCard({ item }: { item: Extract<FeedItem, { kind: 'player_post' }> }) {
+function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar }: {
+  item: Extract<FeedItem, { kind: 'player_post' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
   return (
@@ -646,6 +1114,15 @@ function PlayerPostCard({ item }: { item: Extract<FeedItem, { kind: 'player_post
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
       )}
       {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+      <PostActions
+        postType="player"
+        postId={item.id}
+        currentUserId={currentUserId}
+        currentUserAlias={currentUserAlias}
+        currentUserAvatar={currentUserAvatar}
+        shareUrl={`/u/${item.user_id}`}
+        shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
+      />
     </div>
   )
 }
@@ -798,7 +1275,15 @@ function NoticiaFeedCard({ item }: { item: Extract<FeedItem, { kind: 'noticia' }
 
 // ─── FEED TAB ───
 /** Recarga con `key` desde el padre tras publicar. Paginación / scroll infinito: ampliar límites y cursores aquí. */
-function FeedTab() {
+function FeedTab({
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -966,8 +1451,24 @@ function FeedTab() {
   return (
     <div className="flex flex-col gap-3">
       {items.map(item => {
-        if (item.kind === 'team_post') return <TeamPostCard key={`tp-${item.id}`} item={item} />
-        if (item.kind === 'player_post') return <PlayerPostCard key={`pp-${item.id}`} item={item} />
+        if (item.kind === 'team_post') return (
+          <TeamPostCard
+            key={`tp-${item.id}`}
+            item={item}
+            currentUserId={currentUserId}
+            currentUserAlias={currentUserAlias}
+            currentUserAvatar={currentUserAvatar}
+          />
+        )
+        if (item.kind === 'player_post') return (
+          <PlayerPostCard
+            key={`pp-${item.id}`}
+            item={item}
+            currentUserId={currentUserId}
+            currentUserAlias={currentUserAlias}
+            currentUserAvatar={currentUserAvatar}
+          />
+        )
         if (item.kind === 'event') return <EventCard key={`ev-${item.id}`} item={item} />
         if (item.kind === 'new_team') return <NewTeamCard key={`nt-${item.id}`} item={item} />
         if (item.kind === 'video') return <VideoCard key={`vid-${item.id}`} item={item}/>
@@ -1339,7 +1840,14 @@ export function FeedHome({
       )}
 
       <div className="mt-4">
-        {activeTab === 'feed' && <FeedTab key={feedKey} />}
+        {activeTab === 'feed' && (
+          <FeedTab
+            key={feedKey}
+            currentUserId={userId}
+            currentUserAlias={userAlias}
+            currentUserAvatar={userAvatar}
+          />
+        )}
         {activeTab === 'eventos' && <EventosTab />}
         {activeTab === 'equipos' && <EquiposTab />}
         {activeTab === 'noticias' && <NoticiasTab />}
