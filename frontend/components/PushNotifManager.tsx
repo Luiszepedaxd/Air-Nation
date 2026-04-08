@@ -17,18 +17,16 @@ export function PushNotifManager({ userId }: { userId: string }) {
     if (!('Notification' in window)) return
     if (Notification.permission === 'denied') return
 
-    // Solo intentar una vez por sesión
-    if (sessionStorage.getItem(STORAGE_KEY) === '1') return
-
     subscribedRef.current = true
 
     const run = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) return
 
+      const { subscribeToPush } = await import('@/lib/push-client')
       const ok = await subscribeToPush(session.access_token)
       if (ok) {
-        try { sessionStorage.setItem(STORAGE_KEY, '1') } catch { /* ignore */ }
+        try { sessionStorage.setItem('an_push_subscribed', '1') } catch { /* ignore */ }
       }
     }
 
