@@ -69,6 +69,24 @@ function IgIcon() {
   )
 }
 
+function StarsSmall({ value }: { value: number }) {
+  return (
+    <div className="flex shrink-0 items-center gap-0.5" aria-hidden>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg key={i} width={14} height={14} viewBox="0 0 20 20" fill="none">
+          <path
+            d="M10 2.5l2.35 4.76 5.26.77-3.8 3.7.9 5.24L10 14.9l-4.71 2.48.9-5.24-3.8-3.7 5.26-.77L10 2.5z"
+            fill={i <= value ? '#CC4B37' : 'none'}
+            stroke={i <= value ? '#CC4B37' : '#CCCCCC'}
+            strokeWidth={1.2}
+            strokeLinejoin="round"
+          />
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 function PinMapIcon() {
   return (
     <svg
@@ -159,6 +177,12 @@ export function CampoPublicTabs({
   const showTelefono = Boolean(field.telefono?.trim())
   const showContactSeparator = showUbicacionBlock || showTelefono
 
+  const reviewCount = initialReviews.length
+  const promedioNum = Number(field.promedio_rating)
+  const promedioSafe = Number.isFinite(promedioNum) ? promedioNum : 0
+  const showRatingSummary =
+    reviewCount > 0 || promedioSafe > 0
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -201,6 +225,31 @@ export function CampoPublicTabs({
   return (
     <div>
       <div className="sticky top-0 z-20 border-b border-[#EEEEEE] bg-[#FFFFFF]">
+        {showRatingSummary ? (
+          <button
+            type="button"
+            onClick={() => {
+              setTab('resenas')
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+            className="group flex w-full cursor-pointer items-center gap-2 border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 py-3 text-left transition-colors md:px-6"
+          >
+            <StarsSmall value={Math.round(promedioSafe)} />
+            <span
+              className="text-2xl font-extrabold text-[#111111] transition-colors group-hover:text-[#CC4B37]"
+              style={jost}
+            >
+              {promedioSafe.toFixed(1)}
+            </span>
+            <span
+              className="text-sm text-[#666666] transition-colors group-hover:text-[#CC4B37]"
+              style={lato}
+            >
+              {reviewCount}{' '}
+              {reviewCount === 1 ? 'reseña' : 'reseñas'}
+            </span>
+          </button>
+        ) : null}
         <div className="overflow-x-auto">
           <nav
             className="flex min-w-max gap-6 px-4 md:mx-auto md:max-w-[960px] md:gap-8 md:px-6"
