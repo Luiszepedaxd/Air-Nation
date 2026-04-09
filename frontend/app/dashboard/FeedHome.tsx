@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
@@ -1507,7 +1508,26 @@ export function FeedHome({
   }[]
   isAdmin: boolean
 }) {
-  const [activeTab, setActiveTab] = useState<Tab>('feed')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const rawTab = searchParams.get('tab')
+  const activeTab: Tab = TABS.some((t) => t.id === rawTab)
+    ? (rawTab as Tab)
+    : 'feed'
+
+  const setActiveTab = (tab: Tab) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (tab === 'feed') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    const query = params.toString()
+    router.replace(pathname + (query ? `?${query}` : ''), { scroll: false })
+  }
+
   const [feedKey, setFeedKey] = useState(0)
 
   return (

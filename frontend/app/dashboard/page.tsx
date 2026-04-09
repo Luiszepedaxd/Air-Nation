@@ -106,14 +106,16 @@ export default async function DashboardHomePage({
         </Suspense>
       </div>
       <div className="w-full px-4 md:mx-auto md:max-w-[680px] md:px-6 pb-10">
-        <FeedHome
-          userId={user.id}
-          userAlias={profile?.alias ?? null}
-          userAvatar={profile?.avatar_url ?? null}
-          userTeams={userTeams}
-          userFields={userFields}
-          isAdmin={isAdmin}
-        />
+        <Suspense fallback={null}>
+          <FeedHome
+            userId={user.id}
+            userAlias={profile?.alias ?? null}
+            userAvatar={profile?.avatar_url ?? null}
+            userTeams={userTeams}
+            userFields={userFields}
+            isAdmin={isAdmin}
+          />
+        </Suspense>
       </div>
     </main>
   )
