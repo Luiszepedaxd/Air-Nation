@@ -79,8 +79,8 @@ export function PlayerHero({
 
   return (
     <header className="w-full bg-[#FFFFFF]">
-      {/* 1. PORTADA — solo desktop */}
-      <div className="relative hidden h-[200px] w-full overflow-hidden bg-[#111111] md:block">
+      {/* 1. PORTADA */}
+      <div className="relative h-[120px] w-full overflow-hidden bg-[#111111] md:h-[200px]">
         <ClickableImage
           src={user.foto_portada_url}
           alt=""
@@ -96,7 +96,7 @@ export function PlayerHero({
       <div className="mx-auto max-w-[960px] px-4 pb-2 pt-4 md:px-6 md:pt-0">
         {/* FILA 1: avatar + stats */}
         <div className="mb-3 flex items-center gap-4">
-          <div className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-full border-[3px] border-[#EEEEEE] bg-[#CC4B37] md:relative md:z-10 md:-mt-10 md:border-[3px] md:border-white">
+          <div className="relative z-10 -mt-10 h-[80px] w-[80px] shrink-0 overflow-hidden rounded-full border-[3px] border-[#EEEEEE] bg-[#CC4B37] md:border-white">
             {user.avatar_url ? (
               <ClickableImage
                 src={user.avatar_url}
