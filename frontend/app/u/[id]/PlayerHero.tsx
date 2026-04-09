@@ -226,8 +226,6 @@ export function PlayerHero({
     },
   ].filter((x): x is SocialLinkItem => Boolean(x))
 
-  const socialExtras = socialLinks.length > 2 ? socialLinks.slice(2) : []
-
   const handleTeamClick = (team: TeamCardItem) => {
     if (activeTeamId === team.id) {
       router.push(`/equipos/${encodeURIComponent(team.slug)}`)
@@ -289,48 +287,38 @@ export function PlayerHero({
             </div>
           </div>
           {socialLinks.length > 0 ? (
-            <div className="relative ml-auto self-center">
-              <div className="flex items-center gap-2">
-                {(socialLinks.length <= 2 ? socialLinks : socialLinks.slice(0, 2)).map((item) => (
-                  <a
-                    key={item.key}
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex border-0 bg-transparent p-0"
-                    aria-label={socialLinkAria(item.key)}
-                  >
-                    <SocialIconFor socialKey={item.key} />
-                  </a>
-                ))}
-                {socialLinks.length > 2 ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllSocials((p) => !p)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] bg-[#FAFAFA] text-[11px] font-extrabold leading-none text-[#666666]"
-                    aria-expanded={showAllSocials}
-                    aria-label={showAllSocials ? 'Ocultar redes adicionales' : 'Mostrar más redes'}
-                  >
-                    {showAllSocials ? '\u00D7' : '+'}
-                  </button>
-                ) : null}
-              </div>
-              {showAllSocials && socialLinks.length > 2 ? (
-                <div
-                  className="absolute right-0 top-full z-10 mt-1 grid gap-2 rounded-[6px] border border-[#EEEEEE] bg-[#FFFFFF] p-1"
-                  style={{ gridTemplateColumns: 'repeat(2, auto)' }}
+            <div className="relative ml-auto flex items-center gap-3">
+              {socialLinks.slice(0, 2).map((item) => (
+                <a
+                  key={item.key}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex p-0"
+                  aria-label={socialLinkAria(item.key)}
                 >
-                  {socialExtras.map((item) => (
+                  <SocialIconFor socialKey={item.key} />
+                </a>
+              ))}
+              {socialLinks.length > 2 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSocials((p) => !p)}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center text-[13px] font-extrabold text-[#666666]"
+                  aria-label={showAllSocials ? 'Ocultar' : 'Más redes'}
+                >
+                  {showAllSocials ? '×' : '+'}
+                </button>
+              ) : null}
+              {showAllSocials && socialLinks.length > 2 ? (
+                <div className="absolute right-0 top-full z-10 mt-2 flex flex-col gap-3 rounded-[6px] border border-[#EEEEEE] bg-[#FFFFFF] p-2">
+                  {socialLinks.slice(2).map((item) => (
                     <a
                       key={item.key}
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={
-                        socialExtras.length === 1
-                          ? 'col-start-2 inline-flex shrink-0 justify-self-end border-0 bg-transparent p-0'
-                          : 'inline-flex shrink-0 border-0 bg-transparent p-0'
-                      }
+                      className="inline-flex p-0"
                       aria-label={socialLinkAria(item.key)}
                     >
                       <SocialIconFor socialKey={item.key} />
