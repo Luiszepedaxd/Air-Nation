@@ -33,7 +33,7 @@ type FeedItem =
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
   | { kind: 'noticia'; id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
 
-type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; field_nombre: string | null; field_ciudad: string | null }
+type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
 type NoticiaItem = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
 type VideoItem = { id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
@@ -1188,7 +1188,7 @@ function EventosTab() {
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from('events')
-        .select('id, title, fecha, imagen_url, fields(nombre, ciudad)')
+        .select('id, title, fecha, imagen_url, fields(nombre, ciudad, foto_portada_url)')
         .eq('published', true)
         .eq('status', 'publicado')
         .gte('fecha', new Date().toISOString())
@@ -1203,6 +1203,7 @@ function EventosTab() {
           title: String(r.title ?? ''),
           fecha: String(r.fecha ?? ''),
           imagen_url: (r.imagen_url as string | null) ?? null,
+          field_foto: f ? (f as Record<string, unknown>).foto_portada_url as string | null : null,
           field_nombre: f ? String((f as Record<string, unknown>).nombre ?? '') || null : null,
           field_ciudad: f ? String((f as Record<string, unknown>).ciudad ?? '') || null : null,
         }
