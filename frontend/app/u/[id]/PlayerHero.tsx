@@ -136,6 +136,38 @@ function teamLogoInitial(nombre: string) {
   return (nombre?.trim()?.[0] || '?').toUpperCase()
 }
 
+type SocialKey = 'instagram' | 'tiktok' | 'youtube' | 'facebook'
+
+type SocialLinkItem = { key: SocialKey; url: string }
+
+function socialLinkAria(key: SocialKey): string {
+  switch (key) {
+    case 'instagram':
+      return 'Instagram'
+    case 'tiktok':
+      return 'TikTok'
+    case 'youtube':
+      return 'YouTube'
+    case 'facebook':
+      return 'Facebook'
+    default:
+      return 'Red social'
+  }
+}
+
+function SocialIconFor({ socialKey }: { socialKey: SocialKey }) {
+  switch (socialKey) {
+    case 'instagram':
+      return <SocialInstagramIcon />
+    case 'tiktok':
+      return <SocialTiktokIcon />
+    case 'youtube':
+      return <SocialYoutubeIcon />
+    case 'facebook':
+      return <SocialFacebookIcon />
+  }
+}
+
 export function PlayerHero({
   user,
   subtitle,
@@ -155,6 +187,7 @@ export function PlayerHero({
 }) {
   const router = useRouter()
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
+  const [showAllSocials, setShowAllSocials] = useState(false)
 
   const initial = (user.alias?.trim()?.[0] || '?').toUpperCase()
   const hasMemberNo =
@@ -174,8 +207,24 @@ export function PlayerHero({
   const singleRoleLabel =
     teams.length === 1 ? mapPlatformRole(teams[0].team_role) ?? teamRole : null
 
-  const hasSocials =
-    !!(user.instagram?.trim() || user.tiktok?.trim() || user.youtube?.trim() || user.facebook?.trim())
+  const socialLinks: SocialLinkItem[] = [
+    user.instagram?.trim() && {
+      key: 'instagram' as const,
+      url: instagramUrl(user.instagram.trim()),
+    },
+    user.tiktok?.trim() && {
+      key: 'tiktok' as const,
+      url: tiktokUrl(user.tiktok.trim()),
+    },
+    user.youtube?.trim() && {
+      key: 'youtube' as const,
+      url: youtubeUrl(user.youtube.trim()),
+    },
+    user.facebook?.trim() && {
+      key: 'facebook' as const,
+      url: facebookUrl(user.facebook.trim()),
+    },
+  ].filter((x): x is SocialLinkItem => Boolean(x))
 
   const handleTeamClick = (team: TeamCardItem) => {
     if (activeTeamId === team.id) {
@@ -237,52 +286,66 @@ export function PlayerHero({
               </span>
             </div>
           </div>
-          {hasSocials ? (
+          {socialLinks.length > 0 ? (
             <div className="ml-auto flex shrink-0 items-center gap-3">
-              {user.instagram?.trim() ? (
-                <a
-                  href={instagramUrl(user.instagram.trim())}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex border-0 bg-transparent p-0"
-                  aria-label="Instagram"
-                >
-                  <SocialInstagramIcon />
-                </a>
-              ) : null}
-              {user.tiktok?.trim() ? (
-                <a
-                  href={tiktokUrl(user.tiktok.trim())}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex border-0 bg-transparent p-0"
-                  aria-label="TikTok"
-                >
-                  <SocialTiktokIcon />
-                </a>
-              ) : null}
-              {user.youtube?.trim() ? (
-                <a
-                  href={youtubeUrl(user.youtube.trim())}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex border-0 bg-transparent p-0"
-                  aria-label="YouTube"
-                >
-                  <SocialYoutubeIcon />
-                </a>
-              ) : null}
-              {user.facebook?.trim() ? (
-                <a
-                  href={facebookUrl(user.facebook.trim())}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex border-0 bg-transparent p-0"
-                  aria-label="Facebook"
-                >
-                  <SocialFacebookIcon />
-                </a>
-              ) : null}
+              {socialLinks.length <= 2
+                ? socialLinks.map((item) => (
+                    <a
+                      key={item.key}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex border-0 bg-transparent p-0"
+                      aria-label={socialLinkAria(item.key)}
+                    >
+                      <SocialIconFor socialKey={item.key} />
+                    </a>
+                  ))
+                : (
+                    <>
+                      {socialLinks.slice(0, 2).map((item) => (
+                        <a
+                          key={item.key}
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex border-0 bg-transparent p-0"
+                          aria-label={socialLinkAria(item.key)}
+                        >
+                          <SocialIconFor socialKey={item.key} />
+                        </a>
+                      ))}
+                      <span
+                        className={`flex items-center gap-3 whitespace-nowrap transition-opacity duration-150 ${
+                          showAllSocials
+                            ? 'opacity-100'
+                            : 'pointer-events-none max-w-0 overflow-hidden opacity-0'
+                        }`}
+                      >
+                        {socialLinks.slice(2).map((item) => (
+                          <a
+                            key={item.key}
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex shrink-0 border-0 bg-transparent p-0"
+                            aria-label={socialLinkAria(item.key)}
+                          >
+                            <SocialIconFor socialKey={item.key} />
+                          </a>
+                        ))}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAllSocials((v) => !v)}
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] bg-[#FAFAFA] text-[11px] font-extrabold leading-none text-[#666666]"
+                        aria-expanded={showAllSocials}
+                        aria-label={showAllSocials ? 'Ocultar redes adicionales' : 'Mostrar más redes'}
+                      >
+                        {showAllSocials ? '\u00D7' : '+'}
+                      </button>
+                    </>
+                  )}
             </div>
           ) : null}
         </div>
