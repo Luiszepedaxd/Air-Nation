@@ -304,14 +304,14 @@ export function PlayerHero({
                 <button
                   type="button"
                   onClick={() => setShowAllSocials((p) => !p)}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center text-[13px] font-extrabold text-[#666666]"
+                  className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center text-[13px] font-extrabold text-[#666666]"
                   aria-label={showAllSocials ? 'Ocultar' : 'Más redes'}
                 >
                   {showAllSocials ? '×' : '+'}
                 </button>
               ) : null}
               {showAllSocials && socialLinks.length > 2 ? (
-                <div className="absolute right-0 top-full z-10 mt-2 flex flex-col gap-3 rounded-[6px] border border-[#EEEEEE] bg-[#FFFFFF] p-2">
+                <div className="absolute right-0 top-full z-10 mt-2 grid grid-cols-2 gap-3 rounded-[6px] border border-[#EEEEEE] bg-[#FFFFFF] p-2">
                   {socialLinks.slice(2).map((item) => (
                     <a
                       key={item.key}
