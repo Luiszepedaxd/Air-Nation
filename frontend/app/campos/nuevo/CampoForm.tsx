@@ -9,8 +9,8 @@ import {
   type ReactNode,
 } from 'react'
 import Link from 'next/link'
+import { Autocomplete, useLoadScript } from '@react-google-maps/api'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
-import { CIUDADES } from '@/lib/ciudades'
 import {
   FIELD_DAY_KEYS,
   FIELD_DAY_LABELS,
@@ -25,6 +25,8 @@ import {
   prepareCampoSlugAction,
   prepareCampoSlugAdminAction,
 } from './actions'
+
+const GOOGLE_LIBRARIES: ('places')[] = ['places']
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -188,6 +190,12 @@ export function CampoForm({
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([])
   const [clientError, setClientError] = useState('')
   const [activeUploads, setActiveUploads] = useState(0)
+  const { isLoaded: mapsLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? '',
+    libraries: GOOGLE_LIBRARIES,
+  })
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const [ciudadInput, setCiudadInput] = useState('')
   const [isPending, startTransition] = useTransition()
   const [serverError, setServerError] = useState('')
   const galleryInputRef = useRef<HTMLInputElement>(null)
@@ -352,19 +360,59 @@ export function CampoForm({
           >
             Ciudad
           </label>
-          <select
-            name="ciudad"
-            value={ciudad}
-            onChange={(e) => setCiudad(e.target.value)}
-            required
-            className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
-          >
-            {CIUDADES.map((c) => (
-              <option key={c.value || 'empty'} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </select>
+          <input type="hidden" name="ciudad" value={ciudad} readOnly aria-hidden />
+          {mapsLoaded ? (
+            <Autocomplete
+              onLoad={(ac) => {
+                autocompleteRef.current = ac
+              }}
+              onPlaceChanged={() => {
+                const place = autocompleteRef.current?.getPlace()
+                if (!place?.address_components) return
+                const locality =
+                  place.address_components.find((c) =>
+                    c.types.includes('locality')
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_2')
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_1')
+                  )?.long_name ||
+                  ''
+                if (locality) {
+                  setCiudad(locality)
+                  setCiudadInput(locality)
+                }
+              }}
+              options={{
+                types: ['(cities)'],
+                componentRestrictions: { country: 'mx' },
+              }}
+            >
+              <input
+                type="text"
+                className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
+                placeholder="Busca tu ciudad..."
+                value={ciudadInput}
+                onChange={(e) => {
+                  setCiudadInput(e.target.value)
+                  if (e.target.value === '') setCiudad('')
+                }}
+                autoComplete="off"
+              />
+            </Autocomplete>
+          ) : (
+            <input
+              type="text"
+              className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111]"
+              placeholder="Cargando..."
+              disabled
+            />
+          )}
+          {ciudad && (
+            <p className="text-[11px] text-[#999] mt-1">✓ {ciudad}</p>
+          )}
         </div>
 
         <div>
