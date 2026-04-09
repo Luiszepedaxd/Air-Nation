@@ -96,6 +96,14 @@ export default function LoginClient({
                 className="w-full border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-3 text-sm text-[#111111] placeholder-[#AAAAAA] transition-colors focus:border-[#CC4B37] focus:outline-none"
               />
             </div>
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#767676] hover:text-[#CC4B37] transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             {error && <p className="text-xs text-[#CC4B37]">{error}</p>}
             <button
               type="button"
