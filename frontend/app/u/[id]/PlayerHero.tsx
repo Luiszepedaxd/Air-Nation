@@ -86,25 +86,24 @@ export function PlayerHero({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[960px] px-4 pb-6 md:px-6">
-        <div className="flex items-end justify-between -mt-8 mb-3">
-          <div
-            className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden border-[3px] border-white bg-[#CC4B37]"
-            style={{ borderRadius: '50%' }}
-          >
-            {user.avatar_url ? (
-              <ClickableImage
-                src={user.avatar_url}
-                alt=""
-                width={72}
-                height={72}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-[22px] text-[#FFFFFF]" style={jost}>
-                {initial}
-              </span>
-            )}
+      <div className="mx-auto w-full max-w-[960px] pb-6">
+        <div className="flex items-end justify-between px-4 -mt-9 mb-3 md:px-6">
+          <div className="relative z-[2]">
+            <div className="relative z-[2] flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#CC4B37]">
+              {user.avatar_url ? (
+                <ClickableImage
+                  src={user.avatar_url}
+                  alt=""
+                  width={72}
+                  height={72}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-[22px] text-[#FFFFFF]" style={jost}>
+                  {initial}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2 pb-0.5">
             <MessageButton profileUserId={user.id} currentUserId={currentUserId} />
@@ -116,96 +115,104 @@ export function PlayerHero({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <h1
-            style={jostName}
-            className="text-[20px] font-extrabold leading-tight text-[#111111]"
-          >
-            {user.alias}
-          </h1>
-          {hasMemberNo ? (
-            <span
-              style={jost}
-              className="inline-flex items-center gap-1 rounded-[2px] bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-            >
-              <CheckIcon />
-              VERIFICADO
-            </span>
-          ) : null}
-        </div>
+        <div className="px-4 md:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 md:items-start">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1
+                  style={jostName}
+                  className="text-[20px] font-extrabold leading-tight text-[#111111]"
+                >
+                  {user.alias}
+                </h1>
+                {hasMemberNo ? (
+                  <span
+                    style={jost}
+                    className="inline-flex items-center gap-1 rounded-[2px] bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+                  >
+                    <CheckIcon />
+                    VERIFICADO
+                  </span>
+                ) : null}
+              </div>
 
-        {showMeta ? (
-          <p className="mt-1 text-[12px] text-[#666666]" style={lato}>
-            {subtitle}
-          </p>
-        ) : null}
+              {showMeta ? (
+                <p className="mt-1 text-[12px] text-[#666666]" style={lato}>
+                  {subtitle}
+                </p>
+              ) : null}
 
-        {hasMemberNo ? (
-          <p
-            style={jost}
-            className="mt-1 text-[14px] font-extrabold uppercase text-[#CC4B37]"
-          >
-            MIEMBRO #{user.member_number}
-          </p>
-        ) : null}
+              {hasMemberNo ? (
+                <p
+                  style={jost}
+                  className="mt-1 text-[14px] font-extrabold uppercase text-[#CC4B37]"
+                >
+                  MIEMBRO #{user.member_number}
+                </p>
+              ) : null}
 
-        <div className="my-2 flex gap-5">
-          <button type="button" className="flex flex-col items-start">
-            <span style={jostName} className="text-[17px] font-extrabold text-[#111111]">
-              {followersCount}
-            </span>
-            <span style={lato} className="text-[11px] text-[#666666]">
-              Seguidores
-            </span>
-          </button>
-          <button type="button" className="flex flex-col items-start">
-            <span style={jostName} className="text-[17px] font-extrabold text-[#111111]">
-              {followingCount}
-            </span>
-            <span style={lato} className="text-[11px] text-[#666666]">
-              Siguiendo
-            </span>
-          </button>
-        </div>
+              <div className="flex gap-5 my-2">
+                <div className="flex flex-col">
+                  <span style={jost} className="text-[17px] font-extrabold text-[#111111]">
+                    {followersCount}
+                  </span>
+                  <span style={lato} className="text-[11px] text-[#666666]">
+                    Seguidores
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span style={jost} className="text-[17px] font-extrabold text-[#111111]">
+                    {followingCount}
+                  </span>
+                  <span style={lato} className="text-[11px] text-[#666666]">
+                    Siguiendo
+                  </span>
+                </div>
+              </div>
 
-        {user.bio ? (
-          <p
-            className="mt-2 text-[13px] leading-relaxed text-[#666666]"
-            style={lato}
-          >
-            {user.bio}
-          </p>
-        ) : null}
-
-        {user.teams ? (
-          <Link
-            href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
-            className="mt-3 flex w-fit max-w-full items-center gap-2 rounded-[6px] border border-[#EEEEEE] p-2 transition-colors hover:bg-[#FAFAFA]"
-          >
-            {user.teams.logo_url ? (
-              <img
-                src={user.teams.logo_url}
-                alt=""
-                width={28}
-                height={28}
-                className="h-[28px] w-[28px] shrink-0 rounded-[4px] object-cover"
-              />
-            ) : (
-              <div className="h-[28px] w-[28px] shrink-0 rounded-[4px] bg-[#CC4B37]" />
-            )}
-            <div className="min-w-0 flex-1">
-              <p style={jostName} className="truncate text-[13px] font-extrabold text-[#111111]">
-                {user.teams.nombre}
-              </p>
-              {teamRole ? (
-                <p style={lato} className="text-[11px] text-[#666666]">
-                  {teamRole}
+              {user.bio ? (
+                <p
+                  className="mt-2 text-[13px] leading-relaxed text-[#666666]"
+                  style={lato}
+                >
+                  {user.bio}
                 </p>
               ) : null}
             </div>
-            <ChevronRightIcon />
-          </Link>
-        ) : null}
+
+            <div className="md:pt-2">
+              {user.teams ? (
+                <Link
+                  href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
+                  className="mt-3 flex w-full max-w-[280px] items-center gap-2 rounded-[6px] border border-[#EEEEEE] p-2 transition-colors hover:bg-[#FAFAFA] md:mt-0"
+                >
+                  {user.teams.logo_url ? (
+                    <img
+                      src={user.teams.logo_url}
+                      alt=""
+                      width={28}
+                      height={28}
+                      className="h-[28px] w-[28px] shrink-0 rounded-[4px] object-cover"
+                    />
+                  ) : (
+                    <div className="h-[28px] w-[28px] shrink-0 rounded-[4px] bg-[#CC4B37]" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p style={jostName} className="truncate text-[13px] font-extrabold text-[#111111]">
+                      {user.teams.nombre}
+                    </p>
+                    {teamRole ? (
+                      <p style={lato} className="text-[11px] text-[#666666]">
+                        {teamRole}
+                      </p>
+                    ) : null}
+                  </div>
+                  <ChevronRightIcon />
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </div>
     </header>
   )
