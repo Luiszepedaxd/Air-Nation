@@ -114,9 +114,14 @@ export function FiltrosCampos({
         style={{ maxHeight: '85vh', overflowY: 'auto', borderRadius: '12px 12px 0 0' }}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="flex w-full justify-center pt-3 pb-1"
+          aria-label="Cerrar filtros"
+        >
           <div className="h-1 w-10 rounded-full bg-[#DDDDDD]" />
-        </div>
+        </button>
 
         <div className="px-5 pb-6 pt-2">
           {/* Header */}
@@ -124,14 +129,24 @@ export function FiltrosCampos({
             <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">
               Filtrar
             </p>
-            <button
-              type="button"
-              onClick={handleClear}
-              style={jost}
-              className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline"
-            >
-              Limpiar todo
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleClear}
+                style={jost}
+                className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline"
+              >
+                Limpiar
+              </button>
+              <button
+                type="button"
+                onClick={handleApply}
+                style={jost}
+                className="bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-white"
+              >
+                Aplicar
+              </button>
+            </div>
           </div>
 
           {/* Sección Ubicación */}
@@ -192,16 +207,6 @@ export function FiltrosCampos({
               ))}
             </div>
           </div>
-
-          {/* Botón Aplicar */}
-          <button
-            type="button"
-            onClick={handleApply}
-            style={jost}
-            className="w-full bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white"
-          >
-            Aplicar filtros
-          </button>
         </div>
       </div>
     </>
