@@ -108,12 +108,13 @@ export function FiltrosCampos({
 
       {/* Bottom sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white transition-transform duration-300 ease-out ${
+        className={`fixed left-0 right-0 z-50 bg-white transition-transform duration-300 ease-out ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{
+          bottom: 'calc(64px + env(safe-area-inset-bottom))',
           borderRadius: '12px 12px 0 0',
-          paddingBottom: 'env(safe-area-inset-bottom)',
+          paddingBottom: '8px',
         }}
       >
         {/* Handle */}
