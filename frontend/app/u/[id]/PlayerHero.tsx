@@ -289,7 +289,7 @@ export function PlayerHero({
             </div>
           </div>
           {socialLinks.length > 0 ? (
-            <div className="relative ml-auto self-start">
+            <div className="relative ml-auto self-center">
               <div className="flex items-center gap-2">
                 {(socialLinks.length <= 2 ? socialLinks : socialLinks.slice(0, 2)).map((item) => (
                   <a
