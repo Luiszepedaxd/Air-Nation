@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
@@ -23,6 +24,25 @@ const jostHeading = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
   textTransform: 'uppercase' as const,
+}
+
+const CAMPO_TAB_IDS = [
+  'info',
+  'publicaciones',
+  'eventos',
+  'galeria',
+  'resenas',
+] as const
+type CampoTabId = (typeof CAMPO_TAB_IDS)[number]
+
+function campoTabFromSearchParams(
+  sp: URLSearchParams | { get: (key: string) => string | null }
+): CampoTabId {
+  const raw = sp.get('tab')
+  if (raw && (CAMPO_TAB_IDS as readonly string[]).includes(raw)) {
+    return raw as CampoTabId
+  }
+  return 'info'
 }
 
 function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
@@ -157,9 +177,23 @@ export function CampoPublicTabs({
   initialReviews: FieldReviewPublic[]
   eventos: CampoEventoListItem[]
 }) {
-  const [tab, setTab] = useState<
-    'info' | 'publicaciones' | 'eventos' | 'galeria' | 'resenas'
-  >('info')
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [tab, setTabState] = useState<CampoTabId>(() =>
+    campoTabFromSearchParams(new URLSearchParams(searchParams.toString()))
+  )
+
+  useEffect(() => {
+    setTabState(campoTabFromSearchParams(new URLSearchParams(searchParams.toString())))
+  }, [searchParams])
+
+  function setTab(id: CampoTabId) {
+    setTabState(id)
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('tab', id)
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
   const [publicaciones, setPublicaciones] = useState<CampoFieldPostPublic[]>([])
   const [publicacionesLoading, setPublicacionesLoading] = useState(true)
 

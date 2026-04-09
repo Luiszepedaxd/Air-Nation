@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import type {
   AlbumWithPhotos,
@@ -18,6 +19,25 @@ import { TeamMembers } from './TeamMembers'
 import { TeamPosts } from './TeamPosts'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+const TEAM_TAB_IDS = [
+  'info',
+  'integrantes',
+  'publicaciones',
+  'albumes',
+  'eventos',
+] as const
+type TeamTabId = (typeof TEAM_TAB_IDS)[number]
+
+function teamTabFromSearchParams(
+  sp: URLSearchParams | { get: (key: string) => string | null }
+): TeamTabId {
+  const raw = sp.get('tab')
+  if (raw && (TEAM_TAB_IDS as readonly string[]).includes(raw)) {
+    return raw as TeamTabId
+  }
+  return 'info'
+}
 
 function PinIcon() {
   return (
@@ -130,9 +150,23 @@ export function TeamPublicTabs({
   currentUserId?: string | null
   userTeamRole?: 'founder' | 'admin' | null
 }) {
-  const [tab, setTab] = useState<
-    'info' | 'integrantes' | 'publicaciones' | 'albumes' | 'eventos'
-  >('info')
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [tab, setTabState] = useState<TeamTabId>(() =>
+    teamTabFromSearchParams(new URLSearchParams(searchParams.toString()))
+  )
+
+  useEffect(() => {
+    setTabState(teamTabFromSearchParams(new URLSearchParams(searchParams.toString())))
+  }, [searchParams])
+
+  function setTab(id: TeamTabId) {
+    setTabState(id)
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('tab', id)
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
 
   const ig = team.instagram?.trim()
   const fb = team.facebook?.trim()

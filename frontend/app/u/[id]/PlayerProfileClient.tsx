@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
@@ -22,6 +22,18 @@ const jost = {
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 type TabId = 'posts' | 'info' | 'replicas' | 'eventos'
+
+const PROFILE_TAB_IDS = ['posts', 'info', 'replicas', 'eventos'] as const
+
+function profileTabFromSearchParams(
+  sp: URLSearchParams | { get: (key: string) => string | null }
+): TabId {
+  const raw = sp.get('tab')
+  if (raw && (PROFILE_TAB_IDS as readonly string[]).includes(raw)) {
+    return raw as TabId
+  }
+  return 'posts'
+}
 
 function formatDate(iso: string) {
   try {
@@ -85,7 +97,23 @@ export function PlayerProfileClient({
   rolLabels: Record<string, string>
   currentUserId: string | null
 }) {
-  const [tab, setTab] = useState<TabId>('posts')
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [tab, setTabState] = useState<TabId>(() =>
+    profileTabFromSearchParams(new URLSearchParams(searchParams.toString()))
+  )
+
+  useEffect(() => {
+    setTabState(profileTabFromSearchParams(new URLSearchParams(searchParams.toString())))
+  }, [searchParams])
+
+  function setTab(id: TabId) {
+    setTabState(id)
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('tab', id)
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
 
   const tabs: [TabId, string][] = [
     ['posts', 'Posts'],
