@@ -186,6 +186,7 @@ function PostsPanel({
 
         return (
           <article
+            id={`post-${post.id}`}
             key={post.id}
             className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
           >
@@ -231,7 +232,7 @@ function PostsPanel({
               currentUserId={currentUserId}
               currentUserAlias={null}
               currentUserAvatar={null}
-              shareUrl={`/u/${profileUserId}`}
+              shareUrl={`/u/${profileUserId}#post-${post.id}`}
               shareTitle="Publicación en AirNation"
             />
           </article>

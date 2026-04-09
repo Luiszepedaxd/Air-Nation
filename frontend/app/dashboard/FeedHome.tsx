@@ -574,7 +574,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         currentUserId={currentUserId}
         currentUserAlias={currentUserAlias}
         currentUserAvatar={currentUserAvatar}
-        shareUrl={`/u/${item.user_id}`}
+        shareUrl={`/u/${item.user_id}#post-${item.id}`}
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
         postHref={`/u/${item.user_id}`}
       />
@@ -645,7 +645,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         currentUserId={currentUserId}
         currentUserAlias={currentUserAlias}
         currentUserAvatar={currentUserAvatar}
-        shareUrl={`/u/${item.user_id}`}
+        shareUrl={`/u/${item.user_id}#post-${item.id}`}
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
         postHref={`/u/${item.user_id}`}
       />

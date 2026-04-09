@@ -355,7 +355,7 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                     currentUserId={userId}
                     currentUserAlias={null}
                     currentUserAvatar={null}
-                    shareUrl={`/u/${userId}`}
+                    shareUrl={`/u/${userId}#post-${post.id}`}
                     shareTitle="Publicación en AirNation"
                   />
                 </div>
