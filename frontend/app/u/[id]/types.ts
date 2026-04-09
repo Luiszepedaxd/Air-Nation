@@ -14,7 +14,8 @@ export type PublicUserProfile = {
   member_number: string | number | null
   created_at: string
   perfil_publico: boolean | null
-  teams: { id: string; nombre: string; slug: string } | null
+  team_id: string | null
+  teams: { id: string; nombre: string; slug: string; logo_url: string | null } | null
 }
 
 export type PlayerPostRow = {

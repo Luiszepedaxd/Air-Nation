@@ -25,6 +25,15 @@ function rolLabel(rol: string | null) {
   return ROL_LABELS[rol] || rol
 }
 
+function mapTeamRole(rol: string | null | undefined): string | null {
+  if (rol == null || rol === '') return null
+  const r = String(rol).toLowerCase()
+  if (r === 'founder') return 'Fundador'
+  if (r === 'admin') return 'Admin'
+  if (r === 'member') return 'Miembro'
+  return null
+}
+
 async function fetchPublicProfile(id: string) {
   const supabase = createPublicSupabaseClient()
 
@@ -39,14 +48,25 @@ async function fetchPublicProfile(id: string) {
   if (error) console.error('[u/profile] users query error:', error)
   if (!row || !row.id) return null
 
-  let teamData: { id: string; nombre: string; slug: string } | null = null
+  let teamData: {
+    id: string
+    nombre: string
+    slug: string
+    logo_url: string | null
+  } | null = null
   if (row.team_id) {
     const { data: team } = await supabase
       .from('teams')
-      .select('id, nombre, slug')
+      .select('id, nombre, slug, logo_url')
       .eq('id', row.team_id)
       .maybeSingle()
-    if (team) teamData = team as { id: string; nombre: string; slug: string }
+    if (team)
+      teamData = team as {
+        id: string
+        nombre: string
+        slug: string
+        logo_url: string | null
+      }
   }
 
   const user: PublicUserProfile = {
@@ -155,9 +175,55 @@ export default async function PublicProfilePage({
     [user.ciudad, user.rol ? rolLabel(user.rol) : null].filter(Boolean).join(' · ') ||
     '—'
 
+  const supabasePublic = createPublicSupabaseClient()
+  const [
+    { count: followersCount },
+    { count: followingCount },
+    followRow,
+    teamMemberRes,
+  ] = await Promise.all([
+    supabasePublic
+      .from('user_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', user.id),
+    supabasePublic
+      .from('user_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', user.id),
+    currentUser
+      ? supabasePublic
+          .from('user_follows')
+          .select('follower_id')
+          .eq('follower_id', currentUser.id)
+          .eq('following_id', user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    user.team_id
+      ? supabasePublic
+          .from('team_members')
+          .select('rol_plataforma')
+          .eq('user_id', user.id)
+          .eq('team_id', user.team_id)
+          .eq('status', 'activo')
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
+  const teamRole = mapTeamRole(
+    teamMemberRes.data?.rol_plataforma as string | undefined
+  )
+
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
-      <PlayerHero user={user} subtitle={subtitle} />
+      <PlayerHero
+        user={user}
+        subtitle={subtitle}
+        followersCount={followersCount ?? 0}
+        followingCount={followingCount ?? 0}
+        isFollowing={!!followRow?.data}
+        currentUserId={currentUser?.id ?? null}
+        teamRole={teamRole}
+      />
 
       <PlayerProfileClient
         user={user}
