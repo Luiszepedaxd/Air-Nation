@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { CIUDADES } from "@/lib/ciudades";
+import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import { notifyTeamJoinRequest } from "@/lib/notify-team-join-request";
 import { generateTeamSlug } from "@/lib/team-slug";
+
+const GOOGLE_LIBRARIES: "places"[] = ["places"];
 
 const STORAGE_KEY = "airnation_onboarding";
 
@@ -244,6 +246,13 @@ export default function OnboardingPage() {
   const [avatarError, setAvatarError] = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
+  const { isLoaded: mapsLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "",
+    libraries: GOOGLE_LIBRARIES,
+  });
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [ciudadInput, setCiudadInput] = useState(state.ciudad);
+
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -296,6 +305,10 @@ export default function OnboardingPage() {
       cancelled = true;
     };
   }, [router]);
+
+  useEffect(() => {
+    setCiudadInput(state.ciudad);
+  }, [state.ciudad]);
 
   /**
    * Persiste el borrador del onboarding en localStorage.
@@ -703,35 +716,60 @@ export default function OnboardingPage() {
               <label className={labelClass} style={labelStyle}>
                 Ciudad
               </label>
-              <div className="relative">
-                <select
-                  className={`${inputShell} appearance-none pr-10 cursor-pointer`}
-                  value={state.ciudad}
-                  onChange={(e) => update({ ciudad: e.target.value })}
+              {mapsLoaded ? (
+                <Autocomplete
+                  onLoad={(ac: google.maps.places.Autocomplete) => {
+                    autocompleteRef.current = ac;
+                  }}
+                  onPlaceChanged={() => {
+                    const place = autocompleteRef.current?.getPlace();
+                    if (!place?.address_components) return;
+                    const locality =
+                      place.address_components.find((c) =>
+                        c.types.includes("locality"),
+                      )?.long_name ||
+                      place.address_components.find((c) =>
+                        c.types.includes("administrative_area_level_2"),
+                      )?.long_name ||
+                      place.address_components.find((c) =>
+                        c.types.includes("administrative_area_level_1"),
+                      )?.long_name ||
+                      "";
+                    if (locality) {
+                      update({ ciudad: locality });
+                      setCiudadInput(locality);
+                    }
+                  }}
+                  options={{
+                    types: ["(cities)"],
+                    componentRestrictions: { country: "mx" },
+                  }}
                 >
-                  {CIUDADES.map((c) => (
-                    <option key={c.value || "empty"} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#111111]"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M4 6 L8 10 L12 6"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  <input
+                    type="text"
+                    className={inputShell}
+                    placeholder="Busca tu ciudad..."
+                    value={ciudadInput}
+                    onChange={(e) => {
+                      setCiudadInput(e.target.value);
+                      if (e.target.value === "") update({ ciudad: "" });
+                    }}
+                    autoComplete="off"
                   />
-                </svg>
-              </div>
+                </Autocomplete>
+              ) : (
+                <input
+                  type="text"
+                  className={inputShell}
+                  placeholder="Cargando..."
+                  disabled
+                />
+              )}
+              {state.ciudad && (
+                <p className="text-[11px] text-[#999] mt-1">
+                  ✓ {state.ciudad}
+                </p>
+              )}
             </div>
             <div>
               <label className={labelClass} style={labelStyle}>
