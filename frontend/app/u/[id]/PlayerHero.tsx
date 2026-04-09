@@ -250,8 +250,55 @@ export function PlayerHero({
       </div>
 
       {/* 2. BLOQUE PRINCIPAL */}
-      <div className="mx-auto max-w-[960px] px-4 pb-2 pt-4 md:px-6 md:pt-0">
-        {/* FILA 1: avatar + stats + redes */}
+      <div className="relative mx-auto max-w-[960px] px-4 pb-2 pt-4 md:px-6 md:pt-0">
+        {socialLinks.length > 0 ? (
+          <div className="absolute right-4 top-4" style={{ zIndex: 10 }}>
+            <div className="flex items-center gap-3">
+              {socialLinks.slice(0, 2).map((item) => (
+                <a
+                  key={item.key}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex p-0"
+                  aria-label={socialLinkAria(item.key)}
+                >
+                  <SocialIconFor socialKey={item.key} />
+                </a>
+              ))}
+              {socialLinks.length > 2 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSocials((p) => !p)}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center text-[13px] font-extrabold text-[#666666]"
+                  aria-label={showAllSocials ? 'Ocultar' : 'Más redes'}
+                >
+                  {showAllSocials ? '×' : '+'}
+                </button>
+              ) : null}
+            </div>
+            {showAllSocials && socialLinks.length > 2 ? (
+              <div
+                className="absolute right-0 top-full mt-2 grid grid-cols-2 gap-3 rounded-[6px] border border-[#EEEEEE] bg-[#FFFFFF] p-2"
+                style={{ zIndex: 20 }}
+              >
+                {socialLinks.slice(2).map((item) => (
+                  <a
+                    key={item.key}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex p-0"
+                    aria-label={socialLinkAria(item.key)}
+                  >
+                    <SocialIconFor socialKey={item.key} />
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {/* FILA 1: avatar + stats */}
         <div className="mb-3 flex items-center gap-4">
           <div className="relative z-10 -mt-10 h-[80px] w-[80px] shrink-0 overflow-hidden rounded-full border-[3px] border-[#EEEEEE] bg-[#CC4B37] md:border-white">
             {user.avatar_url ? (
@@ -286,48 +333,6 @@ export function PlayerHero({
               </span>
             </div>
           </div>
-          {socialLinks.length > 0 ? (
-            <div className="relative ml-auto flex items-center gap-3">
-              {socialLinks.slice(0, 2).map((item) => (
-                <a
-                  key={item.key}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex p-0"
-                  aria-label={socialLinkAria(item.key)}
-                >
-                  <SocialIconFor socialKey={item.key} />
-                </a>
-              ))}
-              {socialLinks.length > 2 ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAllSocials((p) => !p)}
-                  className="ml-1 flex h-5 w-5 shrink-0 items-center justify-center text-[13px] font-extrabold text-[#666666]"
-                  aria-label={showAllSocials ? 'Ocultar' : 'Más redes'}
-                >
-                  {showAllSocials ? '×' : '+'}
-                </button>
-              ) : null}
-              {showAllSocials && socialLinks.length > 2 ? (
-                <div className="absolute right-0 top-full z-10 mt-2 grid grid-cols-2 gap-3 rounded-[6px] border border-[#EEEEEE] bg-[#FFFFFF] p-2">
-                  {socialLinks.slice(2).map((item) => (
-                    <a
-                      key={item.key}
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex p-0"
-                      aria-label={socialLinkAria(item.key)}
-                    >
-                      <SocialIconFor socialKey={item.key} />
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         {/* FILA 2: nombre + badge */}
