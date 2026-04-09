@@ -287,9 +287,25 @@ export function PlayerHero({
             </div>
           </div>
           {socialLinks.length > 0 ? (
-            <div className="ml-auto flex shrink-0 items-center gap-3">
-              {socialLinks.length <= 2
-                ? socialLinks.map((item) => (
+            socialLinks.length <= 2 ? (
+              <div className="ml-auto flex shrink-0 items-center gap-3 self-start">
+                {socialLinks.map((item) => (
+                  <a
+                    key={item.key}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex border-0 bg-transparent p-0"
+                    aria-label={socialLinkAria(item.key)}
+                  >
+                    <SocialIconFor socialKey={item.key} />
+                  </a>
+                ))}
+              </div>
+            ) : showAllSocials ? (
+              <div className="ml-auto flex shrink-0 flex-col items-end gap-1 self-start">
+                <div className="flex items-center gap-3">
+                  {socialLinks.slice(0, 2).map((item) => (
                     <a
                       key={item.key}
                       href={item.url}
@@ -300,53 +316,57 @@ export function PlayerHero({
                     >
                       <SocialIconFor socialKey={item.key} />
                     </a>
-                  ))
-                : (
-                    <>
-                      {socialLinks.slice(0, 2).map((item) => (
-                        <a
-                          key={item.key}
-                          href={item.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex border-0 bg-transparent p-0"
-                          aria-label={socialLinkAria(item.key)}
-                        >
-                          <SocialIconFor socialKey={item.key} />
-                        </a>
-                      ))}
-                      <span
-                        className={`flex items-center gap-3 whitespace-nowrap transition-opacity duration-150 ${
-                          showAllSocials
-                            ? 'opacity-100'
-                            : 'pointer-events-none max-w-0 overflow-hidden opacity-0'
-                        }`}
-                      >
-                        {socialLinks.slice(2).map((item) => (
-                          <a
-                            key={item.key}
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex shrink-0 border-0 bg-transparent p-0"
-                            aria-label={socialLinkAria(item.key)}
-                          >
-                            <SocialIconFor socialKey={item.key} />
-                          </a>
-                        ))}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowAllSocials((v) => !v)}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] bg-[#FAFAFA] text-[11px] font-extrabold leading-none text-[#666666]"
-                        aria-expanded={showAllSocials}
-                        aria-label={showAllSocials ? 'Ocultar redes adicionales' : 'Mostrar más redes'}
-                      >
-                        {showAllSocials ? '\u00D7' : '+'}
-                      </button>
-                    </>
-                  )}
-            </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setShowAllSocials(false)}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] bg-[#FAFAFA] text-[11px] font-extrabold leading-none text-[#666666]"
+                    aria-expanded
+                    aria-label="Ocultar redes adicionales"
+                  >
+                    {'\u00D7'}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 transition-opacity duration-150 opacity-100">
+                  {socialLinks.slice(2).map((item) => (
+                    <a
+                      key={item.key}
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 border-0 bg-transparent p-0"
+                      aria-label={socialLinkAria(item.key)}
+                    >
+                      <SocialIconFor socialKey={item.key} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="ml-auto flex shrink-0 items-center gap-3 self-start">
+                {socialLinks.slice(0, 2).map((item) => (
+                  <a
+                    key={item.key}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex border-0 bg-transparent p-0"
+                    aria-label={socialLinkAria(item.key)}
+                  >
+                    <SocialIconFor socialKey={item.key} />
+                  </a>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowAllSocials(true)}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] bg-[#FAFAFA] text-[11px] font-extrabold leading-none text-[#666666]"
+                  aria-expanded={false}
+                  aria-label="Mostrar más redes"
+                >
+                  +
+                </button>
+              </div>
+            )
           ) : null}
         </div>
 
