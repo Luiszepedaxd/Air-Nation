@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { generateTeamSlug } from "@/lib/team-slug";
@@ -9,6 +9,9 @@ import {
   createTeamAction,
   type CreateTeamState,
 } from "./actions";
+import { useLoadScript, Autocomplete } from "@react-google-maps/api";
+
+const GOOGLE_LIBRARIES: ("places")[] = ["places"];
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -35,10 +38,16 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
 export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
   const [nombre, setNombre] = useState("");
   const [ciudad, setCiudad] = useState("");
+  const [ciudadInput, setCiudadInput] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [portadaUrl, setPortadaUrl] = useState("");
   const [clientError, setClientError] = useState("");
   const [activeUploads, setActiveUploads] = useState(0);
+  const { isLoaded: mapsLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "",
+    libraries: GOOGLE_LIBRARIES,
+  });
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [state, formAction] = useFormState(createTeamAction, initialState);
 
   const slug = useMemo(
@@ -110,16 +119,59 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
           >
             Ciudad
           </label>
-          <input
-            type="text"
-            name="ciudad"
-            value={ciudad}
-            onChange={(e) => setCiudad(e.target.value)}
-            placeholder="Ej. Guadalajara"
-            maxLength={80}
-            autoComplete="address-level2"
-            className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
-          />
+          <input type="hidden" name="ciudad" value={ciudad} readOnly aria-hidden />
+          {mapsLoaded ? (
+            <Autocomplete
+              onLoad={(ac) => {
+                autocompleteRef.current = ac;
+              }}
+              onPlaceChanged={() => {
+                const place = autocompleteRef.current?.getPlace();
+                if (!place?.address_components) return;
+                const locality =
+                  place.address_components.find((c) =>
+                    c.types.includes("locality")
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes("administrative_area_level_2")
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes("administrative_area_level_1")
+                  )?.long_name ||
+                  "";
+                if (locality) {
+                  setCiudad(locality);
+                  setCiudadInput(locality);
+                }
+              }}
+              options={{
+                types: ["(cities)"],
+                componentRestrictions: { country: "mx" },
+              }}
+            >
+              <input
+                type="text"
+                className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
+                placeholder="Busca tu ciudad..."
+                value={ciudadInput}
+                onChange={(e) => {
+                  setCiudadInput(e.target.value);
+                  if (e.target.value === "") setCiudad("");
+                }}
+                autoComplete="off"
+              />
+            </Autocomplete>
+          ) : (
+            <input
+              type="text"
+              className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111]"
+              placeholder="Cargando..."
+              disabled
+            />
+          )}
+          {ciudad && (
+            <p className="mt-1 text-[11px] text-[#999999]">✓ {ciudad}</p>
+          )}
         </div>
         <ImageUploadField
           label="LOGO DEL EQUIPO"
