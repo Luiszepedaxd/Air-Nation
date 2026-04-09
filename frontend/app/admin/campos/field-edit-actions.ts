@@ -9,6 +9,7 @@ const MAX_GALLERY = 6
 export type UpdateFieldAdminPayload = {
   fieldId: string
   nombre: string
+  ciudad: string | null
   descripcion: string | null
   horarios_json: Record<string, unknown> | null
   direccion: string | null
@@ -76,6 +77,7 @@ export async function updateFieldAdmin(
     .from('fields')
     .update({
       nombre: n,
+      ciudad: payload.ciudad?.trim() || null,
       descripcion: descripcion || null,
       horarios_json: payload.horarios_json,
       direccion: direccion || null,

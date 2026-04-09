@@ -21,6 +21,9 @@ import {
   weekScheduleFromJson,
   weekScheduleToJson,
 } from '@/lib/field-schedule'
+import { useLoadScript, Autocomplete } from '@react-google-maps/api'
+
+const GOOGLE_LIBRARIES: ('places')[] = ['places']
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -61,6 +64,7 @@ async function postUpload(file: File): Promise<string> {
 export type EditableFieldPayload = {
   id: string
   nombre: string
+  ciudad: string | null
   descripcion: string | null
   horarios_json: unknown
   direccion: string | null
@@ -206,6 +210,13 @@ export function EditCampoClient({
 }) {
   const router = useRouter()
   const [nombre, setNombre] = useState(field.nombre)
+  const [ciudad, setCiudad] = useState(field.ciudad ?? '')
+  const [ciudadInput, setCiudadInput] = useState(field.ciudad ?? '')
+  const { isLoaded: mapsLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? '',
+    libraries: GOOGLE_LIBRARIES,
+  })
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
   const [descripcion, setDescripcion] = useState(field.descripcion ?? '')
   const [schedule, setSchedule] = useState<WeekScheduleState>(() =>
     weekScheduleFromJson(field.horarios_json)
@@ -306,6 +317,7 @@ export function EditCampoClient({
 
     const payload = {
       nombre: n,
+      ciudad: ciudad.trim() || null,
       descripcion: descripcion.trim() || null,
       horarios_json: horariosJsonObj,
       direccion: direccion.trim() || null,
@@ -322,6 +334,7 @@ export function EditCampoClient({
       const result = await updateFieldAdmin({
         fieldId,
         nombre: payload.nombre,
+        ciudad: payload.ciudad,
         descripcion: payload.descripcion,
         horarios_json: payload.horarios_json,
         direccion: payload.direccion,
@@ -366,6 +379,7 @@ export function EditCampoClient({
     router.push(`/mi-campo/${encodeURIComponent(fieldId)}`)
   }, [
     nombre,
+    ciudad,
     descripcion,
     horariosJsonObj,
     direccion,
@@ -382,7 +396,6 @@ export function EditCampoClient({
     adminReturnPath,
     router,
     activeUploads,
-    horariosJsonObj,
   ])
 
   return (
@@ -422,6 +435,60 @@ export function EditCampoClient({
             maxLength={80}
             className={inputClass}
           />
+        </Field>
+        <Field label="Ciudad">
+          {mapsLoaded ? (
+            <Autocomplete
+              onLoad={(ac) => {
+                autocompleteRef.current = ac
+              }}
+              onPlaceChanged={() => {
+                const place = autocompleteRef.current?.getPlace()
+                if (!place?.address_components) return
+                const locality =
+                  place.address_components.find((c) =>
+                    c.types.includes('locality')
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_2')
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_1')
+                  )?.long_name ||
+                  ''
+                if (locality) {
+                  setCiudad(locality)
+                  setCiudadInput(locality)
+                }
+              }}
+              options={{
+                types: ['(cities)'],
+                componentRestrictions: { country: 'mx' },
+              }}
+            >
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Busca tu ciudad..."
+                value={ciudadInput}
+                onChange={(e) => {
+                  setCiudadInput(e.target.value)
+                  if (e.target.value === '') setCiudad('')
+                }}
+                autoComplete="off"
+              />
+            </Autocomplete>
+          ) : (
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="Cargando..."
+              disabled
+            />
+          )}
+          {ciudad ? (
+            <p className="mt-1 text-[11px] text-[#999]">✓ {ciudad}</p>
+          ) : null}
         </Field>
         <Field label="Descripción">
           <textarea
