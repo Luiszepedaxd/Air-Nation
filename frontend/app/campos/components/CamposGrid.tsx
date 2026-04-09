@@ -30,8 +30,7 @@ export function CamposGrid({ fields }: { fields: CampoListRow[] }) {
   const estados = useMemo(() => {
     const s = new Set<string>()
     for (const f of fields) {
-      const e = f.estado
-      if (e?.trim()) s.add(e.trim())
+      if (f.estado?.trim()) s.add(f.estado.trim())
     }
     return Array.from(s)
   }, [fields])
@@ -39,25 +38,25 @@ export function CamposGrid({ fields }: { fields: CampoListRow[] }) {
   const ciudades = useMemo(() => {
     const s = new Set<string>()
     for (const f of fields) {
-      const fieldEstado = f.estado
-      if (estado && fieldEstado?.trim() !== estado) continue
-      const c = f.ciudad?.trim()
-      if (c) s.add(c)
+      if (estado && f.estado?.trim() !== estado) continue
+      if (f.ciudad?.trim()) s.add(f.ciudad.trim())
     }
     return Array.from(s)
   }, [fields, estado])
 
+  const activeCount = useMemo(() => {
+    let n = 0
+    if (estado) n++
+    if (ciudad) n++
+    if (tipo !== 'todos') n++
+    return n
+  }, [estado, ciudad, tipo])
+
   const filtered = useMemo(() => {
     let list = fields
-    if (estado) {
-      list = list.filter((f) => f.estado?.trim() === estado)
-    }
-    if (ciudad) {
-      list = list.filter((f) => (f.ciudad ?? '').trim() === ciudad)
-    }
-    if (tipo !== 'todos') {
-      list = list.filter((f) => normalizeTipo(f.tipo) === tipo)
-    }
+    if (estado) list = list.filter((f) => f.estado?.trim() === estado)
+    if (ciudad) list = list.filter((f) => (f.ciudad ?? '').trim() === ciudad)
+    if (tipo !== 'todos') list = list.filter((f) => normalizeTipo(f.tipo) === tipo)
     return sortSinFotoAlFinal(list)
   }, [fields, estado, ciudad, tipo])
 
@@ -72,12 +71,10 @@ export function CamposGrid({ fields }: { fields: CampoListRow[] }) {
         onCiudad={setCiudad}
         tipo={tipo}
         onTipo={setTipo}
+        activeCount={activeCount}
       />
       {filtered.length === 0 ? (
-        <p
-          className="py-12 text-center text-sm text-[#666666]"
-          style={lato}
-        >
+        <p className="py-12 text-center text-sm text-[#666666]" style={lato}>
           No hay campos que coincidan con los filtros.
         </p>
       ) : (

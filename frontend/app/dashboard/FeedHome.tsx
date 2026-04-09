@@ -1243,8 +1243,11 @@ function EventosTab() {
 function EquiposTab() {
   const [items, setItems] = useState<TeamDirItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [estadoFilter, setEstadoFilter] = useState<string>('todos')
-  const [ciudadFilter, setCiudadFilter] = useState<string>('todas')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [estadoFilter, setEstadoFilter] = useState('')
+  const [ciudadFilter, setCiudadFilter] = useState('')
+  const [localEstado, setLocalEstado] = useState('')
+  const [localCiudad, setLocalCiudad] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -1263,32 +1266,50 @@ function EquiposTab() {
   const estados = useMemo(() => {
     const s = new Set<string>()
     for (const t of items) {
-      const e = t.estado
-      if (e?.trim()) s.add(e.trim())
+      if (t.estado?.trim()) s.add(t.estado.trim())
     }
-    return ['todos', ...Array.from(s).sort()]
+    return Array.from(s).sort()
   }, [items])
 
   const ciudades = useMemo(() => {
     const s = new Set<string>()
     for (const t of items) {
-      const e = t.estado
-      if (estadoFilter !== 'todos' && e?.trim() !== estadoFilter) continue
+      if (localEstado && t.estado?.trim() !== localEstado) continue
       if (t.ciudad?.trim()) s.add(t.ciudad.trim())
     }
-    return ['todas', ...Array.from(s).sort()]
-  }, [items, estadoFilter])
+    return Array.from(s).sort()
+  }, [items, localEstado])
+
+  const activeCount = useMemo(() => {
+    let n = 0
+    if (estadoFilter) n++
+    if (ciudadFilter) n++
+    return n
+  }, [estadoFilter, ciudadFilter])
 
   const filtered = useMemo(() => {
     let list = items
-    if (estadoFilter !== 'todos') {
-      list = list.filter(t => t.estado?.trim() === estadoFilter)
-    }
-    if (ciudadFilter !== 'todas') {
-      list = list.filter(t => t.ciudad?.trim() === ciudadFilter)
-    }
+    if (estadoFilter) list = list.filter(t => t.estado?.trim() === estadoFilter)
+    if (ciudadFilter) list = list.filter(t => t.ciudad?.trim() === ciudadFilter)
     return list
   }, [items, estadoFilter, ciudadFilter])
+
+  const handleOpen = () => {
+    setLocalEstado(estadoFilter)
+    setLocalCiudad(ciudadFilter)
+    setSheetOpen(true)
+  }
+
+  const handleApply = () => {
+    setEstadoFilter(localEstado)
+    setCiudadFilter(localCiudad)
+    setSheetOpen(false)
+  }
+
+  const handleClear = () => {
+    setLocalEstado('')
+    setLocalCiudad('')
+  }
 
   if (loading) return (
     <div className="grid grid-cols-2 gap-3">
@@ -1300,58 +1321,100 @@ function EquiposTab() {
 
   return (
     <div>
-      {/* Filtro Estado */}
-      {estados.length > 1 && (
-        <div className="mb-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {estados.map(e => (
-            <button
-              key={e}
-              type="button"
-              onClick={() => { setEstadoFilter(e); setCiudadFilter('todas') }}
-              style={jost}
-              className={`shrink-0 border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
-                estadoFilter === e
-                  ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
-                  : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
-              }`}
-            >
-              {e === 'todos' ? 'TODOS' : e}
-            </button>
-          ))}
-        </div>
+      {/* Botón filtrar */}
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleOpen}
+          style={jost}
+          className="flex items-center gap-2 border border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:border-[#CCCCCC]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          Filtrar
+          {activeCount > 0 && (
+            <span className="flex h-4 w-4 items-center justify-center bg-[#CC4B37] text-[9px] font-extrabold text-white">
+              {activeCount}
+            </span>
+          )}
+        </button>
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={() => { setEstadoFilter(''); setCiudadFilter('') }}
+            style={jost}
+            className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline"
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {/* Overlay */}
+      {sheetOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setSheetOpen(false)} />
       )}
 
-      {/* Filtro Ciudad (solo si hay estado seleccionado y más de una ciudad) */}
-      {estadoFilter !== 'todos' && ciudades.length > 2 && (
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {ciudades.map(c => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCiudadFilter(c)}
-              style={jost}
-              className={`shrink-0 border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
-                ciudadFilter === c
-                  ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                  : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
-              }`}
-            >
-              {c === 'todas' ? 'TODAS' : c}
-            </button>
-          ))}
+      {/* Bottom sheet */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-white transition-transform duration-300 ease-out ${
+          sheetOpen ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{ maxHeight: '85vh', overflowY: 'auto', borderRadius: '12px 12px 0 0' }}
+      >
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-[#DDDDDD]" />
         </div>
-      )}
+        <div className="px-5 pb-6 pt-2">
+          <div className="mb-5 flex items-center justify-between">
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Filtrar</p>
+            <button type="button" onClick={handleClear} style={jost} className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline">
+              Limpiar todo
+            </button>
+          </div>
+
+          <div className="mb-6">
+            <p style={jost} className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]">
+              Ubicación
+            </p>
+            <div className="flex flex-col gap-3">
+              <select
+                className="w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:outline-none focus:border-[#CC4B37]"
+                value={localEstado}
+                onChange={(e) => { setLocalEstado(e.target.value); setLocalCiudad('') }}
+              >
+                <option value="">Todos los estados</option>
+                {estados.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+              {localEstado && (
+                <select
+                  className="w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:outline-none focus:border-[#CC4B37]"
+                  value={localCiudad}
+                  onChange={(e) => setLocalCiudad(e.target.value)}
+                >
+                  <option value="">Todas las ciudades</option>
+                  {ciudades.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleApply}
+            style={jost}
+            className="w-full bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white"
+          >
+            Aplicar filtros
+          </button>
+        </div>
+      </div>
 
       {filtered.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-12 text-center">
-          <p style={lato} className="text-[13px] text-[#999999]">
-            No hay equipos registrados aquí aún.
-          </p>
-          <Link
-            href="/equipos/nuevo"
-            style={jost}
-            className="border border-[#CC4B37] bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-          >
+          <p style={lato} className="text-[13px] text-[#999999]">No hay equipos registrados aquí aún.</p>
+          <Link href="/equipos/nuevo" style={jost} className="border border-[#CC4B37] bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]">
             CREAR EQUIPO
           </Link>
         </div>
@@ -1376,9 +1439,7 @@ function EquiposTab() {
                     </div>
                   )}
                   {team.destacado && (
-                    <span className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white" style={jost}>
-                      DESTACADO
-                    </span>
+                    <span className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white" style={jost}>DESTACADO</span>
                   )}
                   <div className="absolute bottom-2 left-2 h-10 w-10 shrink-0 overflow-hidden border-2 border-white bg-[#111111]">
                     {team.logo_url ? (
@@ -1389,13 +1450,9 @@ function EquiposTab() {
                   </div>
                 </div>
                 <div className="p-2">
-                  <p className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]" style={jost}>
-                    {team.nombre}
-                  </p>
+                  <p className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]" style={jost}>{team.nombre}</p>
                   {team.ciudad?.trim() ? (
-                    <p className="mt-0.5 truncate text-[11px] text-[#666666]" style={lato}>
-                      {team.ciudad.trim()}
-                    </p>
+                    <p className="mt-0.5 truncate text-[11px] text-[#666666]" style={lato}>{team.ciudad.trim()}</p>
                   ) : null}
                 </div>
               </Link>
