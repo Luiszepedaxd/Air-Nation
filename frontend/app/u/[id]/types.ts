@@ -16,6 +16,13 @@ export type PublicUserProfile = {
   perfil_publico: boolean | null
   team_id: string | null
   teams: { id: string; nombre: string; slug: string; logo_url: string | null } | null
+  teams_list?: Array<{
+    id: string
+    nombre: string
+    slug: string
+    logo_url: string | null
+    team_role: string | null
+  }>
 }
 
 export type PlayerPostRow = {

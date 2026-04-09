@@ -69,9 +69,46 @@ async function fetchPublicProfile(id: string) {
       }
   }
 
+  let teams_list: PublicUserProfile['teams_list'] = undefined
+  const { data: memberRows } = await supabase
+    .from('team_members')
+    .select('rol_plataforma, teams(id, nombre, slug, logo_url)')
+    .eq('user_id', row.id)
+    .eq('status', 'activo')
+
+  if (memberRows && memberRows.length > 0) {
+    const seen = new Set<string>()
+    const list: NonNullable<PublicUserProfile['teams_list']> = []
+    for (const mr of memberRows as {
+      rol_plataforma: string | null
+      teams:
+        | { id: string; nombre: string; slug: string; logo_url: string | null }
+        | { id: string; nombre: string; slug: string; logo_url: string | null }[]
+        | null
+    }[]) {
+      const raw = mr.teams
+      const team = Array.isArray(raw) ? raw[0] : raw
+      if (!team?.id || seen.has(team.id)) continue
+      seen.add(team.id)
+      list.push({
+        id: team.id,
+        nombre: team.nombre,
+        slug: team.slug,
+        logo_url: team.logo_url,
+        team_role: mr.rol_plataforma ?? null,
+      })
+    }
+    if (list.length > 0) teams_list = list
+  }
+
+  if (!teams_list?.length && teamData) {
+    teams_list = [{ ...teamData, team_role: null }]
+  }
+
   const user: PublicUserProfile = {
-    ...(row as unknown as Omit<PublicUserProfile, 'teams'>),
+    ...(row as unknown as Omit<PublicUserProfile, 'teams' | 'teams_list'>),
     teams: teamData,
+    teams_list,
   }
 
   let posts: PlayerPostRow[] = []

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { ClickableImage } from '@/components/ui/ClickableImage'
 import type { PublicUserProfile } from './types'
 import { FollowButton } from './FollowButton'
@@ -47,6 +48,76 @@ function ChevronRightIcon() {
   )
 }
 
+function instagramUrl(raw: string) {
+  return raw.startsWith('http') ? raw : `https://instagram.com/${raw.replace(/^@/, '')}`
+}
+
+function tiktokUrl(raw: string) {
+  return raw.startsWith('http') ? raw : `https://tiktok.com/@${raw.replace(/^@/, '')}`
+}
+
+function youtubeUrl(raw: string) {
+  return raw.startsWith('http') ? raw : `https://youtube.com/@${raw}`
+}
+
+function facebookUrl(raw: string) {
+  return raw.startsWith('http') ? raw : `https://facebook.com/${raw}`
+}
+
+function SocialInstagramIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="text-[#666666]">
+      <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+function SocialTiktokIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="text-[#666666]">
+      <path
+        d="M9 12a4 4 0 104 4V4a5 5 0 005 5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function SocialYoutubeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="text-[#666666]">
+      <rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
+    </svg>
+  )
+}
+
+function SocialFacebookIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden className="text-[#666666]">
+      <rect x="3" y="3" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M13.5 10.5h-2v-1c0-.5.3-.6.8-.6h1.2V6.2h-2.1c-2 0-2.9 1-2.9 2.6V10.5H7v2.8h1.5V22h3.2v-8.7h2.2l.3-2.8z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+function mapPlatformRole(rol: string | null | undefined): string | null {
+  if (rol == null || rol === '') return null
+  const r = String(rol).toLowerCase()
+  if (r === 'founder') return 'Fundador'
+  if (r === 'admin') return 'Admin'
+  if (r === 'member') return 'Miembro'
+  return null
+}
+
 const followButtonClass =
   'flex-1 py-2 text-[13px] font-extrabold rounded-[6px]'
 const messageButtonClass =
@@ -69,6 +140,8 @@ export function PlayerHero({
   currentUserId: string | null
   teamRole: string | null
 }) {
+  const [teamsExpanded, setTeamsExpanded] = useState(false)
+
   const initial = (user.alias?.trim()?.[0] || '?').toUpperCase()
   const hasMemberNo =
     user.member_number != null && String(user.member_number).trim() !== ''
@@ -76,6 +149,19 @@ export function PlayerHero({
   const showMeta = subtitle && subtitle !== '—'
 
   const showActionRow = !currentUserId || currentUserId !== user.id
+
+  const teams =
+    user.teams_list && user.teams_list.length > 0
+      ? user.teams_list
+      : user.teams
+        ? [{ ...user.teams, team_role: null as string | null }]
+        : []
+
+  const singleRoleLabel =
+    teams.length === 1 ? mapPlatformRole(teams[0].team_role) ?? teamRole : null
+
+  const hasSocials =
+    !!(user.instagram?.trim() || user.tiktok?.trim() || user.youtube?.trim() || user.facebook?.trim())
 
   return (
     <header className="w-full bg-[#FFFFFF]">
@@ -168,15 +254,65 @@ export function PlayerHero({
           </p>
         ) : null}
 
-        {/* FILA 6: team pill */}
-        {user.teams ? (
+        {/* FILA 5b: redes sociales */}
+        {hasSocials ? (
+          <div className={`mb-2 flex items-center gap-3 ${!user.bio ? 'mt-1' : ''}`}>
+            {user.instagram?.trim() ? (
+              <a
+                href={instagramUrl(user.instagram.trim())}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex border-0 bg-transparent p-0"
+                aria-label="Instagram"
+              >
+                <SocialInstagramIcon />
+              </a>
+            ) : null}
+            {user.tiktok?.trim() ? (
+              <a
+                href={tiktokUrl(user.tiktok.trim())}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex border-0 bg-transparent p-0"
+                aria-label="TikTok"
+              >
+                <SocialTiktokIcon />
+              </a>
+            ) : null}
+            {user.youtube?.trim() ? (
+              <a
+                href={youtubeUrl(user.youtube.trim())}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex border-0 bg-transparent p-0"
+                aria-label="YouTube"
+              >
+                <SocialYoutubeIcon />
+              </a>
+            ) : null}
+            {user.facebook?.trim() ? (
+              <a
+                href={facebookUrl(user.facebook.trim())}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex border-0 bg-transparent p-0"
+                aria-label="Facebook"
+              >
+                <SocialFacebookIcon />
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* FILA 6: team(s) */}
+        {teams.length === 1 ? (
           <Link
-            href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
+            href={`/equipos/${encodeURIComponent(teams[0].slug)}`}
             className="mb-3 flex w-full items-center gap-2 rounded-[6px] border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2"
           >
-            {user.teams.logo_url ? (
+            {teams[0].logo_url ? (
               <img
-                src={user.teams.logo_url}
+                src={teams[0].logo_url}
                 alt=""
                 width={24}
                 height={24}
@@ -187,16 +323,79 @@ export function PlayerHero({
             )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
-                {user.teams.nombre}
+                {teams[0].nombre}
               </p>
-              {teamRole ? (
+              {singleRoleLabel ? (
                 <p className="text-[11px] text-[#666666]" style={lato}>
-                  {teamRole}
+                  {singleRoleLabel}
                 </p>
               ) : null}
             </div>
             <ChevronRightIcon />
           </Link>
+        ) : teams.length > 1 ? (
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-2">
+              {teams.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTeamsExpanded((v) => !v)}
+                  className="h-8 w-8 shrink-0 overflow-hidden rounded-full border-0 bg-[#FAFAFA] p-0"
+                  aria-expanded={teamsExpanded}
+                  aria-label={`Equipo ${t.nombre}`}
+                >
+                  {t.logo_url ? (
+                    <img src={t.logo_url} alt="" width={32} height={32} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-[#CC4B37]" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div
+              className={`overflow-hidden transition-all duration-200 ease-out ${
+                teamsExpanded ? 'max-h-[200px]' : 'max-h-0'
+              }`}
+            >
+              <ul className="mt-2 flex flex-col gap-2 pb-1">
+                {teams.map((t) => {
+                  const rl = mapPlatformRole(t.team_role)
+                  return (
+                    <li key={`exp-${t.id}`}>
+                      <Link
+                        href={`/equipos/${encodeURIComponent(t.slug)}`}
+                        className="flex w-full items-center gap-2 rounded-[6px] border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2"
+                      >
+                        {t.logo_url ? (
+                          <img
+                            src={t.logo_url}
+                            alt=""
+                            width={20}
+                            height={20}
+                            className="h-5 w-5 shrink-0 rounded-[4px] object-cover"
+                          />
+                        ) : (
+                          <div className="h-5 w-5 shrink-0 rounded-[4px] bg-[#CC4B37]" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
+                            {t.nombre}
+                          </p>
+                          {rl ? (
+                            <p className="text-[11px] text-[#666666]" style={lato}>
+                              {rl}
+                            </p>
+                          ) : null}
+                        </div>
+                        <ChevronRightIcon />
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          </div>
         ) : null}
 
         {/* FILA 7: acciones */}
