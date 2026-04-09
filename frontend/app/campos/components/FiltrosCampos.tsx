@@ -111,17 +111,19 @@ export function FiltrosCampos({
         className={`fixed bottom-0 left-0 right-0 z-50 bg-white transition-transform duration-300 ease-out ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
-        style={{ maxHeight: '85vh', overflowY: 'auto', borderRadius: '12px 12px 0 0' }}
+        style={{
+          borderRadius: '12px 12px 0 0',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
       >
         {/* Handle */}
-        <button
-          type="button"
+        <div
+          className="flex w-full cursor-pointer justify-center py-4"
           onClick={() => setOpen(false)}
-          className="flex w-full justify-center pt-3 pb-1"
-          aria-label="Cerrar filtros"
+          style={{ minHeight: 44 }}
         >
           <div className="h-1 w-10 rounded-full bg-[#DDDDDD]" />
-        </button>
+        </div>
 
         <div className="px-5 pb-6 pt-2">
           {/* Header */}
