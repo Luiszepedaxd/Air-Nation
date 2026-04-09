@@ -3,6 +3,7 @@ export type CampoListRow = {
   nombre: string
   slug: string
   ciudad: string | null
+  estado: string | null
   tipo: string | null
   foto_portada_url: string | null
   logo_url: string | null

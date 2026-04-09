@@ -8,6 +8,9 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 export type TipoFiltro = 'todos' | 'publico' | 'privado'
 
 type Props = {
+  estados: string[]
+  estado: string
+  onEstado: (v: string) => void
   ciudades: string[]
   ciudad: string
   onCiudad: (v: string) => void
@@ -19,12 +22,19 @@ const shell =
   'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:outline-none focus:border-[#CC4B37] transition-colors'
 
 export function FiltrosCampos({
+  estados,
+  estado,
+  onEstado,
   ciudades,
   ciudad,
   onCiudad,
   tipo,
   onTipo,
 }: Props) {
+  const estadoOptions = useMemo(
+    () => [...estados].sort((a, b) => a.localeCompare(b, 'es')),
+    [estados]
+  )
   const options = useMemo(
     () => [...ciudades].sort((a, b) => a.localeCompare(b, 'es')),
     [ciudades]
@@ -39,6 +49,26 @@ export function FiltrosCampos({
         <label
           className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
           style={jost}
+          htmlFor="filtro-estado"
+        >
+          Estado
+        </label>
+        <select
+          id="filtro-estado"
+          className={shell}
+          value={estado}
+          onChange={(e) => { onEstado(e.target.value); onCiudad('') }}
+        >
+          <option value="">Todos los estados</option>
+          {estadoOptions.map((e) => (
+            <option key={e} value={e}>{e}</option>
+          ))}
+        </select>
+      </div>
+      <div className="min-w-0 flex-1">
+        <label
+          className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
+          style={jost}
           htmlFor="filtro-ciudad"
         >
           Ciudad
@@ -48,12 +78,11 @@ export function FiltrosCampos({
           className={shell}
           value={ciudad}
           onChange={(e) => onCiudad(e.target.value)}
+          disabled={!estado}
         >
           <option value="">Todas las ciudades</option>
           {options.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
       </div>

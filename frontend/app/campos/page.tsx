@@ -17,7 +17,7 @@ async function fetchCamposAprobados(): Promise<CampoListRow[]> {
   const { data, error } = await supabase
     .from('fields')
     .select(
-      'id, nombre, slug, ciudad, tipo, foto_portada_url, logo_url, promedio_rating, destacado, orden_destacado'
+      'id, nombre, slug, ciudad, estado, tipo, foto_portada_url, logo_url, promedio_rating, destacado, orden_destacado'
     )
     .eq('status', 'aprobado')
     .order('destacado', { ascending: false })

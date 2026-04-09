@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
@@ -53,6 +53,7 @@ type TeamDirItem = {
   nombre: string
   slug: string
   ciudad: string | null
+  estado: string | null
   logo_url: string | null
   foto_portada_url: string | null
   destacado: boolean
@@ -1242,13 +1243,14 @@ function EventosTab() {
 function EquiposTab() {
   const [items, setItems] = useState<TeamDirItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [estadoFilter, setEstadoFilter] = useState<string>('todos')
   const [ciudadFilter, setCiudadFilter] = useState<string>('todas')
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase
         .from('teams')
-        .select('id, nombre, slug, ciudad, logo_url, foto_portada_url, destacado')
+        .select('id, nombre, slug, ciudad, estado, logo_url, foto_portada_url, destacado')
         .eq('status', 'activo')
         .order('destacado', { ascending: false })
         .order('created_at', { ascending: false })
@@ -1258,13 +1260,35 @@ function EquiposTab() {
     void load()
   }, [])
 
-  const ciudades = ['todas', ...Array.from(
-    new Set(items.map(t => t.ciudad?.trim()).filter(Boolean) as string[])
-  ).sort()]
+  const estados = useMemo(() => {
+    const s = new Set<string>()
+    for (const t of items) {
+      const e = t.estado
+      if (e?.trim()) s.add(e.trim())
+    }
+    return ['todos', ...Array.from(s).sort()]
+  }, [items])
 
-  const filtered = ciudadFilter === 'todas'
-    ? items
-    : items.filter(t => t.ciudad?.trim() === ciudadFilter)
+  const ciudades = useMemo(() => {
+    const s = new Set<string>()
+    for (const t of items) {
+      const e = t.estado
+      if (estadoFilter !== 'todos' && e?.trim() !== estadoFilter) continue
+      if (t.ciudad?.trim()) s.add(t.ciudad.trim())
+    }
+    return ['todas', ...Array.from(s).sort()]
+  }, [items, estadoFilter])
+
+  const filtered = useMemo(() => {
+    let list = items
+    if (estadoFilter !== 'todos') {
+      list = list.filter(t => t.estado?.trim() === estadoFilter)
+    }
+    if (ciudadFilter !== 'todas') {
+      list = list.filter(t => t.ciudad?.trim() === ciudadFilter)
+    }
+    return list
+  }, [items, estadoFilter, ciudadFilter])
 
   if (loading) return (
     <div className="grid grid-cols-2 gap-3">
@@ -1276,8 +1300,29 @@ function EquiposTab() {
 
   return (
     <div>
-      {/* Filtro ciudades */}
-      {ciudades.length > 1 && (
+      {/* Filtro Estado */}
+      {estados.length > 1 && (
+        <div className="mb-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {estados.map(e => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => { setEstadoFilter(e); setCiudadFilter('todas') }}
+              style={jost}
+              className={`shrink-0 border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
+                estadoFilter === e
+                  ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                  : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
+              }`}
+            >
+              {e === 'todos' ? 'TODOS' : e}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Filtro Ciudad (solo si hay estado seleccionado y más de una ciudad) */}
+      {estadoFilter !== 'todos' && ciudades.length > 2 && (
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {ciudades.map(c => (
             <button
@@ -1287,7 +1332,7 @@ function EquiposTab() {
               style={jost}
               className={`shrink-0 border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
                 ciudadFilter === c
-                  ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                  ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
                   : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
               }`}
             >
@@ -1297,11 +1342,10 @@ function EquiposTab() {
         </div>
       )}
 
-      {/* Sin resultados para esa ciudad */}
       {filtered.length === 0 && (
         <div className="flex flex-col items-center gap-4 py-12 text-center">
           <p style={lato} className="text-[13px] text-[#999999]">
-            No hay equipos registrados en {ciudadFilter === 'todas' ? 'México' : ciudadFilter} aún.
+            No hay equipos registrados aquí aún.
           </p>
           <Link
             href="/equipos/nuevo"
@@ -1313,7 +1357,6 @@ function EquiposTab() {
         </div>
       )}
 
-      {/* Grid de cards */}
       {filtered.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
           {filtered.map(team => {
@@ -1324,7 +1367,6 @@ function EquiposTab() {
                 href={`/equipos/${encodeURIComponent(team.slug)}`}
                 className="group block border border-[#EEEEEE] bg-[#FFFFFF] transition-colors hover:border-[#CCCCCC]"
               >
-                {/* Portada */}
                 <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
                   {team.foto_portada_url ? (
                     <img src={team.foto_portada_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
@@ -1334,25 +1376,18 @@ function EquiposTab() {
                     </div>
                   )}
                   {team.destacado && (
-                    <span
-                      className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
-                      style={jost}
-                    >
+                    <span className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white" style={jost}>
                       DESTACADO
                     </span>
                   )}
-                  {/* Logo */}
                   <div className="absolute bottom-2 left-2 h-10 w-10 shrink-0 overflow-hidden border-2 border-white bg-[#111111]">
                     {team.logo_url ? (
                       <img src={team.logo_url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-[#CC4B37]" style={jost}>
-                        {initial}
-                      </div>
+                      <div className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-[#CC4B37]" style={jost}>{initial}</div>
                     )}
                   </div>
                 </div>
-                {/* Info */}
                 <div className="p-2">
                   <p className="line-clamp-1 text-[12px] font-extrabold uppercase leading-snug text-[#111111]" style={jost}>
                     {team.nombre}
@@ -1369,14 +1404,9 @@ function EquiposTab() {
         </div>
       )}
 
-      {/* CTA al final siempre */}
       {filtered.length > 0 && (
         <div className="mt-6 flex justify-center">
-          <Link
-            href="/equipos/nuevo"
-            style={jost}
-            className="border border-[#111111] px-4 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-[#FFFFFF]"
-          >
+          <Link href="/equipos/nuevo" style={jost} className="border border-[#111111] px-4 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-[#FFFFFF]">
             + CREAR EQUIPO
           </Link>
         </div>

@@ -13,7 +13,6 @@ function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
   return 'publico'
 }
 
-/** Sin `foto_portada_url` al final, conservando el orden relativo del resto. */
 function sortSinFotoAlFinal(rows: CampoListRow[]): CampoListRow[] {
   return [...rows].sort((a, b) => {
     const aNo = !a.foto_portada_url?.trim()
@@ -24,20 +23,35 @@ function sortSinFotoAlFinal(rows: CampoListRow[]): CampoListRow[] {
 }
 
 export function CamposGrid({ fields }: { fields: CampoListRow[] }) {
+  const [estado, setEstado] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [tipo, setTipo] = useState<TipoFiltro>('todos')
 
-  const ciudades = useMemo(() => {
+  const estados = useMemo(() => {
     const s = new Set<string>()
     for (const f of fields) {
-      const c = f.ciudad?.trim()
-      if (c) s.add(c)
+      const e = f.estado
+      if (e?.trim()) s.add(e.trim())
     }
     return Array.from(s)
   }, [fields])
 
+  const ciudades = useMemo(() => {
+    const s = new Set<string>()
+    for (const f of fields) {
+      const fieldEstado = f.estado
+      if (estado && fieldEstado?.trim() !== estado) continue
+      const c = f.ciudad?.trim()
+      if (c) s.add(c)
+    }
+    return Array.from(s)
+  }, [fields, estado])
+
   const filtered = useMemo(() => {
     let list = fields
+    if (estado) {
+      list = list.filter((f) => f.estado?.trim() === estado)
+    }
     if (ciudad) {
       list = list.filter((f) => (f.ciudad ?? '').trim() === ciudad)
     }
@@ -45,11 +59,14 @@ export function CamposGrid({ fields }: { fields: CampoListRow[] }) {
       list = list.filter((f) => normalizeTipo(f.tipo) === tipo)
     }
     return sortSinFotoAlFinal(list)
-  }, [fields, ciudad, tipo])
+  }, [fields, estado, ciudad, tipo])
 
   return (
     <div className="space-y-4">
       <FiltrosCampos
+        estados={estados}
+        estado={estado}
+        onEstado={(v) => { setEstado(v); setCiudad('') }}
         ciudades={ciudades}
         ciudad={ciudad}
         onCiudad={setCiudad}
