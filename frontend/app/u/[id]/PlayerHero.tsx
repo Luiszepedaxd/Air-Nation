@@ -72,6 +72,7 @@ export function PlayerHero({
 
   return (
     <header className="w-full">
+      {/* Portada con avatar encima */}
       <div className="relative w-full">
         <div className="relative h-[140px] w-full overflow-hidden bg-[#111111] md:h-[200px]">
           <ClickableImage
@@ -84,38 +85,39 @@ export function PlayerHero({
             <div className="h-full w-full bg-[#111111]" />
           </ClickableImage>
         </div>
-      </div>
-
-      <div className="mx-auto w-full max-w-[960px] pb-6">
-        <div className="flex items-end justify-between px-4 -mt-9 mb-3 md:px-6">
-          <div className="relative z-[2]">
-            <div className="relative z-[2] flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#CC4B37]">
-              {user.avatar_url ? (
-                <ClickableImage
-                  src={user.avatar_url}
-                  alt=""
-                  width={72}
-                  height={72}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-[22px] text-[#FFFFFF]" style={jost}>
-                  {initial}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 pb-0.5">
-            <MessageButton profileUserId={user.id} currentUserId={currentUserId} />
-            <FollowButton
-              profileUserId={user.id}
-              currentUserId={currentUserId}
-              initialIsFollowing={isFollowing}
-            />
+        {/* Avatar absoluto, bottom-left solapando portada */}
+        <div className="absolute bottom-0 left-4 z-10 translate-y-1/2 md:left-6">
+          <div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#CC4B37]">
+            {user.avatar_url ? (
+              <ClickableImage
+                src={user.avatar_url}
+                alt=""
+                width={72}
+                height={72}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span className="text-[22px] text-[#FFFFFF]" style={jost}>
+                {initial}
+              </span>
+            )}
           </div>
         </div>
+      </div>
 
-        <div className="px-4 md:px-6">
+      <div className="mx-auto w-full max-w-[960px]">
+        {/* Fila de acciones — derecha, con padding-top para no tapar el avatar */}
+        <div className="flex items-center justify-end gap-2 px-4 pb-2 pt-3 md:px-6">
+          <MessageButton profileUserId={user.id} currentUserId={currentUserId} />
+          <FollowButton
+            profileUserId={user.id}
+            currentUserId={currentUserId}
+            initialIsFollowing={isFollowing}
+          />
+        </div>
+
+        {/* Contenido del perfil */}
+        <div className="px-4 pb-4 md:px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 md:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -180,11 +182,11 @@ export function PlayerHero({
               ) : null}
             </div>
 
-            <div className="md:pt-2">
+            <div className="mt-3 md:mt-0 md:pt-1">
               {user.teams ? (
                 <Link
                   href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
-                  className="mt-3 flex w-full max-w-[280px] items-center gap-2 rounded-[6px] border border-[#EEEEEE] p-2 transition-colors hover:bg-[#FAFAFA] md:mt-0"
+                  className="flex w-full max-w-[280px] items-center gap-2 rounded-[6px] border border-[#EEEEEE] p-2 transition-colors hover:bg-[#FAFAFA]"
                 >
                   {user.teams.logo_url ? (
                     <img
@@ -213,6 +215,8 @@ export function PlayerHero({
             </div>
           </div>
         </div>
+
+        {/* Tabs — ancho completo */}
       </div>
     </header>
   )
