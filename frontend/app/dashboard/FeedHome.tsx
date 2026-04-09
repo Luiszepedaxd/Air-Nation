@@ -1218,10 +1218,12 @@ function EventosTab() {
 
   return (
     <div className="flex flex-col gap-3">
-      {items.map(item => (
+      {items.map(item => {
+        const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
+        return (
         <Link key={item.id} href={`/eventos/${item.id}`} className="flex gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
           <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
-            {item.imagen_url ? <img src={item.imagen_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#AAAAAA" strokeWidth="1.4" /><path d="M3 9h18M8 5V3M16 5V3" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" /></svg></div>}
+            {imagenFinal ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#AAAAAA" strokeWidth="1.4" /><path d="M3 9h18M8 5V3M16 5V3" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" /></svg></div>}
           </div>
           <div className="min-w-0 flex-1">
             <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">{formatEventDate(item.fecha)}</p>
@@ -1229,7 +1231,8 @@ function EventosTab() {
             {[item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ') && <p style={lato} className="mt-1 text-[11px] text-[#666666] truncate">{[item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')}</p>}
           </div>
         </Link>
-      ))}
+        )
+      })}
     </div>
   )
 }
