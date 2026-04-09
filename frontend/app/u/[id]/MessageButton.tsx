@@ -1,11 +1,17 @@
 'use client'
 
+const defaultClassName =
+  'flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] transition-colors hover:bg-[#F9F9F9]'
+
 export function MessageButton({
   profileUserId,
   currentUserId,
+  className,
 }: {
   profileUserId: string
   currentUserId: string | null
+  /** Si se pasa, sustituye los estilos por defecto del botón. */
+  className?: string
 }) {
   if (!currentUserId || currentUserId === profileUserId) return null
 
@@ -13,7 +19,7 @@ export function MessageButton({
     <button
       type="button"
       aria-label="Enviar mensaje"
-      className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border border-[#EEEEEE] transition-colors hover:bg-[#F9F9F9]"
+      className={className ?? defaultClassName}
       onClick={() => console.log('mensaje a', profileUserId)}
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

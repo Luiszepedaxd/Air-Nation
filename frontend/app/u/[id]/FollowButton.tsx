@@ -10,14 +10,31 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
+const defaultLogin =
+  'inline-flex items-center justify-center rounded-[4px] border border-[#CC4B37] bg-[#CC4B37] px-4 py-1.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#B84330]'
+
+const defaultFollowing =
+  'inline-flex items-center justify-center rounded-[4px] border border-[#CCCCCC] bg-transparent px-4 py-1.5 text-[11px] font-extrabold text-[#111111] transition-colors hover:bg-[#F4F4F4]'
+
+const defaultNotFollowing =
+  'inline-flex items-center justify-center rounded-[4px] border border-[#CC4B37] bg-[#CC4B37] px-4 py-1.5 text-[11px] font-extrabold text-white transition-colors hover:border-[#B84330] hover:bg-[#B84330]'
+
+/** Colores de estado cuando se pasa `className` (layout viene del padre). */
+const stateFollowing = 'border-[#CCCCCC] bg-transparent text-[#111111] hover:bg-[#F4F4F4]'
+const stateNotFollowing =
+  'border-[#CC4B37] bg-[#CC4B37] text-white hover:border-[#B84330] hover:bg-[#B84330]'
+
 export function FollowButton({
   profileUserId,
   currentUserId,
   initialIsFollowing,
+  className,
 }: {
   profileUserId: string
   currentUserId: string | null
   initialIsFollowing: boolean
+  /** Si se pasa, sustituye el layout por defecto; se siguen aplicando estilos de estado (siguiendo / no). */
+  className?: string
 }) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
 
@@ -25,7 +42,11 @@ export function FollowButton({
     return (
       <Link
         href="/login"
-        className="inline-flex items-center justify-center rounded-[4px] border border-[#CC4B37] bg-[#CC4B37] px-4 py-1.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#B84330]"
+        className={
+          className
+            ? `${className} flex items-center justify-center border font-extrabold transition-colors ${stateNotFollowing}`
+            : defaultLogin
+        }
         style={jost}
       >
         Seguir
@@ -61,16 +82,18 @@ export function FollowButton({
     }
   }
 
+  const buttonClass = className
+    ? `${className} flex items-center justify-center border font-extrabold transition-colors ${isFollowing ? stateFollowing : stateNotFollowing}`
+    : isFollowing
+      ? defaultFollowing
+      : defaultNotFollowing
+
   return (
     <button
       type="button"
       onClick={() => void toggle()}
       style={jost}
-      className={
-        isFollowing
-          ? 'inline-flex items-center justify-center rounded-[4px] border border-[#CCCCCC] bg-transparent px-4 py-1.5 text-[11px] font-extrabold text-[#111111] transition-colors hover:bg-[#F4F4F4]'
-          : 'inline-flex items-center justify-center rounded-[4px] border border-[#CC4B37] bg-[#CC4B37] px-4 py-1.5 text-[11px] font-extrabold text-white transition-colors hover:border-[#B84330] hover:bg-[#B84330]'
-      }
+      className={buttonClass}
     >
       {isFollowing ? 'Siguiendo' : 'Seguir'}
     </button>

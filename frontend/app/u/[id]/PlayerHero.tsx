@@ -47,6 +47,11 @@ function ChevronRightIcon() {
   )
 }
 
+const followButtonClass =
+  'flex-1 py-2 text-[13px] font-extrabold rounded-[6px]'
+const messageButtonClass =
+  'w-[42px] py-2 rounded-[6px] border border-[#DBDBDB] flex items-center justify-center shrink-0'
+
 export function PlayerHero({
   user,
   subtitle,
@@ -70,10 +75,12 @@ export function PlayerHero({
 
   const showMeta = subtitle && subtitle !== '—'
 
+  const showActionRow = !currentUserId || currentUserId !== user.id
+
   return (
-    <header className="w-full">
-      {/* PORTADA */}
-      <div className="relative h-[120px] w-full overflow-hidden bg-[#111111] md:h-[180px]">
+    <header className="w-full bg-[#FFFFFF]">
+      {/* 1. PORTADA — solo desktop */}
+      <div className="relative hidden h-[200px] w-full overflow-hidden bg-[#111111] md:block">
         <ClickableImage
           src={user.foto_portada_url}
           alt=""
@@ -85,136 +92,130 @@ export function PlayerHero({
         </ClickableImage>
       </div>
 
-      {/* CUERPO */}
-      <div className="mx-auto max-w-[960px] px-4 md:px-6">
-        {/* FILA SUPERIOR: avatar + acciones en la misma fila */}
-        <div className="flex items-end justify-between -mt-8 mb-4">
-          <div className="relative z-10 flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#CC4B37]">
+      {/* 2. BLOQUE PRINCIPAL */}
+      <div className="mx-auto max-w-[960px] px-4 pb-2 pt-4 md:px-6 md:pt-0">
+        {/* FILA 1: avatar + stats */}
+        <div className="mb-3 flex items-center gap-4">
+          <div className="relative h-[80px] w-[80px] shrink-0 overflow-hidden rounded-full border-[3px] border-[#EEEEEE] bg-[#CC4B37] md:relative md:z-10 md:-mt-10 md:border-[3px] md:border-white">
             {user.avatar_url ? (
               <ClickableImage
                 src={user.avatar_url}
                 alt=""
-                width={72}
-                height={72}
+                width={80}
+                height={80}
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-[22px] text-[#FFFFFF]" style={jost}>
+              <span className="flex h-full w-full items-center justify-center text-[26px] text-[#FFFFFF]" style={jost}>
                 {initial}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 pb-1">
-            <MessageButton profileUserId={user.id} currentUserId={currentUserId} />
+          <div className="flex flex-1 gap-6">
+            <div className="flex flex-col items-center">
+              <span className="text-[17px] font-extrabold text-[#111111]" style={jost}>
+                {followersCount}
+              </span>
+              <span className="text-[12px] text-[#666666]" style={lato}>
+                Seguidores
+              </span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[17px] font-extrabold text-[#111111]" style={jost}>
+                {followingCount}
+              </span>
+              <span className="text-[12px] text-[#666666]" style={lato}>
+                Siguiendo
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* FILA 2: nombre + badge */}
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <h1 className="text-[17px] font-extrabold text-[#111111]" style={jostName}>
+            {user.alias}
+          </h1>
+          {hasMemberNo ? (
+            <span
+              style={jost}
+              className="inline-flex items-center gap-1 rounded-[2px] bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+            >
+              <CheckIcon />
+              VERIFICADO
+            </span>
+          ) : null}
+        </div>
+
+        {/* FILA 3: ciudad · rol */}
+        {showMeta ? (
+          <p className="mb-1 text-[12px] text-[#666666]" style={lato}>
+            {subtitle}
+          </p>
+        ) : null}
+
+        {/* FILA 4: MIEMBRO # */}
+        {hasMemberNo ? (
+          <p style={jost} className="mb-1 text-[14px] font-extrabold uppercase text-[#CC4B37]">
+            MIEMBRO #{user.member_number}
+          </p>
+        ) : null}
+
+        {/* FILA 5: bio */}
+        {user.bio ? (
+          <p className="mb-2 mt-1 text-[13px] leading-relaxed text-[#444444]" style={lato}>
+            {user.bio}
+          </p>
+        ) : null}
+
+        {/* FILA 6: team pill */}
+        {user.teams ? (
+          <Link
+            href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
+            className="mb-3 flex w-full items-center gap-2 rounded-[6px] border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2"
+          >
+            {user.teams.logo_url ? (
+              <img
+                src={user.teams.logo_url}
+                alt=""
+                width={24}
+                height={24}
+                className="h-6 w-6 shrink-0 rounded-[4px] object-cover"
+              />
+            ) : (
+              <div className="h-6 w-6 shrink-0 rounded-[4px] bg-[#CC4B37]" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
+                {user.teams.nombre}
+              </p>
+              {teamRole ? (
+                <p className="text-[11px] text-[#666666]" style={lato}>
+                  {teamRole}
+                </p>
+              ) : null}
+            </div>
+            <ChevronRightIcon />
+          </Link>
+        ) : null}
+
+        {/* FILA 7: acciones */}
+        {showActionRow ? (
+          <div className="mb-3 flex gap-2">
             <FollowButton
               profileUserId={user.id}
               currentUserId={currentUserId}
               initialIsFollowing={isFollowing}
+              className={followButtonClass}
+            />
+            <MessageButton
+              profileUserId={user.id}
+              currentUserId={currentUserId}
+              className={messageButtonClass}
             />
           </div>
-        </div>
+        ) : null}
 
-        {/* INFO + EQUIPO en grid */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] md:items-start md:gap-x-10">
-          {/* Columna izquierda */}
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1
-                style={jostName}
-                className="text-[20px] font-extrabold leading-tight text-[#111111]"
-              >
-                {user.alias}
-              </h1>
-              {hasMemberNo ? (
-                <span
-                  style={jost}
-                  className="inline-flex items-center gap-1 rounded-[2px] bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-                >
-                  <CheckIcon />
-                  VERIFICADO
-                </span>
-              ) : null}
-            </div>
-
-            {showMeta ? (
-              <p className="text-[12px] text-[#666666]" style={lato}>
-                {subtitle}
-              </p>
-            ) : null}
-
-            {hasMemberNo ? (
-              <p
-                style={jost}
-                className="text-[14px] font-extrabold uppercase text-[#CC4B37]"
-              >
-                MIEMBRO #{user.member_number}
-              </p>
-            ) : null}
-
-            <div className="flex gap-5 pt-1">
-              <div className="flex flex-col">
-                <span style={jost} className="text-[16px] font-extrabold text-[#111111]">
-                  {followersCount}
-                </span>
-                <span style={lato} className="text-[11px] text-[#666666]">
-                  Seguidores
-                </span>
-              </div>
-              <div className="flex flex-col">
-                <span style={jost} className="text-[16px] font-extrabold text-[#111111]">
-                  {followingCount}
-                </span>
-                <span style={lato} className="text-[11px] text-[#666666]">
-                  Siguiendo
-                </span>
-              </div>
-            </div>
-
-            {user.bio ? (
-              <p
-                className="pt-1 text-[13px] leading-relaxed text-[#666666]"
-                style={lato}
-              >
-                {user.bio}
-              </p>
-            ) : null}
-          </div>
-
-          {/* Columna derecha — equipo */}
-          {user.teams ? (
-            <div className="mt-4 md:mt-0">
-              <Link
-                href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
-                className="flex w-full max-w-[240px] items-center gap-2 rounded-[6px] border border-[#EEEEEE] p-2 transition-colors hover:bg-[#FAFAFA]"
-              >
-                {user.teams.logo_url ? (
-                  <img
-                    src={user.teams.logo_url}
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="h-[28px] w-[28px] shrink-0 rounded-[4px] object-cover"
-                  />
-                ) : (
-                  <div className="h-[28px] w-[28px] shrink-0 rounded-[4px] bg-[#CC4B37]" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p style={jostName} className="truncate text-[13px] font-extrabold text-[#111111]">
-                    {user.teams.nombre}
-                  </p>
-                  {teamRole ? (
-                    <p style={lato} className="text-[11px] text-[#666666]">
-                      {teamRole}
-                    </p>
-                  ) : null}
-                </div>
-                <ChevronRightIcon />
-              </Link>
-            </div>
-          ) : null}
-        </div>
-
-        {/* Separador antes de tabs */}
         <div className="mt-4" />
       </div>
     </header>
