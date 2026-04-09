@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { ClickableImage } from '@/components/ui/ClickableImage'
 import type { PublicUserProfile } from './types'
@@ -123,6 +124,18 @@ const followButtonClass =
 const messageButtonClass =
   'w-[42px] py-2 rounded-[6px] border border-[#DBDBDB] flex items-center justify-center shrink-0'
 
+type TeamCardItem = {
+  id: string
+  nombre: string
+  slug: string
+  logo_url: string | null
+  team_role: string | null
+}
+
+function teamLogoInitial(nombre: string) {
+  return (nombre?.trim()?.[0] || '?').toUpperCase()
+}
+
 export function PlayerHero({
   user,
   subtitle,
@@ -140,7 +153,8 @@ export function PlayerHero({
   currentUserId: string | null
   teamRole: string | null
 }) {
-  const [teamsExpanded, setTeamsExpanded] = useState(false)
+  const router = useRouter()
+  const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
 
   const initial = (user.alias?.trim()?.[0] || '?').toUpperCase()
   const hasMemberNo =
@@ -150,7 +164,7 @@ export function PlayerHero({
 
   const showActionRow = !currentUserId || currentUserId !== user.id
 
-  const teams =
+  const teams: TeamCardItem[] =
     user.teams_list && user.teams_list.length > 0
       ? user.teams_list
       : user.teams
@@ -162,6 +176,14 @@ export function PlayerHero({
 
   const hasSocials =
     !!(user.instagram?.trim() || user.tiktok?.trim() || user.youtube?.trim() || user.facebook?.trim())
+
+  const handleTeamClick = (team: TeamCardItem) => {
+    if (activeTeamId === team.id) {
+      router.push(`/equipos/${encodeURIComponent(team.slug)}`)
+    } else {
+      setActiveTeamId(team.id)
+    }
+  }
 
   return (
     <header className="w-full bg-[#FFFFFF]">
@@ -180,7 +202,7 @@ export function PlayerHero({
 
       {/* 2. BLOQUE PRINCIPAL */}
       <div className="mx-auto max-w-[960px] px-4 pb-2 pt-4 md:px-6 md:pt-0">
-        {/* FILA 1: avatar + stats */}
+        {/* FILA 1: avatar + stats + redes */}
         <div className="mb-3 flex items-center gap-4">
           <div className="relative z-10 -mt-10 h-[80px] w-[80px] shrink-0 overflow-hidden rounded-full border-[3px] border-[#EEEEEE] bg-[#CC4B37] md:border-white">
             {user.avatar_url ? (
@@ -197,7 +219,7 @@ export function PlayerHero({
               </span>
             )}
           </div>
-          <div className="flex flex-1 gap-6">
+          <div className="flex min-w-0 flex-1 gap-6">
             <div className="flex flex-col items-center">
               <span className="text-[17px] font-extrabold text-[#111111]" style={jost}>
                 {followersCount}
@@ -215,6 +237,54 @@ export function PlayerHero({
               </span>
             </div>
           </div>
+          {hasSocials ? (
+            <div className="ml-auto flex shrink-0 items-center gap-3">
+              {user.instagram?.trim() ? (
+                <a
+                  href={instagramUrl(user.instagram.trim())}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex border-0 bg-transparent p-0"
+                  aria-label="Instagram"
+                >
+                  <SocialInstagramIcon />
+                </a>
+              ) : null}
+              {user.tiktok?.trim() ? (
+                <a
+                  href={tiktokUrl(user.tiktok.trim())}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex border-0 bg-transparent p-0"
+                  aria-label="TikTok"
+                >
+                  <SocialTiktokIcon />
+                </a>
+              ) : null}
+              {user.youtube?.trim() ? (
+                <a
+                  href={youtubeUrl(user.youtube.trim())}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex border-0 bg-transparent p-0"
+                  aria-label="YouTube"
+                >
+                  <SocialYoutubeIcon />
+                </a>
+              ) : null}
+              {user.facebook?.trim() ? (
+                <a
+                  href={facebookUrl(user.facebook.trim())}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex border-0 bg-transparent p-0"
+                  aria-label="Facebook"
+                >
+                  <SocialFacebookIcon />
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* FILA 2: nombre + badge */}
@@ -254,56 +324,6 @@ export function PlayerHero({
           </p>
         ) : null}
 
-        {/* FILA 5b: redes sociales */}
-        {hasSocials ? (
-          <div className={`mb-2 flex items-center gap-3 ${!user.bio ? 'mt-1' : ''}`}>
-            {user.instagram?.trim() ? (
-              <a
-                href={instagramUrl(user.instagram.trim())}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex border-0 bg-transparent p-0"
-                aria-label="Instagram"
-              >
-                <SocialInstagramIcon />
-              </a>
-            ) : null}
-            {user.tiktok?.trim() ? (
-              <a
-                href={tiktokUrl(user.tiktok.trim())}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex border-0 bg-transparent p-0"
-                aria-label="TikTok"
-              >
-                <SocialTiktokIcon />
-              </a>
-            ) : null}
-            {user.youtube?.trim() ? (
-              <a
-                href={youtubeUrl(user.youtube.trim())}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex border-0 bg-transparent p-0"
-                aria-label="YouTube"
-              >
-                <SocialYoutubeIcon />
-              </a>
-            ) : null}
-            {user.facebook?.trim() ? (
-              <a
-                href={facebookUrl(user.facebook.trim())}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex border-0 bg-transparent p-0"
-                aria-label="Facebook"
-              >
-                <SocialFacebookIcon />
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-
         {/* FILA 6: team(s) */}
         {teams.length === 1 ? (
           <Link
@@ -334,67 +354,63 @@ export function PlayerHero({
             <ChevronRightIcon />
           </Link>
         ) : teams.length > 1 ? (
-          <div className="mb-3">
-            <div className="flex flex-wrap gap-2">
-              {teams.map((t) => (
+          <div className="mb-3 flex items-center gap-2 overflow-hidden">
+            {teams.map((t) => {
+              const expanded = activeTeamId === t.id
+              const rolLabel = mapPlatformRole(t.team_role)
+              return (
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setTeamsExpanded((v) => !v)}
-                  className="h-8 w-8 shrink-0 overflow-hidden rounded-full border-0 bg-[#FAFAFA] p-0"
-                  aria-expanded={teamsExpanded}
-                  aria-label={`Equipo ${t.nombre}`}
+                  onClick={() => handleTeamClick(t)}
+                  className="flex items-center gap-2 overflow-hidden rounded-[6px] border border-[#EEEEEE] bg-[#FAFAFA] transition-all duration-200"
+                  style={{
+                    width: expanded ? 'auto' : '44px',
+                    minWidth: expanded ? '160px' : '44px',
+                    padding: expanded ? '8px 12px' : '4px',
+                    flexShrink: 0,
+                  }}
+                  aria-expanded={expanded}
+                  aria-label={
+                    expanded
+                      ? `Abrir perfil del equipo ${t.nombre}`
+                      : `Mostrar datos de ${t.nombre}`
+                  }
                 >
                   {t.logo_url ? (
-                    <img src={t.logo_url} alt="" width={32} height={32} className="h-full w-full object-cover" />
+                    <img
+                      src={t.logo_url}
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 shrink-0 rounded-full object-cover"
+                    />
                   ) : (
-                    <div className="h-full w-full bg-[#CC4B37]" />
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#CC4B37] text-[13px] text-[#FFFFFF]"
+                      style={jost}
+                    >
+                      {teamLogoInitial(t.nombre)}
+                    </div>
                   )}
-                </button>
-              ))}
-            </div>
-            <div
-              className={`overflow-hidden transition-all duration-200 ease-out ${
-                teamsExpanded ? 'max-h-[200px]' : 'max-h-0'
-              }`}
-            >
-              <ul className="mt-2 flex flex-col gap-2 pb-1">
-                {teams.map((t) => {
-                  const rl = mapPlatformRole(t.team_role)
-                  return (
-                    <li key={`exp-${t.id}`}>
-                      <Link
-                        href={`/equipos/${encodeURIComponent(t.slug)}`}
-                        className="flex w-full items-center gap-2 rounded-[6px] border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2"
-                      >
-                        {t.logo_url ? (
-                          <img
-                            src={t.logo_url}
-                            alt=""
-                            width={20}
-                            height={20}
-                            className="h-5 w-5 shrink-0 rounded-[4px] object-cover"
-                          />
-                        ) : (
-                          <div className="h-5 w-5 shrink-0 rounded-[4px] bg-[#CC4B37]" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
-                            {t.nombre}
+                  {expanded ? (
+                    <>
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
+                          {t.nombre}
+                        </p>
+                        {rolLabel ? (
+                          <p className="text-[11px] text-[#666666]" style={lato}>
+                            {rolLabel}
                           </p>
-                          {rl ? (
-                            <p className="text-[11px] text-[#666666]" style={lato}>
-                              {rl}
-                            </p>
-                          ) : null}
-                        </div>
-                        <ChevronRightIcon />
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
+                        ) : null}
+                      </div>
+                      <ChevronRightIcon />
+                    </>
+                  ) : null}
+                </button>
+              )
+            })}
           </div>
         ) : null}
 
