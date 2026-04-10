@@ -170,9 +170,28 @@ export async function generateMetadata({
   const descParts = [`Perfil de ${user.alias} en AirNation`]
   if (user.ciudad) descParts.push(user.ciudad)
   if (user.rol) descParts.push(rolLabel(user.rol))
+
+  const ogImage = user.avatar_url?.trim()
+    ? user.avatar_url
+    : 'https://airnation.online/og-default.jpg'
+
   return {
     title: `${user.alias} — AirNation`,
     description: descParts.join('. '),
+    openGraph: {
+      title: `${user.alias} — AirNation`,
+      description: descParts.join('. '),
+      url: `https://airnation.online/u/${user.id}`,
+      siteName: 'AirNation',
+      images: [{ url: ogImage, width: 400, height: 400, alt: user.alias ?? 'AirNation' }],
+      type: 'profile',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${user.alias} — AirNation`,
+      description: descParts.join('. '),
+      images: [ogImage],
+    },
   }
 }
 
