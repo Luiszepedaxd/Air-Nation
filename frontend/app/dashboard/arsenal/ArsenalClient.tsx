@@ -154,7 +154,6 @@ export function RegistrarForm({
         .select()
         .single()
       if (dbErr) throw dbErr
-      window.scrollTo({ top: 0 })
       onSuccess(data as ReplicaRow)
     } catch { setError('Error al guardar. Intenta de nuevo.') }
     finally { setSaving(false) }
@@ -277,6 +276,9 @@ export function ArsenalList({
   const handleSuccess = (r: ReplicaRow) => {
     setReplicas(prev => [r, ...prev])
     setShowForm(false)
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
     router.refresh()
   }
 
