@@ -278,6 +278,8 @@ export default async function PublicProfilePage({
         replicas={replicas}
         rolLabels={ROL_LABELS}
         currentUserId={currentUser?.id ?? null}
+        currentUserAlias={currentUser?.user_metadata?.alias ?? null}
+        currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}
       />
     </main>
   )

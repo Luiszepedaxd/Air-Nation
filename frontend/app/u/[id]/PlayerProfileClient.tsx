@@ -78,6 +78,8 @@ export function PlayerProfileClient({
   rolLabels,
   currentUserId,
   showPostBox = false,
+  currentUserAlias = null,
+  currentUserAvatar = null,
 }: {
   user: PublicUserProfile
   posts: PlayerPostRow[]
@@ -86,6 +88,8 @@ export function PlayerProfileClient({
   rolLabels: Record<string, string>
   currentUserId: string | null
   showPostBox?: boolean
+  currentUserAlias?: string | null
+  currentUserAvatar?: string | null
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -171,6 +175,8 @@ export function PlayerProfileClient({
               posts={posts}
               profileUserId={user.id}
               currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
             />
           </>
         ) : null}
@@ -195,10 +201,14 @@ function PostsPanel({
   posts,
   profileUserId,
   currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
 }: {
   posts: PlayerPostRow[]
   profileUserId: string
   currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
 }) {
   const router = useRouter()
 
@@ -262,8 +272,8 @@ function PostsPanel({
               postOwnerId={profileUserId}
               postHref={`/u/${profileUserId}`}
               currentUserId={currentUserId}
-              currentUserAlias={null}
-              currentUserAvatar={null}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
               shareUrl={`/u/${profileUserId}#post-${post.id}`}
               shareTitle="Publicación en AirNation"
             />
