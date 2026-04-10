@@ -64,6 +64,7 @@ type FeedPostType =
   | 'noticia'
   | 'event'
   | 'video'
+  | 'replica'
 
 type PostComment = {
   id: string
