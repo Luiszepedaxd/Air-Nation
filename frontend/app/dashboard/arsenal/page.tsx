@@ -20,12 +20,25 @@ export default async function ArsenalPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
+  const { data: pendingTransfers } = await supabase
+    .from('arsenal_transfers')
+    .select('replica_id')
+    .eq('from_user_id', user.id)
+    .eq('status', 'pendiente')
+
+  const pendingIds = new Set((pendingTransfers ?? []).map(t => t.replica_id))
+
+  const replicasWithStatus = (replicas ?? []).map(r => ({
+    ...r,
+    pendingTransfer: pendingIds.has(r.id),
+  }))
+
   return (
     <ArsenalList
       userId={user.id}
       userCiudad={userRow?.ciudad ?? null}
       userEstado={userRow?.estado ?? null}
-      replicas={(replicas ?? []) as ReplicaRow[]}
+      replicas={replicasWithStatus as ReplicaRow[]}
     />
   )
 }

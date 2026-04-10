@@ -28,6 +28,7 @@ export type ReplicaRow = {
   verificada: boolean
   en_venta: boolean
   created_at: string
+  pendingTransfer?: boolean
 }
 
 export function ArsenalIcon({ active }: { active?: boolean }) {
@@ -63,6 +64,11 @@ function ReplicaCard({ replica }: { replica: ReplicaRow }) {
         {replica.en_venta && (
           <span className="absolute right-2 top-2 bg-[#111111] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white" style={jost}>
             En venta
+          </span>
+        )}
+        {replica.pendingTransfer && (
+          <span className="absolute right-2 bottom-2 bg-[#F59E0B] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white" style={jost}>
+            ⏳ Transferencia pendiente
           </span>
         )}
       </div>
@@ -278,7 +284,7 @@ export function ArsenalList({
     setShowForm(false)
     requestAnimationFrame(() => {
       const el = document.getElementById('dashboard-scroll-root')
-      if (el) el.scrollTo({ top: 0, behavior: 'smooth' })
+      if (el) el.scrollTo({ top: 0 })
     })
     router.refresh()
   }

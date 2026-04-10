@@ -73,6 +73,9 @@ function notifText(n: UserNotifRow): string {
     case 'like_post': return `${actor} reaccionó a tu publicación`
     case 'comment_post': return `${actor} comentó tu publicación`
     case 'like_comment': return `${actor} reaccionó a tu comentario`
+    case 'transfer_request': return `${actor} quiere transferirte una réplica`
+    case 'transfer_accepted': return `${actor} aceptó la transferencia de tu réplica`
+    case 'transfer_rejected': return `${actor} rechazó la transferencia de tu réplica`
     default: return `${actor} interactuó contigo`
   }
 }

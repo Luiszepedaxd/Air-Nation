@@ -33,7 +33,7 @@ export async function markAllNotifsRead(
 
 export type UserNotifRow = {
   id: string
-  type: 'like_post' | 'comment_post' | 'like_comment'
+  type: 'like_post' | 'comment_post' | 'like_comment' | 'transfer_request' | 'transfer_accepted' | 'transfer_rejected'
   post_type: 'player' | 'team' | 'field' | 'comment' | null
   post_id: string | null
   comment_id: string | null
@@ -92,4 +92,30 @@ export async function deleteNotif(
     .from('user_notifications')
     .delete()
     .eq('id', notifId)
+}
+
+export async function insertTransferNotif(
+  supabase: SupabaseClient,
+  {
+    actorId,
+    recipientId,
+    replicaNombre,
+    transferId,
+    type,
+  }: {
+    actorId: string
+    recipientId: string
+    replicaNombre: string
+    transferId: string
+    type: 'transfer_request' | 'transfer_accepted' | 'transfer_rejected'
+  }
+): Promise<void> {
+  await supabase.from('user_notifications').insert({
+    actor_id: actorId,
+    recipient_id: recipientId,
+    type,
+    href: `/dashboard/arsenal`,
+    read: false,
+  })
+  notifyNotifUpdated()
 }

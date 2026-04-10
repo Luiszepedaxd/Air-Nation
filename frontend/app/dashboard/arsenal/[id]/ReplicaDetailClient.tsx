@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { insertTransferNotif } from '@/lib/user-notifications'
 import type { ReplicaRow } from '../ArsenalClient'
 import { ArsenalIcon } from '../ArsenalClient'
 
@@ -61,6 +62,13 @@ export function ReplicaDetailClient({
       })
 
       if (error) throw error
+      await insertTransferNotif(supabase, {
+        actorId: currentUserId,
+        recipientId: targetUser.id,
+        replicaNombre: replica.nombre,
+        transferId: '',
+        type: 'transfer_request',
+      })
       setTransferSuccess(true)
     } catch { setTransferError('Error al enviar la solicitud. Intenta de nuevo.') }
     finally { setTransferring(false) }
