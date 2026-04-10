@@ -731,73 +731,129 @@ function FieldPostCard({
   )
 }
 
-function EventCard({ item }: { item: Extract<FeedItem, { kind: 'event' }> }) {
+function EventCard({
+  item,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  item: Extract<FeedItem, { kind: 'event' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const sub = [item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')
   const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
   return (
-    <Link href={`/eventos/${item.id}`}
-      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
-      {/* Banner */}
-      <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-        {imagenFinal
-          ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" />
-          : <div className="w-full h-full flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#444" strokeWidth="1.4"/>
-                <path d="M3 9h18M8 5V3M16 5V3" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
-              </svg>
-            </div>
-        }
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">
-            {formatEventDate(item.fecha)}
-          </p>
-          <h3 style={jost} className="mt-0.5 text-[14px] font-extrabold uppercase leading-snug text-white line-clamp-2">
-            {item.title}
-          </h3>
-          {sub && (
-            <p style={lato} className="mt-1 text-[11px] text-white/70 truncate">{sub}</p>
-          )}
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      <Link href={`/eventos/${item.id}`} className="block">
+        <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+          {imagenFinal
+            ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" />
+            : <div className="w-full h-full flex items-center justify-center">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#444" strokeWidth="1.4"/>
+                  <path d="M3 9h18M8 5V3M16 5V3" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+              </div>
+          }
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-3">
+            <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">
+              {formatEventDate(item.fecha)}
+            </p>
+            <h3 style={jost} className="mt-0.5 text-[14px] font-extrabold uppercase leading-snug text-white line-clamp-2">
+              {item.title}
+            </h3>
+            {sub && (
+              <p style={lato} className="mt-1 text-[11px] text-white/70 truncate">{sub}</p>
+            )}
+          </div>
         </div>
+      </Link>
+      <div className="px-3">
+        <PostActions
+          postType="event"
+          postId={item.id}
+          postOwnerId={null}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+          shareUrl={`/eventos/${item.id}`}
+          shareTitle={item.title}
+          postHref={`/eventos/${item.id}`}
+        />
       </div>
-    </Link>
+    </div>
   )
 }
 
-function NewTeamCard({ item }: { item: Extract<FeedItem, { kind: 'new_team' }> }) {
+function NewTeamCard({
+  item,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  item: Extract<FeedItem, { kind: 'new_team' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const initial = (item.nombre.trim()[0] || '?').toUpperCase()
   return (
-    <Link href={`/equipos/${encodeURIComponent(item.slug)}`}
-      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
-      {/* Foto portada si existe */}
-      {item.foto_portada_url && (
-        <div className="relative h-[140px] w-full overflow-hidden bg-[#111111]">
-          <img src={item.foto_portada_url} alt="" className="w-full h-full object-cover opacity-80" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      <Link href={`/equipos/${encodeURIComponent(item.slug)}`} className="block">
+        {item.foto_portada_url && (
+          <div className="relative h-[140px] w-full overflow-hidden bg-[#111111]">
+            <img src={item.foto_portada_url} alt="" className="w-full h-full object-cover opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          </div>
+        )}
+        <div className="flex items-center gap-3 p-3">
+          <div className="w-12 h-12 shrink-0 overflow-hidden bg-[#F4F4F4] border border-[#EEEEEE]">
+            {item.logo_url
+              ? <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-lg font-bold" style={jost}>{initial}</div>
+            }
+          </div>
+          <div className="min-w-0 flex-1">
+            <p style={lato} className="text-[10px] text-[#999999] mb-0.5 uppercase tracking-wide">Nuevo equipo</p>
+            <h3 style={jost} className="text-[13px] font-extrabold uppercase text-[#111111] line-clamp-1">{item.nombre}</h3>
+            {item.ciudad && <p style={lato} className="text-[11px] text-[#666666]">{item.ciudad}</p>}
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#CCCCCC]">
+            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
-      )}
-      <div className="flex items-center gap-3 p-3">
-        <div className="w-12 h-12 shrink-0 overflow-hidden bg-[#F4F4F4] border border-[#EEEEEE]">
-          {item.logo_url
-            ? <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
-            : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-lg font-bold" style={jost}>{initial}</div>
-          }
-        </div>
-        <div className="min-w-0 flex-1">
-          <p style={lato} className="text-[10px] text-[#999999] mb-0.5 uppercase tracking-wide">Nuevo equipo</p>
-          <h3 style={jost} className="text-[13px] font-extrabold uppercase text-[#111111] line-clamp-1">{item.nombre}</h3>
-          {item.ciudad && <p style={lato} className="text-[11px] text-[#666666]">{item.ciudad}</p>}
-        </div>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-[#CCCCCC]">
-          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+      </Link>
+      <div className="px-3">
+        <PostActions
+          postType="new_team"
+          postId={item.id}
+          postOwnerId={null}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+          shareUrl={`/equipos/${encodeURIComponent(item.slug)}`}
+          shareTitle={`${item.nombre} en AirNation`}
+          postHref={`/equipos/${encodeURIComponent(item.slug)}`}
+        />
       </div>
-    </Link>
+    </div>
   )
 }
 
-function VideoCard({ item }: { item: Extract<FeedItem, { kind: 'video' }> }) {
+function VideoCard({
+  item,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  item: Extract<FeedItem, { kind: 'video' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const [playing, setPlaying] = useState(false)
   const videoId = item.youtube_url?.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
@@ -842,38 +898,75 @@ function VideoCard({ item }: { item: Extract<FeedItem, { kind: 'video' }> }) {
           {item.title}
         </h3>
       </div>
+      <div className="px-3">
+        <PostActions
+          postType="video"
+          postId={item.id}
+          postOwnerId={null}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+          shareUrl={`https://youtu.be/${videoId}`}
+          shareTitle={item.title}
+          postHref={`https://youtu.be/${videoId}`}
+        />
+      </div>
     </div>
   )
 }
 
-function NoticiaFeedCard({ item }: { item: Extract<FeedItem, { kind: 'noticia' }> }) {
+function NoticiaFeedCard({
+  item,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  item: Extract<FeedItem, { kind: 'noticia' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   return (
-    <Link href={`/blog/${item.slug}`}
-      className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
-      {item.cover_url && (
-        <div className="aspect-[16/7] w-full overflow-hidden bg-[#F4F4F4]">
-          <img src={item.cover_url} alt="" className="w-full h-full object-cover" />
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      <Link href={`/blog/${item.slug}`} className="block">
+        {item.cover_url && (
+          <div className="aspect-[16/7] w-full overflow-hidden bg-[#F4F4F4]">
+            <img src={item.cover_url} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+        <div className="p-3">
+          {item.category && (
+            <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-1">
+              {item.category}
+            </p>
+          )}
+          <h3 style={jost} className="text-[13px] font-extrabold uppercase leading-snug text-[#111111] line-clamp-2">
+            {item.title}
+          </h3>
+          {item.excerpt && (
+            <p style={lato} className="mt-1 text-[12px] text-[#666666] line-clamp-2">
+              {item.excerpt}
+            </p>
+          )}
+          <p style={jost} className="mt-2 text-[10px] font-extrabold uppercase text-[#CC4B37]">
+            LEER MÁS →
+          </p>
         </div>
-      )}
-      <div className="p-3">
-        {item.category && (
-          <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-1">
-            {item.category}
-          </p>
-        )}
-        <h3 style={jost} className="text-[13px] font-extrabold uppercase leading-snug text-[#111111] line-clamp-2">
-          {item.title}
-        </h3>
-        {item.excerpt && (
-          <p style={lato} className="mt-1 text-[12px] text-[#666666] line-clamp-2">
-            {item.excerpt}
-          </p>
-        )}
-        <p style={jost} className="mt-2 text-[10px] font-extrabold uppercase text-[#CC4B37]">
-          LEER MÁS →
-        </p>
+      </Link>
+      <div className="px-3">
+        <PostActions
+          postType="noticia"
+          postId={item.id}
+          postOwnerId={null}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+          shareUrl={`/blog/${item.slug}`}
+          shareTitle={item.title}
+          postHref={`/blog/${item.slug}`}
+        />
       </div>
-    </Link>
+    </div>
   )
 }
 
@@ -1164,10 +1257,46 @@ function FeedTab({
               onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
             />
           )
-        if (item.kind === 'event') return <EventCard key={`ev-${item.id}`} item={item} />
-        if (item.kind === 'new_team') return <NewTeamCard key={`nt-${item.id}`} item={item} />
-        if (item.kind === 'video') return <VideoCard key={`vid-${item.id}`} item={item}/>
-        if (item.kind === 'noticia') return <NoticiaFeedCard key={`not-${item.id}`} item={item}/>
+        if (item.kind === 'event')
+          return (
+            <EventCard
+              key={`ev-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+            />
+          )
+        if (item.kind === 'new_team')
+          return (
+            <NewTeamCard
+              key={`nt-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+            />
+          )
+        if (item.kind === 'video')
+          return (
+            <VideoCard
+              key={`vid-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+            />
+          )
+        if (item.kind === 'noticia')
+          return (
+            <NoticiaFeedCard
+              key={`not-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+            />
+          )
         return null
       })}
     </div>
@@ -1507,7 +1636,15 @@ function NoticiasTab() {
   )
 }
 
-function VideosTab() {
+function VideosTab({
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const [items, setItems] = useState<VideoItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -1550,6 +1687,9 @@ function VideosTab() {
         <VideoCard
           key={item.id}
           item={{ kind: 'video', ...item }}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
         />
       ))}
     </div>
@@ -1675,7 +1815,13 @@ export function FeedHome({
         {activeTab === 'eventos' && <EventosTab />}
         {activeTab === 'equipos' && <EquiposTab />}
         {activeTab === 'noticias' && <NoticiasTab />}
-        {activeTab === 'videos' && <VideosTab />}
+        {activeTab === 'videos' && (
+          <VideosTab
+            currentUserId={userId}
+            currentUserAlias={userAlias}
+            currentUserAvatar={userAvatar}
+          />
+        )}
       </div>
     </div>
   )

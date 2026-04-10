@@ -55,6 +55,16 @@ function formatRelativeTime(iso: string): string {
   } catch { return '' }
 }
 
+type FeedPostType =
+  | 'player'
+  | 'team'
+  | 'field'
+  | 'blog'
+  | 'new_team'
+  | 'noticia'
+  | 'event'
+  | 'video'
+
 type PostComment = {
   id: string
   user_id: string
@@ -85,7 +95,7 @@ export function LikesModal({
   postId,
   onClose,
 }: {
-  postType: 'player' | 'team' | 'field'
+  postType: FeedPostType
   postId: string
   onClose: () => void
 }) {
@@ -311,7 +321,7 @@ export function PostActions({
   shareTitle,
   postHref,
 }: {
-  postType: 'player' | 'team' | 'field'
+  postType: FeedPostType
   postId: string
   postOwnerId: string | null
   currentUserId: string | null
@@ -401,7 +411,10 @@ export function PostActions({
   }
 
   const handleShare = async () => {
-    const fullUrl = `https://airnation.online${shareUrl}`
+    const fullUrl =
+      shareUrl.startsWith('http://') || shareUrl.startsWith('https://')
+        ? shareUrl
+        : `https://airnation.online${shareUrl}`
     if (navigator.share) {
       try { await navigator.share({ title: shareTitle, url: fullUrl }) } catch { /* cancelado */ }
     } else {
@@ -518,7 +531,7 @@ export function CommentsSection({
   currentUserAvatar,
   postHref,
 }: {
-  postType: 'player' | 'team' | 'field'
+  postType: FeedPostType
   postId: string
   postOwnerId: string | null
   currentUserId: string | null
