@@ -616,6 +616,7 @@ export function NuevoListingForm({
       const insertData: Record<string, unknown> = {
         seller_id: userId,
         titulo: titulo.trim(),
+        categoria: supercategoria,
         descripcion: descripcion.trim() || null,
         supercategoria,
         subcategoria: subcategoria || null,
@@ -736,7 +737,24 @@ export function NuevoListingForm({
                   <button
                     key={r.id}
                     type="button"
-                    onClick={() => setReplicaConectada(replicaConectada?.id === r.id ? null : r)}
+                    onClick={() => {
+                      if (replicaConectada?.id === r.id) {
+                        setReplicaConectada(null)
+                        setTitulo('')
+                        setSubcategoria('')
+                        setMecanismo('')
+                        setCondicionReplica('stock')
+                        setFotos([])
+                      } else {
+                        setReplicaConectada(r)
+                        if (!titulo.trim()) setTitulo(r.nombre)
+                        if (r.sistema) setSubcategoria(r.sistema)
+                        if (r.mecanismo) setMecanismo(r.mecanismo)
+                        if (r.condicion === 'upgrades') setCondicionReplica('upgrades')
+                        else setCondicionReplica('stock')
+                        if (r.foto_url) setFotos([r.foto_url])
+                      }
+                    }}
                     className={`flex items-center gap-3 border p-3 text-left transition-colors ${
                       replicaConectada?.id === r.id
                         ? 'border-[#CC4B37] bg-[#FFF5F4]'
@@ -799,6 +817,16 @@ export function NuevoListingForm({
 
           {supercategoria === 'replicas' && (
             <>
+              {replicaConectada && (
+                <div className="border border-[#CC4B37] bg-[#FFF5F4] px-3 py-2.5 flex items-center gap-2">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17l-5-5" stroke="#CC4B37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <p style={lato} className="text-[12px] text-[#CC4B37]">
+                    Campos prellenados desde tu arsenal. Puedes editarlos.
+                  </p>
+                </div>
+              )}
               <div>
                 <label className={labelClass} style={jost}>Tipo de réplica *</label>
                 <div className="grid grid-cols-2 gap-2">
