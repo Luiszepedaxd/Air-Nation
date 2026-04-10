@@ -39,3 +39,15 @@ export type PlayerEventRow = {
   imagen_url: string | null
   status: string | null
 }
+
+export type PublicReplicaRow = {
+  id: string
+  nombre: string
+  sistema: string | null
+  mecanismo: string | null
+  condicion: string | null
+  foto_url: string | null
+  verificada: boolean
+  ciudad: string | null
+  estado: string | null
+}

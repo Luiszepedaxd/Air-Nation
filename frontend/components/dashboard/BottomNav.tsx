@@ -91,12 +91,12 @@ const NAV_ITEMS = [
     href: '/dashboard/arsenal',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C9 6 7 9 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-3-2-6-5-10z"
+        <path d="M12 3L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7L12 3Z"
           stroke={active ? '#CC4B37' : '#767676'}
           strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M9 15c0 1.7 1.3 3 3 3s3-1.3 3-3"
+        <path d="M9 12l2 2 4-4"
           stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round"/>
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     )
   },
@@ -393,7 +393,7 @@ export default function BottomNav() {
       {/* Bottom Nav — mobile (5 ítems: sin Docs ni Admin; SOS enlaza a /dashboard/sos) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-        <div className="grid h-14 w-full grid-cols-6 items-stretch">
+        <div className="grid h-14 w-full grid-cols-6 items-center">
           {NAV_ITEMS_MOBILE.map((item) => {
             const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref
@@ -401,7 +401,7 @@ export default function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex min-w-0 flex-col items-center justify-center gap-1"
+                className="flex min-w-0 flex-col items-center justify-center gap-0.5 py-1"
               >
                 {isPerfil ? (
                   <ProfileIconWithBadge

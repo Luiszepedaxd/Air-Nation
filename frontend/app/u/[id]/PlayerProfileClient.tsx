@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import type {
   PlayerEventRow,
   PlayerPostRow,
+  PublicReplicaRow,
   PublicUserProfile,
 } from './types'
 
@@ -67,33 +68,19 @@ function postPhotoUrls(post: PlayerPostRow): string[] {
     .slice(0, 4)
 }
 
-function BulletIcon() {
-  return (
-    <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden className="mt-1.5 shrink-0">
-      <circle cx="4" cy="4" r="4" fill="#CC4B37" />
-    </svg>
-  )
-}
-
-function ClockIcon() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="10" stroke="#CC4B37" strokeWidth="1.6" />
-      <path d="M12 7v5l3 3" stroke="#CC4B37" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 export function PlayerProfileClient({
   user,
   posts,
   events,
+  replicas,
   rolLabels,
   currentUserId,
 }: {
   user: PublicUserProfile
   posts: PlayerPostRow[]
   events: PlayerEventRow[]
+  replicas: PublicReplicaRow[]
   rolLabels: Record<string, string>
   currentUserId: string | null
 }) {
@@ -118,7 +105,7 @@ export function PlayerProfileClient({
   const tabs: [TabId, string][] = [
     ['posts', 'Posts'],
     ['info', 'Info'],
-    ['replicas', 'Réplicas'],
+    ['replicas', 'Arsenal'],
     ['eventos', 'Eventos'],
   ]
 
@@ -176,7 +163,7 @@ export function PlayerProfileClient({
         ) : null}
 
         {tab === 'replicas' ? (
-          <ReplicasPanel />
+          <ReplicasPanel replicas={replicas} />
         ) : null}
 
         {tab === 'eventos' ? (
@@ -381,41 +368,77 @@ function InfoPanel({
   )
 }
 
-function ReplicasPanel() {
+function ShieldIcon() {
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CC4B37]/10">
-        <ClockIcon />
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M12 3L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7L12 3Z"
+        stroke="#AAAAAA" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M9 12l2 2 4-4"
+        stroke="#AAAAAA" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function ReplicasPanel({ replicas }: { replicas: PublicReplicaRow[] }) {
+  if (!replicas.length) {
+    return (
+      <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+        <ShieldIcon />
+        <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
+          Este operador aún no ha registrado su arsenal
+        </p>
       </div>
-      <p
-        style={jost}
-        className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
-      >
-        PRÓXIMAMENTE
-      </p>
-      <h2
-        style={jost}
-        className="mt-2 text-[18px] font-extrabold uppercase text-[#111111]"
-      >
-        RÉPLICAS DEL JUGADOR
-      </h2>
-      <p className="mt-3 max-w-[400px] text-[14px] leading-relaxed text-[#666666]" style={lato}>
-        Pronto podrás ver el arsenal completo de este jugador.
-      </p>
-      <ul className="mt-6 space-y-3 text-left">
-        <li className="flex items-start gap-2 text-[13px] text-[#111111]" style={lato}>
-          <BulletIcon />
-          <span>Listado de réplicas con fotos y especificaciones</span>
-        </li>
-        <li className="flex items-start gap-2 text-[13px] text-[#111111]" style={lato}>
-          <BulletIcon />
-          <span>Marca, modelo y tipo de réplica</span>
-        </li>
-        <li className="flex items-start gap-2 text-[13px] text-[#111111]" style={lato}>
-          <BulletIcon />
-          <span>Upgrades y modificaciones</span>
-        </li>
-      </ul>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {replicas.map((r) => (
+        <div
+          key={r.id}
+          className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden"
+        >
+          <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+            {r.foto_url ? (
+              <img src={r.foto_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <ShieldIcon />
+              </div>
+            )}
+            {r.verificada && (
+              <span
+                className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+                style={jost}
+              >
+                ✓ Verificada
+              </span>
+            )}
+          </div>
+          <div className="p-3">
+            <p className="line-clamp-1 text-[13px] font-extrabold uppercase text-[#111111]" style={jost}>
+              {r.nombre}
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {r.sistema && (
+                <span className="border border-[#EEEEEE] px-2 py-0.5 text-[10px] text-[#666666]" style={lato}>
+                  {r.sistema}
+                </span>
+              )}
+              {r.mecanismo && (
+                <span className="border border-[#EEEEEE] px-2 py-0.5 text-[10px] text-[#666666]" style={lato}>
+                  {r.mecanismo}
+                </span>
+              )}
+            </div>
+            {r.ciudad && (
+              <p className="mt-1.5 text-[11px] text-[#999999]" style={lato}>
+                {r.ciudad}{r.estado ? `, ${r.estado}` : ''}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

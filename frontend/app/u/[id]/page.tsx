@@ -4,11 +4,11 @@ import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-se
 import { createPublicSupabaseClient } from '../supabase-public'
 import { PlayerProfileClient } from './PlayerProfileClient'
 import { PlayerHero } from './PlayerHero'
-import type { PlayerEventRow, PlayerPostRow, PublicUserProfile } from './types'
+import type { PlayerEventRow, PlayerPostRow, PublicReplicaRow, PublicUserProfile } from './types'
 
 export const revalidate = 0
 
-export type { PlayerEventRow, PlayerPostRow, PublicUserProfile }
+export type { PlayerEventRow, PlayerPostRow, PublicReplicaRow, PublicUserProfile }
 
 const ROL_LABELS: Record<string, string> = {
   rifleman: 'Jugador',
@@ -145,7 +145,16 @@ async function fetchPublicProfile(id: string) {
     // event_rsvps table may not exist yet
   }
 
-  return { user, posts, events }
+  let replicas: PublicReplicaRow[] = []
+  const { data: replicasData } = await supabase
+    .from('arsenal')
+    .select('id, nombre, sistema, mecanismo, condicion, foto_url, verificada, ciudad, estado')
+    .eq('user_id', id)
+    .order('created_at', { ascending: false })
+
+  if (replicasData) replicas = replicasData as PublicReplicaRow[]
+
+  return { user, posts, events, replicas }
 }
 
 export async function generateMetadata({
@@ -183,7 +192,7 @@ export default async function PublicProfilePage({
   const result = await fetchPublicProfile(params.id)
   if (!result) notFound()
 
-  const { user, posts, events } = result
+  const { user, posts, events, replicas } = result
 
   const supabaseServer = createDashboardSupabaseServerClient()
   const {
@@ -266,6 +275,7 @@ export default async function PublicProfilePage({
         user={user}
         posts={posts}
         events={events}
+        replicas={replicas}
         rolLabels={ROL_LABELS}
         currentUserId={currentUser?.id ?? null}
       />

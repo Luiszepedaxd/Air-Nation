@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -288,9 +288,19 @@ export function ArsenalClient({
     setView('list')
     router.refresh()
   }
+  const scrollRef = useRef<number>(0)
+
   const handleSelect = (r: ReplicaRow) => {
+    scrollRef.current = window.scrollY
     setSelected(r)
     setView('detail')
+  }
+
+  const handleBack = () => {
+    setView('list')
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: scrollRef.current })
+    })
   }
 
   if (view === 'form') {
@@ -308,7 +318,7 @@ export function ArsenalClient({
   if (view === 'detail' && selected) {
     return (
       <div className="mx-auto max-w-[480px] px-4 py-6">
-        <button type="button" onClick={() => setView('list')} style={jost} className="mb-4 flex items-center gap-2 text-[11px] font-extrabold uppercase text-[#999999]">
+        <button type="button" onClick={handleBack} style={jost} className="mb-4 flex items-center gap-2 text-[11px] font-extrabold uppercase text-[#999999]">
           ← Volver
         </button>
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
