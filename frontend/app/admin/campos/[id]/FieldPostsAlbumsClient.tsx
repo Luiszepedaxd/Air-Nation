@@ -8,13 +8,7 @@ import {
   adminDeleteFieldAlbum,
   adminDeleteFieldPost,
 } from '../actions'
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
-
-const UPLOAD_ENDPOINT = `${API_URL}/upload`
+import { uploadFile } from '@/lib/apiFetch'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -29,16 +23,7 @@ const MAX_POST_PHOTOS = 4
 const MAX_MB = 5
 
 async function postUpload(file: File): Promise<string> {
-  const fd = new FormData()
-  fd.append('file', file)
-  const res = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
-  const json = (await res.json().catch(() => ({}))) as {
-    url?: string
-    error?: string
-  }
-  if (!res.ok) throw new Error(json.error || 'Error al subir.')
-  if (!json.url || typeof json.url !== 'string') throw new Error('Respuesta inválida.')
-  return json.url
+  return uploadFile(file)
 }
 
 type PostRow = {

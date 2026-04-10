@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
+import { uploadFile } from '@/lib/apiFetch'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -12,11 +13,6 @@ const jost = {
 } as const
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
 
 const ALLOWED_IMG = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_POST_PHOTOS = 4
@@ -41,13 +37,7 @@ function validateImageFile(file: File): string | null {
 }
 
 async function uploadOneFile(file: File): Promise<string> {
-  const fd = new FormData()
-  fd.append('file', file)
-  const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: fd })
-  const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string }
-  if (!res.ok) throw new Error(json.error || 'Error al subir la imagen')
-  if (!json.url || typeof json.url !== 'string') throw new Error('Respuesta inválida')
-  return json.url
+  return uploadFile(file)
 }
 
 function normalizeFotoUrls(raw: unknown): string[] {

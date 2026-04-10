@@ -4,14 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { uploadFile } from '@/lib/apiFetch'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const SISTEMAS = ['Rifle de Asalto', 'Subfusil (SMG)', 'Ametralladora Ligera (LMG)', 'DMR', 'Francotirador (Sniper)', 'Pistola', 'Escopeta', 'Otro']
 const MECANISMOS = ['AEG', 'GBB', 'HPA', 'Muelle (Spring)', 'CO2']
-
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://air-nation-production.up.railway.app/api/v1').replace(/\/$/, '')
 
 export type ReplicaRow = {
   id: string
@@ -126,11 +125,8 @@ export function RegistrarForm({
     }
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: fd })
-      const json = await res.json() as { url?: string }
-      if (json.url) setFotoUrl(json.url)
+      const url = await uploadFile(file)
+      setFotoUrl(url)
     } catch { setError('Error al subir la foto.') }
     finally { setUploading(false) }
   }

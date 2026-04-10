@@ -25,15 +25,9 @@ import {
   prepareCampoSlugAction,
   prepareCampoSlugAdminAction,
 } from './actions'
+import { uploadFile } from '@/lib/apiFetch'
 
 const GOOGLE_LIBRARIES: ('places')[] = ['places']
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
-
-const UPLOAD_ENDPOINT = `${API_URL}/upload`
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_GALLERY = 6
@@ -48,20 +42,7 @@ const jostHeading = {
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 async function postUpload(file: File): Promise<string> {
-  const fd = new FormData()
-  fd.append('file', file)
-  const res = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
-  const json = (await res.json().catch(() => ({}))) as {
-    url?: string
-    error?: string
-  }
-  if (!res.ok) {
-    throw new Error(json.error || 'Error al subir la imagen.')
-  }
-  if (!json.url || typeof json.url !== 'string') {
-    throw new Error('Respuesta inválida del servidor.')
-  }
-  return json.url
+  return uploadFile(file)
 }
 
 function FormSection({

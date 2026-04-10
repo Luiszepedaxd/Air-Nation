@@ -7,6 +7,7 @@ import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
+import { uploadFile } from '@/lib/apiFetch'
 import type {
   TeamAlbumAdminRow,
   TeamJoinRequestAdminRow,
@@ -24,12 +25,6 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
-const UPLOAD_ENDPOINT = `${API_URL}/upload`
 
 const ALLOWED_IMG = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_POST_PHOTOS = 4
@@ -170,18 +165,7 @@ function validateImageFile(file: File): string | null {
 }
 
 async function uploadOneFile(file: File): Promise<string> {
-  const fd = new FormData()
-  fd.append('file', file)
-  const res = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd })
-  const json = (await res.json().catch(() => ({}))) as {
-    url?: string
-    error?: string
-  }
-  if (!res.ok) throw new Error(json.error || 'Error al subir la imagen')
-  if (!json.url || typeof json.url !== 'string') {
-    throw new Error('Respuesta inválida del servidor')
-  }
-  return json.url
+  return uploadFile(file)
 }
 
 function SpinnerInline({ className }: { className?: string }) {

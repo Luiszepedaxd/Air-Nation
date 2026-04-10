@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { uploadFile } from "@/lib/apiFetch";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
@@ -82,23 +83,7 @@ export default function AssetUploader({
     setPhase("uploading");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const uploadRes = await fetch(`${API_BASE}/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(
-          typeof err.error === "string" ? err.error : "Error al subir la imagen"
-        );
-      }
-
-      const { url } = (await uploadRes.json()) as { url?: string };
-      if (!url) throw new Error("Respuesta de subida inválida");
+      const url = await uploadFile(file);
 
       const {
         data: { session },

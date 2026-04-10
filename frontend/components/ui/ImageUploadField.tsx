@@ -1,13 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
-
-const UPLOAD_ENDPOINT = `${API_URL}/upload`
+import { uploadFile } from '@/lib/apiFetch'
 
 const jostBtn = {
   fontFamily: "'Jost', sans-serif",
@@ -137,26 +131,9 @@ export function ImageUploadField({
       setUploading(true)
       onUploadStart?.()
       try {
-        const fd = new FormData()
-        fd.append('file', file)
-        const res = await fetch(UPLOAD_ENDPOINT, {
-          method: 'POST',
-          body: fd,
-        })
-        const json = (await res.json().catch(() => ({}))) as {
-          url?: string
-          error?: string
-        }
-        if (!res.ok) {
-          onError(json.error || 'Error al subir la imagen.')
-          return
-        }
-        if (!json.url || typeof json.url !== 'string') {
-          onError('Respuesta inválida del servidor.')
-          return
-        }
-        setPreview(json.url)
-        onUpload(json.url)
+        const uploadedUrl = await uploadFile(file)
+        setPreview(uploadedUrl)
+        onUpload(uploadedUrl)
       } catch {
         onError('Error de red. Intenta de nuevo.')
       } finally {

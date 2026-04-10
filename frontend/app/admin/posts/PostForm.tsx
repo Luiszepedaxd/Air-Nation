@@ -19,6 +19,7 @@ import {
   togglePublish,
   type PostInput,
 } from './actions'
+import { uploadFile } from '@/lib/apiFetch'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -61,30 +62,6 @@ function slugifyTitle(title: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
-}
-
-function getUploadUrl(): string {
-  const base =
-    (typeof process !== 'undefined' &&
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')) ||
-    ''
-  return `${base}/upload`
-}
-
-async function uploadImageFile(file: File): Promise<string> {
-  const fd = new FormData()
-  fd.append('file', file)
-  const res = await fetch(getUploadUrl(), {
-    method: 'POST',
-    body: fd,
-  })
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(t || `Error ${res.status}`)
-  }
-  const json = (await res.json()) as { url?: string }
-  if (!json?.url) throw new Error('Respuesta sin URL')
-  return json.url
 }
 
 const editorProseCss = `
@@ -276,7 +253,7 @@ export default function PostForm({
     setFormError(null)
     setCoverUploading(true)
     try {
-      const url = await uploadImageFile(file)
+      const url = await uploadFile(file)
       setCoverUrl(url)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al subir imagen')
@@ -295,7 +272,7 @@ export default function PostForm({
       setFormError(null)
       setEditorImageUploading(true)
       try {
-        const url = await uploadImageFile(file)
+        const url = await uploadFile(file)
         editor.chain().focus().setImage({ src: url }).run()
       } catch (err) {
         setFormError(err instanceof Error ? err.message : 'Error al subir imagen')

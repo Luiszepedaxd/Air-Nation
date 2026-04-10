@@ -7,6 +7,7 @@ import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
+import { uploadFile } from '@/lib/apiFetch'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -119,11 +120,6 @@ export function PostBox({
   const [publishing, setPublishing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const API_URL = (
-    process.env.NEXT_PUBLIC_API_URL ||
-    'https://air-nation-production.up.railway.app/api/v1'
-  ).replace(/\/$/, '')
-
   const postAsOptions: PostAs[] = [
     {
       type: 'player',
@@ -174,11 +170,7 @@ export function PostBox({
     try {
       const urls: string[] = []
       for (const p of pendingPhotos) {
-        const fd = new FormData()
-        fd.append('file', p.file)
-        const res = await fetch(`${API_URL}/upload`, { method: 'POST', body: fd })
-        const json = (await res.json()) as { url?: string }
-        if (json.url) urls.push(json.url)
+        urls.push(await uploadFile(p.file))
       }
 
       const content = text.trim() || null
