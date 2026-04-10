@@ -47,6 +47,7 @@ export function ReplicaDetailClient({
   const [deleting, setDeleting] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
   const [transferAlias, setTransferAlias] = useState('')
+  const [userSelected, setUserSelected] = useState(false)
   const [transferNota, setTransferNota] = useState('')
   const [transferring, setTransferring] = useState(false)
   const [transferError, setTransferError] = useState('')
@@ -67,12 +68,12 @@ export function ReplicaDetailClient({
   }
 
   const handleTransfer = async () => {
-    if (!transferAlias.trim()) { setTransferError('Escribe el alias del receptor.'); return }
+    if (!userSelected || !foundUser) { setTransferError('Selecciona al operador haciendo clic en la tarjeta.'); return }
     setTransferring(true)
     setTransferError('')
     try {
       const targetUser = foundUser
-      if (!targetUser) { setTransferError('Escribe un alias válido y espera a que aparezca el operador.'); return }
+      if (!targetUser) { setTransferError('Busca un operador y selecciónalo antes de enviar.'); return }
       if (targetUser.id === currentUserId) { setTransferError('No puedes transferirte a ti mismo.'); return }
 
       const { error } = await supabase.from('arsenal_transfers').insert({
@@ -113,6 +114,7 @@ export function ReplicaDetailClient({
       })
       setTransferSuccess(true)
       setShowTransfer(false)
+      setUserSelected(false)
       router.refresh()
     } catch { setTransferError('Error al enviar la solicitud. Intenta de nuevo.') }
     finally { setTransferring(false) }
@@ -122,6 +124,9 @@ export function ReplicaDetailClient({
     if (!incomingTransfer) return
     setProcessingTransfer(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('no session')
+
       const { error } = await supabase.rpc('accept_arsenal_transfer', {
         p_transfer_id: incomingTransfer.id,
         p_user_id: currentUserId,
@@ -140,8 +145,11 @@ export function ReplicaDetailClient({
       setTransferResolved('accepted')
       setIncomingTransfer(null)
       router.refresh()
-    } catch { /* noop */ }
-    finally { setProcessingTransfer(false) }
+    } catch (err) {
+      console.error('[accept_transfer]', err)
+    } finally {
+      setProcessingTransfer(false)
+    }
   }
 
   const handleRejectTransfer = async () => {
@@ -320,7 +328,7 @@ export function ReplicaDetailClient({
           <div className="mt-8 border border-[#EEEEEE] p-4">
             <div className="mb-4 flex items-center justify-between">
               <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Transferir réplica</p>
-              <button type="button" onClick={() => { setShowTransfer(false); setTransferError('') }} className="text-[#999999] hover:text-[#111111]">
+              <button type="button" onClick={() => { setShowTransfer(false); setTransferError(''); setUserSelected(false); setFoundUser(null); setTransferAlias('') }} className="text-[#999999] hover:text-[#111111]">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
               </button>
             </div>
@@ -332,54 +340,82 @@ export function ReplicaDetailClient({
                 <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]" style={jost}>
                   Alias del receptor *
                 </label>
-                <input type="text" className={inputClass} placeholder="@alias del operador" value={transferAlias}
-                onChange={e => {
-                  const val = e.target.value.replace('@', '')
-                  setTransferAlias(val)
-                  setFoundUser(null)
-                  setTransferError('')
-                  if (searchTimeout.current) clearTimeout(searchTimeout.current)
-                  if (val.trim().length < 2) {
-                    setSearchingUser(false)
-                    return
-                  }
-                  setSearchingUser(true)
-                  searchTimeout.current = setTimeout(async () => {
-                    const q = val.trim()
-                    const { data } = await supabase
-                      .from('users')
-                      .select('id, alias, nombre, avatar_url')
-                      .or(`alias.ilike.%${q}%,nombre.ilike.%${q}%`)
-                      .neq('id', currentUserId)
-                      .limit(1)
-                      .maybeSingle()
-                    setSearchingUser(false)
-                    if (data) setFoundUser(data)
-                    else setTransferError('No se encontró ningún operador con ese alias.')
-                  }, 500)
-                }}
-              />
-              {searchingUser && (
-                <p className="mt-1 text-[11px] text-[#999999]" style={lato}>Buscando…</p>
-              )}
-              {foundUser && !searchingUser && (
-                <div className="mt-2 flex items-center gap-3 border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2">
+                {!userSelected ? (
+                <>
+                  <input type="text" className={inputClass} placeholder="Busca por alias o nombre..." value={transferAlias}
+                    onChange={e => {
+                      const val = e.target.value.replace('@', '')
+                      setTransferAlias(val)
+                      setFoundUser(null)
+                      setTransferError('')
+                      if (searchTimeout.current) clearTimeout(searchTimeout.current)
+                      if (val.trim().length < 2) { setSearchingUser(false); return }
+                      setSearchingUser(true)
+                      searchTimeout.current = setTimeout(async () => {
+                        const { data } = await supabase
+                          .from('users')
+                          .select('id, alias, nombre, avatar_url')
+                          .or(`alias.ilike.%${val.trim()}%,nombre.ilike.%${val.trim()}%`)
+                          .neq('id', currentUserId)
+                          .limit(1)
+                          .maybeSingle()
+                        setSearchingUser(false)
+                        if (data) setFoundUser(data)
+                        else setTransferError('No se encontró ningún operador.')
+                      }, 500)
+                    }}
+                  />
+                  {searchingUser && (
+                    <p className="mt-1 text-[11px] text-[#999999]" style={lato}>Buscando…</p>
+                  )}
+                  {foundUser && !searchingUser && (
+                    <button
+                      type="button"
+                      onClick={() => setUserSelected(true)}
+                      className="mt-2 w-full flex items-center gap-3 border border-[#CC4B37] bg-[#FFF5F4] px-3 py-2 text-left transition-colors hover:bg-[#FFECE9]"
+                    >
+                      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[#EEEEEE]">
+                        {foundUser.avatar_url ? (
+                          <img src={foundUser.avatar_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-[#CC4B37]" style={jost}>
+                            {(foundUser.alias || foundUser.nombre || '?')[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-semibold text-[#111111]" style={lato}>{foundUser.nombre || foundUser.alias}</p>
+                        {foundUser.alias && <p className="text-[11px] text-[#999999]" style={lato}>@{foundUser.alias}</p>}
+                      </div>
+                      <p className="text-[10px] font-extrabold uppercase text-[#CC4B37] shrink-0" style={jost}>Seleccionar →</p>
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-3 border border-[#CC4B37] bg-[#FFF5F4] px-3 py-2">
                   <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[#EEEEEE]">
-                    {foundUser.avatar_url ? (
+                    {foundUser?.avatar_url ? (
                       <img src={foundUser.avatar_url} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-[#CC4B37]" style={jost}>
-                        {(foundUser.alias || foundUser.nombre || '?')[0].toUpperCase()}
+                        {(foundUser?.alias || foundUser?.nombre || '?')[0].toUpperCase()}
                       </div>
                     )}
                   </div>
-                  <div>
-                    <p className="text-[12px] font-semibold text-[#111111]" style={lato}>{foundUser.nombre || foundUser.alias}</p>
-                    {foundUser.alias && <p className="text-[11px] text-[#999999]" style={lato}>@{foundUser.alias}</p>}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold text-[#111111]" style={lato}>{foundUser?.nombre || foundUser?.alias}</p>
+                    {foundUser?.alias && <p className="text-[11px] text-[#999999]" style={lato}>@{foundUser.alias}</p>}
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="ml-auto text-[#CC4B37]">
-                    <path d="M5 12l5 5L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <button
+                    type="button"
+                    onClick={() => { setUserSelected(false); setFoundUser(null); setTransferAlias('') }}
+                    className="shrink-0 p-1 text-[#999999] hover:text-[#CC4B37]"
+                    aria-label="Quitar selección"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  </button>
                 </div>
               )}
               </div>
