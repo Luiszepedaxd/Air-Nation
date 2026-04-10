@@ -60,10 +60,16 @@ export function BandejaClient({
       .maybeSingle()
 
     if (!convRow) return
-    const isP1 = String((convRow as Record<string, unknown>).participant_1) === currentUserId
+    const cr = convRow as Record<string, unknown>
+    const isP1 = String(cr.participant_1) === currentUserId
     const field = isP1 ? 'deleted_by_1' : 'deleted_by_2'
 
+    // Borrar mensajes del historial
+    await supabase.from('messages').delete().eq('conversation_id', convId)
+
+    // Marcar conversación como borrada por este usuario
     await supabase.from('conversations').update({ [field]: true }).eq('id', convId)
+
     setConvs(prev => prev.filter(c => c.id !== convId))
   }
 
