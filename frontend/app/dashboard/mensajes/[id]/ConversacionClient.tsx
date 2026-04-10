@@ -129,7 +129,7 @@ export function ConversacionClient({
   const otherName = otherUser.alias || otherUser.nombre || 'Operador'
 
   return (
-    <div className="flex flex-col h-[100dvh] md:h-[calc(100dvh-64px)] bg-[#FFFFFF]">
+    <div className="fixed inset-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">
         <Link href="/dashboard/mensajes" className="text-[#999999] hover:text-[#111111] mr-1">
@@ -167,7 +167,7 @@ export function ConversacionClient({
       )}
 
       {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 overscroll-contain">
         {messages.length === 0 && (
           <p className="text-center text-[12px] text-[#999999] py-8" style={lato}>
             Sé el primero en escribir

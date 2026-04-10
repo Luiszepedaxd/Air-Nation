@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
@@ -36,7 +37,16 @@ export function BandejaClient({
   currentUserId: string
   conversations: ConvItem[]
 }) {
+  const router = useRouter()
   const [convs, setConvs] = useState(initialConvs)
+
+  useEffect(() => {
+    router.refresh()
+  }, [router])
+
+  useEffect(() => {
+    setConvs(initialConvs)
+  }, [initialConvs])
 
   const handleDelete = async (convId: string) => {
     if (!confirm('¿Eliminar esta conversación? Solo se borrará de tu bandeja.')) return
