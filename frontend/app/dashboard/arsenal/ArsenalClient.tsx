@@ -277,7 +277,8 @@ export function ArsenalList({
     setReplicas(prev => [r, ...prev])
     setShowForm(false)
     requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const el = document.getElementById('dashboard-scroll-root')
+      if (el) el.scrollTo({ top: 0, behavior: 'smooth' })
     })
     router.refresh()
   }

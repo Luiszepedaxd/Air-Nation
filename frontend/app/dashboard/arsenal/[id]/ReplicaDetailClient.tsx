@@ -160,10 +160,13 @@ export function ReplicaDetailClient({
                   }
                   setSearchingUser(true)
                   searchTimeout.current = setTimeout(async () => {
+                    const q = val.trim()
                     const { data } = await supabase
                       .from('users')
                       .select('id, alias, nombre, avatar_url')
-                      .ilike('alias', val.trim())
+                      .or(`alias.ilike.%${q}%,nombre.ilike.%${q}%`)
+                      .neq('id', currentUserId)
+                      .limit(1)
                       .maybeSingle()
                     setSearchingUser(false)
                     if (data) setFoundUser(data)
