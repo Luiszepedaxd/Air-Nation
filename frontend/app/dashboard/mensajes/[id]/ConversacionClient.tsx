@@ -129,7 +129,7 @@ export function ConversacionClient({
   const otherName = otherUser.alias || otherUser.nombre || 'Operador'
 
   return (
-    <div className="fixed inset-x-0 top-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden" style={{ bottom: 'calc(3.5rem + env(safe-area-inset-bottom))' }}>
+    <div className="fixed inset-x-0 top-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">
         <Link href="/dashboard/mensajes" className="text-[#999999] hover:text-[#111111] mr-1">
