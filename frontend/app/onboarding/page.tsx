@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { apiFetch, uploadFile } from "@/lib/apiFetch";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import { notifyTeamJoinRequest } from "@/lib/notify-team-join-request";
 import { generateTeamSlug } from "@/lib/team-slug";
@@ -446,9 +447,8 @@ export default function OnboardingPage() {
       const patchTeamId =
         state.team_join_via_request ? null : state.team_id;
 
-      const res = await fetch(`${API_URL}/users/${userId}`, {
+      const res = await apiFetch(`/users/${userId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre: state.nombre.trim(),
           alias: state.alias.trim(),
@@ -557,22 +557,8 @@ export default function OnboardingPage() {
       }
       setAvatarUploading(true);
       try {
-        const fd = new FormData();
-        fd.append("file", file);
-        const up = await fetch(`${API_URL}/upload`, {
-          method: "POST",
-          body: fd,
-        });
-        if (!up.ok) {
-          setAvatarError("No se pudo subir.");
-          return;
-        }
-        const json = (await up.json()) as { url?: string };
-        if (!json?.url) {
-          setAvatarError("Error del servidor.");
-          return;
-        }
-        update({ avatar_url: json.url });
+        const url = await uploadFile(file);
+        update({ avatar_url: url });
       } catch {
         setAvatarError("Error al subir la imagen.");
       } finally {

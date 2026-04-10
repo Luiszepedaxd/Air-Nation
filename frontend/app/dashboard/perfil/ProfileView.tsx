@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { apiFetch, uploadFile } from '@/lib/apiFetch'
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -248,25 +249,10 @@ export function ProfileView({
       }
       setAvatarUploading(true)
       try {
-        const fd = new FormData()
-        fd.append('file', file)
-        const up = await fetch(`${API_URL}/upload`, {
-          method: 'POST',
-          body: fd,
-        })
-        if (!up.ok) {
-          setAvatarError('No se pudo subir la imagen.')
-          return
-        }
-        const json = (await up.json()) as { url?: string }
-        if (!json?.url) {
-          setAvatarError('Respuesta inválida del servidor.')
-          return
-        }
-        const patch = await fetch(`${API_URL}/users/${user.id}`, {
+        const url = await uploadFile(file)
+        const patch = await apiFetch(`/users/${user.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatar_url: json.url }),
+          body: JSON.stringify({ avatar_url: url }),
         })
         if (!patch.ok) {
           setAvatarError('No se pudo guardar la foto.')
@@ -274,7 +260,7 @@ export function ProfileView({
         }
         const body = (await patch.json()) as { user?: ProfileUserRow }
         if (body.user) setUser(body.user)
-        else setUser((s) => ({ ...s, avatar_url: json.url ?? null }))
+        else setUser((s) => ({ ...s, avatar_url: url ?? null }))
       } catch {
         setAvatarError('Error de red. Intenta de nuevo.')
       } finally {
@@ -300,25 +286,10 @@ export function ProfileView({
       }
       setPortadaUploading(true)
       try {
-        const fd = new FormData()
-        fd.append('file', file)
-        const up = await fetch(`${API_URL}/upload`, {
-          method: 'POST',
-          body: fd,
-        })
-        if (!up.ok) {
-          setPortadaError('No se pudo subir la imagen.')
-          return
-        }
-        const json = (await up.json()) as { url?: string }
-        if (!json?.url) {
-          setPortadaError('Respuesta inválida del servidor.')
-          return
-        }
-        const patch = await fetch(`${API_URL}/users/${user.id}`, {
+        const url = await uploadFile(file)
+        const patch = await apiFetch(`/users/${user.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ foto_portada_url: json.url }),
+          body: JSON.stringify({ foto_portada_url: url }),
         })
         if (!patch.ok) {
           setPortadaError('No se pudo guardar la portada.')
@@ -326,8 +297,8 @@ export function ProfileView({
         }
         const body = (await patch.json()) as { user?: ProfileUserRow }
         if (body.user) setUser(body.user)
-        else setUser((s) => ({ ...s, foto_portada_url: json.url ?? null }))
-        setPortadaUrl(json.url ?? null)
+        else setUser((s) => ({ ...s, foto_portada_url: url ?? null }))
+        setPortadaUrl(url ?? null)
       } catch {
         setPortadaError('Error de red. Intenta de nuevo.')
       } finally {
@@ -385,9 +356,8 @@ export function ProfileView({
         teamIdDraft !== user.team_id &&
         teamSearchText.trim().length > 0
 
-      const res = await fetch(`${API_URL}/users/${user.id}`, {
+      const res = await apiFetch(`/users/${user.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre: form.nombre.trim(),
           alias: form.alias.trim(),
