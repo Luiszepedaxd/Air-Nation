@@ -261,6 +261,8 @@ export function PerfilTabsClient({
                 rookie: 'Rookie',
               }}
               currentUserId={user.id}
+              currentUserAlias={user.alias ?? null}
+              currentUserAvatar={user.avatar_url ?? null}
               showPostBox
             />
           </div>
