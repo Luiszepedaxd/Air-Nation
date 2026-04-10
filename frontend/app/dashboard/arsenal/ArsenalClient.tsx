@@ -496,6 +496,84 @@ export function ArsenalTabs({
 }
 
 function MarketplaceTab({
+  userId,
+  listings,
+}: {
+  userId: string
+  listings: MarketplaceListing[]
+}) {
+  const [subTab, setSubTab] = useState<'explorar' | 'mis-ventas'>('explorar')
+
+  return (
+    <div>
+      {/* Sub-tabs pills */}
+      <div className="mb-5 flex items-center gap-2">
+        {([
+          { id: 'explorar' as const, label: 'Explorar' },
+          { id: 'mis-ventas' as const, label: 'Mis ventas' },
+        ]).map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setSubTab(tab.id)}
+            style={lato}
+            className={`px-4 py-2 text-[13px] font-semibold transition-colors rounded-none ${
+              subTab === tab.id
+                ? 'bg-[#111111] text-[#FFFFFF]'
+                : 'bg-[#F4F4F4] text-[#666666] hover:bg-[#EEEEEE]'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+
+        {subTab === 'mis-ventas' && (
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: abrir form nuevo listing
+            }}
+            style={jost}
+            className="ml-auto flex items-center gap-1.5 bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-white"
+          >
+            + Publicar
+          </button>
+        )}
+      </div>
+
+      {subTab === 'explorar' && (
+        <ExplorarTab />
+      )}
+
+      {subTab === 'mis-ventas' && (
+        <MisVentasTab
+          userId={userId}
+          listings={listings}
+        />
+      )}
+    </div>
+  )
+}
+
+function ExplorarTab() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
+        <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
+      </svg>
+      <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
+        Marketplace próximamente
+      </p>
+      <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
+        Aquí verás réplicas, accesorios y gear en venta de toda la comunidad
+      </p>
+    </div>
+  )
+}
+
+function MisVentasTab({
+  userId,
   listings,
 }: {
   userId: string
@@ -503,29 +581,6 @@ function MarketplaceTab({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
-            Marketplace
-          </h1>
-          <p className="mt-1 text-[13px] text-[#666666]" style={lato}>
-            {listings.length === 0
-              ? 'No tienes publicaciones activas'
-              : `${listings.length} publicación${listings.length !== 1 ? 'es' : ''}`}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            // TODO: abrir form de nuevo listing
-          }}
-          style={jost}
-          className="flex items-center gap-2 bg-[#CC4B37] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white"
-        >
-          + Publicar
-        </button>
-      </div>
-
       {listings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -538,6 +593,16 @@ function MarketplaceTab({
           <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
             Publica réplicas, accesorios o gear para vender a la comunidad
           </p>
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: abrir form nuevo listing
+            }}
+            style={jost}
+            className="mt-6 bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white"
+          >
+            Publicar ahora
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -572,7 +637,7 @@ function MarketplaceTab({
                 <p style={jost} className="line-clamp-1 text-[12px] font-extrabold uppercase text-[#111111]">
                   {listing.titulo}
                 </p>
-                <div className="mt-1 flex items-center gap-1">
+                <div className="mt-1 flex items-center gap-1.5">
                   {listing.precio_original && listing.precio_original !== listing.precio && (
                     <span style={lato} className="text-[11px] text-[#999999] line-through">
                       ${listing.precio_original.toLocaleString('es-MX')}
