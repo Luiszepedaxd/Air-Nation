@@ -1260,6 +1260,7 @@ function MarketplaceTab({
 }
 
 function ListingCard({ listing }: { listing: ListingFeed }) {
+  const sellerName = listing.seller.alias?.trim() || listing.seller.nombre?.trim() || 'Vendedor'
   const foto = listing.fotos_urls?.[0] ?? null
 
   return (
@@ -1315,6 +1316,9 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
         {/* Título */}
         <p style={lato} className="text-[13px] text-[#111111] line-clamp-2 leading-snug">
           {listing.titulo}
+        </p>
+        <p style={lato} className="mt-0.5 text-[11px] text-[#666666] truncate">
+          {sellerName}
         </p>
 
         {/* Ubicación */}
