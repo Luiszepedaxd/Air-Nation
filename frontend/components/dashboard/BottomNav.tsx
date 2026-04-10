@@ -393,7 +393,7 @@ export default function BottomNav() {
       {/* Bottom Nav — mobile (5 ítems: sin Docs ni Admin; SOS enlaza a /dashboard/sos) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-        <div className="grid h-14 w-full grid-cols-6 items-center">
+        <div className="grid h-16 w-full grid-cols-6 items-center">
           {NAV_ITEMS_MOBILE.map((item) => {
             const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref
@@ -401,7 +401,7 @@ export default function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex min-w-0 flex-col items-center justify-center gap-0.5 py-1"
+                className="flex min-w-0 flex-col items-center justify-center gap-0.5"
               >
                 {isPerfil ? (
                   <ProfileIconWithBadge

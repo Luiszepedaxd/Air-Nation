@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
-import { ArsenalClient } from './ArsenalClient'
+import type { ReplicaRow } from './ArsenalClient'
+import { ArsenalList } from './ArsenalClient'
 
 export default async function ArsenalPage() {
   const supabase = createDashboardSupabaseServerClient()
@@ -9,7 +10,7 @@ export default async function ArsenalPage() {
 
   const { data: userRow } = await supabase
     .from('users')
-    .select('ciudad, estado, alias, nombre, avatar_url')
+    .select('ciudad, estado')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -20,11 +21,11 @@ export default async function ArsenalPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <ArsenalClient
+    <ArsenalList
       userId={user.id}
       userCiudad={userRow?.ciudad ?? null}
       userEstado={userRow?.estado ?? null}
-      replicas={replicas ?? []}
+      replicas={(replicas ?? []) as ReplicaRow[]}
     />
   )
 }

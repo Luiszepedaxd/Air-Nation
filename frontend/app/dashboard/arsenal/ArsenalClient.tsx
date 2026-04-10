@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -29,30 +30,29 @@ export type ReplicaRow = {
   created_at: string
 }
 
-function FireIcon({ active }: { active?: boolean }) {
+export function ArsenalIcon({ active }: { active?: boolean }) {
   return (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M12 2C9 6 7 9 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-3-2-6-5-10z"
+      <path d="M12 3L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7L12 3Z"
         stroke={active ? '#CC4B37' : '#AAAAAA'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M9 15c0 1.7 1.3 3 3 3s3-1.3 3-3"
-        stroke={active ? '#CC4B37' : '#AAAAAA'} strokeWidth="1.8" strokeLinecap="round"/>
+      <path d="M9 12l2 2 4-4"
+        stroke={active ? '#CC4B37' : '#AAAAAA'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
 
-function ReplicaCard({ replica, onSelect }: { replica: ReplicaRow; onSelect: (r: ReplicaRow) => void }) {
+function ReplicaCard({ replica }: { replica: ReplicaRow }) {
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(replica)}
-      className="group w-full text-left border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden transition-colors hover:border-[#CCCCCC]"
+    <Link
+      href={`/dashboard/arsenal/${replica.id}`}
+      className="group w-full text-left border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden transition-colors hover:border-[#CCCCCC] block"
     >
       <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
         {replica.foto_url ? (
           <img src={replica.foto_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <FireIcon />
+            <ArsenalIcon />
           </div>
         )}
         {replica.verificada && (
@@ -80,11 +80,11 @@ function ReplicaCard({ replica, onSelect }: { replica: ReplicaRow; onSelect: (r:
           <p className="mt-1.5 text-[11px] text-[#999999]" style={lato}>{replica.ciudad}{replica.estado ? `, ${replica.estado}` : ''}</p>
         )}
       </div>
-    </button>
+    </Link>
   )
 }
 
-function RegistrarForm({
+export function RegistrarForm({
   userId,
   userCiudad,
   userEstado,
@@ -154,6 +154,7 @@ function RegistrarForm({
         .select()
         .single()
       if (dbErr) throw dbErr
+      window.scrollTo({ top: 0 })
       onSuccess(data as ReplicaRow)
     } catch { setError('Error al guardar. Intenta de nuevo.') }
     finally { setSaving(false) }
@@ -172,7 +173,6 @@ function RegistrarForm({
       </div>
 
       <div className="flex flex-col gap-5">
-        {/* Foto */}
         <div>
           <p className={labelClass} style={jost}>Foto</p>
           <div className="relative aspect-video w-full overflow-hidden border border-[#EEEEEE] bg-[#F4F4F4]">
@@ -180,7 +180,7 @@ function RegistrarForm({
               <img src={fotoUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2">
-                <FireIcon />
+                <ArsenalIcon />
                 <p className="text-[11px] text-[#999999]" style={lato}>Sin foto</p>
               </div>
             )}
@@ -191,13 +191,11 @@ function RegistrarForm({
           </label>
         </div>
 
-        {/* Nombre */}
         <div>
           <label className={labelClass} style={jost}>Nombre / Modelo *</label>
           <input type="text" className={inputClass} placeholder="Ej. M4 CQB, AK-74, MP5..." value={nombre} onChange={e => setNombre(e.target.value)} maxLength={80} />
         </div>
 
-        {/* Sistema */}
         <div>
           <label className={labelClass} style={jost}>Sistema de arma *</label>
           <div className="grid grid-cols-2 gap-2">
@@ -210,7 +208,6 @@ function RegistrarForm({
           </div>
         </div>
 
-        {/* Mecanismo */}
         <div>
           <label className={labelClass} style={jost}>Mecanismo *</label>
           <div className="flex flex-wrap gap-2">
@@ -223,7 +220,6 @@ function RegistrarForm({
           </div>
         </div>
 
-        {/* Condición */}
         <div>
           <label className={labelClass} style={jost}>Condición *</label>
           <div className="flex gap-2">
@@ -239,7 +235,6 @@ function RegistrarForm({
           )}
         </div>
 
-        {/* Serial */}
         <div>
           <label className={labelClass} style={jost}>Número de serie <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional — verifica la réplica)</span></label>
           <input type="text" className={inputClass} placeholder="Ej. ABC123456" value={serial} onChange={e => setSerial(e.target.value)} maxLength={60} />
@@ -248,7 +243,6 @@ function RegistrarForm({
           )}
         </div>
 
-        {/* Descripción */}
         <div>
           <label className={labelClass} style={jost}>Descripción <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional)</span></label>
           <textarea className={`${inputClass} resize-none`} rows={3} placeholder="Notas adicionales..." value={descripcion} onChange={e => setDescripcion(e.target.value)} maxLength={300} />
@@ -265,7 +259,7 @@ function RegistrarForm({
   )
 }
 
-export function ArsenalClient({
+export function ArsenalList({
   userId,
   userCiudad,
   userEstado,
@@ -278,83 +272,23 @@ export function ArsenalClient({
 }) {
   const router = useRouter()
   const [replicas, setReplicas] = useState(initialReplicas)
-  const [view, setView] = useState<'list' | 'form' | 'detail'>('list')
-  const [selected, setSelected] = useState<ReplicaRow | null>(null)
+  const [showForm, setShowForm] = useState(false)
 
-  const handleNew = () => setView('form')
-  const handleCancel = () => setView('list')
   const handleSuccess = (r: ReplicaRow) => {
     setReplicas(prev => [r, ...prev])
-    setView('list')
+    setShowForm(false)
     router.refresh()
   }
-  const scrollRef = useRef<number>(0)
 
-  const handleSelect = (r: ReplicaRow) => {
-    scrollRef.current = window.scrollY
-    setSelected(r)
-    setView('detail')
-  }
-
-  const handleBack = () => {
-    setView('list')
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: scrollRef.current })
-    })
-  }
-
-  if (view === 'form') {
+  if (showForm) {
     return (
       <RegistrarForm
         userId={userId}
         userCiudad={userCiudad}
         userEstado={userEstado}
         onSuccess={handleSuccess}
-        onCancel={handleCancel}
+        onCancel={() => setShowForm(false)}
       />
-    )
-  }
-
-  if (view === 'detail' && selected) {
-    return (
-      <div className="mx-auto max-w-[480px] px-4 py-6">
-        <button type="button" onClick={handleBack} style={jost} className="mb-4 flex items-center gap-2 text-[11px] font-extrabold uppercase text-[#999999]">
-          ← Volver
-        </button>
-        <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-          {selected.foto_url ? (
-            <img src={selected.foto_url} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center"><FireIcon /></div>
-          )}
-          {selected.verificada && (
-            <span className="absolute left-3 top-3 bg-[#CC4B37] px-2 py-1 text-[10px] font-extrabold uppercase text-white" style={jost}>✓ Verificada</span>
-          )}
-        </div>
-        <div className="mt-4 space-y-3">
-          <h2 style={jost} className="text-[22px] font-extrabold uppercase text-[#111111]">{selected.nombre}</h2>
-          <div className="flex flex-wrap gap-2">
-            {selected.sistema && <span className="border border-[#EEEEEE] px-3 py-1 text-[11px] text-[#666666]" style={lato}>{selected.sistema}</span>}
-            {selected.mecanismo && <span className="border border-[#EEEEEE] px-3 py-1 text-[11px] text-[#666666]" style={lato}>{selected.mecanismo}</span>}
-            {selected.condicion && <span className="border border-[#EEEEEE] px-3 py-1 text-[11px] text-[#666666]" style={lato}>{selected.condicion === 'upgrades' ? 'Con upgrades' : 'Stock'}</span>}
-          </div>
-          {selected.upgrades && (
-            <div className="border-l-2 border-[#CC4B37] pl-3">
-              <p className="text-[11px] font-bold uppercase text-[#999999]" style={jost}>Upgrades</p>
-              <p className="text-[13px] text-[#111111]" style={lato}>{selected.upgrades}</p>
-            </div>
-          )}
-          {selected.serial && (
-            <p className="text-[12px] text-[#666666]" style={lato}>Serie: <span className="font-semibold text-[#111111]">{selected.serial}</span></p>
-          )}
-          {selected.descripcion && (
-            <p className="text-[13px] text-[#111111] leading-relaxed" style={lato}>{selected.descripcion}</p>
-          )}
-          {selected.ciudad && (
-            <p className="text-[12px] text-[#999999]" style={lato}>{selected.ciudad}{selected.estado ? `, ${selected.estado}` : ''}</p>
-          )}
-        </div>
-      </div>
     )
   }
 
@@ -370,7 +304,7 @@ export function ArsenalClient({
               {replicas.length === 0 ? 'Registra tu primera réplica' : `${replicas.length} réplica${replicas.length !== 1 ? 's' : ''} registrada${replicas.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button type="button" onClick={handleNew} style={jost}
+          <button type="button" onClick={() => setShowForm(true)} style={jost}
             className="flex items-center gap-2 bg-[#CC4B37] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white">
             + Registrar
           </button>
@@ -378,10 +312,10 @@ export function ArsenalClient({
 
         {replicas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <FireIcon />
+            <ArsenalIcon />
             <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">Tu arsenal está vacío</p>
             <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">Registra tus réplicas para tenerlas identificadas y protegidas</p>
-            <button type="button" onClick={handleNew} style={jost}
+            <button type="button" onClick={() => setShowForm(true)} style={jost}
               className="mt-6 bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white">
               Registrar primera réplica
             </button>
@@ -389,7 +323,7 @@ export function ArsenalClient({
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {replicas.map(r => (
-              <ReplicaCard key={r.id} replica={r} onSelect={handleSelect} />
+              <ReplicaCard key={r.id} replica={r} />
             ))}
           </div>
         )}

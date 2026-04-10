@@ -1,0 +1,180 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import type { ReplicaRow } from '../ArsenalClient'
+import { ArsenalIcon } from '../ArsenalClient'
+
+const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+export function ReplicaDetailClient({
+  replica: initialReplica,
+  isOwner,
+  currentUserId,
+}: {
+  replica: ReplicaRow
+  isOwner: boolean
+  currentUserId: string
+}) {
+  const router = useRouter()
+  const [replica] = useState(initialReplica)
+  const [deleting, setDeleting] = useState(false)
+  const [showTransfer, setShowTransfer] = useState(false)
+  const [transferAlias, setTransferAlias] = useState('')
+  const [transferNota, setTransferNota] = useState('')
+  const [transferring, setTransferring] = useState(false)
+  const [transferError, setTransferError] = useState('')
+  const [transferSuccess, setTransferSuccess] = useState(false)
+
+  const handleDelete = async () => {
+    if (!confirm('¿Eliminar esta réplica? Esta acción no se puede deshacer.')) return
+    setDeleting(true)
+    const { error } = await supabase.from('arsenal').delete().eq('id', replica.id)
+    if (!error) {
+      router.push('/dashboard/arsenal')
+      router.refresh()
+    }
+    setDeleting(false)
+  }
+
+  const handleTransfer = async () => {
+    if (!transferAlias.trim()) { setTransferError('Escribe el alias del receptor.'); return }
+    setTransferring(true)
+    setTransferError('')
+    try {
+      const { data: targetUser } = await supabase
+        .from('users')
+        .select('id, alias, nombre')
+        .eq('alias', transferAlias.trim())
+        .maybeSingle()
+
+      if (!targetUser) { setTransferError('No se encontró ningún operador con ese alias.'); return }
+      if (targetUser.id === currentUserId) { setTransferError('No puedes transferirte a ti mismo.'); return }
+
+      const { error } = await supabase.from('arsenal_transfers').insert({
+        replica_id: replica.id,
+        from_user_id: currentUserId,
+        to_user_id: targetUser.id,
+        nota: transferNota.trim() || null,
+        status: 'pendiente',
+      })
+
+      if (error) throw error
+      setTransferSuccess(true)
+    } catch { setTransferError('Error al enviar la solicitud. Intenta de nuevo.') }
+    finally { setTransferring(false) }
+  }
+
+  const inputClass = 'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
+
+  return (
+    <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
+      <div className="mx-auto max-w-[480px] px-4 py-6">
+        <Link href="/dashboard/arsenal" style={jost} className="mb-4 flex items-center gap-2 text-[11px] font-extrabold uppercase text-[#999999]">
+          ← Mi Arsenal
+        </Link>
+
+        <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+          {replica.foto_url ? (
+            <img src={replica.foto_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center"><ArsenalIcon /></div>
+          )}
+          {replica.verificada && (
+            <span className="absolute left-3 top-3 bg-[#CC4B37] px-2 py-1 text-[10px] font-extrabold uppercase text-white" style={jost}>✓ Verificada</span>
+          )}
+          {replica.en_venta && (
+            <span className="absolute right-3 top-3 bg-[#111111] px-2 py-1 text-[10px] font-extrabold uppercase text-white" style={jost}>En venta</span>
+          )}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <h1 style={jost} className="text-[22px] font-extrabold uppercase text-[#111111]">{replica.nombre}</h1>
+
+          <div className="flex flex-wrap gap-2">
+            {replica.sistema && <span className="border border-[#EEEEEE] px-3 py-1 text-[11px] text-[#666666]" style={lato}>{replica.sistema}</span>}
+            {replica.mecanismo && <span className="border border-[#EEEEEE] px-3 py-1 text-[11px] text-[#666666]" style={lato}>{replica.mecanismo}</span>}
+            {replica.condicion && <span className="border border-[#EEEEEE] px-3 py-1 text-[11px] text-[#666666]" style={lato}>{replica.condicion === 'upgrades' ? 'Con upgrades' : 'Stock'}</span>}
+          </div>
+
+          {replica.upgrades && (
+            <div className="border-l-2 border-[#CC4B37] pl-3">
+              <p className="text-[11px] font-bold uppercase text-[#999999]" style={jost}>Upgrades</p>
+              <p className="text-[13px] text-[#111111]" style={lato}>{replica.upgrades}</p>
+            </div>
+          )}
+
+          {replica.serial && (
+            <p className="text-[12px] text-[#666666]" style={lato}>Serie: <span className="font-semibold text-[#111111]">{replica.serial}</span></p>
+          )}
+
+          {replica.descripcion && (
+            <p className="text-[13px] text-[#111111] leading-relaxed" style={lato}>{replica.descripcion}</p>
+          )}
+
+          {replica.ciudad && (
+            <p className="text-[12px] text-[#999999]" style={lato}>{replica.ciudad}{replica.estado ? `, ${replica.estado}` : ''}</p>
+          )}
+        </div>
+
+        {isOwner && !showTransfer && !transferSuccess && (
+          <div className="mt-8 flex flex-col gap-3">
+            <button type="button" onClick={() => setShowTransfer(true)} style={jost}
+              className="w-full border border-[#111111] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-white">
+              Transferir réplica
+            </button>
+            <button type="button" onClick={() => void handleDelete()} disabled={deleting} style={jost}
+              className="w-full border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37] transition-colors hover:border-[#CC4B37] disabled:opacity-50">
+              {deleting ? 'Eliminando…' : 'Eliminar réplica'}
+            </button>
+          </div>
+        )}
+
+        {isOwner && showTransfer && !transferSuccess && (
+          <div className="mt-8 border border-[#EEEEEE] p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Transferir réplica</p>
+              <button type="button" onClick={() => { setShowTransfer(false); setTransferError('') }} className="text-[#999999] hover:text-[#111111]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+            <p className="mb-4 text-[12px] text-[#666666]" style={lato}>
+              El receptor recibirá una solicitud de transferencia. La réplica cambia de dueño solo si la acepta.
+            </p>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]" style={jost}>
+                  Alias del receptor *
+                </label>
+                <input type="text" className={inputClass} placeholder="@alias del operador" value={transferAlias}
+                  onChange={e => setTransferAlias(e.target.value.replace('@', ''))} />
+              </div>
+              <div>
+                <label className="mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]" style={jost}>
+                  Nota <span className="normal-case font-normal tracking-normal text-[#AAAAAA]">(opcional)</span>
+                </label>
+                <textarea className={`${inputClass} resize-none`} rows={2} placeholder="Ej. Vendida, acordado $X" value={transferNota}
+                  onChange={e => setTransferNota(e.target.value)} maxLength={200} />
+              </div>
+              {transferError && <p className="text-[12px] text-[#CC4B37]" style={lato}>{transferError}</p>}
+              <button type="button" onClick={() => void handleTransfer()} disabled={transferring} style={jost}
+                className="w-full bg-[#CC4B37] py-3 text-[11px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50">
+                {transferring ? 'Enviando…' : 'Enviar solicitud de transferencia'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {transferSuccess && (
+          <div className="mt-8 border border-[#EEEEEE] bg-[#F4F4F4] p-4 text-center">
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Solicitud enviada</p>
+            <p style={lato} className="mt-1 text-[12px] text-[#666666]">El receptor debe aceptar para completar la transferencia</p>
+          </div>
+        )}
+      </div>
+    </main>
+  )
+}
