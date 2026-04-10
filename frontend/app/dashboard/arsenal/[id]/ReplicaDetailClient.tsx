@@ -31,12 +31,14 @@ export function ReplicaDetailClient({
   currentUserId,
   pendingTransfer: initialPendingTransfer,
   incomingTransfer: initialIncomingTransfer,
+  originalOwnerId,
 }: {
   replica: ReplicaRow
   isOwner: boolean
   currentUserId: string
   pendingTransfer: PendingTransferData | null
   incomingTransfer: IncomingTransferData | null
+  originalOwnerId: string
 }) {
   const router = useRouter()
   const [replica] = useState(initialReplica)
@@ -135,7 +137,7 @@ export function ReplicaDetailClient({
 
       await insertTransferNotif(supabase, {
         actorId: currentUserId,
-        recipientId: replica.user_id ?? '',
+        recipientId: originalOwnerId,
         replicaNombre: replica.nombre,
         transferId: incomingTransfer.id,
         type: 'transfer_accepted',
@@ -230,7 +232,7 @@ export function ReplicaDetailClient({
           )}
         </div>
 
-        {!isOwner && incomingTransfer && !transferResolved && (
+        {incomingTransfer && !transferResolved && (
           <div className="mt-8 border-2 border-[#CC4B37] p-4">
             <p style={jost} className="text-[13px] font-extrabold uppercase text-[#CC4B37] mb-3">
               Te quieren transferir esta réplica
@@ -272,7 +274,7 @@ export function ReplicaDetailClient({
           </div>
         )}
 
-        {!isOwner && transferResolved && (
+        {transferResolved && (
           <div className="mt-8 border border-[#EEEEEE] bg-[#F4F4F4] p-4 text-center">
             <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">
               {transferResolved === 'accepted' ? 'Réplica aceptada' : 'Transferencia rechazada'}

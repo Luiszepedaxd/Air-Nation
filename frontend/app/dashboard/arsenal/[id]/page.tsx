@@ -70,6 +70,7 @@ export default async function ReplicaDetailPage({ params }: { params: { id: stri
       currentUserId={user.id}
       pendingTransfer={pendingTransferData}
       incomingTransfer={incomingTransferData}
+      originalOwnerId={String(replica.user_id)}
     />
   )
 }
