@@ -1260,71 +1260,66 @@ function MarketplaceTab({
 }
 
 function ListingCard({ listing }: { listing: ListingFeed }) {
-  const sellerName = listing.seller.alias?.trim() || listing.seller.nombre?.trim() || 'Vendedor'
   const foto = listing.fotos_urls?.[0] ?? null
 
   return (
     <Link
       href={`/marketplace/${listing.id}`}
-      className="group block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden transition-colors hover:border-[#CCCCCC]"
+      className="group block bg-[#FFFFFF] overflow-hidden transition-colors"
     >
-      {/* Foto */}
-      <div className="relative aspect-square w-full overflow-hidden bg-[#111111]">
-        {foto ? (
-          <img src={foto} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#444" strokeWidth="1.4" strokeLinejoin="round"/>
-              <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
-            </svg>
+      {/* Foto cuadrada */}
+      <div className="relative w-full overflow-hidden bg-[#F4F4F4]" style={{ paddingBottom: '100%' }}>
+        <div className="absolute inset-0">
+          {foto ? (
+            <img src={foto} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#EEEEEE]">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
+                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </div>
+          )}
+          {listing.vendido && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span style={jost} className="bg-[#111111] px-3 py-1 text-[10px] font-extrabold uppercase text-white">
+                Vendido
+              </span>
+            </div>
+          )}
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {listing.nuevo_usado === 'nuevo' && !listing.vendido && (
+              <span style={jost} className="bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+                Nuevo
+              </span>
+            )}
           </div>
-        )}
-        {listing.vendido && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span style={jost} className="bg-[#111111] px-3 py-1.5 text-[11px] font-extrabold uppercase text-white">
-              Vendido
+          {listing.modalidad === 'desde' && !listing.vendido && (
+            <span style={jost} className="absolute bottom-2 right-2 bg-black/60 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+              Desde
             </span>
-          </div>
-        )}
-        {listing.nuevo_usado === 'nuevo' && !listing.vendido && (
-          <span style={jost} className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-            Nuevo
-          </span>
-        )}
-        {listing.modalidad === 'desde' && !listing.vendido && (
-          <span style={jost} className="absolute right-2 top-2 bg-[#111111]/70 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-            Desde
-          </span>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Info */}
-      <div className="p-2.5">
-        {/* Precio */}
-        <div className="flex items-center gap-1.5 mb-1">
+      <div className="pt-2 pb-3 px-1">
+        <div className="flex items-baseline gap-1 mb-0.5">
           {listing.precio_original && listing.precio_original !== listing.precio && (
             <span style={lato} className="text-[11px] text-[#999999] line-through">
               ${listing.precio_original.toLocaleString('es-MX')}
             </span>
           )}
-          <span style={jost} className="text-[15px] font-extrabold text-[#111111]">
+          <span style={jost} className="text-[14px] font-extrabold text-[#111111]">
             ${listing.precio?.toLocaleString('es-MX') ?? '—'}
           </span>
         </div>
-
-        {/* Título */}
-        <p style={lato} className="text-[13px] text-[#111111] line-clamp-2 leading-snug">
+        <p style={lato} className="text-[12px] text-[#444444] line-clamp-2 leading-snug">
           {listing.titulo}
         </p>
-        <p style={lato} className="mt-0.5 text-[11px] text-[#666666] truncate">
-          {sellerName}
-        </p>
-
-        {/* Ubicación */}
         {listing.ciudad && (
-          <p style={lato} className="mt-1 text-[11px] text-[#999999] truncate">
-            {listing.ciudad}{listing.estado ? `, ${listing.estado}` : ''}
+          <p style={lato} className="mt-0.5 text-[11px] text-[#999999] truncate">
+            {listing.ciudad}
           </p>
         )}
       </div>
@@ -1332,15 +1327,16 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
   )
 }
 
-function ExplorarTab({
-  currentUserId,
-}: {
-  currentUserId: string | null
-}) {
+function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
   const [listings, setListings] = useState<ListingFeed[]>([])
   const [loading, setLoading] = useState(true)
-  const [filtroCategoria, setFiltroCategoria] = useState<string>('')
-  const [filtroNuevoUsado, setFiltroNuevoUsado] = useState<string>('')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [filtroCategoria, setFiltroCategoria] = useState('')
+  const [filtroNuevoUsado, setFiltroNuevoUsado] = useState('')
+  const [localCategoria, setLocalCategoria] = useState('')
+  const [localNuevoUsado, setLocalNuevoUsado] = useState('')
+
+  const activeCount = [filtroCategoria, filtroNuevoUsado].filter(Boolean).length
 
   useEffect(() => {
     const load = async () => {
@@ -1395,53 +1391,159 @@ function ExplorarTab({
     void load()
   }, [filtroCategoria, filtroNuevoUsado])
 
+  const handleOpen = () => {
+    setLocalCategoria(filtroCategoria)
+    setLocalNuevoUsado(filtroNuevoUsado)
+    setSheetOpen(true)
+  }
+
+  const handleApply = () => {
+    setFiltroCategoria(localCategoria)
+    setFiltroNuevoUsado(localNuevoUsado)
+    setSheetOpen(false)
+  }
+
+  const handleClear = () => {
+    setLocalCategoria('')
+    setLocalNuevoUsado('')
+  }
+
   return (
     <div>
-      {/* Filtros */}
-      <div className="mb-4 flex flex-wrap gap-2">
-        {(['', 'replicas', 'accesorios', 'gear'] as const).map(cat => (
+      {/* Botón filtrar */}
+      <div className="mb-4 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleOpen}
+          style={jost}
+          className="flex items-center gap-2 border border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:border-[#CCCCCC]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          Filtrar
+          {activeCount > 0 && (
+            <span className="flex h-4 w-4 items-center justify-center bg-[#CC4B37] text-[9px] font-extrabold text-white">
+              {activeCount}
+            </span>
+          )}
+        </button>
+        {activeCount > 0 && (
           <button
-            key={cat}
             type="button"
-            onClick={() => setFiltroCategoria(cat)}
-            style={lato}
-            className={`px-3 py-1.5 text-[12px] font-semibold transition-colors border ${
-              filtroCategoria === cat
-                ? 'bg-[#111111] text-white border-[#111111]'
-                : 'bg-[#FFFFFF] text-[#666666] border-[#EEEEEE] hover:border-[#CCCCCC]'
-            }`}
+            onClick={() => { setFiltroCategoria(''); setFiltroNuevoUsado('') }}
+            style={jost}
+            className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline"
           >
-            {cat === '' ? 'Todo' : cat === 'replicas' ? 'Réplicas' : cat === 'accesorios' ? 'Accesorios' : 'Gear'}
+            Limpiar
           </button>
-        ))}
-        <div className="ml-auto flex gap-2">
-          {(['', 'nuevo', 'usado'] as const).map(nu => (
-            <button
-              key={nu}
-              type="button"
-              onClick={() => setFiltroNuevoUsado(nu)}
-              style={lato}
-              className={`px-3 py-1.5 text-[12px] font-semibold transition-colors border ${
-                filtroNuevoUsado === nu
-                  ? 'bg-[#111111] text-white border-[#111111]'
-                  : 'bg-[#FFFFFF] text-[#666666] border-[#EEEEEE] hover:border-[#CCCCCC]'
-              }`}
-            >
-              {nu === '' ? 'Todos' : nu === 'nuevo' ? 'Nuevo' : 'Usado'}
-            </button>
-          ))}
+        )}
+      </div>
+
+      {/* Overlay */}
+      {sheetOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setSheetOpen(false)} />
+      )}
+
+      {/* Bottom sheet */}
+      <div
+        className={`fixed left-0 right-0 z-50 bg-white transition-transform duration-300 ease-out ${
+          sheetOpen ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{
+          bottom: 'calc(64px + env(safe-area-inset-bottom))',
+          borderRadius: '12px 12px 0 0',
+          paddingBottom: '8px',
+        }}
+      >
+        <div
+          className="flex w-full cursor-pointer justify-center py-4"
+          onClick={() => setSheetOpen(false)}
+        >
+          <div className="h-1 w-10 rounded-full bg-[#DDDDDD]" />
+        </div>
+        <div className="px-5 pb-6 pt-2">
+          <div className="mb-5 flex items-center justify-between">
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Filtrar</p>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={handleClear} style={jost}
+                className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline">
+                Limpiar
+              </button>
+              <button type="button" onClick={handleApply} style={jost}
+                className="bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-white">
+                Aplicar
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-5">
+            <p style={jost} className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]">
+              Categoría
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { id: '', label: 'Todo' },
+                { id: 'replicas', label: 'Réplicas' },
+                { id: 'accesorios', label: 'Accesorios' },
+                { id: 'gear', label: 'Gear' },
+              ]).map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setLocalCategoria(opt.id)}
+                  style={jost}
+                  className={`border px-4 py-2 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
+                    localCategoria === opt.id
+                      ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
+                      : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p style={jost} className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]">
+              Estado
+            </p>
+            <div className="flex gap-2">
+              {([
+                { id: '', label: 'Todos' },
+                { id: 'nuevo', label: 'Nuevo' },
+                { id: 'usado', label: 'Usado' },
+              ]).map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setLocalNuevoUsado(opt.id)}
+                  style={jost}
+                  className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
+                    localNuevoUsado === opt.id
+                      ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
+                      : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[0,1,2,3].map(i => (
-            <div key={i} className="border border-[#EEEEEE] overflow-hidden">
-              <div className="aspect-square w-full bg-[#F4F4F4] animate-pulse" />
-              <div className="p-2.5 space-y-2">
+            <div key={i} className="overflow-hidden">
+              <div className="w-full bg-[#F4F4F4] animate-pulse" style={{ paddingBottom: '100%' }} />
+              <div className="pt-2 space-y-1.5">
                 <div className="h-4 w-20 bg-[#F4F4F4] animate-pulse" />
                 <div className="h-3 w-full bg-[#F4F4F4] animate-pulse" />
-                <div className="h-3 w-24 bg-[#F4F4F4] animate-pulse" />
+                <div className="h-3 w-16 bg-[#F4F4F4] animate-pulse" />
               </div>
             </div>
           ))}
@@ -1453,14 +1555,14 @@ function ExplorarTab({
             <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
           <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
-            Sin publicaciones aún
+            Sin publicaciones
           </p>
           <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
             Sé el primero en publicar algo en el marketplace
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {listings.map(listing => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
@@ -1470,87 +1572,286 @@ function ExplorarTab({
   )
 }
 
+type MisVentasListing = MarketplaceListing & {
+  nuevo_usado?: string
+  subcategoria?: string | null
+}
+
+function MisVentasCard({
+  listing,
+  onUpdate,
+  onDelete,
+}: {
+  listing: MarketplaceListing
+  onUpdate: (id: string, updates: Partial<MarketplaceListing>) => void
+  onDelete: (id: string) => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editandoPrecio, setEditandoPrecio] = useState(false)
+  const [nuevoPrecio, setNuevoPrecio] = useState('')
+  const [saving, setSaving] = useState(false)
+  const foto = listing.fotos_urls?.[0] ?? null
+
+  const handlePausar = async () => {
+    setMenuOpen(false)
+    const nuevoStatus = listing.status === 'pausado' ? 'activo' : 'pausado'
+    const { error } = await supabase
+      .from('marketplace')
+      .update({ status: nuevoStatus })
+      .eq('id', listing.id)
+    if (!error) onUpdate(listing.id, { status: nuevoStatus })
+  }
+
+  const handleVendido = async () => {
+    setMenuOpen(false)
+    const { error } = await supabase
+      .from('marketplace')
+      .update({ vendido: true, status: 'activo' })
+      .eq('id', listing.id)
+    if (!error) onUpdate(listing.id, { vendido: true })
+  }
+
+  const handleEliminar = async () => {
+    setMenuOpen(false)
+    if (!confirm('¿Eliminar esta publicación?')) return
+    const { error } = await supabase
+      .from('marketplace')
+      .delete()
+      .eq('id', listing.id)
+    if (!error) onDelete(listing.id)
+  }
+
+  const handleEditarPrecio = async () => {
+    if (!nuevoPrecio || Number(nuevoPrecio) <= 0) return
+    setSaving(true)
+    const { error } = await supabase
+      .from('marketplace')
+      .update({
+        precio_original: listing.precio,
+        precio: Number(nuevoPrecio),
+      })
+      .eq('id', listing.id)
+    if (!error) {
+      onUpdate(listing.id, {
+        precio_original: listing.precio,
+        precio: Number(nuevoPrecio),
+      })
+      setEditandoPrecio(false)
+      setNuevoPrecio('')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      {/* Foto */}
+      <div className="relative w-full overflow-hidden bg-[#F4F4F4]" style={{ paddingBottom: '100%' }}>
+        <div className="absolute inset-0">
+          {foto ? (
+            <img src={foto} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#EEEEEE]">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
+                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
+              </svg>
+            </div>
+          )}
+          {listing.vendido && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
+                Vendido
+              </span>
+            </div>
+          )}
+          {listing.status === 'pausado' && !listing.vendido && (
+            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+              <span style={jost} className="bg-[#999999] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
+                Pausado
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Info + acciones */}
+      <div className="p-2.5">
+        <div className="flex items-start justify-between gap-1 mb-1">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              {listing.precio_original && listing.precio_original !== listing.precio && (
+                <span style={lato} className="text-[11px] text-[#999999] line-through">
+                  ${listing.precio_original.toLocaleString('es-MX')}
+                </span>
+              )}
+              <span style={jost} className="text-[14px] font-extrabold text-[#CC4B37]">
+                ${listing.precio?.toLocaleString('es-MX') ?? '—'}
+              </span>
+            </div>
+            <p style={lato} className="text-[12px] text-[#444444] line-clamp-1 mt-0.5">
+              {listing.titulo}
+            </p>
+          </div>
+
+          {/* Menú */}
+          {!listing.vendido && (
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(v => !v)}
+                className="flex items-center justify-center w-7 h-7 text-[#999999] hover:text-[#111111]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="1.5"/>
+                  <circle cx="12" cy="12" r="1.5"/>
+                  <circle cx="12" cy="19" r="1.5"/>
+                </svg>
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-[90]" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => { setMenuOpen(false); setEditandoPrecio(true) }}
+                      style={lato}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                    >
+                      Bajar precio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handlePausar()}
+                      style={lato}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                    >
+                      {listing.status === 'pausado' ? 'Reactivar' : 'Pausar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVendido()}
+                      style={lato}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                    >
+                      Marcar como vendido
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleEliminar()}
+                      style={lato}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#CC4B37] hover:bg-[#FFF8F7]"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Form editar precio */}
+        {editandoPrecio && (
+          <div className="mt-2 border-t border-[#EEEEEE] pt-2">
+            <p style={jost} className="text-[9px] font-extrabold uppercase text-[#999999] mb-1.5">
+              Nuevo precio
+            </p>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span style={lato} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#999999] text-sm">$</span>
+                <input
+                  type="number"
+                  className="w-full border border-[#EEEEEE] bg-[#F4F4F4] pl-6 pr-2 py-2 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+                  placeholder="0"
+                  value={nuevoPrecio}
+                  onChange={e => setNuevoPrecio(e.target.value)}
+                  min={0}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleEditarPrecio()}
+                disabled={saving}
+                style={jost}
+                className="bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-50"
+              >
+                {saving ? '…' : 'OK'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEditandoPrecio(false); setNuevoPrecio('') }}
+                style={jost}
+                className="border border-[#EEEEEE] px-3 py-2 text-[10px] font-extrabold uppercase text-[#666666]"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function MisVentasTab({
   userId,
-  listings,
+  listings: initialListings,
   onPublish,
 }: {
   userId: string
   listings: MarketplaceListing[]
   onPublish: () => void
 }) {
+  const [listings, setListings] = useState(initialListings)
+
+  useEffect(() => {
+    setListings(initialListings)
+  }, [initialListings])
+
+  const handleUpdate = (id: string, updates: Partial<MarketplaceListing>) => {
+    setListings(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))
+  }
+
+  const handleDelete = (id: string) => {
+    setListings(prev => prev.filter(l => l.id !== id))
+  }
+
+  if (listings.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
+          <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+        <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
+          Sin publicaciones
+        </p>
+        <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
+          Publica réplicas, accesorios o gear para vender a la comunidad
+        </p>
+        <button
+          type="button"
+          onClick={onPublish}
+          style={jost}
+          className="mt-6 bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white"
+        >
+          Publicar ahora
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div>
-      {listings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
-            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
-          </svg>
-          <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
-            Sin publicaciones
-          </p>
-          <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
-            Publica réplicas, accesorios o gear para vender a la comunidad
-          </p>
-          <button
-            type="button"
-            onClick={onPublish}
-            style={jost}
-            className="mt-6 bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white"
-          >
-            Publicar ahora
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {listings.map(listing => (
-            <div
-              key={listing.id}
-              className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden"
-            >
-              <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-                {listing.fotos_urls?.[0] ? (
-                  <img src={listing.fotos_urls[0]} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#444" strokeWidth="1.4" strokeLinejoin="round"/>
-                      <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
-                    </svg>
-                  </div>
-                )}
-                {listing.vendido && (
-                  <span style={jost} className="absolute left-2 top-2 bg-[#111111] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-                    Vendido
-                  </span>
-                )}
-                {listing.status === 'pausado' && (
-                  <span style={jost} className="absolute left-2 top-2 bg-[#999999] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-                    Pausado
-                  </span>
-                )}
-              </div>
-              <div className="p-3">
-                <p style={jost} className="line-clamp-1 text-[12px] font-extrabold uppercase text-[#111111]">
-                  {listing.titulo}
-                </p>
-                <div className="mt-1 flex items-center gap-1.5">
-                  {listing.precio_original && listing.precio_original !== listing.precio && (
-                    <span style={lato} className="text-[11px] text-[#999999] line-through">
-                      ${listing.precio_original.toLocaleString('es-MX')}
-                    </span>
-                  )}
-                  <span style={jost} className="text-[13px] font-extrabold text-[#CC4B37]">
-                    {listing.modalidad === 'desde' ? 'Desde ' : ''}
-                    ${listing.precio?.toLocaleString('es-MX') ?? '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {listings.map(listing => (
+        <MisVentasCard
+          key={listing.id}
+          listing={listing}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+        />
+      ))}
     </div>
   )
 }
