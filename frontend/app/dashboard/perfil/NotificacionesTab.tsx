@@ -88,30 +88,42 @@ function SwipeableRow({
   children: ReactNode
 }) {
   const [offset, setOffset] = useState(0)
-  const offsetRef = useRef(0)
+  const [swiping, setSwiping] = useState(false)
   const startX = useRef<number | null>(null)
-  const isDragging = useRef(false)
-  const THRESHOLD = 60
+  const lastX = useRef<number>(0)
+  const velocity = useRef<number>(0)
+  const offsetRef = useRef(0)
+  const THRESHOLD = 72
+  const MAX_SWIPE = 90
 
   const handleTouchStart = (e: TouchEvent) => {
     if (!canDelete) return
     startX.current = e.touches[0].clientX
-    isDragging.current = true
+    lastX.current = e.touches[0].clientX
+    velocity.current = 0
+    setSwiping(true)
   }
 
   const handleTouchMove = (e: TouchEvent) => {
-    if (!isDragging.current || startX.current === null) return
-    const delta = e.touches[0].clientX - startX.current
-    const next = Math.max(-100, Math.min(0, delta))
-    offsetRef.current = next
-    setOffset(next)
+    if (startX.current === null || !canDelete) return
+    const currentX = e.touches[0].clientX
+    velocity.current = currentX - lastX.current
+    lastX.current = currentX
+    const delta = currentX - startX.current
+    const resistance = delta < 0 ? 1 : 0.2
+    const clamped = Math.max(-MAX_SWIPE, Math.min(0, delta * resistance))
+    offsetRef.current = clamped
+    setOffset(clamped)
   }
 
   const handleTouchEnd = () => {
-    if (!isDragging.current) return
-    isDragging.current = false
-    if (offsetRef.current < -THRESHOLD) {
-      onDelete()
+    if (!canDelete) return
+    setSwiping(false)
+    const o = offsetRef.current
+    const shouldDelete = o < -THRESHOLD || velocity.current < -8
+    if (shouldDelete) {
+      setOffset(-MAX_SWIPE)
+      setTimeout(() => onDelete(), 200)
     } else {
       offsetRef.current = 0
       setOffset(0)
@@ -119,19 +131,33 @@ function SwipeableRow({
     startX.current = null
   }
 
+  const revealPercent = Math.min(1, Math.abs(offset) / MAX_SWIPE)
+
   return (
-    <div className="relative overflow-hidden">
-      {/* Fondo rojo de borrado */}
+    <div className="relative overflow-hidden rounded-[2px]">
       {canDelete && (
-        <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 px-5">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <div
+          className="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 px-5"
+          style={{ opacity: revealPercent }}
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+            style={{ transform: `scale(${0.7 + revealPercent * 0.3})`, transition: 'transform 0.1s' }}
+          >
             <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
       )}
-      {/* Contenido deslizable */}
       <div
-        style={{ transform: `translateX(${offset}px)`, transition: isDragging.current ? 'none' : 'transform 0.2s ease' }}
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: swiping ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          willChange: 'transform',
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
