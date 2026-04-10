@@ -13,6 +13,27 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const SISTEMAS = ['Rifle de Asalto', 'Subfusil (SMG)', 'Ametralladora Ligera (LMG)', 'DMR', 'Francotirador (Sniper)', 'Pistola', 'Escopeta', 'Otro']
 const MECANISMOS = ['AEG', 'GBB', 'HPA', 'Muelle (Spring)', 'CO2']
 
+const ACCESORIOS_SUBCATS = [
+  'Miras y ópticas',
+  'Silenciadores y flash hiders',
+  'Grips y foregrips',
+  'Cargadores',
+  'Baterías y cargadores eléctricos',
+  'Internos',
+  'Externos',
+  'Otros',
+]
+
+const GEAR_SUBCATS: Record<string, string[]> = {
+  'Cabeza': ['Cascos', 'Gorras y boinas', 'Headsets y comunicación'],
+  'Cara y ojos': ['Goggles', 'Máscaras completas', 'Protectores faciales', 'Balaclavas'],
+  'Torso': ['Plate carriers', 'Chalecos tácticos', 'Chest rigs'],
+  'Organización': ['Bolsas MOLLE', 'Pouches', 'Mochilas tácticas'],
+  'Ropa': ['Uniformes', 'Camisas y pantalones tácticos'],
+  'Manos y pies': ['Guantes', 'Botas tácticas'],
+  'Otros': ['Otros'],
+}
+
 export type ReplicaRow = {
   id: string
   user_id?: string | null
@@ -488,6 +509,9 @@ export function ArsenalTabs({
           <MarketplaceTab
             userId={userId}
             listings={listings}
+            userCiudad={userCiudad}
+            userEstado={userEstado}
+            replicas={replicas}
           />
         )}
       </div>
@@ -495,14 +519,644 @@ export function ArsenalTabs({
   )
 }
 
+type PaqueteDraft = { id: string; nombre: string; descripcion: string; precio: string }
+
+export function NuevoListingForm({
+  userId,
+  userCiudad,
+  userEstado,
+  replicas,
+  onSuccess,
+  onCancel,
+}: {
+  userId: string
+  userCiudad: string | null
+  userEstado: string | null
+  replicas: ReplicaRow[]
+  onSuccess: () => void
+  onCancel: () => void
+}) {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
+
+  const [supercategoria, setSupercategoria] = useState<'replicas' | 'accesorios' | 'gear' | ''>('')
+  const [replicaConectada, setReplicaConectada] = useState<ReplicaRow | null>(null)
+
+  const [titulo, setTitulo] = useState('')
+  const [descripcion, setDescripcion] = useState('')
+  const [subcategoria, setSubcategoria] = useState('')
+  const [subSubcategoria, setSubSubcategoria] = useState('')
+  const [mecanismo, setMecanismo] = useState('')
+  const [condicionReplica, setCondicionReplica] = useState<'stock' | 'upgrades'>('stock')
+
+  const [nuevoUsado, setNuevoUsado] = useState<'nuevo' | 'usado'>('usado')
+  const [modalidad, setModalidad] = useState<'fijo' | 'desde'>('fijo')
+  const [precio, setPrecio] = useState('')
+  const [paquetes, setPaquetes] = useState<PaqueteDraft[]>([
+    { id: '1', nombre: '', descripcion: '', precio: '' },
+  ])
+
+  const [fotos, setFotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const inputClass = 'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
+  const labelClass = 'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]'
+
+  const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || fotos.length >= 6) return
+    setUploading(true)
+    try {
+      const url = await uploadFile(file)
+      setFotos(prev => [...prev, url])
+    } catch { setError('Error al subir la foto.') }
+    finally { setUploading(false) }
+  }
+
+  const addPaquete = () => {
+    if (paquetes.length >= 4) return
+    setPaquetes(prev => [...prev, {
+      id: String(Date.now()),
+      nombre: '',
+      descripcion: '',
+      precio: '',
+    }])
+  }
+
+  const updatePaquete = (id: string, field: keyof PaqueteDraft, value: string) => {
+    setPaquetes(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p))
+  }
+
+  const removePaquete = (id: string) => {
+    if (paquetes.length <= 1) return
+    setPaquetes(prev => prev.filter(p => p.id !== id))
+  }
+
+  const canGoStep2 = !!supercategoria
+  const canGoStep3 = titulo.trim().length > 0 && (
+    supercategoria === 'replicas' ? !!subcategoria && !!mecanismo :
+    supercategoria === 'accesorios' ? !!subcategoria :
+    !!subcategoria && !!subSubcategoria
+  )
+  const canGoStep4 = modalidad === 'fijo'
+    ? precio.trim().length > 0 && Number(precio) > 0
+    : paquetes.every(p => p.nombre.trim() && Number(p.precio) > 0)
+
+  const handlePublish = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      const precioFinal = modalidad === 'fijo' ? Number(precio) : Math.min(...paquetes.map(p => Number(p.precio)))
+      const paquetesData = modalidad === 'desde'
+        ? paquetes.map((p, i) => ({ nombre: p.nombre.trim(), descripcion: p.descripcion.trim() || null, precio: Number(p.precio), orden: i }))
+        : []
+
+      const insertData: Record<string, unknown> = {
+        seller_id: userId,
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim() || null,
+        supercategoria,
+        subcategoria: subcategoria || null,
+        sub_subcategoria: subSubcategoria || null,
+        mecanismo: supercategoria === 'replicas' ? mecanismo || null : null,
+        condicion_replica: supercategoria === 'replicas' ? condicionReplica : null,
+        nuevo_usado: nuevoUsado,
+        modalidad,
+        precio: precioFinal,
+        paquetes: paquetesData,
+        fotos_urls: fotos,
+        ciudad: userCiudad,
+        estado: userEstado,
+        status: 'activo',
+        vendido: false,
+      }
+
+      if (replicaConectada) {
+        insertData.replica_id = replicaConectada.id
+      }
+
+      const { error: dbErr } = await supabase
+        .from('marketplace')
+        .insert(insertData)
+
+      if (dbErr) throw dbErr
+
+      if (replicaConectada) {
+        await supabase.from('arsenal').update({ en_venta: true }).eq('id', replicaConectada.id)
+      }
+
+      onSuccess()
+    } catch {
+      setError('Error al publicar. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-[480px] px-4 py-6">
+      {/* Header */}
+      <div className="mb-6 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={step === 1 ? onCancel : () => setStep(s => (s - 1) as 1 | 2 | 3 | 4)}
+          className="text-[#999999] hover:text-[#111111]"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        <div className="flex-1">
+          <h2 style={jost} className="text-[18px] font-extrabold uppercase text-[#111111]">
+            Nueva publicación
+          </h2>
+          <p style={lato} className="text-[11px] text-[#999999]">Paso {step} de 4</p>
+        </div>
+      </div>
+
+      {/* Step indicator */}
+      <div className="mb-6 flex gap-1">
+        {[1, 2, 3, 4].map(s => (
+          <div
+            key={s}
+            className={`h-1 flex-1 transition-colors ${s <= step ? 'bg-[#CC4B37]' : 'bg-[#EEEEEE]'}`}
+          />
+        ))}
+      </div>
+
+      {/* PASO 1 */}
+      {step === 1 && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className={labelClass} style={jost}>¿Qué vas a vender?</p>
+            <div className="flex flex-col gap-2">
+              {([
+                { id: 'replicas', label: 'Réplica', desc: 'AEG, GBB, HPA, Spring...' },
+                { id: 'accesorios', label: 'Accesorio', desc: 'Miras, cargadores, baterías...' },
+                { id: 'gear', label: 'Gear', desc: 'Cascos, chalecos, uniformes...' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => { setSupercategoria(opt.id); setSubcategoria(''); setSubSubcategoria('') }}
+                  className={`flex items-center gap-3 border p-4 text-left transition-colors ${
+                    supercategoria === opt.id
+                      ? 'border-[#CC4B37] bg-[#FFF5F4]'
+                      : 'border-[#EEEEEE] bg-[#F4F4F4]'
+                  }`}
+                >
+                  <div className="flex-1">
+                    <p style={jost} className={`text-[12px] font-extrabold uppercase ${supercategoria === opt.id ? 'text-[#CC4B37]' : 'text-[#111111]'}`}>
+                      {opt.label}
+                    </p>
+                    <p style={lato} className="text-[11px] text-[#999999] mt-0.5">{opt.desc}</p>
+                  </div>
+                  {supercategoria === opt.id && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 6L9 17l-5-5" stroke="#CC4B37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {supercategoria === 'replicas' && replicas.length > 0 && (
+            <div>
+              <p className={labelClass} style={jost}>
+                Conectar con tu arsenal <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional)</span>
+              </p>
+              <p style={lato} className="mb-3 text-[12px] text-[#666666]">
+                Si vendes una réplica de tu arsenal, conéctala para mostrar que está verificada.
+              </p>
+              <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto">
+                {replicas.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setReplicaConectada(replicaConectada?.id === r.id ? null : r)}
+                    className={`flex items-center gap-3 border p-3 text-left transition-colors ${
+                      replicaConectada?.id === r.id
+                        ? 'border-[#CC4B37] bg-[#FFF5F4]'
+                        : 'border-[#EEEEEE] bg-[#FFFFFF]'
+                    }`}
+                  >
+                    <div className="w-10 h-10 shrink-0 overflow-hidden bg-[#F4F4F4]">
+                      {r.foto_url
+                        ? <img src={r.foto_url} alt="" className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center"><ArsenalIcon /></div>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111] truncate">{r.nombre}</p>
+                      {r.verificada && (
+                        <p style={lato} className="text-[10px] text-[#CC4B37]">✓ Verificada</p>
+                      )}
+                    </div>
+                    {replicaConectada?.id === r.id && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17l-5-5" stroke="#CC4B37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setStep(2)}
+            disabled={!canGoStep2}
+            style={jost}
+            className="w-full bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-40"
+          >
+            Continuar
+          </button>
+        </div>
+      )}
+
+      {/* PASO 2 — Detalles */}
+      {step === 2 && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className={labelClass} style={jost}>Título *</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder={
+                supercategoria === 'replicas' ? 'Ej. M4 CQB Tokyo Marui...' :
+                supercategoria === 'accesorios' ? 'Ej. Mira holográfica EOTech...' :
+                'Ej. Chest rig Warrior Assault...'
+              }
+              value={titulo}
+              onChange={e => setTitulo(e.target.value.slice(0, 80))}
+              maxLength={80}
+            />
+          </div>
+
+          {supercategoria === 'replicas' && (
+            <>
+              <div>
+                <label className={labelClass} style={jost}>Tipo de réplica *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {SISTEMAS.map(s => (
+                    <button key={s} type="button" onClick={() => setSubcategoria(s)} style={jost}
+                      className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${subcategoria === s ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className={labelClass} style={jost}>Mecanismo *</label>
+                <div className="flex flex-wrap gap-2">
+                  {MECANISMOS.map(m => (
+                    <button key={m} type="button" onClick={() => setMecanismo(m)} style={jost}
+                      className={`border px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${mecanismo === m ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className={labelClass} style={jost}>Condición *</label>
+                <div className="flex gap-2">
+                  {(['stock', 'upgrades'] as const).map(c => (
+                    <button key={c} type="button" onClick={() => setCondicionReplica(c)} style={jost}
+                      className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${condicionReplica === c ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                      {c === 'stock' ? 'Stock' : 'Con upgrades'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {supercategoria === 'accesorios' && (
+            <div>
+              <label className={labelClass} style={jost}>Tipo de accesorio *</label>
+              <div className="grid grid-cols-2 gap-2">
+                {ACCESORIOS_SUBCATS.map(s => (
+                  <button key={s} type="button" onClick={() => setSubcategoria(s)} style={jost}
+                    className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${subcategoria === s ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {supercategoria === 'gear' && (
+            <>
+              <div>
+                <label className={labelClass} style={jost}>Categoría *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.keys(GEAR_SUBCATS).map(cat => (
+                    <button key={cat} type="button"
+                      onClick={() => { setSubcategoria(cat); setSubSubcategoria('') }}
+                      style={jost}
+                      className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${subcategoria === cat ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {subcategoria && GEAR_SUBCATS[subcategoria] && (
+                <div>
+                  <label className={labelClass} style={jost}>Tipo *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {GEAR_SUBCATS[subcategoria].map(sub => (
+                      <button key={sub} type="button" onClick={() => setSubSubcategoria(sub)} style={jost}
+                        className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${subSubcategoria === sub ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <div>
+            <label className={labelClass} style={jost}>
+              Descripción <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional)</span>
+            </label>
+            <textarea
+              className={`${inputClass} resize-none`}
+              rows={3}
+              placeholder="Describe el estado, accesorios incluidos, historial..."
+              value={descripcion}
+              onChange={e => setDescripcion(e.target.value.slice(0, 500))}
+              maxLength={500}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setStep(3)}
+            disabled={!canGoStep3}
+            style={jost}
+            className="w-full bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-40"
+          >
+            Continuar
+          </button>
+        </div>
+      )}
+
+      {/* PASO 3 — Precio */}
+      {step === 3 && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className={labelClass} style={jost}>Estado del artículo *</label>
+            <div className="flex gap-2">
+              {(['nuevo', 'usado'] as const).map(nu => (
+                <button key={nu} type="button" onClick={() => setNuevoUsado(nu)} style={jost}
+                  className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${nuevoUsado === nu ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                  {nu === 'nuevo' ? 'Nuevo' : 'Usado'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClass} style={jost}>Tipo de venta *</label>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setModalidad('fijo')}
+                className={`flex items-start gap-3 border p-4 text-left transition-colors ${modalidad === 'fijo' ? 'border-[#CC4B37] bg-[#FFF5F4]' : 'border-[#EEEEEE] bg-[#F4F4F4]'}`}
+              >
+                <div className="flex-1">
+                  <p style={jost} className={`text-[12px] font-extrabold uppercase ${modalidad === 'fijo' ? 'text-[#CC4B37]' : 'text-[#111111]'}`}>
+                    Precio fijo
+                  </p>
+                  <p style={lato} className="text-[11px] text-[#999999] mt-0.5">
+                    Un solo precio, todo incluido. El comprador toma o deja.
+                  </p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalidad('desde')}
+                className={`flex items-start gap-3 border p-4 text-left transition-colors ${modalidad === 'desde' ? 'border-[#CC4B37] bg-[#FFF5F4]' : 'border-[#EEEEEE] bg-[#F4F4F4]'}`}
+              >
+                <div className="flex-1">
+                  <p style={jost} className={`text-[12px] font-extrabold uppercase ${modalidad === 'desde' ? 'text-[#CC4B37]' : 'text-[#111111]'}`}>
+                    Desde (paquetes)
+                  </p>
+                  <p style={lato} className="text-[11px] text-[#999999] mt-0.5">
+                    Define opciones: solo réplica, réplica + mags, todo incluido. El comprador elige.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {modalidad === 'fijo' && (
+            <div>
+              <label className={labelClass} style={jost}>Precio (MXN) *</label>
+              <div className="relative">
+                <span style={lato} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] text-sm">$</span>
+                <input
+                  type="number"
+                  className={`${inputClass} pl-7`}
+                  placeholder="0"
+                  value={precio}
+                  onChange={e => setPrecio(e.target.value)}
+                  min={0}
+                />
+              </div>
+            </div>
+          )}
+
+          {modalidad === 'desde' && (
+            <div className="flex flex-col gap-3">
+              <p className={labelClass} style={jost}>
+                Paquetes *
+                <span className="text-[#AAAAAA] normal-case font-normal tracking-normal ml-1">
+                  (mín 1, máx 4)
+                </span>
+              </p>
+              {paquetes.map((p, i) => (
+                <div key={p.id} className="border border-[#EEEEEE] p-3 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <p style={jost} className="text-[10px] font-extrabold uppercase text-[#999999]">
+                      Paquete {i + 1}
+                    </p>
+                    {paquetes.length > 1 && (
+                      <button type="button" onClick={() => removePaquete(p.id)} className="text-[#CC4B37] text-[11px]" style={lato}>
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    className={inputClass}
+                    placeholder='Ej. "Solo réplica" o "Todo incluido"'
+                    value={p.nombre}
+                    onChange={e => updatePaquete(p.id, 'nombre', e.target.value.slice(0, 60))}
+                    maxLength={60}
+                  />
+                  <input
+                    type="text"
+                    className={inputClass}
+                    placeholder="¿Qué incluye este paquete? (opcional)"
+                    value={p.descripcion}
+                    onChange={e => updatePaquete(p.id, 'descripcion', e.target.value.slice(0, 120))}
+                    maxLength={120}
+                  />
+                  <div className="relative">
+                    <span style={lato} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999999] text-sm">$</span>
+                    <input
+                      type="number"
+                      className={`${inputClass} pl-7`}
+                      placeholder="Precio MXN"
+                      value={p.precio}
+                      onChange={e => updatePaquete(p.id, 'precio', e.target.value)}
+                      min={0}
+                    />
+                  </div>
+                </div>
+              ))}
+              {paquetes.length < 4 && (
+                <button
+                  type="button"
+                  onClick={addPaquete}
+                  style={jost}
+                  className="w-full border border-dashed border-[#CCCCCC] py-3 text-[11px] font-extrabold uppercase text-[#999999] hover:border-[#CC4B37] hover:text-[#CC4B37] transition-colors"
+                >
+                  + Agregar paquete
+                </button>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setStep(4)}
+            disabled={!canGoStep4}
+            style={jost}
+            className="w-full bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-40"
+          >
+            Continuar
+          </button>
+        </div>
+      )}
+
+      {/* PASO 4 — Fotos y publicar */}
+      {step === 4 && (
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className={labelClass} style={jost}>
+              Fotos
+              <span className="text-[#AAAAAA] normal-case font-normal tracking-normal ml-1">
+                (máx 6, recomendado al menos 1)
+              </span>
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {fotos.map((url, i) => (
+                <div key={i} className="relative aspect-square overflow-hidden bg-[#F4F4F4]">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setFotos(prev => prev.filter((_, j) => j !== i))}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center bg-black/60 text-white text-xs"
+                  >
+                    ×
+                  </button>
+                  {i === 0 && (
+                    <span style={jost} className="absolute bottom-1 left-1 bg-[#CC4B37] px-1 py-0.5 text-[8px] font-extrabold uppercase text-white">
+                      Portada
+                    </span>
+                  )}
+                </div>
+              ))}
+              {fotos.length < 6 && (
+                <label className="flex aspect-square cursor-pointer flex-col items-center justify-center border border-dashed border-[#CCCCCC] bg-[#F4F4F4] hover:border-[#CC4B37] transition-colors">
+                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFoto} disabled={uploading} />
+                  {uploading ? (
+                    <p style={lato} className="text-[10px] text-[#999999]">Subiendo…</p>
+                  ) : (
+                    <>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#AAAAAA]">
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                      <p style={lato} className="mt-1 text-[10px] text-[#999999]">Agregar</p>
+                    </>
+                  )}
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Resumen */}
+          <div className="border border-[#EEEEEE] p-4 bg-[#F4F4F4]">
+            <p style={jost} className="text-[10px] font-extrabold uppercase text-[#999999] mb-2">Resumen</p>
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">{titulo}</p>
+            <p style={lato} className="text-[11px] text-[#666666] mt-0.5">
+              {supercategoria === 'replicas' ? `${subcategoria} · ${mecanismo}` :
+               supercategoria === 'accesorios' ? subcategoria :
+               `${subcategoria} · ${subSubcategoria}`}
+              {' · '}
+              {nuevoUsado === 'nuevo' ? 'Nuevo' : 'Usado'}
+            </p>
+            <p style={jost} className="text-[15px] font-extrabold text-[#CC4B37] mt-2">
+              {modalidad === 'fijo'
+                ? `$${Number(precio).toLocaleString('es-MX')}`
+                : `Desde $${Math.min(...paquetes.map(p => Number(p.precio))).toLocaleString('es-MX')}`
+              }
+            </p>
+          </div>
+
+          {error && <p className="text-sm text-[#CC4B37]" style={lato}>{error}</p>}
+
+          <button
+            type="button"
+            onClick={() => void handlePublish()}
+            disabled={saving || uploading}
+            style={jost}
+            className="w-full bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
+          >
+            {saving ? 'Publicando…' : 'Publicar ahora'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MarketplaceTab({
   userId,
   listings,
+  userCiudad,
+  userEstado,
+  replicas,
 }: {
   userId: string
   listings: MarketplaceListing[]
+  userCiudad: string | null
+  userEstado: string | null
+  replicas: ReplicaRow[]
 }) {
+  const router = useRouter()
   const [subTab, setSubTab] = useState<'explorar' | 'mis-ventas'>('explorar')
+  const [showNuevoListing, setShowNuevoListing] = useState(false)
+
+  if (showNuevoListing) {
+    return (
+      <NuevoListingForm
+        userId={userId}
+        userCiudad={userCiudad}
+        userEstado={userEstado}
+        replicas={replicas}
+        onSuccess={() => { setShowNuevoListing(false); router.refresh() }}
+        onCancel={() => setShowNuevoListing(false)}
+      />
+    )
+  }
 
   return (
     <div>
@@ -530,9 +1184,7 @@ function MarketplaceTab({
         {subTab === 'mis-ventas' && (
           <button
             type="button"
-            onClick={() => {
-              // TODO: abrir form nuevo listing
-            }}
+            onClick={() => setShowNuevoListing(true)}
             style={jost}
             className="ml-auto flex items-center gap-1.5 bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-white"
           >
@@ -549,6 +1201,7 @@ function MarketplaceTab({
         <MisVentasTab
           userId={userId}
           listings={listings}
+          onPublish={() => setShowNuevoListing(true)}
         />
       )}
     </div>
@@ -575,9 +1228,11 @@ function ExplorarTab() {
 function MisVentasTab({
   userId,
   listings,
+  onPublish,
 }: {
   userId: string
   listings: MarketplaceListing[]
+  onPublish: () => void
 }) {
   return (
     <div>
@@ -595,9 +1250,7 @@ function MisVentasTab({
           </p>
           <button
             type="button"
-            onClick={() => {
-              // TODO: abrir form nuevo listing
-            }}
+            onClick={onPublish}
             style={jost}
             className="mt-6 bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white"
           >
