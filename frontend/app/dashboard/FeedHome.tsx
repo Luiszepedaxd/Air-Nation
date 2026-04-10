@@ -1304,7 +1304,15 @@ function FeedTab({
 }
 
 // ─── EVENTOS TAB ───
-function EventosTab() {
+function EventosTab({
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const [items, setItems] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -1344,16 +1352,43 @@ function EventosTab() {
       {items.map(item => {
         const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
         return (
-        <Link key={item.id} href={`/eventos/${item.id}`} className="flex gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
-          <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
-            {imagenFinal ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#AAAAAA" strokeWidth="1.4" /><path d="M3 9h18M8 5V3M16 5V3" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" /></svg></div>}
+          <div key={item.id} className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+            <Link href={`/eventos/${item.id}`} className="flex gap-3 p-3">
+              <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
+                {imagenFinal
+                  ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#AAAAAA" strokeWidth="1.4" />
+                        <path d="M3 9h18M8 5V3M16 5V3" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                }
+              </div>
+              <div className="min-w-0 flex-1">
+                <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">{formatEventDate(item.fecha)}</p>
+                <h3 style={jost} className="mt-0.5 line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">{item.title}</h3>
+                {[item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ') &&
+                  <p style={lato} className="mt-1 text-[11px] text-[#666666] truncate">
+                    {[item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')}
+                  </p>
+                }
+              </div>
+            </Link>
+            <div className="px-3">
+              <PostActions
+                postType="event"
+                postId={item.id}
+                postOwnerId={null}
+                currentUserId={currentUserId}
+                currentUserAlias={currentUserAlias}
+                currentUserAvatar={currentUserAvatar}
+                shareUrl={`/eventos/${item.id}`}
+                shareTitle={item.title}
+                postHref={`/eventos/${item.id}`}
+              />
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">{formatEventDate(item.fecha)}</p>
-            <h3 style={jost} className="mt-0.5 line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">{item.title}</h3>
-            {[item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ') && <p style={lato} className="mt-1 text-[11px] text-[#666666] truncate">{[item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')}</p>}
-          </div>
-        </Link>
         )
       })}
     </div>
@@ -1598,7 +1633,15 @@ function EquiposTab() {
 }
 
 // ─── NOTICIAS TAB ───
-function NoticiasTab() {
+function NoticiasTab({
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
   const [items, setItems] = useState<NoticiaItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -1621,16 +1664,39 @@ function NoticiasTab() {
   return (
     <div className="flex flex-col gap-3">
       {items.map(item => (
-        <Link key={item.id} href={`/blog/${item.slug}`} className="flex gap-3 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
-          <div className="w-20 h-20 shrink-0 overflow-hidden bg-[#F4F4F4]">
-            {item.cover_url ? <img src={item.cover_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M7 3h8l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1Z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round" /><path d="M15 3v4h4M9 11h6M9 15h4" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" /></svg></div>}
+        <div key={item.id} className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+          <Link href={`/blog/${item.slug}`} className="flex gap-3 p-3">
+            <div className="w-20 h-20 shrink-0 overflow-hidden bg-[#F4F4F4]">
+              {item.cover_url
+                ? <img src={item.cover_url} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full flex items-center justify-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M7 3h8l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1Z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round" />
+                      <path d="M15 3v4h4M9 11h6M9 15h4" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round" />
+                    </svg>
+                  </div>
+              }
+            </div>
+            <div className="min-w-0 flex-1">
+              {item.category && <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-0.5">{item.category}</p>}
+              <h3 style={jost} className="line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">{item.title}</h3>
+              {item.excerpt && <p style={lato} className="mt-1 line-clamp-2 text-[11px] text-[#666666]">{item.excerpt}</p>}
+            </div>
+          </Link>
+          <div className="px-3">
+            <PostActions
+              postType="noticia"
+              postId={item.id}
+              postOwnerId={null}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+              shareUrl={`/blog/${item.slug}`}
+              shareTitle={item.title}
+              postHref={`/blog/${item.slug}`}
+            />
           </div>
-          <div className="min-w-0 flex-1">
-            {item.category && <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-0.5">{item.category}</p>}
-            <h3 style={jost} className="line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">{item.title}</h3>
-            {item.excerpt && <p style={lato} className="mt-1 line-clamp-2 text-[11px] text-[#666666]">{item.excerpt}</p>}
-          </div>
-        </Link>
+        </div>
       ))}
     </div>
   )
@@ -1812,9 +1878,21 @@ export function FeedHome({
             isAdmin={isAdmin}
           />
         )}
-        {activeTab === 'eventos' && <EventosTab />}
+        {activeTab === 'eventos' && (
+          <EventosTab
+            currentUserId={userId}
+            currentUserAlias={userAlias}
+            currentUserAvatar={userAvatar}
+          />
+        )}
         {activeTab === 'equipos' && <EquiposTab />}
-        {activeTab === 'noticias' && <NoticiasTab />}
+        {activeTab === 'noticias' && (
+          <NoticiasTab
+            currentUserId={userId}
+            currentUserAlias={userAlias}
+            currentUserAvatar={userAvatar}
+          />
+        )}
         {activeTab === 'videos' && (
           <VideosTab
             currentUserId={userId}
