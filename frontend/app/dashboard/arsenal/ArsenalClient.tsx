@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
@@ -520,6 +520,29 @@ export function ArsenalTabs({
 }
 
 type PaqueteDraft = { id: string; nombre: string; descripcion: string; precio: string }
+
+type ListingFeed = {
+  id: string
+  titulo: string
+  precio: number | null
+  precio_original: number | null
+  modalidad: 'fijo' | 'desde'
+  supercategoria: string | null
+  subcategoria: string | null
+  fotos_urls: string[]
+  ciudad: string | null
+  estado: string | null
+  nuevo_usado: string
+  vendido: boolean
+  status: string
+  created_at: string
+  seller: {
+    id: string
+    alias: string | null
+    nombre: string | null
+    avatar_url: string | null
+  }
+}
 
 export function NuevoListingForm({
   userId,
@@ -1222,7 +1245,7 @@ function MarketplaceTab({
       </div>
 
       {subTab === 'explorar' && (
-        <ExplorarTab />
+        <ExplorarTab currentUserId={userId} />
       )}
 
       {subTab === 'mis-ventas' && (
@@ -1236,19 +1259,209 @@ function MarketplaceTab({
   )
 }
 
-function ExplorarTab() {
+function ListingCard({ listing }: { listing: ListingFeed }) {
+  const foto = listing.fotos_urls?.[0] ?? null
+
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
-        <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
-      </svg>
-      <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
-        Marketplace próximamente
-      </p>
-      <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
-        Aquí verás réplicas, accesorios y gear en venta de toda la comunidad
-      </p>
+    <Link
+      href={`/marketplace/${listing.id}`}
+      className="group block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden transition-colors hover:border-[#CCCCCC]"
+    >
+      {/* Foto */}
+      <div className="relative aspect-square w-full overflow-hidden bg-[#111111]">
+        {foto ? (
+          <img src={foto} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#444" strokeWidth="1.4" strokeLinejoin="round"/>
+              <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </div>
+        )}
+        {listing.vendido && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span style={jost} className="bg-[#111111] px-3 py-1.5 text-[11px] font-extrabold uppercase text-white">
+              Vendido
+            </span>
+          </div>
+        )}
+        {listing.nuevo_usado === 'nuevo' && !listing.vendido && (
+          <span style={jost} className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+            Nuevo
+          </span>
+        )}
+        {listing.modalidad === 'desde' && !listing.vendido && (
+          <span style={jost} className="absolute right-2 top-2 bg-[#111111]/70 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+            Desde
+          </span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-2.5">
+        {/* Precio */}
+        <div className="flex items-center gap-1.5 mb-1">
+          {listing.precio_original && listing.precio_original !== listing.precio && (
+            <span style={lato} className="text-[11px] text-[#999999] line-through">
+              ${listing.precio_original.toLocaleString('es-MX')}
+            </span>
+          )}
+          <span style={jost} className="text-[15px] font-extrabold text-[#111111]">
+            ${listing.precio?.toLocaleString('es-MX') ?? '—'}
+          </span>
+        </div>
+
+        {/* Título */}
+        <p style={lato} className="text-[13px] text-[#111111] line-clamp-2 leading-snug">
+          {listing.titulo}
+        </p>
+
+        {/* Ubicación */}
+        {listing.ciudad && (
+          <p style={lato} className="mt-1 text-[11px] text-[#999999] truncate">
+            {listing.ciudad}{listing.estado ? `, ${listing.estado}` : ''}
+          </p>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+function ExplorarTab({
+  currentUserId,
+}: {
+  currentUserId: string | null
+}) {
+  const [listings, setListings] = useState<ListingFeed[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('')
+  const [filtroNuevoUsado, setFiltroNuevoUsado] = useState<string>('')
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      let query = supabase
+        .from('marketplace')
+        .select(`
+          id, titulo, precio, precio_original, modalidad,
+          supercategoria, subcategoria, fotos_urls,
+          ciudad, estado, nuevo_usado, vendido, status, created_at,
+          users!seller_id ( id, alias, nombre, avatar_url )
+        `)
+        .eq('status', 'activo')
+        .eq('vendido', false)
+        .order('created_at', { ascending: false })
+        .limit(40)
+
+      if (filtroCategoria) query = query.eq('supercategoria', filtroCategoria)
+      if (filtroNuevoUsado) query = query.eq('nuevo_usado', filtroNuevoUsado)
+
+      const { data } = await query
+
+      setListings((data ?? []).map(row => {
+        const r = row as Record<string, unknown>
+        const u = Array.isArray(r.users) ? r.users[0] : r.users
+        const uo = (u ?? {}) as Record<string, unknown>
+        return {
+          id: String(r.id),
+          titulo: String(r.titulo ?? ''),
+          precio: r.precio ? Number(r.precio) : null,
+          precio_original: r.precio_original ? Number(r.precio_original) : null,
+          modalidad: (r.modalidad as 'fijo' | 'desde') ?? 'fijo',
+          supercategoria: r.supercategoria ? String(r.supercategoria) : null,
+          subcategoria: r.subcategoria ? String(r.subcategoria) : null,
+          fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : [],
+          ciudad: r.ciudad ? String(r.ciudad) : null,
+          estado: r.estado ? String(r.estado) : null,
+          nuevo_usado: String(r.nuevo_usado ?? 'usado'),
+          vendido: Boolean(r.vendido),
+          status: String(r.status ?? 'activo'),
+          created_at: String(r.created_at),
+          seller: {
+            id: String(uo.id ?? ''),
+            alias: uo.alias ? String(uo.alias) : null,
+            nombre: uo.nombre ? String(uo.nombre) : null,
+            avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
+          },
+        }
+      }))
+      setLoading(false)
+    }
+    void load()
+  }, [filtroCategoria, filtroNuevoUsado])
+
+  return (
+    <div>
+      {/* Filtros */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {(['', 'replicas', 'accesorios', 'gear'] as const).map(cat => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => setFiltroCategoria(cat)}
+            style={lato}
+            className={`px-3 py-1.5 text-[12px] font-semibold transition-colors border ${
+              filtroCategoria === cat
+                ? 'bg-[#111111] text-white border-[#111111]'
+                : 'bg-[#FFFFFF] text-[#666666] border-[#EEEEEE] hover:border-[#CCCCCC]'
+            }`}
+          >
+            {cat === '' ? 'Todo' : cat === 'replicas' ? 'Réplicas' : cat === 'accesorios' ? 'Accesorios' : 'Gear'}
+          </button>
+        ))}
+        <div className="ml-auto flex gap-2">
+          {(['', 'nuevo', 'usado'] as const).map(nu => (
+            <button
+              key={nu}
+              type="button"
+              onClick={() => setFiltroNuevoUsado(nu)}
+              style={lato}
+              className={`px-3 py-1.5 text-[12px] font-semibold transition-colors border ${
+                filtroNuevoUsado === nu
+                  ? 'bg-[#111111] text-white border-[#111111]'
+                  : 'bg-[#FFFFFF] text-[#666666] border-[#EEEEEE] hover:border-[#CCCCCC]'
+              }`}
+            >
+              {nu === '' ? 'Todos' : nu === 'nuevo' ? 'Nuevo' : 'Usado'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[0,1,2,3].map(i => (
+            <div key={i} className="border border-[#EEEEEE] overflow-hidden">
+              <div className="aspect-square w-full bg-[#F4F4F4] animate-pulse" />
+              <div className="p-2.5 space-y-2">
+                <div className="h-4 w-20 bg-[#F4F4F4] animate-pulse" />
+                <div className="h-3 w-full bg-[#F4F4F4] animate-pulse" />
+                <div className="h-3 w-24 bg-[#F4F4F4] animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
+            Sin publicaciones aún
+          </p>
+          <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
+            Sé el primero en publicar algo en el marketplace
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {listings.map(listing => (
+            <ListingCard key={listing.id} listing={listing} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
