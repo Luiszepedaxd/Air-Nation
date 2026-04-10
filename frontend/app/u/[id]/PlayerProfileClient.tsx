@@ -421,9 +421,10 @@ function ReplicasPanel({ replicas }: { replicas: PublicReplicaRow[] }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {replicas.map((r) => (
-        <div
+        <Link
           key={r.id}
-          className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden"
+          href={`/replicas/${r.id}`}
+          className="block border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden transition-colors hover:border-[#CCCCCC]"
         >
           <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
             {r.foto_url ? (
@@ -464,7 +465,7 @@ function ReplicasPanel({ replicas }: { replicas: PublicReplicaRow[] }) {
               </p>
             )}
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   )
