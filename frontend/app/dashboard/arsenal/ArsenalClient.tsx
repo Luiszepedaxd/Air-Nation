@@ -15,6 +15,7 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://air-nation-producti
 
 export type ReplicaRow = {
   id: string
+  user_id?: string | null
   nombre: string
   sistema: string | null
   mecanismo: string | null
@@ -68,7 +69,7 @@ function ReplicaCard({ replica }: { replica: ReplicaRow }) {
         )}
         {replica.pendingTransfer && (
           <span className="absolute right-2 bottom-2 bg-[#F59E0B] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white" style={jost}>
-            ⏳ Transferencia pendiente
+            Transferencia pendiente
           </span>
         )}
       </div>

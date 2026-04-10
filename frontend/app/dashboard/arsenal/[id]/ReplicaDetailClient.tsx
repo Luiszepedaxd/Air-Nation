@@ -11,17 +11,39 @@ import { ArsenalIcon } from '../ArsenalClient'
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
+type PendingTransferData = {
+  id: string
+  nota: string | null
+  created_at: string
+  to_user: { alias: string | null; nombre: string | null; avatar_url: string | null }
+}
+
+type IncomingTransferData = {
+  id: string
+  nota: string | null
+  created_at: string
+  from_user: { alias: string | null; nombre: string | null; avatar_url: string | null }
+}
+
 export function ReplicaDetailClient({
   replica: initialReplica,
   isOwner,
   currentUserId,
+  pendingTransfer: initialPendingTransfer,
+  incomingTransfer: initialIncomingTransfer,
 }: {
   replica: ReplicaRow
   isOwner: boolean
   currentUserId: string
+  pendingTransfer: PendingTransferData | null
+  incomingTransfer: IncomingTransferData | null
 }) {
   const router = useRouter()
   const [replica] = useState(initialReplica)
+  const [pendingTransfer, setPendingTransfer] = useState(initialPendingTransfer)
+  const [incomingTransfer, setIncomingTransfer] = useState(initialIncomingTransfer)
+  const [processingTransfer, setProcessingTransfer] = useState(false)
+  const [transferResolved, setTransferResolved] = useState<'accepted' | 'rejected' | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [showTransfer, setShowTransfer] = useState(false)
   const [transferAlias, setTransferAlias] = useState('')
@@ -62,16 +84,96 @@ export function ReplicaDetailClient({
       })
 
       if (error) throw error
+
+      const { data: newTransfer } = await supabase
+        .from('arsenal_transfers')
+        .select('id, nota, created_at')
+        .eq('replica_id', replica.id)
+        .eq('status', 'pendiente')
+        .maybeSingle()
+
+      setPendingTransfer(newTransfer ? {
+        id: String(newTransfer.id),
+        nota: (newTransfer.nota as string | null) ?? null,
+        created_at: String(newTransfer.created_at),
+        to_user: {
+          alias: targetUser.alias ?? null,
+          nombre: targetUser.nombre ?? null,
+          avatar_url: targetUser.avatar_url ?? null,
+        },
+      } : null)
+
       await insertTransferNotif(supabase, {
         actorId: currentUserId,
         recipientId: targetUser.id,
         replicaNombre: replica.nombre,
         transferId: '',
         type: 'transfer_request',
+        replicaId: replica.id,
       })
       setTransferSuccess(true)
+      setShowTransfer(false)
+      router.refresh()
     } catch { setTransferError('Error al enviar la solicitud. Intenta de nuevo.') }
     finally { setTransferring(false) }
+  }
+
+  const handleAcceptTransfer = async () => {
+    if (!incomingTransfer) return
+    setProcessingTransfer(true)
+    try {
+      const { error: updateErr } = await supabase
+        .from('arsenal_transfers')
+        .update({ status: 'aceptada', updated_at: new Date().toISOString() })
+        .eq('id', incomingTransfer.id)
+      if (updateErr) throw updateErr
+
+      const { error: ownerErr } = await supabase
+        .from('arsenal')
+        .update({ user_id: currentUserId })
+        .eq('id', replica.id)
+      if (ownerErr) throw ownerErr
+
+      await insertTransferNotif(supabase, {
+        actorId: currentUserId,
+        recipientId: replica.user_id ?? '',
+        replicaNombre: replica.nombre,
+        transferId: incomingTransfer.id,
+        type: 'transfer_accepted',
+        replicaId: replica.id,
+      })
+
+      setTransferResolved('accepted')
+      setIncomingTransfer(null)
+      router.refresh()
+    } catch { /* noop */ }
+    finally { setProcessingTransfer(false) }
+  }
+
+  const handleRejectTransfer = async () => {
+    if (!incomingTransfer) return
+    setProcessingTransfer(true)
+    try {
+      const { error } = await supabase
+        .from('arsenal_transfers')
+        .update({ status: 'rechazada', updated_at: new Date().toISOString() })
+        .eq('id', incomingTransfer.id)
+      if (error) throw error
+
+      await insertTransferNotif(supabase, {
+        actorId: currentUserId,
+        recipientId: replica.user_id ?? '',
+        replicaNombre: replica.nombre,
+        transferId: incomingTransfer.id,
+        type: 'transfer_rejected',
+        replicaId: replica.id,
+      })
+
+      setTransferResolved('rejected')
+      setIncomingTransfer(null)
+      router.refresh()
+    } catch { /* noop */ }
+    finally { setProcessingTransfer(false) }
   }
 
   const inputClass = 'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
@@ -126,16 +228,97 @@ export function ReplicaDetailClient({
           )}
         </div>
 
-        {isOwner && !showTransfer && !transferSuccess && (
+        {!isOwner && incomingTransfer && !transferResolved && (
+          <div className="mt-8 border-2 border-[#CC4B37] p-4">
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#CC4B37] mb-3">
+              Te quieren transferir esta réplica
+            </p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
+                {incomingTransfer.from_user.avatar_url ? (
+                  <img src={incomingTransfer.from_user.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[12px] font-bold text-[#CC4B37]" style={jost}>
+                    {(incomingTransfer.from_user.alias || incomingTransfer.from_user.nombre || '?')[0].toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div>
+                <p style={lato} className="text-[13px] font-semibold text-[#111111]">
+                  {incomingTransfer.from_user.nombre || incomingTransfer.from_user.alias}
+                </p>
+                {incomingTransfer.from_user.alias && (
+                  <p style={lato} className="text-[11px] text-[#999999]">@{incomingTransfer.from_user.alias}</p>
+                )}
+              </div>
+            </div>
+            {incomingTransfer.nota && (
+              <div className="mb-3 border-l-2 border-[#EEEEEE] pl-3">
+                <p style={lato} className="text-[12px] text-[#666666]">{incomingTransfer.nota}</p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => void handleAcceptTransfer()} disabled={processingTransfer} style={jost}
+                className="flex-1 bg-[#CC4B37] py-3 text-[11px] font-extrabold uppercase text-white disabled:opacity-50">
+                {processingTransfer ? 'Procesando…' : 'Aceptar'}
+              </button>
+              <button type="button" onClick={() => void handleRejectTransfer()} disabled={processingTransfer} style={jost}
+                className="flex-1 border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase text-[#666666] disabled:opacity-50">
+                Rechazar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isOwner && transferResolved && (
+          <div className="mt-8 border border-[#EEEEEE] bg-[#F4F4F4] p-4 text-center">
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">
+              {transferResolved === 'accepted' ? 'Réplica aceptada' : 'Transferencia rechazada'}
+            </p>
+            <p style={lato} className="mt-1 text-[12px] text-[#666666]">
+              {transferResolved === 'accepted'
+                ? 'La réplica ahora aparece en tu arsenal'
+                : 'Le notificamos al remitente'}
+            </p>
+            {transferResolved === 'accepted' && (
+              <Link href="/dashboard/arsenal" style={jost}
+                className="mt-3 inline-flex items-center justify-center bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase text-white">
+                Ver mi arsenal
+              </Link>
+            )}
+          </div>
+        )}
+
+        {isOwner && !showTransfer && (
           <div className="mt-8 flex flex-col gap-3">
-            <button type="button" onClick={() => setShowTransfer(true)} style={jost}
-              className="w-full border border-[#111111] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-white">
-              Transferir réplica
-            </button>
-            <button type="button" onClick={() => void handleDelete()} disabled={deleting} style={jost}
-              className="w-full border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37] transition-colors hover:border-[#CC4B37] disabled:opacity-50">
-              {deleting ? 'Eliminando…' : 'Eliminar réplica'}
-            </button>
+            {pendingTransfer ? (
+              <div className="border border-[#F59E0B] bg-[#FFFBEB] p-4">
+                <p style={jost} className="text-[11px] font-extrabold uppercase text-[#D97706]">Transferencia pendiente</p>
+                <p style={lato} className="mt-1 text-[12px] text-[#666666]">
+                  Enviada a{' '}
+                  <span className="font-semibold text-[#111111]">
+                    {pendingTransfer.to_user.alias ? `@${pendingTransfer.to_user.alias}` : pendingTransfer.to_user.nombre ?? 'Operador'}
+                  </span>
+                </p>
+                {pendingTransfer.nota && (
+                  <p style={lato} className="mt-1 text-[12px] text-[#999999]">{pendingTransfer.nota}</p>
+                )}
+                <p style={lato} className="mt-2 text-[11px] text-[#999999]">
+                  Esperando que el receptor acepte o rechace
+                </p>
+              </div>
+            ) : (
+              <>
+                <button type="button" onClick={() => setShowTransfer(true)} style={jost}
+                  className="w-full border border-[#111111] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-white">
+                  Transferir réplica
+                </button>
+                <button type="button" onClick={() => void handleDelete()} disabled={deleting} style={jost}
+                  className="w-full border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37] transition-colors hover:border-[#CC4B37] disabled:opacity-50">
+                  {deleting ? 'Eliminando…' : 'Eliminar réplica'}
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -222,7 +405,7 @@ export function ReplicaDetailClient({
           </div>
         )}
 
-        {transferSuccess && (
+        {transferSuccess && !pendingTransfer && (
           <div className="mt-8 border border-[#EEEEEE] bg-[#F4F4F4] p-4 text-center">
             <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Solicitud enviada</p>
             <p style={lato} className="mt-1 text-[12px] text-[#666666]">El receptor debe aceptar para completar la transferencia</p>

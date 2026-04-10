@@ -102,19 +102,21 @@ export async function insertTransferNotif(
     replicaNombre,
     transferId,
     type,
+    replicaId,
   }: {
     actorId: string
     recipientId: string
     replicaNombre: string
     transferId: string
     type: 'transfer_request' | 'transfer_accepted' | 'transfer_rejected'
+    replicaId?: string
   }
 ): Promise<void> {
   await supabase.from('user_notifications').insert({
     actor_id: actorId,
     recipient_id: recipientId,
     type,
-    href: `/dashboard/arsenal`,
+    href: replicaId ? `/dashboard/arsenal/${replicaId}` : `/dashboard/arsenal`,
     read: false,
   })
   notifyNotifUpdated()
