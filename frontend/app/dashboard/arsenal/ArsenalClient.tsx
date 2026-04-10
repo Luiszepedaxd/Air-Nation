@@ -304,7 +304,7 @@ export function ArsenalList({
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
-      <div className="px-4 pt-6 md:px-6">
+      <div className="px-4 pt-6 md:px-6 max-w-[1200px] mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
@@ -331,7 +331,7 @@ export function ArsenalList({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {replicas.map(r => (
               <ReplicaCard key={r.id} replica={r} />
             ))}
