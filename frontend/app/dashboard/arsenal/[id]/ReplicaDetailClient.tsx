@@ -274,26 +274,37 @@ export function ReplicaDetailClient({
           </div>
         )}
 
-        {transferResolved && (
-          <div className="mt-8 border border-[#EEEEEE] bg-[#F4F4F4] p-4 text-center">
-            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">
-              {transferResolved === 'accepted' ? 'Réplica aceptada' : 'Transferencia rechazada'}
+        {transferResolved === 'accepted' && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white px-6 text-center">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center bg-[#CC4B37]">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M5 12l5 5L19 7" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h2 style={jost} className="text-[28px] font-extrabold uppercase leading-tight text-[#111111]">
+              Réplica aceptada
+            </h2>
+            <p style={lato} className="mt-3 text-[14px] text-[#666666] max-w-[280px] leading-relaxed">
+              La réplica ya aparece en tu arsenal. Ahora eres el nuevo dueño registrado.
             </p>
-            <p style={lato} className="mt-1 text-[12px] text-[#666666]">
-              {transferResolved === 'accepted'
-                ? 'La réplica ahora aparece en tu arsenal'
-                : 'Le notificamos al remitente'}
-            </p>
-            {transferResolved === 'accepted' && (
-              <Link href="/dashboard/arsenal" style={jost}
-                className="mt-3 inline-flex items-center justify-center bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase text-white">
-                Ver mi arsenal
-              </Link>
-            )}
+            <Link
+              href="/dashboard/arsenal"
+              style={jost}
+              className="mt-8 w-full max-w-[320px] bg-[#CC4B37] py-4 text-[13px] font-extrabold uppercase tracking-wide text-white text-center block"
+            >
+              Ver mi arsenal →
+            </Link>
           </div>
         )}
 
-        {isOwner && !showTransfer && (
+        {transferResolved === 'rejected' && (
+          <div className="mt-8 border border-[#EEEEEE] bg-[#F4F4F4] p-4 text-center">
+            <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">Transferencia rechazada</p>
+            <p style={lato} className="mt-1 text-[12px] text-[#666666]">Le notificamos al remitente</p>
+          </div>
+        )}
+
+        {isOwner && !showTransfer && !transferResolved && (
           <div className="mt-8 flex flex-col gap-3">
             {pendingTransfer ? (
               <div className="border border-[#F59E0B] bg-[#FFFBEB] p-4">
