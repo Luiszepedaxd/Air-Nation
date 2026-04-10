@@ -49,7 +49,7 @@ export function BandejaClient({
   }, [initialConvs])
 
   const handleDelete = async (convId: string) => {
-    if (!confirm('¿Eliminar esta conversación? Solo se borrará de tu bandeja.')) return
+    if (!confirm('¿Eliminar esta conversación? El historial se borrará solo para ti.')) return
     const conv = convs.find(c => c.id === convId)
     if (!conv) return
 
@@ -63,12 +63,13 @@ export function BandejaClient({
     const cr = convRow as Record<string, unknown>
     const isP1 = String(cr.participant_1) === currentUserId
     const field = isP1 ? 'deleted_by_1' : 'deleted_by_2'
+    const deletedAtField = isP1 ? 'deleted_at_1' : 'deleted_at_2'
 
-    // Borrar mensajes del historial
-    await supabase.from('messages').delete().eq('conversation_id', convId)
-
-    // Marcar conversación como borrada por este usuario
-    await supabase.from('conversations').update({ [field]: true }).eq('id', convId)
+    // Marcar timestamp de borrado para este usuario (no borra mensajes del otro)
+    await supabase.from('conversations').update({
+      [field]: true,
+      [deletedAtField]: new Date().toISOString(),
+    }).eq('id', convId)
 
     setConvs(prev => prev.filter(c => c.id !== convId))
   }

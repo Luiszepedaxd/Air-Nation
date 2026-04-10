@@ -11,6 +11,7 @@ export default async function ConversacionPage({ params }: { params: { id: strin
     .from('conversations')
     .select(`
       id, participant_1, participant_2, listing_id,
+      deleted_at_1, deleted_at_2,
       u1:users!participant_1(id, alias, nombre, avatar_url),
       u2:users!participant_2(id, alias, nombre, avatar_url),
       listing:marketplace(id, titulo, fotos_urls)
@@ -32,19 +33,35 @@ export default async function ConversacionPage({ params }: { params: { id: strin
     ? (Array.isArray(r.listing) ? r.listing[0] : r.listing) as Record<string, unknown>
     : null
 
-  const { data: msgs } = await supabase
+  const deletedAt = isP1
+    ? (r.deleted_at_1 as string | null) ?? null
+    : (r.deleted_at_2 as string | null) ?? null
+
+  let msgsQuery = supabase
     .from('messages')
     .select('id, content, sender_id, read, created_at')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
     .limit(100)
 
-  await supabase
+  if (deletedAt) {
+    msgsQuery = msgsQuery.gt('created_at', deletedAt)
+  }
+
+  const { data: msgs } = await msgsQuery
+
+  let markReadQuery = supabase
     .from('messages')
     .update({ read: true })
     .eq('conversation_id', params.id)
     .neq('sender_id', user.id)
     .eq('read', false)
+
+  if (deletedAt) {
+    markReadQuery = markReadQuery.gt('created_at', deletedAt)
+  }
+
+  await markReadQuery
 
   const field = isP1 ? 'unread_1' : 'unread_2'
   await supabase.from('conversations').update({ [field]: 0 }).eq('id', params.id)
