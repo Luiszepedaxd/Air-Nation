@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const { uploadToCloudflare } = require("../services/cloudflare");
+const { requireAuth } = require("../middleware/requireAuth");
 
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -18,7 +19,7 @@ const upload = multer({
 
 const router = express.Router();
 
-router.post("/", (req, res) => {
+router.post("/", requireAuth, (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ error: err.message });

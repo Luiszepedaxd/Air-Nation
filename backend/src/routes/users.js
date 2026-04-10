@@ -1,6 +1,7 @@
 const express = require("express");
 const supabase = require("../lib/supabase");
 const { requireAdmin } = require("../middleware/requireAdmin");
+const { requireAuth } = require("../middleware/requireAuth");
 
 const router = express.Router();
 
@@ -92,9 +93,12 @@ router.post("/register", (req, res) => {
  * @param {'instagram'|'facebook'|'amigo'|'google'|'evento'|'otro'} [req.body.como_se_entero]
  * @param {string|null} [req.body.avatar_url]
  */
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", requireAuth, async (req, res) => {
   try {
     const body = req.body || {};
+    if (req.authUser.id !== req.params.id) {
+      return res.status(403).json({ error: "No puedes modificar otro perfil" });
+    }
     const updates = {};
 
     if (body.nombre !== undefined) updates.nombre = body.nombre;
