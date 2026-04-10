@@ -87,13 +87,16 @@ const NAV_ITEMS = [
     },
   },
   {
-    label: 'Réplicas',
-    href: '/dashboard/replicas',
+    label: 'Arsenal',
+    href: '/dashboard/arsenal',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M4 12h16M4 12c0-1 .5-2 1.5-2.5L14 5M4 12c0 1 .5 2 1.5 2.5L14 19M20 12l-3-4M20 12l-3 4"
+        <path d="M12 2C9 6 7 9 7 12c0 2.8 2.2 5 5 5s5-2.2 5-5c0-3-2-6-5-10z"
           stroke={active ? '#CC4B37' : '#767676'}
           strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 15c0 1.7 1.3 3 3 3s3-1.3 3-3"
+          stroke={active ? '#CC4B37' : '#767676'}
+          strokeWidth="1.8" strokeLinecap="round"/>
       </svg>
     )
   },
@@ -119,7 +122,7 @@ const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[1], label: 'OPERADOR' },
   { ...NAV_ITEMS[2], label: 'CREDENCIAL' },
   { ...NAV_ITEMS[3], label: 'CAMPOS' },
-  { ...NAV_ITEMS[4], label: 'RÉPLICAS' },
+  { ...NAV_ITEMS[4], label: 'ARSENAL' },
   {
     label: 'SOS',
     href: '/dashboard/sos',
