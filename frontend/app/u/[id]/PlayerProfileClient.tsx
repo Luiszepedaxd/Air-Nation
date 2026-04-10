@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { PostBox } from '@/app/dashboard/FeedHome'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
@@ -76,6 +77,7 @@ export function PlayerProfileClient({
   replicas,
   rolLabels,
   currentUserId,
+  showPostBox = false,
 }: {
   user: PublicUserProfile
   posts: PlayerPostRow[]
@@ -83,6 +85,7 @@ export function PlayerProfileClient({
   replicas: PublicReplicaRow[]
   rolLabels: Record<string, string>
   currentUserId: string | null
+  showPostBox?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -151,11 +154,25 @@ export function PlayerProfileClient({
 
       <div className="mx-auto max-w-[960px] px-4 py-6 md:px-6 md:py-8">
         {tab === 'posts' ? (
-          <PostsPanel
-            posts={posts}
-            profileUserId={user.id}
-            currentUserId={currentUserId}
-          />
+          <>
+            {showPostBox && currentUserId ? (
+              <div className="mx-auto mb-4 w-full max-w-[600px]">
+                <PostBox
+                  userId={currentUserId}
+                  userAlias={user.alias}
+                  userAvatar={user.avatar_url}
+                  userTeams={[]}
+                  userFields={[]}
+                  onPublished={() => window.location.reload()}
+                />
+              </div>
+            ) : null}
+            <PostsPanel
+              posts={posts}
+              profileUserId={user.id}
+              currentUserId={currentUserId}
+            />
+          </>
         ) : null}
 
         {tab === 'info' ? (

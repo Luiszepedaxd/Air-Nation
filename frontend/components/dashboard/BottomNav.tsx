@@ -45,19 +45,17 @@ const NAV_ITEMS = [
     )
   },
   {
-    label: 'Credencial',
-    href: '/dashboard/credencial',
+    label: 'Mensajes',
+    href: '/dashboard/mensajes',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="6" width="20" height="13" rx="1.5"
+        <path
+          d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
           stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8"/>
-        <circle cx="8" cy="12" r="2.5"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8"/>
-        <path d="M13 10h5M13 13.5h3.5"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round"/>
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     )
   },
@@ -120,7 +118,7 @@ function sosNavIcon(active: boolean) {
 const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[0], label: 'HOME' },
   { ...NAV_ITEMS[1], label: 'OPERADOR' },
-  { ...NAV_ITEMS[2], label: 'CREDENCIAL' },
+  { ...NAV_ITEMS[2], label: 'MENSAJES' },
   { ...NAV_ITEMS[3], label: 'CAMPOS' },
   { ...NAV_ITEMS[4], label: 'ARSENAL' },
   {
@@ -209,6 +207,7 @@ export default function BottomNav() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingJoinCount, setPendingJoinCount] = useState(0)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0)
   const [hasAvatar, setHasAvatar] = useState(true)
 
   const refreshPendingJoinCount = useCallback(async () => {
@@ -298,8 +297,23 @@ export default function BottomNav() {
         .eq('id', user.id)
         .maybeSingle()
       setHasAvatar(!!(perfil?.avatar_url))
+
+      let msgUnread = 0
+      const q1 = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('participant_1', user.id)
+        .gt('unread_1', 0)
+      if (!q1.error) msgUnread += q1.count ?? 0
+      const q2 = await supabase
+        .from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('participant_2', user.id)
+        .gt('unread_2', 0)
+      if (!q2.error) msgUnread += q2.count ?? 0
+      setUnreadMsgCount(msgUnread)
     })
-  }, [])
+  }, [pathname])
 
   const handleLogout = async () => {
     await supabase.auth.signOut({ scope: 'local' })
@@ -409,6 +423,18 @@ export default function BottomNav() {
                     badgeCount={pendingJoinCount + unreadNotifCount}
                     showDot={!hasAvatar}
                   />
+                ) : item.href === '/dashboard/mensajes' ? (
+                  <span className="relative inline-flex">
+                    {item.icon(active)}
+                    {unreadMsgCount > 0 && (
+                      <span
+                        className="absolute -right-1 -top-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#CC4B37] px-0.5 text-[10px] font-extrabold leading-none text-white"
+                        style={{ fontFamily: "'Jost', sans-serif" }}
+                      >
+                        {unreadMsgCount > 99 ? '99+' : unreadMsgCount}
+                      </span>
+                    )}
+                  </span>
                 ) : (
                   item.icon(active)
                 )}

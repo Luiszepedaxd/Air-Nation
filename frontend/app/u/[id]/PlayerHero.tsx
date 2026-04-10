@@ -176,6 +176,8 @@ export function PlayerHero({
   isFollowing,
   currentUserId,
   teamRole,
+  isOwner = false,
+  onEditClick,
 }: {
   user: PublicUserProfile
   subtitle: string
@@ -184,6 +186,8 @@ export function PlayerHero({
   isFollowing: boolean
   currentUserId: string | null
   teamRole: string | null
+  isOwner?: boolean
+  onEditClick?: () => void
 }) {
   const router = useRouter()
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
@@ -476,6 +480,22 @@ export function PlayerHero({
               currentUserId={currentUserId}
               className={messageButtonClass}
             />
+          </div>
+        ) : isOwner ? (
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={onEditClick}
+              className="flex items-center gap-1.5 border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[11px] font-extrabold uppercase text-[#666666] transition-colors hover:border-[#CCCCCC]"
+              style={jost}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+              </svg>
+              EDITAR PERFIL
+            </button>
           </div>
         ) : null}
 

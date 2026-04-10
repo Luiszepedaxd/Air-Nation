@@ -84,7 +84,7 @@ type PostAs =
   | { type: 'team'; id: string; nombre: string; avatar: string | null; slug: string }
   | { type: 'field'; id: string; nombre: string; avatar: string | null; slug: string }
 
-function PostBox({
+export function PostBox({
   userId,
   userAlias,
   userAvatar,

@@ -4,6 +4,7 @@ import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-request
 import { fetchPendingJoinRequestsForModerator } from '@/lib/pending-join-requests'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
+import type { PlayerPostRow, PublicReplicaRow } from '@/app/u/[id]/types'
 import { type MisEquipoItem } from './MisEquiposSection'
 import { PerfilTabsClient } from './PerfilTabsClient'
 
@@ -341,6 +342,22 @@ export default async function PerfilPage({
     if (name && rid) pendingJoinPending.push({ id: rid, nombre: name })
   }
 
+  const { data: postsData } = await supabase
+    .from('player_posts')
+    .select('id, content, fotos_urls, created_at')
+    .eq('user_id', authUser.id)
+    .eq('published', true)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  const { data: replicasData } = await supabase
+    .from('arsenal')
+    .select(
+      'id, nombre, sistema, mecanismo, condicion, foto_url, verificada, ciudad, estado'
+    )
+    .eq('user_id', authUser.id)
+    .order('created_at', { ascending: false })
+
   return (
     <PerfilTabsClient
       user={row}
@@ -355,14 +372,10 @@ export default async function PerfilPage({
       ownerPendingFieldRequests={ownerPendingFieldRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
-      initialTab={
-        searchParams.tab === 'campos'
-          ? 'campos'
-          : searchParams.tab === 'eventos'
-            ? 'eventos'
-            : undefined
-      }
+      initialTab={undefined}
       campoRegistradoNotice={searchParams.campo_creado === '1'}
+      posts={(postsData ?? []) as PlayerPostRow[]}
+      replicas={(replicasData ?? []) as PublicReplicaRow[]}
     />
   )
 }
