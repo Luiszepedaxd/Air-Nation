@@ -122,17 +122,11 @@ export function ReplicaDetailClient({
     if (!incomingTransfer) return
     setProcessingTransfer(true)
     try {
-      const { error: updateErr } = await supabase
-        .from('arsenal_transfers')
-        .update({ status: 'aceptada', updated_at: new Date().toISOString() })
-        .eq('id', incomingTransfer.id)
-      if (updateErr) throw updateErr
-
-      const { error: ownerErr } = await supabase
-        .from('arsenal')
-        .update({ user_id: currentUserId })
-        .eq('id', replica.id)
-      if (ownerErr) throw ownerErr
+      const { error } = await supabase.rpc('accept_arsenal_transfer', {
+        p_transfer_id: incomingTransfer.id,
+        p_user_id: currentUserId,
+      })
+      if (error) throw error
 
       await insertTransferNotif(supabase, {
         actorId: currentUserId,
