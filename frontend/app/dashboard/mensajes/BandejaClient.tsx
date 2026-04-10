@@ -95,8 +95,12 @@ export function BandejaClient({
         ) : (
           <div className="flex flex-col divide-y divide-[#EEEEEE]">
             {convs.map(conv => (
-              <div key={conv.id} className="group flex items-center gap-3 py-3">
-                <Link href={`/dashboard/mensajes/${conv.id}`} className="flex flex-1 items-center gap-3 min-w-0">
+              <div key={conv.id} className="group relative flex items-center py-3">
+                <Link
+                  href={`/dashboard/mensajes/${conv.id}`}
+                  prefetch={true}
+                  className="flex flex-1 items-center gap-3 min-w-0 pr-8"
+                >
                   <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
                     {conv.other_user.avatar_url ? (
                       <img src={conv.other_user.avatar_url} alt="" className="h-full w-full object-cover" />
@@ -133,7 +137,7 @@ export function BandejaClient({
                 <button
                   type="button"
                   onClick={() => void handleDelete(conv.id)}
-                  className="shrink-0 p-2 text-[#DDDDDD] opacity-0 group-hover:opacity-100 hover:text-[#CC4B37] transition-all"
+                  className="absolute right-0 shrink-0 p-2 text-[#DDDDDD] opacity-0 group-hover:opacity-100 hover:text-[#CC4B37] transition-all"
                   aria-label="Eliminar conversación"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
