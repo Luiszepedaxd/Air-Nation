@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
 
@@ -335,5 +336,258 @@ export function ArsenalList({
         )}
       </div>
     </main>
+  )
+}
+
+export type MarketplaceListing = {
+  id: string
+  titulo: string
+  precio: number | null
+  precio_original: number | null
+  modalidad: 'fijo' | 'desde'
+  supercategoria: string | null
+  fotos_urls: string[]
+  status: string
+  vendido: boolean
+  created_at: string
+}
+
+type ArsenalTab = 'arsenal' | 'marketplace'
+
+export function ArsenalTabs({
+  userId,
+  userCiudad,
+  userEstado,
+  replicas,
+  listings,
+}: {
+  userId: string
+  userCiudad: string | null
+  userEstado: string | null
+  userAlias: string | null
+  userAvatar: string | null
+  replicas: ReplicaRow[]
+  listings: MarketplaceListing[]
+}) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const rawTab = searchParams.get('tab')
+  const activeTab: ArsenalTab = rawTab === 'marketplace' ? 'marketplace' : 'arsenal'
+
+  const setTab = (tab: ArsenalTab) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (tab === 'arsenal') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    const query = params.toString()
+    router.replace(pathname + (query ? `?${query}` : ''), { scroll: false })
+  }
+
+  const [showForm, setShowForm] = useState(false)
+
+  const handleSuccess = (_r: ReplicaRow) => {
+    setShowForm(false)
+    router.refresh()
+  }
+
+  if (showForm) {
+    return (
+      <RegistrarForm
+        userId={userId}
+        userCiudad={userCiudad}
+        userEstado={userEstado}
+        onSuccess={handleSuccess}
+        onCancel={() => setShowForm(false)}
+      />
+    )
+  }
+
+  return (
+    <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
+      {/* Tabs nav */}
+      <div className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-[#FFFFFF]">
+        <ScrollableTabsNav>
+          {([
+            { id: 'arsenal' as ArsenalTab, label: 'MI ARSENAL' },
+            { id: 'marketplace' as ArsenalTab, label: 'MARKETPLACE' },
+          ]).map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setTab(tab.id)}
+              style={jost}
+              className={`shrink-0 border-b-2 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
+                activeTab === tab.id
+                  ? 'border-[#CC4B37] text-[#111111]'
+                  : 'border-transparent text-[#999999]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </ScrollableTabsNav>
+      </div>
+
+      <div className="px-4 pt-6 md:px-6 max-w-[1200px] mx-auto">
+        {activeTab === 'arsenal' && (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
+                  Mi Arsenal
+                </h1>
+                <p className="mt-1 text-[13px] text-[#666666]" style={lato}>
+                  {replicas.length === 0
+                    ? 'Registra tu primera réplica'
+                    : `${replicas.length} réplica${replicas.length !== 1 ? 's' : ''} registrada${replicas.length !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForm(true)}
+                style={jost}
+                className="flex items-center gap-2 bg-[#CC4B37] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white"
+              >
+                + Registrar
+              </button>
+            </div>
+
+            {replicas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <ArsenalIcon />
+                <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
+                  Tu arsenal está vacío
+                </p>
+                <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
+                  Registra tus réplicas para tenerlas identificadas y protegidas
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  style={jost}
+                  className="mt-6 bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white"
+                >
+                  Registrar primera réplica
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {replicas.map(r => (
+                  <ReplicaCard key={r.id} replica={r} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'marketplace' && (
+          <MarketplaceTab
+            userId={userId}
+            listings={listings}
+          />
+        )}
+      </div>
+    </main>
+  )
+}
+
+function MarketplaceTab({
+  listings,
+}: {
+  userId: string
+  listings: MarketplaceListing[]
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
+            Marketplace
+          </h1>
+          <p className="mt-1 text-[13px] text-[#666666]" style={lato}>
+            {listings.length === 0
+              ? 'No tienes publicaciones activas'
+              : `${listings.length} publicación${listings.length !== 1 ? 'es' : ''}`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            // TODO: abrir form de nuevo listing
+          }}
+          style={jost}
+          className="flex items-center gap-2 bg-[#CC4B37] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white"
+        >
+          + Publicar
+        </button>
+      </div>
+
+      {listings.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          <p style={jost} className="mt-4 text-[14px] font-extrabold uppercase text-[#666666]">
+            Sin publicaciones
+          </p>
+          <p style={lato} className="mt-2 text-[13px] text-[#999999] max-w-[260px]">
+            Publica réplicas, accesorios o gear para vender a la comunidad
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {listings.map(listing => (
+            <div
+              key={listing.id}
+              className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden"
+            >
+              <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+                {listing.fotos_urls?.[0] ? (
+                  <img src={listing.fotos_urls[0]} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#444" strokeWidth="1.4" strokeLinejoin="round"/>
+                      <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#444" strokeWidth="1.4" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                )}
+                {listing.vendido && (
+                  <span style={jost} className="absolute left-2 top-2 bg-[#111111] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+                    Vendido
+                  </span>
+                )}
+                {listing.status === 'pausado' && (
+                  <span style={jost} className="absolute left-2 top-2 bg-[#999999] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+                    Pausado
+                  </span>
+                )}
+              </div>
+              <div className="p-3">
+                <p style={jost} className="line-clamp-1 text-[12px] font-extrabold uppercase text-[#111111]">
+                  {listing.titulo}
+                </p>
+                <div className="mt-1 flex items-center gap-1">
+                  {listing.precio_original && listing.precio_original !== listing.precio && (
+                    <span style={lato} className="text-[11px] text-[#999999] line-through">
+                      ${listing.precio_original.toLocaleString('es-MX')}
+                    </span>
+                  )}
+                  <span style={jost} className="text-[13px] font-extrabold text-[#CC4B37]">
+                    {listing.modalidad === 'desde' ? 'Desde ' : ''}
+                    ${listing.precio?.toLocaleString('es-MX') ?? '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

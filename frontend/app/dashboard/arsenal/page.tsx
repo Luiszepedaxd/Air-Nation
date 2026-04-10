@@ -1,7 +1,8 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
-import type { ReplicaRow } from './ArsenalClient'
-import { ArsenalList } from './ArsenalClient'
+import type { ReplicaRow, MarketplaceListing } from './ArsenalClient'
+import { ArsenalTabs } from './ArsenalClient'
 
 export default async function ArsenalPage() {
   const supabase = createDashboardSupabaseServerClient()
@@ -10,7 +11,7 @@ export default async function ArsenalPage() {
 
   const { data: userRow } = await supabase
     .from('users')
-    .select('ciudad, estado')
+    .select('ciudad, estado, alias, avatar_url')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -33,12 +34,23 @@ export default async function ArsenalPage() {
     pendingTransfer: pendingIds.has(r.id),
   }))
 
+  const { data: listings } = await supabase
+    .from('marketplace')
+    .select('id, titulo, precio, precio_original, modalidad, supercategoria, fotos_urls, status, vendido, created_at')
+    .eq('seller_id', user.id)
+    .order('created_at', { ascending: false })
+
   return (
-    <ArsenalList
-      userId={user.id}
-      userCiudad={userRow?.ciudad ?? null}
-      userEstado={userRow?.estado ?? null}
-      replicas={replicasWithStatus as ReplicaRow[]}
-    />
+    <Suspense fallback={null}>
+      <ArsenalTabs
+        userId={user.id}
+        userCiudad={userRow?.ciudad ?? null}
+        userEstado={userRow?.estado ?? null}
+        userAlias={userRow?.alias ?? null}
+        userAvatar={userRow?.avatar_url ?? null}
+        replicas={replicasWithStatus as ReplicaRow[]}
+        listings={(listings ?? []) as MarketplaceListing[]}
+      />
+    </Suspense>
   )
 }
