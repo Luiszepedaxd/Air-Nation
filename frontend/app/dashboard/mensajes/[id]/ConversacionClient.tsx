@@ -198,7 +198,7 @@ export function ConversacionClient({
       </div>
 
       {/* Input */}
-      <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3" style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 12px) + 4rem)' }}>
+      <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3 pb-3" style={{ marginBottom: 'calc(4rem + max(env(safe-area-inset-bottom), 12px))' }}>
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
