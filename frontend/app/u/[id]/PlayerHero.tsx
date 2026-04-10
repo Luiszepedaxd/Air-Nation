@@ -319,7 +319,7 @@ export function PlayerHero({
               </span>
             )}
           </div>
-          <div className="flex min-w-0 flex-1 gap-6">
+          <div className="flex min-w-0 flex-1 items-center gap-6">
             <div className="flex flex-col items-center">
               <span className="text-[17px] font-extrabold text-[#111111]" style={jost}>
                 {followersCount}
@@ -336,6 +336,20 @@ export function PlayerHero({
                 Siguiendo
               </span>
             </div>
+            {isOwner && onEditClick ? (
+              <button
+                type="button"
+                onClick={onEditClick}
+                className="ml-auto flex h-8 w-8 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] transition-colors hover:border-[#CCCCCC]"
+                aria-label="Editar perfil"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+                </svg>
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -480,22 +494,6 @@ export function PlayerHero({
               currentUserId={currentUserId}
               className={messageButtonClass}
             />
-          </div>
-        ) : isOwner ? (
-          <div className="mb-3 flex justify-end">
-            <button
-              type="button"
-              onClick={onEditClick}
-              className="flex items-center gap-1.5 border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[11px] font-extrabold uppercase text-[#666666] transition-colors hover:border-[#CCCCCC]"
-              style={jost}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
-                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-                <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
-              </svg>
-              EDITAR PERFIL
-            </button>
           </div>
         ) : null}
 

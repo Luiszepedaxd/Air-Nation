@@ -100,32 +100,12 @@ const NAV_ITEMS = [
   },
 ]
 
-function sosNavIcon(active: boolean) {
-  const stroke = active ? '#CC4B37' : '#767676'
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="9" stroke={stroke} strokeWidth="1.8" />
-      <path
-        d="M12 8v4M12 16h.01"
-        stroke={stroke}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
 const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[0], label: 'HOME' },
   { ...NAV_ITEMS[1], label: 'OPERADOR' },
   { ...NAV_ITEMS[2], label: 'MENSAJES' },
   { ...NAV_ITEMS[3], label: 'CAMPOS' },
   { ...NAV_ITEMS[4], label: 'ARSENAL' },
-  {
-    label: 'SOS',
-    href: '/dashboard/sos',
-    icon: sosNavIcon,
-  },
 ]
 
 function AdminShieldIcon({ active }: { active: boolean }) {
@@ -404,10 +384,10 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {/* Bottom Nav — mobile (5 ítems: sin Docs ni Admin; SOS enlaza a /dashboard/sos) */}
+      {/* Bottom Nav — mobile (5 ítems: HOME, OPERADOR, MENSAJES, CAMPOS, ARSENAL) */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-        <div className="grid h-16 w-full grid-cols-6 items-center">
+        <div className="grid h-16 w-full grid-cols-5 items-center">
           {NAV_ITEMS_MOBILE.map((item) => {
             const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref

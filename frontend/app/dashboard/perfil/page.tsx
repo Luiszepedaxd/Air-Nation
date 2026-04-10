@@ -6,6 +6,7 @@ import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
 import type { PlayerPostRow, PublicReplicaRow } from '@/app/u/[id]/types'
 import { type MisEquipoItem } from './MisEquiposSection'
+import type { CredentialUserData } from '@/components/credential/CredentialCard'
 import { PerfilTabsClient } from './PerfilTabsClient'
 
 export default async function PerfilPage({
@@ -342,6 +343,31 @@ export default async function PerfilPage({
     if (name && rid) pendingJoinPending.push({ id: rid, nombre: name })
   }
 
+  let credencialTeamNombre: string | null = null
+  const { data: userWithTeam } = await supabase
+    .from('users')
+    .select('teams(nombre)')
+    .eq('id', authUser.id)
+    .maybeSingle()
+  const teams = (userWithTeam as { teams?: unknown } | null)?.teams
+  if (teams) {
+    credencialTeamNombre = Array.isArray(teams)
+      ? (teams[0] as { nombre?: string } | undefined)?.nombre ?? null
+      : (teams as { nombre?: string }).nombre ?? null
+  }
+
+  const credencialData: CredentialUserData = {
+    id: row.id as string,
+    nombre: row.nombre ?? null,
+    alias: row.alias ?? null,
+    ciudad: row.ciudad ?? null,
+    rol: row.rol ?? null,
+    avatar_url: row.avatar_url ?? null,
+    member_number: row.member_number ?? null,
+    created_at: String(row.created_at ?? ''),
+    teamNombre: credencialTeamNombre,
+  }
+
   const { data: postsData } = await supabase
     .from('player_posts')
     .select('id, content, fotos_urls, created_at')
@@ -374,6 +400,7 @@ export default async function PerfilPage({
       pendingJoinPending={pendingJoinPending}
       initialTab={undefined}
       campoRegistradoNotice={searchParams.campo_creado === '1'}
+      credencialData={credencialData}
       posts={(postsData ?? []) as PlayerPostRow[]}
       replicas={(replicasData ?? []) as PublicReplicaRow[]}
     />
