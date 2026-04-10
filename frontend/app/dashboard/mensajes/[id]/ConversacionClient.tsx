@@ -167,22 +167,29 @@ export function ConversacionClient({
       )}
 
       {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 overscroll-contain">
+      <div className="flex-1 overflow-y-auto px-4 py-4 overscroll-contain">
         {messages.length === 0 && (
           <p className="text-center text-[12px] text-[#999999] py-8" style={lato}>
             Sé el primero en escribir
           </p>
         )}
-        {messages.map(msg => {
+        {messages.map((msg, i) => {
           const isMe = msg.sender_id === currentUserId
+          const prev = messages[i - 1]
+          const sameSenderAsPrev = Boolean(prev && prev.sender_id === msg.sender_id)
           return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] px-3 py-2 text-[13px] leading-relaxed ${
-                isMe
-                  ? 'bg-[#CC4B37] text-white'
-                  : 'bg-[#F4F4F4] text-[#111111]'
-              }`} style={lato}>
-                {msg.content}
+            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${sameSenderAsPrev ? 'mt-0.5' : 'mt-3'}`}>
+              <div className="flex max-w-[75%] flex-col">
+                <div className={`px-3 py-2 text-[13px] leading-relaxed rounded-[12px] ${
+                  isMe
+                    ? 'bg-[#CC4B37] text-white rounded-br-[4px]'
+                    : 'bg-[#F4F4F4] text-[#111111] rounded-bl-[4px]'
+                }`} style={lato}>
+                  {msg.content}
+                </div>
+                <p className={`mt-0.5 text-[10px] text-[#AAAAAA] ${isMe ? 'text-right' : 'text-left'}`} style={lato}>
+                  {new Date(msg.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
             </div>
           )

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
@@ -30,6 +30,156 @@ function timeAgo(iso: string | null): string {
   } catch { return '' }
 }
 
+function SwipeableConvRow({
+  conv,
+  onDelete,
+}: {
+  conv: ConvItem
+  onDelete: (id: string) => void
+}) {
+  const [offset, setOffset] = useState(0)
+  const [swiping, setSwiping] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const startX = useRef<number | null>(null)
+  const lastX = useRef<number>(0)
+  const velocity = useRef<number>(0)
+  const THRESHOLD = 72
+  const MAX_SWIPE = 80
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX
+    lastX.current = e.touches[0].clientX
+    velocity.current = 0
+    setSwiping(true)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startX.current === null) return
+    const currentX = e.touches[0].clientX
+    velocity.current = currentX - lastX.current
+    lastX.current = currentX
+    const delta = currentX - startX.current
+    const clamped = Math.max(-MAX_SWIPE, Math.min(0, delta))
+    setOffset(clamped)
+  }
+
+  const handleTouchEnd = () => {
+    setSwiping(false)
+    if (offset < -THRESHOLD || velocity.current < -8) {
+      setOffset(-MAX_SWIPE)
+      setConfirmDelete(true)
+    } else {
+      setOffset(0)
+    }
+    startX.current = null
+  }
+
+  const handleConfirmDelete = () => {
+    setOffset(0)
+    setConfirmDelete(false)
+    onDelete(conv.id)
+  }
+
+  const handleCancelDelete = () => {
+    setOffset(0)
+    setConfirmDelete(false)
+  }
+
+  const otherName = conv.other_user.alias || conv.other_user.nombre || 'Operador'
+
+  return (
+    <div className="relative overflow-hidden border-b border-[#EEEEEE] last:border-b-0">
+      {/* Fondo rojo de borrado */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 px-5"
+        style={{ opacity: Math.min(1, Math.abs(offset) / MAX_SWIPE) }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+
+      {/* Contenido deslizable */}
+      <div
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: swiping ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          willChange: 'transform',
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <Link
+          href={`/dashboard/mensajes/${conv.id}`}
+          prefetch={true}
+          className="flex items-center gap-3 px-4 py-3"
+        >
+          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
+            {conv.other_user.avatar_url ? (
+              <img src={conv.other_user.avatar_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[13px] font-bold text-[#CC4B37]" style={jost}>
+                {otherName[0].toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className={`truncate text-[13px] uppercase ${conv.unread > 0 ? 'font-extrabold text-[#111111]' : 'font-semibold text-[#444444]'}`} style={jost}>
+                {otherName}
+              </p>
+              <span className="shrink-0 text-[11px] text-[#999999]" style={lato}>
+                {timeAgo(conv.last_message_at)}
+              </span>
+            </div>
+            {conv.listing && (
+              <p className="text-[10px] text-[#CC4B37] uppercase font-extrabold truncate" style={jost}>
+                {conv.listing.titulo}
+              </p>
+            )}
+            <p className={`truncate text-[12px] ${conv.unread > 0 ? 'font-semibold text-[#111111]' : 'text-[#666666]'}`} style={lato}>
+              {conv.last_message || 'Sin mensajes aún'}
+            </p>
+          </div>
+          {conv.unread > 0 && (
+            <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#CC4B37] text-[10px] font-extrabold text-white" style={jost}>
+              {conv.unread > 9 ? '9+' : conv.unread}
+            </span>
+          )}
+        </Link>
+      </div>
+
+      {/* Modal de confirmación inline */}
+      {confirmDelete && (
+        <div className="absolute inset-0 flex items-center justify-between bg-[#FFFFFF] px-4 z-10">
+          <p style={lato} className="text-[13px] text-[#111111]">
+            ¿Eliminar esta conversación?
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancelDelete}
+              style={jost}
+              className="border border-[#EEEEEE] px-3 py-1.5 text-[11px] font-extrabold uppercase text-[#666666]"
+            >
+              No
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              style={jost}
+              className="bg-[#CC4B37] px-3 py-1.5 text-[11px] font-extrabold uppercase text-white"
+            >
+              Eliminar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function BandejaClient({
   currentUserId,
   conversations: initialConvs,
@@ -49,9 +199,7 @@ export function BandejaClient({
   }, [initialConvs])
 
   const handleDelete = async (convId: string) => {
-    if (!confirm('¿Eliminar esta conversación? El historial se borrará solo para ti.')) return
-    const conv = convs.find(c => c.id === convId)
-    if (!conv) return
+    setConvs(prev => prev.filter(c => c.id !== convId))
 
     const { data: convRow } = await supabase
       .from('conversations')
@@ -65,24 +213,23 @@ export function BandejaClient({
     const field = isP1 ? 'deleted_by_1' : 'deleted_by_2'
     const deletedAtField = isP1 ? 'deleted_at_1' : 'deleted_at_2'
 
-    // Marcar timestamp de borrado para este usuario (no borra mensajes del otro)
     await supabase.from('conversations').update({
       [field]: true,
       [deletedAtField]: new Date().toISOString(),
     }).eq('id', convId)
-
-    setConvs(prev => prev.filter(c => c.id !== convId))
   }
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
-      <div className="px-4 pt-6 md:px-6 max-w-[640px] mx-auto">
-        <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px] mb-6">
-          Mensajes
-        </h1>
+      <div className="max-w-[640px] mx-auto">
+        <div className="px-4 pt-6 pb-4">
+          <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
+            Mensajes
+          </h1>
+        </div>
 
         {convs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="flex flex-col items-center justify-center py-20 text-center px-4">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
                 stroke="#AAAAAA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -93,58 +240,13 @@ export function BandejaClient({
             </p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-[#EEEEEE]">
+          <div className="border-t border-[#EEEEEE]">
             {convs.map(conv => (
-              <div key={conv.id} className="group relative flex items-center py-3">
-                <Link
-                  href={`/dashboard/mensajes/${conv.id}`}
-                  prefetch={true}
-                  className="flex flex-1 items-center gap-3 min-w-0 pr-8"
-                >
-                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
-                    {conv.other_user.avatar_url ? (
-                      <img src={conv.other_user.avatar_url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[13px] font-bold text-[#CC4B37]" style={jost}>
-                        {(conv.other_user.alias || conv.other_user.nombre || '?')[0].toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[13px] font-extrabold uppercase text-[#111111]" style={jost}>
-                        {conv.other_user.alias || conv.other_user.nombre || 'Operador'}
-                      </p>
-                      <span className="shrink-0 text-[11px] text-[#999999]" style={lato}>
-                        {timeAgo(conv.last_message_at)}
-                      </span>
-                    </div>
-                    {conv.listing && (
-                      <p className="text-[10px] text-[#CC4B37] uppercase font-extrabold truncate" style={jost}>
-                        {conv.listing.titulo}
-                      </p>
-                    )}
-                    <p className="truncate text-[12px] text-[#666666]" style={lato}>
-                      {conv.last_message || 'Sin mensajes aún'}
-                    </p>
-                  </div>
-                  {conv.unread > 0 && (
-                    <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#CC4B37] text-[10px] font-extrabold text-white" style={jost}>
-                      {conv.unread > 9 ? '9+' : conv.unread}
-                    </span>
-                  )}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(conv.id)}
-                  className="absolute right-0 shrink-0 p-2 text-[#DDDDDD] opacity-0 group-hover:opacity-100 hover:text-[#CC4B37] transition-all"
-                  aria-label="Eliminar conversación"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
+              <SwipeableConvRow
+                key={conv.id}
+                conv={conv}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
