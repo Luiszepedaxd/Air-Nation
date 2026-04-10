@@ -83,3 +83,13 @@ export async function fetchUserNotifs(
     }
   })
 }
+
+export async function deleteNotif(
+  supabase: SupabaseClient,
+  notifId: string
+): Promise<void> {
+  await supabase
+    .from('user_notifications')
+    .delete()
+    .eq('id', notifId)
+}

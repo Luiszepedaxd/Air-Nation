@@ -101,12 +101,16 @@ export function PerfilTabsClient({
     initialTabFromParam(initialTab)
   )
   const [joinRequests, setJoinRequests] = useState(initialJoinRequests)
+  const [localApprovedFieldNotices, setLocalApprovedFieldNotices] =
+    useState(approvedFieldNotices)
+  const [localOwnerPendingFieldRequests, setLocalOwnerPendingFieldRequests] =
+    useState(ownerPendingFieldRequests)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const { canShow: canShowPush, trigger: triggerPush, loading: pushLoading } = usePushNotifButton()
   const pendingCount =
     joinRequests.length +
-    approvedFieldNotices.length +
-    ownerPendingFieldRequests.length
+    localApprovedFieldNotices.length +
+    localOwnerPendingFieldRequests.length
   const showCamposTab =
     misCampos.length > 0 || campoRegistradoNotice === true
 
@@ -117,7 +121,21 @@ export function PerfilTabsClient({
 
   const removeRequest = useCallback((id: string) => {
     setJoinRequests((r) => r.filter((x) => x.id !== id))
+    setLocalApprovedFieldNotices((r) => r.filter((x) => x.id !== id))
+    setLocalOwnerPendingFieldRequests((r) => r.filter((x) => x.id !== id))
   }, [])
+
+  useEffect(() => {
+    setJoinRequests(initialJoinRequests)
+  }, [initialJoinRequests])
+
+  useEffect(() => {
+    setLocalApprovedFieldNotices(approvedFieldNotices)
+  }, [approvedFieldNotices])
+
+  useEffect(() => {
+    setLocalOwnerPendingFieldRequests(ownerPendingFieldRequests)
+  }, [ownerPendingFieldRequests])
 
   useEffect(() => {
     const el = document.getElementById('dashboard-scroll-root')
@@ -388,8 +406,8 @@ export function PerfilTabsClient({
           <NotificacionesTab
             userId={user.id}
             requests={joinRequests}
-            approvedFieldNotices={approvedFieldNotices}
-            ownerPendingFieldRequests={ownerPendingFieldRequests}
+            approvedFieldNotices={localApprovedFieldNotices}
+            ownerPendingFieldRequests={localOwnerPendingFieldRequests}
             onRemove={removeRequest}
           />
         ) : null}
