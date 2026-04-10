@@ -129,7 +129,7 @@ export function ConversacionClient({
   const otherName = otherUser.alias || otherUser.nombre || 'Operador'
 
   return (
-    <div className="fixed inset-x-0 top-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden" style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
+    <div className="fixed inset-x-0 top-0 bottom-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">
         <Link href="/dashboard/mensajes" className="text-[#999999] hover:text-[#111111] mr-1">
@@ -198,7 +198,7 @@ export function ConversacionClient({
       </div>
 
       {/* Input */}
-      <div className="shrink-0 border-t border-[#EEEEEE] px-4 py-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+      <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3" style={{ paddingBottom: 'calc(max(env(safe-area-inset-bottom), 12px) + 4rem)' }}>
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
