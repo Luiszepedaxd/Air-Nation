@@ -49,7 +49,7 @@ export default async function MensajesPage() {
         foto: Array.isArray(listing.fotos_urls) ? String(listing.fotos_urls[0] ?? '') : null,
       } : null,
     }
-  }).filter(c => !c.deletedByMe)
+  }).filter(c => !c.deletedByMe || (c.unread > 0))
 
   return (
     <BandejaClient
