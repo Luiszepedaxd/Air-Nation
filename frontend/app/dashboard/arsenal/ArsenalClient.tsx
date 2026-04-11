@@ -371,6 +371,7 @@ export type MarketplaceListing = {
   status: string
   vendido: boolean
   created_at: string
+  paquetes: { nombre: string; descripcion: string | null; precio: number; orden: number }[]
 }
 
 type ArsenalTab = 'arsenal' | 'explorar' | 'mis-ventas'
@@ -1667,6 +1668,8 @@ function MisVentasCard({
   const [menuOpen, setMenuOpen] = useState(false)
   const [editandoPrecio, setEditandoPrecio] = useState(false)
   const [nuevoPrecio, setNuevoPrecio] = useState('')
+  const [editandoPaquetes, setEditandoPaquetes] = useState(false)
+  const [preciosPaquetes, setPreciosPaquetes] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState(false)
   const [localStatus, setLocalStatus] = useState(listing.status)
   const [localVendido, setLocalVendido] = useState(listing.vendido)
@@ -1741,6 +1744,33 @@ function MisVentasCard({
     setSaving(false)
   }
 
+  const handleEditarPaquetes = async () => {
+    setSaving(true)
+    const paquetesActualizados = listing.paquetes.map((p, i) => ({
+      ...p,
+      precio: Number(preciosPaquetes[i]) > 0 ? Number(preciosPaquetes[i]) : p.precio,
+    }))
+    const nuevoPrecioMin = Math.min(...paquetesActualizados.map(p => p.precio))
+    const { error } = await supabase
+      .from('marketplace')
+      .update({
+        paquetes: paquetesActualizados,
+        precio_original: listing.precio,
+        precio: nuevoPrecioMin,
+      })
+      .eq('id', listing.id)
+    if (!error) {
+      onUpdate(listing.id, {
+        paquetes: paquetesActualizados,
+        precio_original: listing.precio,
+        precio: nuevoPrecioMin,
+      })
+      setEditandoPaquetes(false)
+      setPreciosPaquetes({})
+    }
+    setSaving(false)
+  }
+
   return (
     <div className="rounded-[12px] overflow-visible border border-[#E4E4E4] shadow-sm bg-[#FFFFFF]">
       {/* Foto */}
@@ -1810,7 +1840,17 @@ function MisVentasCard({
                 <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg rounded-[8px] overflow-hidden">
                   {!localVendido && <button
                     type="button"
-                    onClick={() => { setMenuOpen(false); setEditandoPrecio(true) }}
+                    onClick={() => {
+                      setMenuOpen(false)
+                      if (listing.modalidad === 'desde' && listing.paquetes?.length > 0) {
+                        const precios: Record<number, string> = {}
+                        listing.paquetes.forEach((p, i) => { precios[i] = String(p.precio) })
+                        setPreciosPaquetes(precios)
+                        setEditandoPaquetes(true)
+                      } else {
+                        setEditandoPrecio(true)
+                      }
+                    }}
                     style={lato}
                     className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
                   >
@@ -1876,6 +1916,51 @@ function MisVentasCard({
               <button
                 type="button"
                 onClick={() => { setEditandoPrecio(false); setNuevoPrecio('') }}
+                style={jost}
+                className="border border-[#EEEEEE] px-3 py-2 text-[10px] font-extrabold uppercase text-[#666666]"
+              >
+                X
+              </button>
+            </div>
+          </div>
+        )}
+
+        {editandoPaquetes && (
+          <div className="mt-2 border-t border-[#EEEEEE] pt-2">
+            <p style={jost} className="text-[9px] font-extrabold uppercase text-[#999999] mb-2">
+              Nuevo precio por paquete
+            </p>
+            <div className="flex flex-col gap-2">
+              {listing.paquetes.map((p, i) => (
+                <div key={i} className="flex flex-col gap-1">
+                  <p style={lato} className="text-[11px] text-[#666666]">{p.nombre}</p>
+                  <div className="relative">
+                    <span style={lato} className="absolute left-2 top-1/2 -translate-y-1/2 text-[#999999] text-sm">$</span>
+                    <input
+                      type="number"
+                      className="w-full border border-[#EEEEEE] bg-[#F4F4F4] pl-6 pr-2 py-2 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+                      placeholder={String(p.precio)}
+                      value={preciosPaquetes[i] ?? ''}
+                      onChange={e => setPreciosPaquetes(prev => ({ ...prev, [i]: e.target.value }))}
+                      min={0}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => void handleEditarPaquetes()}
+                disabled={saving}
+                style={jost}
+                className="flex-1 bg-[#CC4B37] py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-50"
+              >
+                {saving ? '...' : 'Guardar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEditandoPaquetes(false); setPreciosPaquetes({}) }}
                 style={jost}
                 className="border border-[#EEEEEE] px-3 py-2 text-[10px] font-extrabold uppercase text-[#666666]"
               >

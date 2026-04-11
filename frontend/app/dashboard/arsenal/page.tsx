@@ -36,7 +36,7 @@ export default async function ArsenalPage() {
 
   const { data: listings } = await supabase
     .from('marketplace')
-    .select('id, titulo, precio, precio_original, modalidad, supercategoria, fotos_urls, status, vendido, created_at')
+    .select('id, titulo, precio, precio_original, modalidad, supercategoria, fotos_urls, status, vendido, created_at, paquetes')
     .eq('seller_id', user.id)
     .order('created_at', { ascending: false })
 
