@@ -1268,7 +1268,7 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
       className="group block"
     >
       {/* Foto cuadrada con margen */}
-      <div className="relative w-full overflow-hidden bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
+      <div className="relative w-full overflow-hidden rounded-[4px] bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
         {foto ? (
           <img
             src={foto}
@@ -1525,7 +1525,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 px-1">
           {[0,1,2,3].map(i => (
             <div key={i} className="overflow-hidden">
               <div className="w-full bg-[#F4F4F4] animate-pulse" style={{ paddingBottom: '100%' }} />
@@ -1551,7 +1551,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 px-1">
           {listings.map(listing => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
