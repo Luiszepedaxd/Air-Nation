@@ -390,6 +390,19 @@ function MisVentasWrapper({
 }) {
   const router = useRouter()
   const [showNuevoListing, setShowNuevoListing] = useState(false)
+  const [localListings, setLocalListings] = useState(listings)
+
+  useEffect(() => {
+    setLocalListings(listings)
+  }, [listings])
+
+  const handleUpdate = (id: string, updates: Partial<MarketplaceListing>) => {
+    setLocalListings(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))
+  }
+
+  const handleDelete = (id: string) => {
+    setLocalListings(prev => prev.filter(l => l.id !== id))
+  }
 
   if (showNuevoListing) {
     return (
@@ -426,8 +439,10 @@ function MisVentasWrapper({
       </div>
       <MisVentasTab
         userId={userId}
-        listings={listings}
+        listings={localListings}
         onPublish={() => setShowNuevoListing(true)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
       />
     </div>
   )
@@ -636,6 +651,7 @@ export function NuevoListingForm({
   const [subSubcategoria, setSubSubcategoria] = useState('')
   const [mecanismo, setMecanismo] = useState('')
   const [condicionReplica, setCondicionReplica] = useState<'stock' | 'upgrades'>('stock')
+  const [upgradesDesc, setUpgradesDesc] = useState('')
 
   const [nuevoUsado, setNuevoUsado] = useState<'nuevo' | 'usado'>('usado')
   const [modalidad, setModalidad] = useState<'fijo' | 'desde'>('fijo')
@@ -648,6 +664,22 @@ export function NuevoListingForm({
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href)
+
+    const handlePopState = () => {
+      if (step > 1) {
+        setStep(s => (s - 1) as 1 | 2 | 3 | 4)
+        window.history.pushState(null, '', window.location.href)
+      } else {
+        onCancel()
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [step, onCancel])
 
   const inputClass = 'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
   const labelClass = 'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]'
@@ -712,7 +744,6 @@ export function NuevoListingForm({
         seller_id: userId,
         titulo: titulo.trim(),
         categoria: supercategoria,
-        descripcion: descripcion.trim() || null,
         supercategoria,
         subcategoria: subcategoria || null,
         sub_subcategoria: subSubcategoria || null,
@@ -727,6 +758,10 @@ export function NuevoListingForm({
         estado: userEstado,
         status: 'activo',
         vendido: false,
+        descripcion: descripcion.trim() ||
+          (condicionReplica === 'upgrades' && upgradesDesc.trim()
+            ? `Upgrades: ${upgradesDesc.trim()}`
+            : null),
       }
 
       if (replicaConectada) {
@@ -954,6 +989,16 @@ export function NuevoListingForm({
                     </button>
                   ))}
                 </div>
+                {condicionReplica === 'upgrades' && (
+                  <textarea
+                    className={`${inputClass} mt-2 resize-none`}
+                    rows={3}
+                    placeholder="Describe los upgrades: motor, hopup, inner barrel, stock..."
+                    value={upgradesDesc}
+                    onChange={e => setUpgradesDesc(e.target.value.slice(0, 300))}
+                    maxLength={300}
+                  />
+                )}
               </div>
             </>
           )}
@@ -1834,27 +1879,17 @@ function MisVentasCard({
 
 function MisVentasTab({
   userId,
-  listings: initialListings,
+  listings,
   onPublish,
+  onUpdate,
+  onDelete,
 }: {
   userId: string
   listings: MarketplaceListing[]
   onPublish: () => void
+  onUpdate: (id: string, updates: Partial<MarketplaceListing>) => void
+  onDelete: (id: string) => void
 }) {
-  const [listings, setListings] = useState(initialListings)
-
-  useEffect(() => {
-    setListings(initialListings)
-  }, [initialListings])
-
-  const handleUpdate = (id: string, updates: Partial<MarketplaceListing>) => {
-    setListings(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))
-  }
-
-  const handleDelete = (id: string) => {
-    setListings(prev => prev.filter(l => l.id !== id))
-  }
-
   if (listings.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -1886,8 +1921,8 @@ function MisVentasTab({
         <MisVentasCard
           key={listing.id}
           listing={listing}
-          onUpdate={handleUpdate}
-          onDelete={handleDelete}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
         />
       ))}
     </div>
