@@ -1265,17 +1265,18 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
   return (
     <Link
       href={`/marketplace/${listing.id}`}
-      className="group block bg-[#FFFFFF] border border-[#EEEEEE] overflow-hidden hover:border-[#CCCCCC] transition-colors"
+      className="group block"
     >
-      <div className="relative w-full bg-[#F4F4F4]" style={{ aspectRatio: '1/1' }}>
+      {/* Foto cuadrada con margen */}
+      <div className="relative w-full overflow-hidden bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
         {foto ? (
           <img
             src={foto}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#CCCCCC" strokeWidth="1.4" strokeLinejoin="round"/>
               <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#CCCCCC" strokeWidth="1.4" strokeLinecap="round"/>
@@ -1284,41 +1285,32 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
         )}
         {listing.vendido && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white tracking-widest">
+            <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
               Vendido
             </span>
           </div>
         )}
         {listing.nuevo_usado === 'nuevo' && !listing.vendido && (
-          <span style={jost} className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+          <span style={jost} className="absolute left-1.5 top-1.5 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
             Nuevo
           </span>
         )}
-        {listing.modalidad === 'desde' && !listing.vendido && (
-          <span style={jost} className="absolute right-2 bottom-2 bg-black/60 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-            Desde
-          </span>
-        )}
       </div>
-      <div className="p-2.5">
-        <div className="flex items-baseline gap-1.5 mb-0.5">
-          {listing.precio_original && listing.precio_original !== listing.precio && (
-            <span style={lato} className="text-[11px] text-[#999999] line-through">
-              ${listing.precio_original.toLocaleString('es-MX')}
-            </span>
+
+      {/* Info debajo de la foto */}
+      <div className="pt-1.5 pb-2">
+        <p style={jost} className="text-[14px] font-extrabold text-[#111111] leading-tight">
+          ${listing.precio?.toLocaleString('es-MX') ?? '—'}
+          {listing.modalidad === 'desde' && (
+            <span style={lato} className="ml-1 text-[10px] font-normal text-[#999999] normal-case">desde</span>
           )}
-          <span style={jost} className="text-[15px] font-extrabold text-[#111111]">
-            ${listing.precio?.toLocaleString('es-MX') ?? '—'}
-          </span>
-        </div>
-        <p style={lato} className="text-[12px] text-[#444444] line-clamp-2 leading-snug">
+        </p>
+        <p style={lato} className="mt-0.5 text-[12px] text-[#444444] line-clamp-2 leading-snug">
           {listing.titulo}
         </p>
-        {listing.ciudad && (
-          <p style={lato} className="mt-0.5 text-[11px] text-[#999999] truncate">
-            {listing.ciudad}
-          </p>
-        )}
+        <p style={lato} className="mt-0.5 text-[11px] text-[#999999] truncate">
+          {listing.ciudad ?? ''}
+        </p>
       </div>
     </Link>
   )
@@ -1406,7 +1398,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
   }
 
   return (
-    <div>
+    <div className="px-4">
       {/* Botón filtrar */}
       <div className="mb-4 flex items-center gap-2">
         <button
@@ -1533,7 +1525,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3">
           {[0,1,2,3].map(i => (
             <div key={i} className="overflow-hidden">
               <div className="w-full bg-[#F4F4F4] animate-pulse" style={{ paddingBottom: '100%' }} />
@@ -1559,7 +1551,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3">
           {listings.map(listing => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
