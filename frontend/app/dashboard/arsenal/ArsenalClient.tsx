@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
@@ -381,32 +381,20 @@ function MisVentasWrapper({
   userCiudad,
   userEstado,
   replicas,
+  onUpdate,
+  onDelete,
+  onNewListing,
 }: {
   userId: string
   listings: MarketplaceListing[]
   userCiudad: string | null
   userEstado: string | null
   replicas: ReplicaRow[]
+  onUpdate: (id: string, updates: Partial<MarketplaceListing>) => void
+  onDelete: (id: string) => void
+  onNewListing: (listings: MarketplaceListing[]) => void
 }) {
-  const router = useRouter()
   const [showNuevoListing, setShowNuevoListing] = useState(false)
-  const [localListings, setLocalListings] = useState(listings)
-  const initializedRef = useRef(false)
-
-  useEffect(() => {
-    if (!initializedRef.current) {
-      initializedRef.current = true
-      setLocalListings(listings)
-    }
-  }, [listings])
-
-  const handleUpdate = (id: string, updates: Partial<MarketplaceListing>) => {
-    setLocalListings(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))
-  }
-
-  const handleDelete = (id: string) => {
-    setLocalListings(prev => prev.filter(l => l.id !== id))
-  }
 
   if (showNuevoListing) {
     return (
@@ -415,7 +403,15 @@ function MisVentasWrapper({
         userCiudad={userCiudad}
         userEstado={userEstado}
         replicas={replicas}
-        onSuccess={() => { setShowNuevoListing(false); router.refresh() }}
+        onSuccess={async () => {
+            setShowNuevoListing(false)
+            const { data } = await supabase
+              .from('marketplace')
+              .select('id, titulo, precio, precio_original, modalidad, supercategoria, fotos_urls, status, vendido, created_at')
+              .eq('seller_id', userId)
+              .order('created_at', { ascending: false })
+            if (data) onNewListing(data as MarketplaceListing[])
+          }}
         onCancel={() => setShowNuevoListing(false)}
       />
     )
@@ -443,10 +439,10 @@ function MisVentasWrapper({
       </div>
       <MisVentasTab
         userId={userId}
-        listings={localListings}
+        listings={listings}
         onPublish={() => setShowNuevoListing(true)}
-        onUpdate={handleUpdate}
-        onDelete={handleDelete}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
       />
     </div>
   )
@@ -489,6 +485,15 @@ export function ArsenalTabs({
   }
 
   const [showForm, setShowForm] = useState(false)
+  const [localListings, setLocalListings] = useState(listings)
+
+  const handleUpdateListing = (id: string, updates: Partial<MarketplaceListing>) => {
+    setLocalListings(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))
+  }
+
+  const handleDeleteListing = (id: string) => {
+    setLocalListings(prev => prev.filter(l => l.id !== id))
+  }
 
   const handleSuccess = (_r: ReplicaRow) => {
     setShowForm(false)
@@ -593,10 +598,13 @@ export function ArsenalTabs({
         {activeTab === 'mis-ventas' && (
           <MisVentasWrapper
             userId={userId}
-            listings={listings}
+            listings={localListings}
             userCiudad={userCiudad}
             userEstado={userEstado}
             replicas={replicas}
+            onUpdate={handleUpdateListing}
+            onDelete={handleDeleteListing}
+            onNewListing={(newListings) => setLocalListings(newListings)}
           />
         )}
       </div>
