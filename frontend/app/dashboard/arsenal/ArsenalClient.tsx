@@ -210,7 +210,7 @@ export function RegistrarForm({
             )}
           </div>
           <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 border border-[#EEEEEE] bg-[#F4F4F4] py-2.5 text-[11px] font-extrabold uppercase text-[#111111]" style={jost}>
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFoto} disabled={uploading} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFoto} disabled={uploading} />
             {uploading ? 'Subiendo…' : 'Elegir foto'}
           </label>
         </div>
@@ -1193,7 +1193,7 @@ export function NuevoListingForm({
               ))}
               {fotos.length < 6 && (
                 <label className="flex aspect-square cursor-pointer flex-col items-center justify-center border border-dashed border-[#CCCCCC] bg-[#F4F4F4] hover:border-[#CC4B37] transition-colors">
-                  <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFoto} disabled={uploading} />
+                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFoto} disabled={uploading} />
                   {uploading ? (
                     <p style={lato} className="text-[10px] text-[#999999]">Subiendo…</p>
                   ) : (

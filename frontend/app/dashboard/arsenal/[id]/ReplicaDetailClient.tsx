@@ -156,7 +156,7 @@ export function ReplicaDetailClient({
           }
           {isOwner && (
             <label className="absolute bottom-2 right-2 cursor-pointer bg-black/60 px-3 py-1.5 text-[10px] font-extrabold uppercase text-white" style={jost}>
-              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFoto} disabled={uploadingFoto} />
+              <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFoto} disabled={uploadingFoto} />
               {uploadingFoto ? 'Subiendo…' : 'Cambiar foto'}
             </label>
           )}

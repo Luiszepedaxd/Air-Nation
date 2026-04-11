@@ -519,6 +519,7 @@ export function ProfileView({
           ref={fileRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          multiple
           className="hidden"
           onChange={onAvatarChange}
         />
@@ -845,6 +846,7 @@ export function ProfileView({
               ref={portadaFileRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              multiple
               className="hidden"
               onChange={onPortadaChange}
             />

@@ -848,6 +848,7 @@ export default function OnboardingPage() {
                     ref={avatarInputRef}
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
+                    multiple
                     className="hidden"
                     onChange={onAvatarChange}
                   />

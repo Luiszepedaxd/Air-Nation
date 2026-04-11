@@ -223,6 +223,7 @@ export function ImageUploadField({
             ref={inputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            multiple
             className="hidden"
             onChange={(e) => void handleChange(e)}
           />

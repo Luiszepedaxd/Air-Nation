@@ -491,6 +491,7 @@ export default function PostForm({
           ref={coverInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          multiple
           className="hidden"
           onChange={handleCoverFile}
         />
@@ -551,6 +552,7 @@ export default function PostForm({
           ref={editorImageInputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          multiple
           className="hidden"
           onChange={onEditorImageInput}
         />

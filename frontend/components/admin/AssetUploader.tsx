@@ -141,6 +141,7 @@ export default function AssetUploader({
         ref={inputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         aria-hidden
         onChange={onFileChange}
