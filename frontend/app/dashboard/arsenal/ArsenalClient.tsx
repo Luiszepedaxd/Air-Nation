@@ -1265,10 +1265,10 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
   return (
     <Link
       href={`/marketplace/${listing.id}`}
-      className="group block"
+      className="group block border border-[#EEEEEE] overflow-hidden hover:border-[#CCCCCC] transition-colors"
     >
       {/* Foto cuadrada con margen */}
-      <div className="relative w-full overflow-hidden rounded-[4px] bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
+      <div className="relative w-full overflow-hidden bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
         {foto ? (
           <img
             src={foto}
@@ -1298,7 +1298,7 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
       </div>
 
       {/* Info debajo de la foto */}
-      <div className="pt-1.5 pb-2">
+      <div className="pt-1.5 pb-2 px-2">
         <p style={jost} className="text-[14px] font-extrabold text-[#111111] leading-tight">
           ${listing.precio?.toLocaleString('es-MX') ?? '—'}
           {listing.modalidad === 'desde' && (
