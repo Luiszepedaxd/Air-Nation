@@ -1291,12 +1291,24 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
 
       {/* Info debajo de la foto */}
       <div className="pt-1.5 pb-2 px-2">
-        <p style={jost} className="text-[14px] font-extrabold text-[#111111] leading-tight">
-          ${listing.precio?.toLocaleString('es-MX') ?? '—'}
-          {listing.modalidad === 'desde' && (
-            <span style={lato} className="ml-1 text-[10px] font-normal text-[#999999] normal-case">desde</span>
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          {listing.precio_original && listing.precio_original !== listing.precio && (
+            <span style={lato} className="text-[11px] text-[#999999] line-through">
+              ${listing.precio_original.toLocaleString('es-MX')}
+            </span>
           )}
-        </p>
+          <p style={jost} className="text-[14px] font-extrabold text-[#111111] leading-tight">
+            {listing.modalidad === 'desde' && (
+              <span style={lato} className="mr-1 text-[10px] font-normal text-[#999999] normal-case">Desde </span>
+            )}
+            ${listing.precio?.toLocaleString('es-MX') ?? '—'}
+          </p>
+          {listing.precio_original && listing.precio_original !== listing.precio && (
+            <span style={jost} className="text-[9px] font-extrabold text-white bg-[#CC4B37] px-1 py-0.5">
+              -{Math.round((1 - (listing.precio ?? 0) / listing.precio_original) * 100)}%
+            </span>
+          )}
+        </div>
         <p style={lato} className="mt-0.5 text-[12px] text-[#444444] line-clamp-2 leading-snug">
           {listing.titulo}
         </p>
@@ -1316,8 +1328,10 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
   const [filtroNuevoUsado, setFiltroNuevoUsado] = useState('')
   const [localCategoria, setLocalCategoria] = useState('')
   const [localNuevoUsado, setLocalNuevoUsado] = useState('')
+  const [filtroDescuento, setFiltroDescuento] = useState(false)
+  const [localDescuento, setLocalDescuento] = useState(false)
 
-  const activeCount = [filtroCategoria, filtroNuevoUsado].filter(Boolean).length
+  const activeCount = [filtroCategoria, filtroNuevoUsado, filtroDescuento ? 'desc' : ''].filter(Boolean).length
 
   useEffect(() => {
     const load = async () => {
@@ -1337,6 +1351,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
 
       if (filtroCategoria) query = query.eq('supercategoria', filtroCategoria)
       if (filtroNuevoUsado) query = query.eq('nuevo_usado', filtroNuevoUsado)
+      if (filtroDescuento) query = query.not('precio_original', 'is', null)
 
       const { data } = await query
 
@@ -1370,23 +1385,26 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
       setLoading(false)
     }
     void load()
-  }, [filtroCategoria, filtroNuevoUsado])
+  }, [filtroCategoria, filtroNuevoUsado, filtroDescuento])
 
   const handleOpen = () => {
     setLocalCategoria(filtroCategoria)
     setLocalNuevoUsado(filtroNuevoUsado)
+    setLocalDescuento(filtroDescuento)
     setSheetOpen(true)
   }
 
   const handleApply = () => {
     setFiltroCategoria(localCategoria)
     setFiltroNuevoUsado(localNuevoUsado)
+    setFiltroDescuento(localDescuento)
     setSheetOpen(false)
   }
 
   const handleClear = () => {
     setLocalCategoria('')
     setLocalNuevoUsado('')
+    setLocalDescuento(false)
   }
 
   return (
@@ -1396,7 +1414,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
         {activeCount > 0 && (
           <button
             type="button"
-            onClick={() => { setFiltroCategoria(''); setFiltroNuevoUsado('') }}
+            onClick={() => { setFiltroCategoria(''); setFiltroNuevoUsado(''); setFiltroDescuento(false) }}
             style={lato}
             className="text-[12px] text-[#999999] underline-offset-2 hover:underline"
           >
@@ -1516,6 +1534,24 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
               ))}
             </div>
           </div>
+
+          <div className="mt-5">
+            <p style={jost} className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]">
+              Precio
+            </p>
+            <button
+              type="button"
+              onClick={() => setLocalDescuento(v => !v)}
+              style={jost}
+              className={`border px-4 py-2 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${
+                localDescuento
+                  ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
+                  : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
+              }`}
+            >
+              Con descuento
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1575,16 +1611,21 @@ function MisVentasCard({
   const [editandoPrecio, setEditandoPrecio] = useState(false)
   const [nuevoPrecio, setNuevoPrecio] = useState('')
   const [saving, setSaving] = useState(false)
+  const [localStatus, setLocalStatus] = useState(listing.status)
+  const [localVendido, setLocalVendido] = useState(listing.vendido)
   const foto = listing.fotos_urls?.[0] ?? null
 
   const handlePausar = async () => {
     setMenuOpen(false)
-    const nuevoStatus = listing.status === 'pausado' ? 'activo' : 'pausado'
+    const nuevoStatus = localStatus === 'pausado' ? 'activo' : 'pausado'
     const { error } = await supabase
       .from('marketplace')
       .update({ status: nuevoStatus })
       .eq('id', listing.id)
-    if (!error) onUpdate(listing.id, { status: nuevoStatus })
+    if (!error) {
+      onUpdate(listing.id, { status: nuevoStatus })
+      setLocalStatus(nuevoStatus)
+    }
   }
 
   const handleVendido = async () => {
@@ -1593,7 +1634,10 @@ function MisVentasCard({
       .from('marketplace')
       .update({ vendido: true, status: 'activo' })
       .eq('id', listing.id)
-    if (!error) onUpdate(listing.id, { vendido: true })
+    if (!error) {
+      onUpdate(listing.id, { vendido: true })
+      setLocalVendido(true)
+    }
   }
 
   const handleEliminar = async () => {
@@ -1654,14 +1698,14 @@ function MisVentasCard({
             </svg>
           </div>
         )}
-        {listing.vendido && (
+        {localVendido && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
               Vendido
             </span>
           </div>
         )}
-        {listing.status === 'pausado' && !listing.vendido && (
+        {localStatus === 'pausado' && !localVendido && (
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
             <span style={jost} className="bg-[#999999] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
               Pausado
@@ -1707,7 +1751,7 @@ function MisVentasCard({
               <>
                 <div className="fixed inset-0 z-[90]" onClick={() => setMenuOpen(false)} />
                 <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg rounded-[8px] overflow-hidden">
-                  {!listing.vendido && <button
+                  {!localVendido && <button
                     type="button"
                     onClick={() => { setMenuOpen(false); setEditandoPrecio(true) }}
                     style={lato}
@@ -1715,15 +1759,15 @@ function MisVentasCard({
                   >
                     Bajar precio
                   </button>}
-                  {!listing.vendido && <button
+                  {!localVendido && <button
                     type="button"
                     onClick={() => void handlePausar()}
                     style={lato}
                     className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
                   >
-                    {listing.status === 'pausado' ? 'Reactivar' : 'Pausar'}
+                    {localStatus === 'pausado' ? 'Reactivar' : 'Pausar'}
                   </button>}
-                  {!listing.vendido && <button
+                  {!localVendido && <button
                     type="button"
                     onClick={() => void handleVendido()}
                     style={lato}
