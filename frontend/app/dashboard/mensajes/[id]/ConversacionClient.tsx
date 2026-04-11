@@ -229,7 +229,11 @@ export function ConversacionClient({
                   {renderMessageContent(msg.content, isMe)}
                 </div>
                 <p className={`mt-0.5 text-[10px] text-[#AAAAAA] ${isMe ? 'text-right' : 'text-left'}`} style={lato}>
-                  {new Date(msg.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(msg.created_at).toLocaleTimeString('es-MX', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  })}
                 </p>
               </div>
             </div>

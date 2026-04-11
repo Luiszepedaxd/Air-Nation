@@ -116,6 +116,8 @@ export function PerfilTabsClient({
   const [localOwnerPendingFieldRequests, setLocalOwnerPendingFieldRequests] =
     useState(ownerPendingFieldRequests)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
   const {
     canShow: canShowPush,
     trigger: triggerPush,
@@ -168,6 +170,24 @@ export function PerfilTabsClient({
       cancelled = true
       window.removeEventListener(NOTIF_UPDATED_EVENT, onUpd)
     }
+  }, [user.id])
+
+  useEffect(() => {
+    const loadFollows = async () => {
+      const [{ count: fc }, { count: fg }] = await Promise.all([
+        supabase
+          .from('user_follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('following_id', user.id),
+        supabase
+          .from('user_follows')
+          .select('*', { count: 'exact', head: true })
+          .eq('follower_id', user.id),
+      ])
+      setFollowersCount(fc ?? 0)
+      setFollowingCount(fg ?? 0)
+    }
+    void loadFollows()
   }, [user.id])
 
   const publicUser: PublicUserProfile = {
@@ -238,8 +258,8 @@ export function PerfilTabsClient({
               subtitle={
                 [user.ciudad, user.rol].filter(Boolean).join(' · ') || '—'
               }
-              followersCount={0}
-              followingCount={0}
+              followersCount={followersCount}
+              followingCount={followingCount}
               isFollowing={false}
               currentUserId={user.id}
               teamRole={null}

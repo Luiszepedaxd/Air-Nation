@@ -141,7 +141,7 @@ function SwipeableConvRow({
             <p className={`truncate text-[12px] ${conv.unread > 0 ? 'font-semibold text-[#111111]' : 'text-[#666666]'}`} style={lato}>
               {conv.last_message?.startsWith('[LISTING:')
                 ? 'Consulta sobre una publicacion'
-                : conv.last_message || 'Sin mensajes aún'}
+                : conv.last_message?.split('\n')[0]?.trim() || 'Sin mensajes aún'}
             </p>
           </div>
           {conv.unread > 0 && (
