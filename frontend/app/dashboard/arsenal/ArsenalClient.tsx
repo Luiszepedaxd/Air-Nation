@@ -653,14 +653,20 @@ export function NuevoListingForm({
   const labelClass = 'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]'
 
   const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
-    if (!file || fotos.length >= 6) return
+    if (!files.length || fotos.length >= 6) return
+    const allowed = files.slice(0, 6 - fotos.length)
     setUploading(true)
     try {
-      const url = await uploadFile(file)
-      setFotos(prev => [...prev, url])
-    } catch { setError('Error al subir la foto.') }
+      const urls: string[] = []
+      for (const file of allowed) {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) continue
+        const url = await uploadFile(file)
+        urls.push(url)
+      }
+      setFotos(prev => [...prev, ...urls])
+    } catch { setError('Error al subir las fotos.') }
     finally { setUploading(false) }
   }
 
