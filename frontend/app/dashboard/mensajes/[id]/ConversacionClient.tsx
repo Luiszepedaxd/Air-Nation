@@ -128,6 +128,47 @@ export function ConversacionClient({
 
   const otherName = otherUser.alias || otherUser.nombre || 'Operador'
 
+  function parseListing(content: string): { listingId: string; titulo: string; precio: string; resto: string } | null {
+    const match = content.match(/^\[LISTING:([^\]]+)\] (.+?) - (\$[\d,]+)\n\n([\s\S]+)$/)
+    if (!match) return null
+    return { listingId: match[1], titulo: match[2], precio: match[3], resto: match[4] }
+  }
+
+  function renderMessageContent(content: string, isMe: boolean) {
+    const parsed = parseListing(content)
+    if (parsed) {
+      const cardBorder = isMe ? 'border-white/30 bg-white/10' : 'border-[#CCCCCC] bg-white'
+      const labelColor = isMe ? 'text-white/70' : 'text-[#999999]'
+      const titleColor = isMe ? 'text-white' : 'text-[#111111]'
+      const priceColor = isMe ? 'text-white' : 'text-[#CC4B37]'
+      const restoColor = isMe ? 'text-white' : 'text-[#111111]'
+      return (
+        <div className="flex flex-col gap-2 max-w-[240px]">
+          <a
+            href={`/marketplace/${parsed.listingId}`}
+            className={`block border overflow-hidden rounded-[8px] ${cardBorder}`}
+          >
+            <div className="p-2.5">
+              <p style={jost} className={`text-[10px] font-extrabold uppercase mb-1 ${labelColor}`}>
+                Publicacion en venta
+              </p>
+              <p style={lato} className={`text-[13px] font-semibold line-clamp-2 leading-snug ${titleColor}`}>
+                {parsed.titulo}
+              </p>
+              <p style={jost} className={`mt-1 text-[14px] font-extrabold ${priceColor}`}>
+                {parsed.precio}
+              </p>
+            </div>
+          </a>
+          <p style={lato} className={`text-[13px] leading-relaxed ${restoColor}`}>
+            {parsed.resto}
+          </p>
+        </div>
+      )
+    }
+    return <span>{content}</span>
+  }
+
   return (
     <div className="fixed inset-x-0 top-0 bottom-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
       {/* Header */}
@@ -185,7 +226,7 @@ export function ConversacionClient({
                     ? 'bg-[#CC4B37] text-white rounded-br-[4px]'
                     : 'bg-[#F4F4F4] text-[#111111] rounded-bl-[4px]'
                 }`} style={lato}>
-                  {msg.content}
+                  {renderMessageContent(msg.content, isMe)}
                 </div>
                 <p className={`mt-0.5 text-[10px] text-[#AAAAAA] ${isMe ? 'text-right' : 'text-left'}`} style={lato}>
                   {new Date(msg.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
