@@ -97,6 +97,25 @@ export function ListingDetailClient({
         content: mensajeAuto,
       })
 
+      // Actualizar last_message en la conversación
+      const { data: convRow } = await supabase
+        .from('conversations')
+        .select('participant_1, participant_2, unread_1, unread_2')
+        .eq('id', convId)
+        .maybeSingle()
+
+      if (convRow) {
+        const cr = convRow as Record<string, unknown>
+        const isP1 = String(cr.participant_1) === currentUserId
+        const field = isP1 ? 'unread_2' : 'unread_1'
+        const current = isP1 ? Number(cr.unread_2 ?? 0) : Number(cr.unread_1 ?? 0)
+        await supabase.from('conversations').update({
+          last_message: mensajeAuto,
+          last_message_at: new Date().toISOString(),
+          [field]: current + 1,
+        }).eq('id', convId)
+      }
+
       router.push(`/dashboard/mensajes/${convId}`)
     } catch {
       router.push('/dashboard/mensajes')
