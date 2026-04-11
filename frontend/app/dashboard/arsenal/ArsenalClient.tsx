@@ -1593,11 +1593,24 @@ function MisVentasCard({
   const handleEliminar = async () => {
     setMenuOpen(false)
     if (!confirm('¿Eliminar esta publicación?')) return
+    const { data: listingRow } = await supabase
+      .from('marketplace')
+      .select('replica_id')
+      .eq('id', listing.id)
+      .maybeSingle()
     const { error } = await supabase
       .from('marketplace')
       .delete()
       .eq('id', listing.id)
-    if (!error) onDelete(listing.id)
+    if (!error) {
+      if (listingRow?.replica_id) {
+        await supabase
+          .from('arsenal')
+          .update({ en_venta: false })
+          .eq('id', listingRow.replica_id)
+      }
+      onDelete(listing.id)
+    }
   }
 
   const handleEditarPrecio = async () => {
@@ -1671,61 +1684,59 @@ function MisVentasCard({
           </div>
 
           {/* Menu */}
-          {!listing.vendido && (
-            <div className="relative shrink-0 z-10">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(v => !v)}
-                className="flex items-center justify-center w-7 h-7 text-[#999999] hover:text-[#111111]"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <circle cx="12" cy="5" r="1.5"/>
-                  <circle cx="12" cy="12" r="1.5"/>
-                  <circle cx="12" cy="19" r="1.5"/>
-                </svg>
-              </button>
+          <div className="relative shrink-0 z-10">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(v => !v)}
+              className="flex items-center justify-center w-7 h-7 text-[#999999] hover:text-[#111111]"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="1.5"/>
+                <circle cx="12" cy="12" r="1.5"/>
+                <circle cx="12" cy="19" r="1.5"/>
+              </svg>
+            </button>
 
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-[90]" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg rounded-[8px] overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => { setMenuOpen(false); setEditandoPrecio(true) }}
-                      style={lato}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
-                    >
-                      Bajar precio
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handlePausar()}
-                      style={lato}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
-                    >
-                      {listing.status === 'pausado' ? 'Reactivar' : 'Pausar'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleVendido()}
-                      style={lato}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
-                    >
-                      Marcar como vendido
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleEliminar()}
-                      style={lato}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#CC4B37] hover:bg-[#FFF8F7]"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-[90]" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg rounded-[8px] overflow-hidden">
+                  {!listing.vendido && <button
+                    type="button"
+                    onClick={() => { setMenuOpen(false); setEditandoPrecio(true) }}
+                    style={lato}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                  >
+                    Bajar precio
+                  </button>}
+                  {!listing.vendido && <button
+                    type="button"
+                    onClick={() => void handlePausar()}
+                    style={lato}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                  >
+                    {listing.status === 'pausado' ? 'Reactivar' : 'Pausar'}
+                  </button>}
+                  {!listing.vendido && <button
+                    type="button"
+                    onClick={() => void handleVendido()}
+                    style={lato}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#111111] hover:bg-[#F4F4F4]"
+                  >
+                    Marcar como vendido
+                  </button>}
+                  <button
+                    type="button"
+                    onClick={() => void handleEliminar()}
+                    style={lato}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#CC4B37] hover:bg-[#FFF8F7]"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Form editar precio */}
