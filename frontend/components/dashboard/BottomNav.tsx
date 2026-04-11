@@ -60,6 +60,20 @@ const NAV_ITEMS = [
     )
   },
   {
+    label: 'Arsenal',
+    href: '/dashboard/arsenal',
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M12 3L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7L12 3Z"
+          stroke={active ? '#CC4B37' : '#767676'}
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 12l2 2 4-4"
+          stroke={active ? '#CC4B37' : '#767676'}
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  },
+  {
     label: 'Campos',
     href: '/campos',
     icon: (active: boolean) => {
@@ -84,28 +98,14 @@ const NAV_ITEMS = [
       )
     },
   },
-  {
-    label: 'Arsenal',
-    href: '/dashboard/arsenal',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M12 3L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7L12 3Z"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M9 12l2 2 4-4"
-          stroke={active ? '#CC4B37' : '#767676'}
-          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    )
-  },
 ]
 
 const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[0], label: 'HOME' },
   { ...NAV_ITEMS[1], label: 'OPERADOR' },
   { ...NAV_ITEMS[2], label: 'MENSAJES' },
-  { ...NAV_ITEMS[3], label: 'CAMPOS' },
-  { ...NAV_ITEMS[4], label: 'ARSENAL' },
+  { ...NAV_ITEMS[3], label: 'ARSENAL' },
+  { ...NAV_ITEMS[4], label: 'CAMPOS' },
 ]
 
 function AdminShieldIcon({ active }: { active: boolean }) {
