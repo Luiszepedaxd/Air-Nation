@@ -144,7 +144,8 @@ export function ListingDetailClient({
         </div>
 
         {/* Foto principal — full width sin padding */}
-        <div className="relative w-full bg-[#111111]" style={{ aspectRatio: '4/3' }}>
+        <div className="px-4 pt-2 pb-0 bg-[#FFFFFF]">
+        <div className="relative w-full overflow-hidden rounded-[8px] bg-[#111111]" style={{ aspectRatio: '4/3' }}>
           {fotos.length > 0 ? (
             <img
               src={fotos[fotoIndex]}
@@ -203,10 +204,11 @@ export function ListingDetailClient({
             </div>
           )}
         </div>
+        </div>
 
         {/* Thumbnails */}
         {fotos.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto px-4 py-2 bg-[#F4F4F4]">
+          <div className="flex gap-1.5 overflow-x-auto px-4 py-2 bg-[#FFFFFF]">
             {fotos.map((url, i) => (
               <button
                 key={i}
