@@ -373,7 +373,65 @@ export type MarketplaceListing = {
   created_at: string
 }
 
-type ArsenalTab = 'arsenal' | 'marketplace'
+type ArsenalTab = 'arsenal' | 'explorar' | 'mis-ventas'
+
+function MisVentasWrapper({
+  userId,
+  listings,
+  userCiudad,
+  userEstado,
+  replicas,
+}: {
+  userId: string
+  listings: MarketplaceListing[]
+  userCiudad: string | null
+  userEstado: string | null
+  replicas: ReplicaRow[]
+}) {
+  const router = useRouter()
+  const [showNuevoListing, setShowNuevoListing] = useState(false)
+
+  if (showNuevoListing) {
+    return (
+      <NuevoListingForm
+        userId={userId}
+        userCiudad={userCiudad}
+        userEstado={userEstado}
+        replicas={replicas}
+        onSuccess={() => { setShowNuevoListing(false); router.refresh() }}
+        onCancel={() => setShowNuevoListing(false)}
+      />
+    )
+  }
+
+  return (
+    <div>
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h2 style={jost} className="text-[18px] font-extrabold uppercase text-[#111111]">
+            Mis ventas
+          </h2>
+          <p style={lato} className="mt-0.5 text-[12px] text-[#999999]">
+            {listings.length === 0 ? 'Sin publicaciones activas' : `${listings.length} publicación${listings.length !== 1 ? 'es' : ''}`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowNuevoListing(true)}
+          style={jost}
+          className="flex items-center gap-1.5 bg-[#CC4B37] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white"
+        >
+          + Publicar
+        </button>
+      </div>
+      <MisVentasTab
+        userId={userId}
+        listings={listings}
+        onPublish={() => setShowNuevoListing(true)}
+      />
+    </div>
+  )
+}
 
 export function ArsenalTabs({
   userId,
@@ -395,7 +453,10 @@ export function ArsenalTabs({
   const pathname = usePathname()
 
   const rawTab = searchParams.get('tab')
-  const activeTab: ArsenalTab = rawTab === 'marketplace' ? 'marketplace' : 'arsenal'
+  const activeTab: ArsenalTab =
+    rawTab === 'explorar' ? 'explorar' :
+    rawTab === 'mis-ventas' ? 'mis-ventas' :
+    'arsenal'
 
   const setTab = (tab: ArsenalTab) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -434,7 +495,8 @@ export function ArsenalTabs({
         <ScrollableTabsNav>
           {([
             { id: 'arsenal' as ArsenalTab, label: 'MI ARSENAL' },
-            { id: 'marketplace' as ArsenalTab, label: 'MARKETPLACE' },
+            { id: 'explorar' as ArsenalTab, label: 'EXPLORAR' },
+            { id: 'mis-ventas' as ArsenalTab, label: 'MIS VENTAS' },
           ]).map(tab => (
             <button
               key={tab.id}
@@ -505,8 +567,12 @@ export function ArsenalTabs({
           </>
         )}
 
-        {activeTab === 'marketplace' && (
-          <MarketplaceTab
+        {activeTab === 'explorar' && (
+          <ExplorarTab currentUserId={userId} />
+        )}
+
+        {activeTab === 'mis-ventas' && (
+          <MisVentasWrapper
             userId={userId}
             listings={listings}
             userCiudad={userCiudad}
@@ -1174,86 +1240,6 @@ export function NuevoListingForm({
             {saving ? 'Publicando…' : 'Publicar ahora'}
           </button>
         </div>
-      )}
-    </div>
-  )
-}
-
-function MarketplaceTab({
-  userId,
-  listings,
-  userCiudad,
-  userEstado,
-  replicas,
-}: {
-  userId: string
-  listings: MarketplaceListing[]
-  userCiudad: string | null
-  userEstado: string | null
-  replicas: ReplicaRow[]
-}) {
-  const router = useRouter()
-  const [subTab, setSubTab] = useState<'explorar' | 'mis-ventas'>('explorar')
-  const [showNuevoListing, setShowNuevoListing] = useState(false)
-
-  if (showNuevoListing) {
-    return (
-      <NuevoListingForm
-        userId={userId}
-        userCiudad={userCiudad}
-        userEstado={userEstado}
-        replicas={replicas}
-        onSuccess={() => { setShowNuevoListing(false); router.refresh() }}
-        onCancel={() => setShowNuevoListing(false)}
-      />
-    )
-  }
-
-  return (
-    <div>
-      {/* Sub-tabs pills */}
-      <div className="mb-5 flex items-center gap-2">
-        {([
-          { id: 'explorar' as const, label: 'Explorar' },
-          { id: 'mis-ventas' as const, label: 'Mis ventas' },
-        ]).map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setSubTab(tab.id)}
-            style={lato}
-            className={`px-4 py-2 text-[13px] font-semibold transition-colors rounded-none ${
-              subTab === tab.id
-                ? 'bg-[#111111] text-[#FFFFFF]'
-                : 'bg-[#F4F4F4] text-[#666666] hover:bg-[#EEEEEE]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-
-        {subTab === 'mis-ventas' && (
-          <button
-            type="button"
-            onClick={() => setShowNuevoListing(true)}
-            style={jost}
-            className="ml-auto flex items-center gap-1.5 bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide text-white"
-          >
-            + Publicar
-          </button>
-        )}
-      </div>
-
-      {subTab === 'explorar' && (
-        <ExplorarTab currentUserId={userId} />
-      )}
-
-      {subTab === 'mis-ventas' && (
-        <MisVentasTab
-          userId={userId}
-          listings={listings}
-          onPublish={() => setShowNuevoListing(true)}
-        />
       )}
     </div>
   )
