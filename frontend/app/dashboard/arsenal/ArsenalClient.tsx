@@ -1386,33 +1386,37 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
   return (
     <div className="px-4">
       {/* Botón filtrar */}
-      <div className="mb-4 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleOpen}
-          style={jost}
-          className="flex items-center gap-2 border border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:border-[#CCCCCC]"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          Filtrar
-          {activeCount > 0 && (
-            <span className="flex h-4 w-4 items-center justify-center bg-[#CC4B37] text-[9px] font-extrabold text-white">
-              {activeCount}
-            </span>
-          )}
-        </button>
+      <div className="mb-4 flex items-center justify-end gap-2">
         {activeCount > 0 && (
           <button
             type="button"
             onClick={() => { setFiltroCategoria(''); setFiltroNuevoUsado('') }}
-            style={jost}
-            className="text-[11px] font-extrabold uppercase text-[#999999] underline-offset-2 hover:underline"
+            style={lato}
+            className="text-[12px] text-[#999999] underline-offset-2 hover:underline"
           >
-            Limpiar
+            Limpiar filtros
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleOpen}
+          className={`flex items-center gap-1.5 border px-3 py-2 text-[12px] transition-colors ${
+            activeCount > 0
+              ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]'
+              : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
+          }`}
+          style={lato}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          Filtrar
+          {activeCount > 0 && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white">
+              {activeCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Overlay */}
@@ -1511,7 +1515,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 px-1">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {[0,1,2,3].map(i => (
             <div key={i} className="overflow-hidden">
               <div className="w-full bg-[#F4F4F4] animate-pulse" style={{ paddingBottom: '100%' }} />
@@ -1537,7 +1541,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 px-1">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {listings.map(listing => (
             <ListingCard key={listing.id} listing={listing} />
           ))}
