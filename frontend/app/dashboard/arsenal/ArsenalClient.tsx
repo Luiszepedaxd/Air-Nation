@@ -1265,52 +1265,49 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
   return (
     <Link
       href={`/marketplace/${listing.id}`}
-      className="group block bg-[#FFFFFF] overflow-hidden transition-colors"
+      className="group block bg-[#FFFFFF] border border-[#EEEEEE] overflow-hidden hover:border-[#CCCCCC] transition-colors"
     >
-      {/* Foto cuadrada */}
-      <div className="relative w-full overflow-hidden bg-[#F4F4F4]" style={{ paddingBottom: '100%' }}>
-        <div className="absolute inset-0">
-          {foto ? (
-            <img src={foto} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#EEEEEE]">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
-                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
-              </svg>
-            </div>
-          )}
-          {listing.vendido && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span style={jost} className="bg-[#111111] px-3 py-1 text-[10px] font-extrabold uppercase text-white">
-                Vendido
-              </span>
-            </div>
-          )}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {listing.nuevo_usado === 'nuevo' && !listing.vendido && (
-              <span style={jost} className="bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-                Nuevo
-              </span>
-            )}
+      <div className="relative w-full bg-[#F4F4F4]" style={{ aspectRatio: '1/1' }}>
+        {foto ? (
+          <img
+            src={foto}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#CCCCCC" strokeWidth="1.4" strokeLinejoin="round"/>
+              <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#CCCCCC" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
           </div>
-          {listing.modalidad === 'desde' && !listing.vendido && (
-            <span style={jost} className="absolute bottom-2 right-2 bg-black/60 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
-              Desde
+        )}
+        {listing.vendido && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white tracking-widest">
+              Vendido
             </span>
-          )}
-        </div>
+          </div>
+        )}
+        {listing.nuevo_usado === 'nuevo' && !listing.vendido && (
+          <span style={jost} className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+            Nuevo
+          </span>
+        )}
+        {listing.modalidad === 'desde' && !listing.vendido && (
+          <span style={jost} className="absolute right-2 bottom-2 bg-black/60 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">
+            Desde
+          </span>
+        )}
       </div>
-
-      {/* Info */}
-      <div className="pt-2 pb-3 px-1">
-        <div className="flex items-baseline gap-1 mb-0.5">
+      <div className="p-2.5">
+        <div className="flex items-baseline gap-1.5 mb-0.5">
           {listing.precio_original && listing.precio_original !== listing.precio && (
             <span style={lato} className="text-[11px] text-[#999999] line-through">
               ${listing.precio_original.toLocaleString('es-MX')}
             </span>
           )}
-          <span style={jost} className="text-[14px] font-extrabold text-[#111111]">
+          <span style={jost} className="text-[15px] font-extrabold text-[#111111]">
             ${listing.precio?.toLocaleString('es-MX') ?? '—'}
           </span>
         </div>

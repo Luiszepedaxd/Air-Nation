@@ -104,7 +104,7 @@ export function ListingDetailClient({
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF]" style={{ paddingBottom: showCTA ? 'calc(80px + env(safe-area-inset-bottom))' : '40px' }}>
-      <div className="mx-auto max-w-[640px]">
+      <div className="mx-auto max-w-[640px] overflow-hidden">
 
         {/* Foto principal — full width sin padding */}
         <div className="relative w-full bg-[#111111]" style={{ aspectRatio: '1/1' }}>
@@ -255,35 +255,11 @@ export function ListingDetailClient({
             </div>
           )}
 
-          {/* Botón contactar — visible inline también */}
-          {showCTA && (
-            <div className="mb-4 flex gap-2">
-              <button
-                type="button"
-                onClick={() => void handleContactar()}
-                disabled={openingChat}
-                style={jost}
-                className="flex-1 bg-[#CC4B37] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
-              >
-                {openingChat ? 'Abriendo chat…' : 'Contactar vendedor'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                className="flex h-[50px] w-[50px] shrink-0 items-center justify-center border border-[#EEEEEE] text-[#666666] hover:border-[#CCCCCC]"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v12M8 7l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-          )}
-
           {/* Mensaje sugerido */}
           {showCTA && (
-            <div className="mb-4 border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-3">
-              <p style={lato} className="text-[13px] text-[#666666] italic">"{mensajeSugerido}"</p>
-            </div>
+            <p style={lato} className="mb-4 text-[12px] text-[#AAAAAA] italic">
+              💬 Mensaje sugerido: "{mensajeSugerido}"
+            </p>
           )}
 
           {/* Descripción */}
