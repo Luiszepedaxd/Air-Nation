@@ -66,7 +66,6 @@ export function ListingDetailClient({
     listing.modalidad === 'desde' && paquetesOrdenados.length > 0 ? 0 : null
   )
   const [openingChat, setOpeningChat] = useState(false)
-  const [mensajeSugerido] = useState('¿Sigue disponible?')
 
   const sellerName = seller.alias?.trim() || seller.nombre?.trim() || 'Vendedor'
   const fotos = listing.fotos_urls.length > 0 ? listing.fotos_urls : []
@@ -83,6 +82,19 @@ export function ListingDetailClient({
         p_user_b: seller.id,
       })
       if (error || convId == null) throw error
+
+      // Enviar mensaje automático con referencia al listing
+      const precioTexto = listing.precio
+        ? `$${listing.precio.toLocaleString('es-MX')}`
+        : ''
+      const mensajeAuto = `[LISTING:${listing.id}] ${listing.titulo}${precioTexto ? ` - ${precioTexto}` : ''}\n\nHola, me interesa tu publicacion. Sigue disponible?`
+
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: currentUserId,
+        content: mensajeAuto,
+      })
+
       router.push(`/dashboard/mensajes/${convId}`)
     } catch {
       router.push('/dashboard/mensajes')
@@ -106,8 +118,33 @@ export function ListingDetailClient({
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF]" style={{ paddingBottom: showCTA ? 'calc(80px + env(safe-area-inset-bottom))' : '40px' }}>
       <div className="mx-auto max-w-[640px] overflow-hidden">
 
+        {/* Header: volver + título + compartir */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-[#EEEEEE]">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="text-[#666666] hover:text-[#111111]"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+          <p style={jost} className="flex-1 text-[13px] font-extrabold uppercase text-[#111111] line-clamp-1">
+            {listing.titulo}
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleShare()}
+            className="text-[#666666] hover:text-[#111111]"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v12M8 7l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
         {/* Foto principal — full width sin padding */}
-        <div className="relative w-full bg-[#111111]" style={{ aspectRatio: '1/1' }}>
+        <div className="relative w-full bg-[#111111]" style={{ aspectRatio: '4/3' }}>
           {fotos.length > 0 ? (
             <img
               src={fotos[fotoIndex]}
@@ -255,13 +292,6 @@ export function ListingDetailClient({
             </div>
           )}
 
-          {/* Mensaje sugerido */}
-          {showCTA && (
-            <p style={lato} className="mb-4 text-[12px] text-[#AAAAAA] italic">
-              💬 Mensaje sugerido: "{mensajeSugerido}"
-            </p>
-          )}
-
           {/* Descripción */}
           {listing.descripcion && (
             <div className="mb-4 border-t border-[#EEEEEE] pt-4">
@@ -359,26 +389,17 @@ export function ListingDetailClient({
         {/* CTA fijo en bottom */}
         {showCTA && (
           <div
-            className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#EEEEEE] bg-white px-4 py-3 flex gap-3"
+            className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#EEEEEE] bg-white px-4 py-3"
             style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}
           >
-            <button
-              type="button"
-              onClick={() => void handleShare()}
-              className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#EEEEEE] text-[#666666]"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v12M8 7l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
             <button
               type="button"
               onClick={() => void handleContactar()}
               disabled={openingChat}
               style={jost}
-              className="flex-1 bg-[#CC4B37] h-12 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
+              className="w-full bg-[#CC4B37] h-12 text-[12px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
             >
-              {openingChat ? 'Abriendo chat…' : 'Contactar vendedor'}
+              {openingChat ? 'Abriendo chat...' : 'Contactar vendedor'}
             </button>
           </div>
         )}

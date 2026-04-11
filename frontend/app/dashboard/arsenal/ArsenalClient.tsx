@@ -1622,40 +1622,38 @@ function MisVentasCard({
   }
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+    <div className="rounded-[12px] overflow-visible border border-[#E4E4E4] shadow-sm bg-[#FFFFFF]">
       {/* Foto */}
-      <div className="relative w-full overflow-hidden bg-[#F4F4F4]" style={{ paddingBottom: '100%' }}>
-        <div className="absolute inset-0">
-          {foto ? (
-            <img src={foto} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[#EEEEEE]">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round"/>
-                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#AAAAAA" strokeWidth="1.4" strokeLinecap="round"/>
-              </svg>
-            </div>
-          )}
-          {listing.vendido && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
-                Vendido
-              </span>
-            </div>
-          )}
-          {listing.status === 'pausado' && !listing.vendido && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-              <span style={jost} className="bg-[#999999] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
-                Pausado
-              </span>
-            </div>
-          )}
-        </div>
+      <div className="relative w-full overflow-hidden rounded-t-[12px] bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
+        {foto ? (
+          <img src={foto} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#CCCCCC" strokeWidth="1.4" strokeLinejoin="round"/>
+              <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#CCCCCC" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </div>
+        )}
+        {listing.vendido && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span style={jost} className="bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
+              Vendido
+            </span>
+          </div>
+        )}
+        {listing.status === 'pausado' && !listing.vendido && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+            <span style={jost} className="bg-[#999999] px-2 py-1 text-[9px] font-extrabold uppercase text-white">
+              Pausado
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Info + acciones */}
-      <div className="p-2.5">
-        <div className="flex items-start justify-between gap-1 mb-1">
+      {/* Info */}
+      <div className="px-2 pt-1.5 pb-2">
+        <div className="flex items-start justify-between gap-1">
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-1.5 flex-wrap">
               {listing.precio_original && listing.precio_original !== listing.precio && (
@@ -1663,7 +1661,7 @@ function MisVentasCard({
                   ${listing.precio_original.toLocaleString('es-MX')}
                 </span>
               )}
-              <span style={jost} className="text-[14px] font-extrabold text-[#CC4B37]">
+              <span style={jost} className="text-[14px] font-extrabold text-[#111111]">
                 ${listing.precio?.toLocaleString('es-MX') ?? '—'}
               </span>
             </div>
@@ -1672,9 +1670,9 @@ function MisVentasCard({
             </p>
           </div>
 
-          {/* Menú */}
+          {/* Menu */}
           {!listing.vendido && (
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 z-10">
               <button
                 type="button"
                 onClick={() => setMenuOpen(v => !v)}
@@ -1690,7 +1688,7 @@ function MisVentasCard({
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-[90]" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg">
+                  <div className="absolute right-0 top-7 z-[100] min-w-[160px] border border-[#EEEEEE] bg-white shadow-lg rounded-[8px] overflow-hidden">
                     <button
                       type="button"
                       onClick={() => { setMenuOpen(false); setEditandoPrecio(true) }}
@@ -1755,7 +1753,7 @@ function MisVentasCard({
                 style={jost}
                 className="bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-50"
               >
-                {saving ? '…' : 'OK'}
+                {saving ? '...' : 'OK'}
               </button>
               <button
                 type="button"
@@ -1763,7 +1761,7 @@ function MisVentasCard({
                 style={jost}
                 className="border border-[#EEEEEE] px-3 py-2 text-[10px] font-extrabold uppercase text-[#666666]"
               >
-                ✕
+                X
               </button>
             </div>
           </div>
