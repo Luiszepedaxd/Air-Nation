@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
@@ -391,9 +391,13 @@ function MisVentasWrapper({
   const router = useRouter()
   const [showNuevoListing, setShowNuevoListing] = useState(false)
   const [localListings, setLocalListings] = useState(listings)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    setLocalListings(listings)
+    if (!initializedRef.current) {
+      initializedRef.current = true
+      setLocalListings(listings)
+    }
   }, [listings])
 
   const handleUpdate = (id: string, updates: Partial<MarketplaceListing>) => {

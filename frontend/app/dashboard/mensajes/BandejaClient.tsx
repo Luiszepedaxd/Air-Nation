@@ -24,28 +24,34 @@ function timeAgo(iso: string | null): string {
     const date = new Date(iso)
     const now = new Date()
 
-    const isToday = date.toDateString() === now.toDateString()
-    const yesterday = new Date(now)
-    yesterday.setDate(now.getDate() - 1)
-    const isYesterday = date.toDateString() === yesterday.toDateString()
+    // Usar offset local para comparar fechas correctamente
+    const localDate = new Date(date.getTime())
+    const localNow = new Date(now.getTime())
+
+    const dateStr = `${localDate.getFullYear()}-${localDate.getMonth()}-${localDate.getDate()}`
+    const nowStr = `${localNow.getFullYear()}-${localNow.getMonth()}-${localNow.getDate()}`
+
+    const yesterdayDate = new Date(localNow)
+    yesterdayDate.setDate(localNow.getDate() - 1)
+    const yesterdayStr = `${yesterdayDate.getFullYear()}-${yesterdayDate.getMonth()}-${yesterdayDate.getDate()}`
 
     const diffMs = now.getTime() - date.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-    if (isToday) {
+    if (dateStr === nowStr) {
       return date.toLocaleTimeString('es-MX', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
       })
     }
-    if (isYesterday) return 'Ayer'
+    if (dateStr === yesterdayStr) return 'Ayer'
     if (diffDays < 7) {
       return date.toLocaleDateString('es-MX', { weekday: 'short' })
     }
-    const dd = String(date.getDate()).padStart(2, '0')
-    const mm = String(date.getMonth() + 1).padStart(2, '0')
-    const yyyy = date.getFullYear()
+    const dd = String(localDate.getDate()).padStart(2, '0')
+    const mm = String(localDate.getMonth() + 1).padStart(2, '0')
+    const yyyy = localDate.getFullYear()
     return `${dd}/${mm}/${yyyy}`
   } catch { return '' }
 }
