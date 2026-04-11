@@ -1265,7 +1265,7 @@ function ListingCard({ listing }: { listing: ListingFeed }) {
   return (
     <Link
       href={`/marketplace/${listing.id}`}
-      className="group block border border-[#EEEEEE] overflow-hidden hover:border-[#CCCCCC] transition-colors"
+      className="group block rounded-[12px] overflow-hidden border border-[#E4E4E4] shadow-sm hover:shadow-md transition-shadow bg-[#FFFFFF]"
     >
       {/* Foto cuadrada con margen */}
       <div className="relative w-full overflow-hidden bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
