@@ -21,12 +21,32 @@ type ConvItem = {
 function timeAgo(iso: string | null): string {
   if (!iso) return ''
   try {
-    const diff = Date.now() - new Date(iso).getTime()
-    const h = Math.floor(diff / (1000 * 60 * 60))
-    if (h < 1) return 'ahora'
-    if (h < 24) return `${h}h`
-    const d = Math.floor(h / 24)
-    return d === 1 ? '1d' : `${d}d`
+    const date = new Date(iso)
+    const now = new Date()
+
+    const isToday = date.toDateString() === now.toDateString()
+    const yesterday = new Date(now)
+    yesterday.setDate(now.getDate() - 1)
+    const isYesterday = date.toDateString() === yesterday.toDateString()
+
+    const diffMs = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (isToday) {
+      return date.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
+    }
+    if (isYesterday) return 'Ayer'
+    if (diffDays < 7) {
+      return date.toLocaleDateString('es-MX', { weekday: 'short' })
+    }
+    const dd = String(date.getDate()).padStart(2, '0')
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const yyyy = date.getFullYear()
+    return `${dd}/${mm}/${yyyy}`
   } catch { return '' }
 }
 
