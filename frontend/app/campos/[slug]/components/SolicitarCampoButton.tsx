@@ -1,7 +1,7 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { GuestActionModal } from '@/components/ui/GuestActionModal'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import { supabase } from '@/lib/supabase'
 
@@ -38,9 +38,6 @@ export function SolicitarCampoButton({
   solicitanteNombre: string | null
   solicitanteAlias: string | null
 }) {
-  const router = useRouter()
-  const loginHref = `/login?redirect=${encodeURIComponent(`/campos/${fieldSlug}`)}`
-
   const [open, setOpen] = useState(false)
   const [fechaDeseada, setFechaDeseada] = useState('')
   const [numJugadores, setNumJugadores] = useState(10)
@@ -55,6 +52,7 @@ export function SolicitarCampoButton({
   const [error, setError] = useState<string | null>(null)
   const [imagenUrl, setImagenUrl] = useState<string | null>(null)
   const [uploadBusy, setUploadBusy] = useState(0)
+  const [guestModal, setGuestModal] = useState(false)
 
   const minDate = useMemo(() => todayInputMin(), [])
 
@@ -132,7 +130,7 @@ export function SolicitarCampoButton({
 
   const handlePrimaryClick = () => {
     if (!userId) {
-      router.push(loginHref)
+      setGuestModal(true)
       return
     }
     if (sentOk || hasPending) return
@@ -402,6 +400,13 @@ export function SolicitarCampoButton({
           </div>
         </div>
       ) : null}
+
+      <GuestActionModal
+        open={guestModal}
+        onClose={() => setGuestModal(false)}
+        action="solicitar"
+        redirectPath={`/campos/${fieldSlug}`}
+      />
     </>
   )
 }

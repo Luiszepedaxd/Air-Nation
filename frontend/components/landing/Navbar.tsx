@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 const NAV_LINKS = [
   { label: "Funciones", href: "#funciones" },
@@ -11,11 +12,18 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 55);
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setIsLoggedIn(!!data.session);
+    });
   }, []);
 
   const linkNav = scrolled
@@ -67,18 +75,29 @@ export default function Navbar() {
 
         {/* ── Auth CTAs ── */}
         <div className="hidden md:flex items-center gap-2 shrink-0">
-          <Link
-            href="/login"
-            className={linkLogin}
-          >
-            Iniciar sesión
-          </Link>
-          <Link
-            href="/register"
-            className="font-body font-bold text-[0.7rem] text-white bg-an-accent hover:bg-an-accent-h transition-colors uppercase tracking-[0.15em] px-5 py-2.5"
-          >
-            Registrarse
-          </Link>
+          {isLoggedIn ? (
+            <Link
+              href="/dashboard"
+              className="font-body font-bold text-[0.7rem] text-white bg-an-accent hover:bg-an-accent-h transition-colors uppercase tracking-[0.15em] px-5 py-2.5"
+            >
+              Ir al Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className={linkLogin}
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                href="/register"
+                className="font-body font-bold text-[0.7rem] text-white bg-an-accent hover:bg-an-accent-h transition-colors uppercase tracking-[0.15em] px-5 py-2.5"
+              >
+                Registrarse
+              </Link>
+            </>
+          )}
         </div>
 
         {/* ── Hamburger ── */}
@@ -120,18 +139,29 @@ export default function Navbar() {
               </a>
             ))}
             <div className="pt-4 flex flex-col gap-3 border-t border-an-border">
-              <Link
-                href="/login"
-                className="font-body font-bold text-sm text-[#333333] text-center py-3 border border-an-border uppercase tracking-wider hover:bg-an-surface2 transition-colors"
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                href="/register"
-                className="font-body font-bold text-sm text-white bg-an-accent text-center py-3 uppercase tracking-wider hover:bg-an-accent-h transition-colors"
-              >
-                Registrarse gratis
-              </Link>
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="font-body font-bold text-sm text-white bg-an-accent text-center py-3 uppercase tracking-wider hover:bg-an-accent-h transition-colors"
+                >
+                  Ir al Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="font-body font-bold text-sm text-[#333333] text-center py-3 border border-an-border uppercase tracking-wider hover:bg-an-surface2 transition-colors"
+                  >
+                    Iniciar sesión
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="font-body font-bold text-sm text-white bg-an-accent text-center py-3 uppercase tracking-wider hover:bg-an-accent-h transition-colors"
+                  >
+                    Registrarse gratis
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

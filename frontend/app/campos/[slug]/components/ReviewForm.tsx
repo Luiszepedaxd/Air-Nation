@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import Link from 'next/link'
+import { GuestActionModal } from '@/components/ui/GuestActionModal'
 import { supabase } from '@/lib/supabase'
 import type { FieldReviewPublic } from '../../types'
 
@@ -61,8 +61,7 @@ export function ReviewForm({ fieldId, slug, onSaved }: Props) {
   const [comentario, setComentario] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-
-  const redirectTo = `/campos/${slug}`
+  const [guestModal, setGuestModal] = useState(false)
 
   const loadMine = useCallback(async () => {
     const {
@@ -213,15 +212,22 @@ export function ReviewForm({ fieldId, slug, onSaved }: Props) {
 
   if (!userId) {
     return (
-      <p className="text-sm text-[#666666]" style={lato}>
-        <Link
-          href={`/login?redirect=${encodeURIComponent(redirectTo)}`}
-          className="font-semibold text-[#CC4B37] underline-offset-2 hover:underline"
+      <>
+        <button
+          type="button"
+          onClick={() => setGuestModal(true)}
+          className="border border-[#CC4B37] bg-[#CC4B37] px-4 py-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white"
+          style={{ ...jost, borderRadius: 2 }}
         >
-          Inicia sesión
-        </Link>{' '}
-        para dejar una reseña.
-      </p>
+          DEJAR RESEÑA
+        </button>
+        <GuestActionModal
+          open={guestModal}
+          onClose={() => setGuestModal(false)}
+          action="resena"
+          redirectPath={`/campos/${slug}`}
+        />
+      </>
     )
   }
 
