@@ -4,6 +4,8 @@ import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
+import { CamposCiudadLanding } from '../components/CamposCiudadLanding'
+import { CIUDADES, fetchCamposCiudad } from '../lib/ciudades-seo'
 import type { CampoDetailRow, FieldReviewPublic } from '../types'
 import { CampoHero } from './components/CampoHero'
 import type { CampoEventoListItem } from './components/CampoPublicTabs'
@@ -159,11 +161,39 @@ async function fetchEventosCampo(fieldId: string): Promise<CampoEventoListItem[]
   }))
 }
 
+export function generateStaticParams() {
+  return Object.keys(CIUDADES).map((slug) => ({ slug }))
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string }
 }): Promise<Metadata> {
+  const ciudad = CIUDADES[params.slug]
+  if (ciudad) {
+    const title = `Campos de airsoft en ${ciudad.label} ${new Date().getFullYear()} | AirNation`
+    const url = `https://airnation.online/campos/${params.slug}`
+    return {
+      title,
+      description: ciudad.descripcion,
+      alternates: { canonical: url },
+      openGraph: {
+        title,
+        description: ciudad.descripcion,
+        url,
+        type: 'website',
+        images: [
+          {
+            url: 'https://airnation.online/og-default.jpg',
+            width: 1200,
+            height: 630,
+          },
+        ],
+      },
+    }
+  }
+
   const field = await getCampoBySlug(params.slug)
   if (!field) {
     return { title: 'Campo — AirNation' }
@@ -195,6 +225,14 @@ export default async function CampoPublicPage({
 }: {
   params: { slug: string }
 }) {
+  const ciudad = CIUDADES[params.slug]
+  if (ciudad) {
+    const fields = await fetchCamposCiudad(ciudad.supabaseValues)
+    return (
+      <CamposCiudadLanding slug={params.slug} ciudad={ciudad} fields={fields} />
+    )
+  }
+
   const field = await getCampoBySlug(params.slug)
   if (!field) notFound()
 
