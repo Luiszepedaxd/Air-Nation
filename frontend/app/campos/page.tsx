@@ -7,9 +7,12 @@ import type { CampoListRow } from './types'
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'Campos de airsoft — AirNation',
+  title: 'Campos de airsoft en México — AirNation',
   description:
-    'Listado de campos de airsoft aprobados. Encuentra dónde jugar cerca de ti.',
+    'Encuentra campos de airsoft cerca de ti en México. Guadalajara, CDMX, Monterrey y más.',
+  alternates: {
+    canonical: 'https://airnation.online/campos',
+  },
 }
 
 async function fetchCamposAprobados(): Promise<CampoListRow[]> {

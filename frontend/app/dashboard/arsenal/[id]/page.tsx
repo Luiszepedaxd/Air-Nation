@@ -1,3 +1,10 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Réplica — AirNation',
+  robots: { index: false, follow: false },
+}
+
 import { redirect, notFound } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '../../supabase-server'
 import { ReplicaDetailClient } from './ReplicaDetailClient'
