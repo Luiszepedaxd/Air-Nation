@@ -24,6 +24,12 @@ export default function Navbar() {
     supabase.auth.getSession().then(({ data }) => {
       setIsLoggedIn(!!data.session);
     });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const linkNav = scrolled
