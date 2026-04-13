@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://airnation.online"),
   alternates: {
-    canonical: '/',
+    canonical: 'https://airnation.online',
   },
   title: "AirNation — Plataforma central del airsoft",
   description:
