@@ -55,37 +55,24 @@ export default async function Hero() {
           </h1>
 
           {/* CTAs */}
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center gap-2.5 px-8 py-[1.1rem] bg-an-accent text-white font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:bg-an-accent-h transition-colors"
-              >
-                Crear cuenta gratis
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                  <path d="M2.5 7h9M8 3.5L11.5 7 8 10.5"
-                    stroke="currentColor" strokeWidth="1.6"
-                    strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center px-8 py-[1.1rem] border border-white/35 text-white/90 font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:border-white hover:text-white transition-colors"
-              >
-                Ya tengo cuenta
-              </Link>
-            </div>
-            <a
-              href="/campos"
-              className="inline-flex items-center justify-center gap-1.5 text-white/60 hover:text-white/90 transition-colors font-body text-[0.7rem] uppercase tracking-[0.14em] mt-1"
-              style={{ fontFamily: "'Jost', sans-serif" }}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center gap-2.5 px-8 py-[1.1rem] bg-an-accent text-white font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:bg-an-accent-h transition-colors"
             >
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z"
-                  stroke="currentColor" strokeWidth="1.4" fill="none"/>
+              Crear cuenta gratis
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <path d="M2.5 7h9M8 3.5L11.5 7 8 10.5"
+                  stroke="currentColor" strokeWidth="1.6"
+                  strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Explorar sin cuenta
-            </a>
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center px-8 py-[1.1rem] border border-white/35 text-white/90 font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:border-white hover:text-white transition-colors"
+            >
+              Ya tengo cuenta
+            </Link>
           </div>
         </div>
       </div>

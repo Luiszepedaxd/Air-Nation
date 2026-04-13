@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { GuestActionModal } from '@/components/ui/GuestActionModal'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -55,7 +54,6 @@ export function RSVPButton({
   const [loading, setLoading] = useState(false)
   const [localCount, setLocalCount] = useState(initialCount)
   const [hasRsvp, setHasRsvp] = useState(initialHasRsvp)
-  const [guestModal, setGuestModal] = useState(false)
 
   useEffect(() => {
     setLocalCount(initialCount)
@@ -67,6 +65,11 @@ export function RSVPButton({
     if (hasRsvp) return false
     return localCount >= cupo
   }, [cupo, localCount, hasRsvp])
+
+  const redirectLogin = useCallback(() => {
+    const path = `/eventos/${eventId}`
+    router.push(`/login?redirect=${encodeURIComponent(path)}`)
+  }, [router, eventId])
 
   const handleRsvp = useCallback(async () => {
     if (!sessionUserId || loading || eventoLleno) return
@@ -107,22 +110,14 @@ export function RSVPButton({
 
   if (!sessionUserId) {
     return (
-      <>
-        <button
-          type="button"
-          style={jost}
-          onClick={() => setGuestModal(true)}
-          className="flex h-12 w-full items-center justify-center bg-[#CC4B37] text-[11px] tracking-wide text-[#FFFFFF]"
-        >
-          ME APUNTO
-        </button>
-        <GuestActionModal
-          open={guestModal}
-          onClose={() => setGuestModal(false)}
-          action="rsvp"
-          redirectPath={`/eventos/${eventId}`}
-        />
-      </>
+      <button
+        type="button"
+        style={jost}
+        onClick={redirectLogin}
+        className="flex h-12 w-full items-center justify-center bg-[#CC4B37] text-[11px] tracking-wide text-[#FFFFFF]"
+      >
+        ME APUNTO
+      </button>
     )
   }
 

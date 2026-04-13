@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
-import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 import { ReplicaPublicClient } from './ReplicaPublicClient'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 
@@ -35,9 +34,6 @@ export async function generateMetadata({
   return {
     title: `${data.nombre} — AirNation`,
     description: descParts.join(' · '),
-    alternates: {
-      canonical: `${BASE}/replicas/${params.id}`,
-    },
     openGraph: {
       title: `${data.nombre} — AirNation`,
       description: descParts.join(' · '),
@@ -89,54 +85,28 @@ export default async function ReplicaPublicPage({
     avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
   }
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: String(r.nombre),
-    description: r.descripcion ? String(r.descripcion) : undefined,
-    image: r.foto_url ? String(r.foto_url) : undefined,
-    url: `${BASE}/replicas/${params.id}`,
-    brand: {
-      '@type': 'Brand',
-      name: 'AirNation Arsenal',
-    },
-    additionalProperty: [
-      r.sistema ? { '@type': 'PropertyValue', name: 'Sistema', value: String(r.sistema) } : null,
-      r.mecanismo ? { '@type': 'PropertyValue', name: 'Mecanismo', value: String(r.mecanismo) } : null,
-      r.condicion ? { '@type': 'PropertyValue', name: 'Condición', value: String(r.condicion) } : null,
-      r.serial ? { '@type': 'PropertyValue', name: 'Serial', value: String(r.serial) } : null,
-    ].filter(Boolean),
-  }
-
   return (
-    <>
-      <PublicSiteHeader />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <ReplicaPublicClient
-        replica={{
-          id: String(r.id),
-          nombre: String(r.nombre),
-          sistema: r.sistema ? String(r.sistema) : null,
-          mecanismo: r.mecanismo ? String(r.mecanismo) : null,
-          condicion: r.condicion ? String(r.condicion) : null,
-          upgrades: r.upgrades ? String(r.upgrades) : null,
-          foto_url: r.foto_url ? String(r.foto_url) : null,
-          descripcion: r.descripcion ? String(r.descripcion) : null,
-          ciudad: r.ciudad ? String(r.ciudad) : null,
-          estado: r.estado ? String(r.estado) : null,
-          verificada: Boolean(r.verificada),
-          en_venta: Boolean(r.en_venta),
-          serial: r.serial ? String(r.serial) : null,
-          created_at: String(r.created_at),
-        }}
-        owner={owner}
-        currentUserId={currentUser?.id ?? null}
-        currentUserAlias={currentUser?.user_metadata?.alias ?? null}
-        currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}
-      />
-    </>
+    <ReplicaPublicClient
+      replica={{
+        id: String(r.id),
+        nombre: String(r.nombre),
+        sistema: r.sistema ? String(r.sistema) : null,
+        mecanismo: r.mecanismo ? String(r.mecanismo) : null,
+        condicion: r.condicion ? String(r.condicion) : null,
+        upgrades: r.upgrades ? String(r.upgrades) : null,
+        foto_url: r.foto_url ? String(r.foto_url) : null,
+        descripcion: r.descripcion ? String(r.descripcion) : null,
+        ciudad: r.ciudad ? String(r.ciudad) : null,
+        estado: r.estado ? String(r.estado) : null,
+        verificada: Boolean(r.verificada),
+        en_venta: Boolean(r.en_venta),
+        serial: r.serial ? String(r.serial) : null,
+        created_at: String(r.created_at),
+      }}
+      owner={owner}
+      currentUserId={currentUser?.id ?? null}
+      currentUserAlias={currentUser?.user_metadata?.alias ?? null}
+      currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}
+    />
   )
 }

@@ -60,34 +60,6 @@ export default async function CamposPage() {
         </div>
       </header>
 
-      {/* Links a páginas de ciudad — SEO interno */}
-      <div className="border-b border-[#EEEEEE] bg-[#F4F4F4]">
-        <div className="mx-auto max-w-[1200px] px-4 py-3 md:px-6">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span
-              className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
-              style={{ fontFamily: "'Jost', sans-serif" }}
-            >
-              Por ciudad:
-            </span>
-            {[
-              { label: 'Guadalajara', href: '/campos/guadalajara' },
-              { label: 'CDMX', href: '/campos/cdmx' },
-              { label: 'Monterrey', href: '/campos/monterrey' },
-            ].map((c) => (
-              <a
-                key={c.href}
-                href={c.href}
-                className="border border-[#DDDDDD] bg-white px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#333333] hover:border-[#CC4B37] hover:text-[#CC4B37] transition-colors"
-                style={{ fontFamily: "'Jost', sans-serif" }}
-              >
-                {c.label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
         <CamposGrid fields={fields} />
       </div>

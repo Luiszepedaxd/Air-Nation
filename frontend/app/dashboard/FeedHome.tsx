@@ -8,7 +8,6 @@ import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
-import { GuestActionModal } from '@/components/ui/GuestActionModal'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -85,37 +84,6 @@ type PostAs =
   | { type: 'player'; id: string; nombre: string; avatar: string | null }
   | { type: 'team'; id: string; nombre: string; avatar: string | null; slug: string }
   | { type: 'field'; id: string; nombre: string; avatar: string | null; slug: string }
-
-function GuestPostBox() {
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <div className="mb-4 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 shrink-0 bg-[#F4F4F4] rounded-full flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="8" r="4" stroke="#AAAAAA" strokeWidth="1.5"/>
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#AAAAAA" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="flex-1 bg-[#F4F4F4] px-3 py-2 text-left text-[13px] text-[#AAAAAA]"
-            style={lato}
-          >
-            Únete para publicar...
-          </button>
-        </div>
-      </div>
-      <GuestActionModal
-        open={open}
-        onClose={() => setOpen(false)}
-        action="default"
-      />
-    </>
-  )
-}
 
 export function PostBox({
   userId,
@@ -1811,7 +1779,7 @@ export function FeedHome({
   userFields,
   isAdmin,
 }: {
-  userId: string | null
+  userId: string
   userAlias: string | null
   userAvatar: string | null
   userTeams: {
@@ -1883,20 +1851,16 @@ export function FeedHome({
       </div>
 
       {activeTab === 'feed' && (
-        userId ? (
-          <PostBox
-            userId={userId}
-            userAlias={userAlias}
-            userAvatar={userAvatar}
-            userTeams={userTeams}
-            userFields={userFields}
-            onPublished={() => {
-              setFeedKey((prev) => prev + 1)
-            }}
-          />
-        ) : (
-          <GuestPostBox />
-        )
+        <PostBox
+          userId={userId}
+          userAlias={userAlias}
+          userAvatar={userAvatar}
+          userTeams={userTeams}
+          userFields={userFields}
+          onPublished={() => {
+            setFeedKey((prev) => prev + 1)
+          }}
+        />
       )}
 
       <div className="mt-4">

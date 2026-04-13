@@ -471,7 +471,7 @@ export default function OnboardingPage() {
       }
       // Dar tiempo a que el PATCH sea visible en lecturas server-side del dashboard
       await new Promise((resolve) => setTimeout(resolve, 500));
-      router.push("/?from=onboarding");
+      router.push("/dashboard?from=onboarding");
     } catch {
       setSubmitError("Algo salió mal. Intenta de nuevo.");
     } finally {
