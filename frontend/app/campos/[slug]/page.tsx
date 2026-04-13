@@ -176,16 +176,16 @@ export async function generateMetadata({
     title: `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`,
     description: desc,
     alternates: {
-      canonical: `https://airnation.online/campos/${field.slug}`,
+      canonical: `https://www.airnation.online/campos/${field.slug}`,
     },
     openGraph: {
       title: `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`,
       description: desc,
-      url: `https://airnation.online/campos/${field.slug}`,
+      url: `https://www.airnation.online/campos/${field.slug}`,
       type: 'website',
       images: field.foto_portada_url
         ? [{ url: field.foto_portada_url, width: 1200, height: 630 }]
-        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
+        : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }
@@ -230,7 +230,7 @@ export default async function CampoPublicPage({
             '@context': 'https://schema.org',
             '@type': 'SportsActivityLocation',
             name: field.nombre,
-            url: `https://airnation.online/campos/${field.slug}`,
+            url: `https://www.airnation.online/campos/${field.slug}`,
             description: field.descripcion ?? undefined,
             ...(field.foto_portada_url ? { image: field.foto_portada_url } : {}),
             ...(field.telefono ? { telephone: field.telefono } : {}),

@@ -4,7 +4,7 @@ export const runtime = 'nodejs'
 import type { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 
-const BASE = 'https://airnation.online'
+const BASE = 'https://www.airnation.online'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [

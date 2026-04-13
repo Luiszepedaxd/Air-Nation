@@ -12,9 +12,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://airnation.online"),
+  metadataBase: new URL("https://www.airnation.online"),
   alternates: {
-    canonical: 'https://airnation.online',
+    canonical: 'https://www.airnation.online',
   },
   title: "AirNation — Plataforma central del airsoft",
   description:
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "AirNation",
     description: "La base del Airsoft en México",
-    url: "https://airnation.online",
+    url: "https://www.airnation.online",
     siteName: "AirNation",
     locale: "es_MX",
     type: "website",
@@ -69,8 +69,8 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: 'AirNation',
-              url: 'https://airnation.online',
-              logo: 'https://airnation.online/icons/icon-180.png',
+              url: 'https://www.airnation.online',
+              logo: 'https://www.airnation.online/icons/icon-180.png',
               sameAs: [],
               knowsAbout: ['airsoft', 'paintball', 'milsim'],
               description:

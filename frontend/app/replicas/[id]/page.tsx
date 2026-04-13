@@ -6,7 +6,7 @@ import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-se
 
 export const revalidate = 0
 
-const BASE = 'https://airnation.online'
+const BASE = 'https://www.airnation.online'
 
 export async function generateMetadata({
   params,

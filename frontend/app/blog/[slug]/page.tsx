@@ -99,17 +99,17 @@ export async function generateMetadata({
     title: post.meta_title?.trim() || `${post.title} — AirNation`,
     description: description,
     alternates: {
-      canonical: `https://airnation.online/blog/${post.slug}`,
+      canonical: `https://www.airnation.online/blog/${post.slug}`,
     },
     openGraph: {
       title: post.meta_title?.trim() || post.title,
       description: description,
-      url: `https://airnation.online/blog/${post.slug}`,
+      url: `https://www.airnation.online/blog/${post.slug}`,
       type: 'article',
       publishedTime: post.created_at,
       images: post.cover_url
         ? [{ url: post.cover_url, width: 1200, height: 630 }]
-        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
+        : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }
@@ -144,24 +144,24 @@ export default async function BlogPostPage({
     description: post.meta_description?.trim() || post.excerpt?.trim() || '',
     datePublished: post.created_at,
     dateModified: post.created_at,
-    url: `https://airnation.online/blog/${post.slug}`,
+    url: `https://www.airnation.online/blog/${post.slug}`,
     author: {
       '@type': 'Organization',
       name: 'AirNation',
-      url: 'https://airnation.online',
+      url: 'https://www.airnation.online',
     },
     publisher: {
       '@type': 'Organization',
       name: 'AirNation',
-      url: 'https://airnation.online',
+      url: 'https://www.airnation.online',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://airnation.online/icons/icon-180.png',
+        url: 'https://www.airnation.online/icons/icon-180.png',
       },
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://airnation.online/blog/${post.slug}`,
+      '@id': `https://www.airnation.online/blog/${post.slug}`,
     },
     ...(post.cover_url ? { image: post.cover_url } : {}),
   }

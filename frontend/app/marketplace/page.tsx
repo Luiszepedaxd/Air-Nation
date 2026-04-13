@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description:
     'Encuentra réplicas de airsoft, equipo y accesorios en venta en México. Marketplace con productos nuevos y usados.',
   alternates: {
-    canonical: 'https://airnation.online/marketplace',
+    canonical: 'https://www.airnation.online/marketplace',
   },
 }
 

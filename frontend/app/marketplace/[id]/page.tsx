@@ -6,7 +6,7 @@ import { ListingDetailClient } from './ListingDetailClient'
 
 export const revalidate = 0
 
-const BASE = 'https://airnation.online'
+const BASE = 'https://www.airnation.online'
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const supabase = createPublicSupabaseClient()

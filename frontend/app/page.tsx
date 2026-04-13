@@ -14,17 +14,17 @@ export const metadata: Metadata = {
   description:
     'Equipos, campos, eventos, credencial digital y registro de réplicas. La plataforma hecha por y para la comunidad de airsoft en México.',
   alternates: {
-    canonical: 'https://airnation.online',
+    canonical: 'https://www.airnation.online',
   },
   openGraph: {
     title: 'AirNation — Plataforma central del airsoft en México',
     description:
       'Equipos, campos, eventos, credencial digital y registro de réplicas. La plataforma hecha por y para la comunidad de airsoft en México.',
-    url: 'https://airnation.online',
+    url: 'https://www.airnation.online',
     type: 'website',
     images: [
       {
-        url: 'https://airnation.online/og-default.jpg',
+        url: 'https://www.airnation.online/og-default.jpg',
         width: 1200,
         height: 630,
       },
@@ -42,7 +42,7 @@ export default function Home() {
             '@context': 'https://schema.org',
             '@type': 'WebSite',
             name: 'AirNation',
-            url: 'https://airnation.online',
+            url: 'https://www.airnation.online',
             description:
               'Plataforma central del airsoft en México. Equipos, campos, eventos y credencial digital.',
             potentialAction: {
@@ -50,7 +50,7 @@ export default function Home() {
               target: {
                 '@type': 'EntryPoint',
                 urlTemplate:
-                  'https://airnation.online/campos?ciudad={search_term_string}',
+                  'https://www.airnation.online/campos?ciudad={search_term_string}',
               },
               'query-input': 'required name=search_term_string',
             },

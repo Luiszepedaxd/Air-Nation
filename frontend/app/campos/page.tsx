@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description:
     'Encuentra campos de airsoft cerca de ti en México. Guadalajara, CDMX, Monterrey y más.',
   alternates: {
-    canonical: 'https://airnation.online/campos',
+    canonical: 'https://www.airnation.online/campos',
   },
 }
 

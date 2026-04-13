@@ -16,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         '/api/',
       ],
     },
-    sitemap: 'https://airnation.online/sitemap.xml',
-    host: 'https://airnation.online',
+    sitemap: 'https://www.airnation.online/sitemap.xml',
+    host: 'https://www.airnation.online',
   }
 }

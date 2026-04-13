@@ -74,16 +74,16 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `https://airnation.online/unirte/${team.slug}`,
+      canonical: `https://www.airnation.online/unirte/${team.slug}`,
     },
     openGraph: {
       title,
       description,
-      url: `https://airnation.online/unirte/${team.slug}`,
+      url: `https://www.airnation.online/unirte/${team.slug}`,
       type: 'website',
       images: team.foto_portada_url
         ? [{ url: team.foto_portada_url, width: 1200, height: 630 }]
-        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
+        : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }

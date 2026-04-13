@@ -354,16 +354,16 @@ export async function generateMetadata({
     title: `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`,
     description: desc,
     alternates: {
-      canonical: `https://airnation.online/equipos/${team.slug}`,
+      canonical: `https://www.airnation.online/equipos/${team.slug}`,
     },
     openGraph: {
       title: `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`,
       description: desc,
-      url: `https://airnation.online/equipos/${team.slug}`,
+      url: `https://www.airnation.online/equipos/${team.slug}`,
       type: 'website',
       images: team.foto_portada_url
         ? [{ url: team.foto_portada_url, width: 1200, height: 630 }]
-        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
+        : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }

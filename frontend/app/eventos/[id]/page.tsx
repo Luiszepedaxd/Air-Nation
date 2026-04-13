@@ -135,16 +135,16 @@ export async function generateMetadata({
     title: `${row.title} — Airsoft en ${fMeta.ciudad ?? 'México'} | AirNation`,
     description: desc.slice(0, 160),
     alternates: {
-      canonical: `https://airnation.online/eventos/${id}`,
+      canonical: `https://www.airnation.online/eventos/${id}`,
     },
     openGraph: {
       title: `${row.title} — Airsoft en ${fMeta.ciudad ?? 'México'} | AirNation`,
       description: desc.slice(0, 160),
-      url: `https://airnation.online/eventos/${id}`,
+      url: `https://www.airnation.online/eventos/${id}`,
       type: 'website',
       images: imagenOg
         ? [{ url: imagenOg, width: 1200, height: 630 }]
-        : [{ url: 'https://airnation.online/og-default.jpg', width: 1200, height: 630 }],
+        : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
     },
   }
 }
@@ -196,7 +196,7 @@ export default async function EventoDetailPage({
             name: row.title,
             startDate: row.fecha,
             description: row.descripcion ?? undefined,
-            url: `https://airnation.online/eventos/${id}`,
+            url: `https://www.airnation.online/eventos/${id}`,
             eventStatus: 'https://schema.org/EventScheduled',
             eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
             ...(heroImagen ? { image: heroImagen } : {}),
@@ -205,7 +205,7 @@ export default async function EventoDetailPage({
                   '@type': 'Place',
                   name: f.nombre,
                   ...(f.slug
-                    ? { url: `https://airnation.online/campos/${f.slug}` }
+                    ? { url: `https://www.airnation.online/campos/${f.slug}` }
                     : {}),
                   address: {
                     '@type': 'PostalAddress',
@@ -223,7 +223,7 @@ export default async function EventoDetailPage({
             organizer: {
               '@type': 'Organization',
               name: 'AirNation',
-              url: 'https://airnation.online',
+              url: 'https://www.airnation.online',
             },
           }),
         }}

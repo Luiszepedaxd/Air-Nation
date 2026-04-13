@@ -173,7 +173,7 @@ export async function generateMetadata({
 
   const ogImage = user.avatar_url?.trim()
     ? user.avatar_url
-    : 'https://airnation.online/og-default.jpg'
+    : 'https://www.airnation.online/og-default.jpg'
 
   return {
     title: `${user.alias} — AirNation`,
@@ -181,7 +181,7 @@ export async function generateMetadata({
     openGraph: {
       title: `${user.alias} — AirNation`,
       description: descParts.join('. '),
-      url: `https://airnation.online/u/${user.id}`,
+      url: `https://www.airnation.online/u/${user.id}`,
       siteName: 'AirNation',
       images: [{ url: ogImage, width: 400, height: 400, alt: user.alias ?? 'AirNation' }],
       type: 'profile',
