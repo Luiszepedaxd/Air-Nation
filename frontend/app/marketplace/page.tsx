@@ -6,9 +6,9 @@ import type { PublicMarketplaceListing } from './types'
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'Marketplace de airsoft en México — AirNation',
+  title: 'Réplicas y equipo de airsoft en venta — AirNation',
   description:
-    'Compra y vende réplicas de airsoft en México. Marketplace P2P con equipos nuevos y usados.',
+    'Encuentra réplicas de airsoft, equipo y accesorios en venta en México. Marketplace P2P con productos nuevos y usados.',
   alternates: {
     canonical: 'https://airnation.online/marketplace',
   },
@@ -67,10 +67,10 @@ export default async function MarketplacePage() {
             className="text-2xl font-extrabold uppercase leading-tight text-white"
             style={jost}
           >
-            Marketplace de airsoft
+            Réplicas y equipo de airsoft
           </h1>
           <p className="mt-2 text-sm text-[#999999]" style={lato}>
-            Compra y vende réplicas en México
+            Compra y vende en México
           </p>
         </div>
       </header>
