@@ -1,68 +1,107 @@
-import type { Metadata } from 'next'
+import { Suspense } from 'react'
+import { createDashboardSupabaseServerClient } from './dashboard/supabase-server'
+import { FeedHome } from './dashboard/FeedHome'
+import { SaludoSection, SaludoSkeleton } from './dashboard/feed-saludo'
+import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 
-export const revalidate = 0;
+export const revalidate = 0
 
-import Navbar           from "@/components/landing/Navbar";
-import Hero             from "@/components/landing/Hero";
-import Features         from "@/components/landing/Features";
-import ProductPreview   from "@/components/landing/ProductPreview";
-import CommunitySection from "@/components/landing/CommunitySection";
-import Footer           from "@/components/landing/Footer";
+export default async function HomePage() {
+  let userId: string | null = null
+  let userAlias: string | null = null
+  let userAvatar: string | null = null
+  let isAdmin = false
+  let userTeams: {
+    id: string
+    nombre: string
+    slug: string
+    logo_url: string | null
+    rol: 'founder' | 'admin'
+  }[] = []
+  let userFields: {
+    id: string
+    nombre: string
+    slug: string
+    foto_portada_url: string | null
+  }[] = []
 
-export const metadata: Metadata = {
-  title: 'AirNation — Plataforma central del airsoft en México',
-  description:
-    'Equipos, campos, eventos, credencial digital y registro de réplicas. La plataforma hecha por y para la comunidad de airsoft en México.',
-  alternates: {
-    canonical: 'https://airnation.online',
-  },
-  openGraph: {
-    title: 'AirNation — Plataforma central del airsoft en México',
-    description:
-      'Equipos, campos, eventos, credencial digital y registro de réplicas. La plataforma hecha por y para la comunidad de airsoft en México.',
-    url: 'https://airnation.online',
-    type: 'website',
-    images: [
-      {
-        url: 'https://airnation.online/og-default.jpg',
-        width: 1200,
-        height: 630,
-      },
-    ],
-  },
-}
+  try {
+    const supabase = createDashboardSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-export default function Home() {
+    if (user) {
+      userId = user.id
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('alias, avatar_url, app_role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      userAlias = profile?.alias ?? null
+      userAvatar = profile?.avatar_url ?? null
+      isAdmin = profile?.app_role === 'admin'
+
+      const { data: membershipRows } = await supabase
+        .from('team_members')
+        .select('team_id, rol_plataforma')
+        .eq('user_id', user.id)
+        .eq('status', 'activo')
+        .in('rol_plataforma', ['founder', 'admin'])
+
+      const teamIds = (membershipRows ?? []).map((m) => m.team_id as string)
+      const rolByTeamId = new Map(
+        (membershipRows ?? []).map((m) => [
+          m.team_id as string,
+          m.rol_plataforma as 'founder' | 'admin',
+        ])
+      )
+
+      if (teamIds.length > 0) {
+        const { data: teamsData } = await supabase
+          .from('teams')
+          .select('id, nombre, slug, logo_url')
+          .in('id', teamIds)
+          .eq('status', 'activo')
+        userTeams = (teamsData ?? []).map((t) => {
+          const row = t as { id: string; nombre: string; slug: string; logo_url: string | null }
+          return { ...row, rol: rolByTeamId.get(row.id) ?? 'admin' }
+        })
+      }
+
+      const { data: fieldsData } = await supabase
+        .from('fields')
+        .select('id, nombre, slug, foto_portada_url')
+        .eq('created_by', user.id)
+        .eq('status', 'aprobado')
+      userFields = (fieldsData ?? []) as typeof userFields
+    }
+  } catch {
+    // Sin sesión o error — continuar como guest
+  }
+
   return (
-    <main className="min-h-screen overflow-x-hidden bg-an-bg">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebSite',
-            name: 'AirNation',
-            url: 'https://airnation.online',
-            description:
-              'Plataforma central del airsoft en México. Equipos, campos, eventos y credencial digital.',
-            potentialAction: {
-              '@type': 'SearchAction',
-              target: {
-                '@type': 'EntryPoint',
-                urlTemplate:
-                  'https://airnation.online/campos?ciudad={search_term_string}',
-              },
-              'query-input': 'required name=search_term_string',
-            },
-          }),
-        }}
-      />
-      <Navbar />
-      <Hero />
-      <Features />
-      <ProductPreview />
-      <CommunitySection />
-      <Footer />
+    <main className="min-h-full bg-[#FFFFFF]">
+      <PublicSiteHeader />
+      {userId && (
+        <div className="w-full px-4 pt-4 pb-2 md:mx-auto md:max-w-[680px] md:px-6">
+          <Suspense fallback={<SaludoSkeleton />}>
+            <SaludoSection />
+          </Suspense>
+        </div>
+      )}
+      <div className="w-full px-4 md:mx-auto md:max-w-[680px] md:px-6 pb-10">
+        <Suspense fallback={null}>
+          <FeedHome
+            userId={userId}
+            userAlias={userAlias}
+            userAvatar={userAvatar}
+            userTeams={userTeams}
+            userFields={userFields}
+            isAdmin={isAdmin}
+          />
+        </Suspense>
+      </div>
     </main>
-  );
+  )
 }

@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session && (pathname === '/login' || pathname === '/register')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   // /campos/nuevo: solo exige sesión (arriba). Cualquier usuario registrado puede registrar un campo.
