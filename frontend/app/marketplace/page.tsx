@@ -8,7 +8,7 @@ export const revalidate = 0
 export const metadata: Metadata = {
   title: 'Réplicas y equipo de airsoft en venta — AirNation',
   description:
-    'Encuentra réplicas de airsoft, equipo y accesorios en venta en México. Marketplace P2P con productos nuevos y usados.',
+    'Encuentra réplicas de airsoft, equipo y accesorios en venta en México. Marketplace con productos nuevos y usados.',
   alternates: {
     canonical: 'https://airnation.online/marketplace',
   },
