@@ -8,7 +8,10 @@ export default async function PublicSiteHeader() {
 
   return (
     <header className="w-full border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 py-3 flex items-center justify-between">
-      <a href="/" className="flex items-center gap-2">
+      <a
+        href={session ? '/' : '/campos'}
+        className="flex items-center gap-2"
+      >
         <span className="w-6 h-6 bg-[#CC4B37] flex items-center justify-center">
           <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
             <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff" />

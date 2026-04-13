@@ -20,7 +20,9 @@ export const CIUDADES: Record<
       'GDL',
       'Zapopan',
       'Tlaquepaque',
+      'San Pedro Tlaquepaque',
       'Tonalá',
+      'Tonala',
     ],
     descripcion:
       'Encuentra los mejores campos de airsoft en Guadalajara y zona metropolitana. Partidas, eventos y comunidad airsofter en Jalisco.',
