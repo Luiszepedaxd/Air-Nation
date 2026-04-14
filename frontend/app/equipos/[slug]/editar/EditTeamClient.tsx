@@ -214,21 +214,24 @@ export function EditTeamClient({
               onPlaceChanged={() => {
                 const place = autocompleteRef.current?.getPlace()
                 if (!place?.address_components) return
-                const estadoLugar =
-                  place.address_components.find((c) =>
-                    c.types.includes('administrative_area_level_1')
+
+                const getComponent = (type: string) =>
+                  place.address_components!.find((c) =>
+                    c.types.includes(type)
                   )?.long_name?.trim() ?? ''
-                const locality =
-                  place.address_components.find((c) =>
-                    c.types.includes('locality')
-                  )?.long_name ||
-                  place.address_components.find((c) =>
-                    c.types.includes('administrative_area_level_2')
-                  )?.long_name ||
-                  place.address_components.find((c) =>
-                    c.types.includes('administrative_area_level_1')
-                  )?.long_name ||
+
+                const estadoLugar =
+                  getComponent('administrative_area_level_1') ||
+                  getComponent('administrative_area_level_2') ||
                   ''
+
+                const locality =
+                  getComponent('locality') ||
+                  getComponent('sublocality_level_1') ||
+                  getComponent('administrative_area_level_2') ||
+                  getComponent('administrative_area_level_1') ||
+                  ''
+
                 setEstado(estadoLugar)
                 if (locality) {
                   setCiudad(locality)
