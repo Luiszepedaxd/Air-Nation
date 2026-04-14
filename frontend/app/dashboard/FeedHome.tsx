@@ -73,6 +73,15 @@ function clearFeedSessionCache() {
   }
 }
 
+function getScrollContainer(): HTMLElement | Window {
+  return document.getElementById('dashboard-scroll-root') ?? window
+}
+
+function getScrollTop(): number {
+  const c = document.getElementById('dashboard-scroll-root')
+  return c ? c.scrollTop : window.scrollY
+}
+
 function readFeedTabSessionCache(): FeedTabSessionPayload | null {
   if (typeof window === 'undefined') return null
   const tsRaw = sessionStorage.getItem(FEED_ITEMS_TS_KEY)
@@ -1546,7 +1555,13 @@ function FeedTab({
       const yRaw = sessionStorage.getItem(FEED_SCROLL_Y_KEY)
       const y = yRaw != null ? Number(yRaw) : 0
       requestAnimationFrame(() => {
-        window.scrollTo(0, Number.isFinite(y) && y >= 0 ? y : 0)
+        const top = Number.isFinite(y) && y >= 0 ? y : 0
+        const container = getScrollContainer()
+        if (container instanceof Window) {
+          container.scrollTo(0, top)
+        } else {
+          container.scrollTop = top
+        }
       })
       return
     }
@@ -1559,15 +1574,16 @@ function FeedTab({
       if (timeoutId !== undefined) clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
         try {
-          sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(window.scrollY))
+          sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(getScrollTop()))
         } catch {
           /* ignore */
         }
       }, 150)
     }
-    window.addEventListener('scroll', onScroll, { passive: true })
+    const scrollRoot = getScrollContainer()
+    scrollRoot.addEventListener('scroll', onScroll, { passive: true })
     return () => {
-      window.removeEventListener('scroll', onScroll)
+      scrollRoot.removeEventListener('scroll', onScroll)
       if (timeoutId !== undefined) clearTimeout(timeoutId)
     }
   }, [])
