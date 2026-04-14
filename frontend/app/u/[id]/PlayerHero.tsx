@@ -527,11 +527,11 @@ export function PlayerHero({
 
       {showVerifyModal && isOwner ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-0 md:items-center md:px-4"
           onClick={() => setShowVerifyModal(false)}
         >
           <div
-            className="w-full max-w-sm rounded-t-[12px] bg-[#FFFFFF] p-6 md:rounded-[8px]"
+            className="w-full max-w-sm rounded-t-[12px] bg-[#FFFFFF] px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 md:rounded-[8px] md:pb-6"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
