@@ -1,7 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { supabase } from '@/lib/supabase'
 import { apiFetch, uploadFile } from '@/lib/apiFetch'
 
@@ -119,19 +127,35 @@ function Spinner({ className = 'text-[#FFFFFF]' }: { className?: string }) {
   )
 }
 
+export type ProfileViewHandle = {
+  startEdit: () => void
+  openAvatarPicker: () => void
+}
+
 type Props = {
   user: ProfileUserRow
   teamNombre: string | null
   teamSlug: string | null
   pendingJoinPending?: { id: string; nombre: string }[]
+  compactReadMode?: boolean
+  onEditModeChange?: (editing: boolean) => void
+  onUserUpdated?: (u: ProfileUserRow) => void
+  onCompactAvatarState?: (s: { uploading: boolean; error: string }) => void
 }
 
-export function ProfileView({
-  user: initialUser,
-  teamNombre,
-  teamSlug,
-  pendingJoinPending = [],
-}: Props) {
+export const ProfileView = forwardRef<ProfileViewHandle, Props>(function ProfileView(
+  {
+    user: initialUser,
+    teamNombre,
+    teamSlug,
+    pendingJoinPending = [],
+    compactReadMode = false,
+    onEditModeChange,
+    onUserUpdated,
+    onCompactAvatarState,
+  },
+  ref
+) {
   const [user, setUser] = useState<ProfileUserRow>(initialUser)
   const [readTeamNombre, setReadTeamNombre] = useState(teamNombre ?? '')
   const [editMode, setEditMode] = useState(false)
@@ -167,6 +191,20 @@ export function ProfileView({
     const extra = localPendingJoins.filter((p) => !seen.has(p.id))
     return [...pendingJoinPending, ...extra]
   }, [pendingJoinPending, localPendingJoins])
+
+  const exitEditMode = useCallback(() => {
+    setEditMode(false)
+    onEditModeChange?.(false)
+  }, [onEditModeChange])
+
+  useEffect(() => {
+    onUserUpdated?.(user)
+  }, [user, onUserUpdated])
+
+  useEffect(() => {
+    if (!compactReadMode) return
+    onCompactAvatarState?.({ uploading: avatarUploading, error: avatarError })
+  }, [compactReadMode, avatarUploading, avatarError, onCompactAvatarState])
 
   useEffect(() => {
     setReadTeamNombre(teamNombre ?? '')
@@ -308,7 +346,7 @@ export function ProfileView({
     [user.id]
   )
 
-  const startEdit = () => {
+  const startEdit = useCallback(() => {
     setFormError('')
     setProfileSuccessMsg('')
     setForm(initialFromUser(user))
@@ -321,16 +359,26 @@ export function ProfileView({
     setTeamSearchLoading(false)
     teamSearchAbortRef.current?.abort()
     setEditMode(true)
-  }
+    onEditModeChange?.(true)
+  }, [user, readTeamNombre, onEditModeChange])
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setFormError('')
     teamSearchAbortRef.current?.abort()
     setTeamResults([])
     setTeamMenuOpen(false)
     setTeamSearchLoading(false)
-    setEditMode(false)
-  }
+    exitEditMode()
+  }, [exitEditMode])
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      startEdit,
+      openAvatarPicker: () => fileRef.current?.click(),
+    }),
+    [startEdit]
+  )
 
   const clearTeamSelection = () => {
     setTeamIdDraft(null)
@@ -411,7 +459,7 @@ export function ProfileView({
         const code = (joinErr as { code?: string } | null)?.code
         if (joinErr && code !== '23505') {
           setFormError('Perfil guardado, pero no se pudo enviar la solicitud al equipo.')
-          setEditMode(false)
+          exitEditMode()
           return
         }
         const newId = (joinRow as { id?: string } | null)?.id
@@ -436,7 +484,7 @@ export function ProfileView({
       if (!wantsNewTeam && keptTeamId && teamSearchText.trim()) {
         setReadTeamNombre(teamSearchText.trim())
       }
-      setEditMode(false)
+      exitEditMode()
     } catch {
       setFormError('Error de red. Intenta de nuevo.')
     } finally {
@@ -446,6 +494,23 @@ export function ProfileView({
 
   const fieldShell =
     'border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-3'
+
+  const showReadOnlyDetails = !editMode && !compactReadMode
+
+  if (compactReadMode && !editMode) {
+    return (
+      <div className="hidden" aria-hidden>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          className="hidden"
+          onChange={onAvatarChange}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="mt-8 max-w-[640px]">
@@ -542,7 +607,7 @@ export function ProfileView({
         ) : null}
       </section>
 
-      {!editMode ? (
+      {showReadOnlyDetails ? (
         <>
           {user.bio ? (
             <div className={`${fieldShell} md:col-span-2 mt-6`}>
@@ -1042,4 +1107,4 @@ export function ProfileView({
       )}
     </div>
   )
-}
+})

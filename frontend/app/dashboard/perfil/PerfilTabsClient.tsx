@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PlayerHero } from '@/app/u/[id]/PlayerHero'
 import { PlayerProfileClient } from '@/app/u/[id]/PlayerProfileClient'
 import type {
@@ -28,7 +28,11 @@ import {
 import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { NotificacionesTab } from './NotificacionesTab'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
-import { ProfileView, type ProfileUserRow } from './ProfileView'
+import {
+  ProfileView,
+  type ProfileUserRow,
+  type ProfileViewHandle,
+} from './ProfileView'
 import { CredencialClient } from '@/components/credential/CredencialClient'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
 
@@ -52,6 +56,31 @@ const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+function ConfigMiniAvatarSpinner({ className = 'text-[#111111]' }: { className?: string }) {
+  return (
+    <svg
+      className={`h-4 w-4 animate-spin ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  )
+}
 
 const permisosLabelStyle = {
   ...jost,
@@ -378,6 +407,24 @@ export function PerfilTabsClient({
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const { trigger: triggerPush, loading: pushLoading } = usePushNotifButton()
+  const profileViewRef = useRef<ProfileViewHandle>(null)
+  const [configProfileUser, setConfigProfileUser] = useState(user)
+  const [configProfileEditing, setConfigProfileEditing] = useState(false)
+  const [compactAvatarUi, setCompactAvatarUi] = useState({
+    uploading: false,
+    error: '',
+  })
+
+  const handleConfigUserUpdated = useCallback((u: ProfileUserRow) => {
+    setConfigProfileUser(u)
+  }, [])
+
+  const handleCompactAvatarState = useCallback(
+    (s: { uploading: boolean; error: string }) => {
+      setCompactAvatarUi(s)
+    },
+    []
+  )
 
   const pendingCount =
     joinRequests.length +
@@ -426,6 +473,14 @@ export function PerfilTabsClient({
       window.removeEventListener(NOTIF_UPDATED_EVENT, onUpd)
     }
   }, [user.id])
+
+  useEffect(() => {
+    setConfigProfileUser(user)
+  }, [user])
+
+  useEffect(() => {
+    if (activeTab !== 'configuracion') setConfigProfileEditing(false)
+  }, [activeTab])
 
   useEffect(() => {
     const loadFollows = async () => {
@@ -669,20 +724,122 @@ export function PerfilTabsClient({
               style={jost}
               className="mb-6 text-[22px] font-extrabold uppercase text-[#111111]"
             >
-              Configuración
+              CONFIGURACIÓN
             </h1>
+            {!configProfileEditing ? (
+              <div className="mb-2 max-w-[640px]">
+                {!configProfileUser.avatar_url ? (
+                  <div className="mb-4 flex w-full items-start gap-2 rounded-[2px] border border-[#FFCCC7] bg-[#FFF5F4] px-3 py-2">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="mt-0.5 shrink-0"
+                      aria-hidden
+                    >
+                      <circle cx="12" cy="12" r="9" stroke="#CC4B37" strokeWidth="1.8" />
+                      <path
+                        d="M12 8v4M12 16h.01"
+                        stroke="#CC4B37"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <p
+                      className="text-[11px] leading-snug text-[#CC4B37]"
+                      style={lato}
+                    >
+                      <strong>Tu perfil está incompleto.</strong> Sin foto de perfil no puedes
+                      acceder a tu credencial digital.
+                    </p>
+                  </div>
+                ) : null}
+                <div className="flex flex-col items-center border-b border-[#EEEEEE] pb-6">
+                  <div
+                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[#CC4B37] md:h-[88px] md:w-[88px]"
+                    style={{ borderRadius: '50%' }}
+                  >
+                    {configProfileUser.avatar_url ? (
+                      <img
+                        src={configProfileUser.avatar_url}
+                        alt=""
+                        width={88}
+                        height={88}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-full w-full items-center justify-center text-[28px] text-[#FFFFFF] md:text-[32px]"
+                        style={jost}
+                      >
+                        {(
+                          configProfileUser.alias?.trim()?.[0] ||
+                          configProfileUser.nombre?.trim()?.[0] ||
+                          '?'
+                        ).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <p
+                    className="mt-3 text-center text-[15px] font-semibold text-[#111111]"
+                    style={lato}
+                  >
+                    {configProfileUser.nombre?.trim() || '—'}
+                  </p>
+                  <p
+                    className="mt-1 text-center text-[13px] text-[#666666]"
+                    style={lato}
+                  >
+                    {configProfileUser.alias?.trim()
+                      ? configProfileUser.alias.trim().startsWith('@')
+                        ? configProfileUser.alias.trim()
+                        : `@${configProfileUser.alias.trim()}`
+                      : '—'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => profileViewRef.current?.openAvatarPicker()}
+                    disabled={compactAvatarUi.uploading}
+                    style={jost}
+                    className="mt-3 inline-flex min-h-[36px] items-center justify-center gap-2 rounded-[2px] border border-solid border-[#111111] bg-transparent px-3 py-1.5 text-[10px] font-extrabold uppercase text-[#111111] disabled:opacity-60"
+                  >
+                    {compactAvatarUi.uploading ? <ConfigMiniAvatarSpinner /> : null}
+                    {compactAvatarUi.uploading ? 'SUBIENDO…' : 'CAMBIAR FOTO'}
+                  </button>
+                  {compactAvatarUi.error ? (
+                    <p className="mt-2 text-center text-[12px] text-[#CC4B37]" style={lato}>
+                      {compactAvatarUi.error}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => profileViewRef.current?.startEdit()}
+                    style={jost}
+                    className="mt-3 w-full max-w-[240px] rounded-[2px] bg-[#111111] py-2.5 text-[11px] font-extrabold uppercase text-[#FFFFFF]"
+                  >
+                    EDITAR PERFIL
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <ProfileView
+              ref={profileViewRef}
               user={user}
               teamNombre={teamNombre}
               teamSlug={teamSlug}
               pendingJoinPending={pendingJoinPending}
+              compactReadMode
+              onEditModeChange={setConfigProfileEditing}
+              onUserUpdated={handleConfigUserUpdated}
+              onCompactAvatarState={handleCompactAvatarState}
             />
             <PermisosSection
               userId={user.id}
               triggerPush={triggerPush}
               pushLoading={pushLoading}
             />
-            <div className="mt-8 space-y-3">
+            <div className="mt-8 space-y-3 border-t border-[#EEEEEE] pt-8">
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -693,9 +850,7 @@ export function PerfilTabsClient({
                 </Link>
               )}
               <PerfilPwaInstallBlock />
-              <div className="border-t border-[#EEEEEE] pt-8">
-                <PerfilLogoutButton />
-              </div>
+              <PerfilLogoutButton />
             </div>
           </div>
         )}
