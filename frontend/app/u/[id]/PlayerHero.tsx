@@ -531,7 +531,8 @@ export function PlayerHero({
           onClick={() => setShowVerifyModal(false)}
         >
           <div
-            className="w-full max-w-sm rounded-t-[12px] bg-[#FFFFFF] px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-6 md:rounded-[8px] md:pb-6"
+            className="w-full max-w-sm rounded-t-[12px] bg-[#FFFFFF] px-6 pt-6 pb-6 md:rounded-[8px]"
+            style={{ marginBottom: 'calc(4rem + max(env(safe-area-inset-bottom), 12px))' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
