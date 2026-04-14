@@ -5,6 +5,7 @@ export type PublicTeam = {
   /** Dueño del equipo (teams.created_by) */
   created_by?: string | null
   ciudad: string | null
+  anio_fundacion: number | null
   descripcion: string | null
   historia: string | null
   foto_portada_url: string | null

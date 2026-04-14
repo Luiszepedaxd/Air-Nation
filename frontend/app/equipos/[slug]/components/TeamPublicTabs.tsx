@@ -232,6 +232,15 @@ export function TeamPublicTabs({
               </p>
             ) : null}
 
+            {team.anio_fundacion ? (
+              <p
+                className="text-[14px] text-[#111111]"
+                style={lato}
+              >
+                Fundado en {team.anio_fundacion}
+              </p>
+            ) : null}
+
             {ig || fb || wa ? (
               <div className="flex flex-wrap gap-2">
                 {ig ? (

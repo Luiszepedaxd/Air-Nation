@@ -53,6 +53,7 @@ export type UpdateTeamAdminPayload = {
   nombre: string
   ciudad: string | null
   estado?: string | null
+  anio_fundacion: number | null
   descripcion: string | null
   historia: string | null
   instagram: string | null
@@ -87,6 +88,7 @@ export async function updateTeamAdmin(
       nombre: n,
       ciudad: payload.ciudad?.trim() || null,
       estado: payload.estado?.trim() || null,
+      anio_fundacion: payload.anio_fundacion ?? null,
       descripcion: payload.descripcion?.trim() || null,
       historia: payload.historia?.trim() || null,
       instagram: payload.instagram?.trim() || null,

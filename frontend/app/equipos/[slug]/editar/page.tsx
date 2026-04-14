@@ -56,7 +56,7 @@ export default async function EditarEquipoPage({
   const { data: team, error: teamError } = await supabase
     .from('teams')
     .select(
-      'id, nombre, slug, ciudad, estado, descripcion, historia, foto_portada_url, logo_url, instagram, facebook, whatsapp_url, created_at, status'
+      'id, nombre, slug, ciudad, estado, anio_fundacion, descripcion, historia, foto_portada_url, logo_url, instagram, facebook, whatsapp_url, created_at, status'
     )
     .eq('slug', slug)
     .maybeSingle()
@@ -92,6 +92,11 @@ export default async function EditarEquipoPage({
           slug: team.slug as string,
           ciudad: team.ciudad as string | null,
           estado: team.estado as string | null,
+          anio_fundacion: (() => {
+            const v = team.anio_fundacion as number | null | undefined
+            if (v == null || !Number.isFinite(Number(v))) return null
+            return Number(v)
+          })(),
           descripcion: team.descripcion as string | null,
           historia: team.historia as string | null,
           foto_portada_url: team.foto_portada_url as string | null,

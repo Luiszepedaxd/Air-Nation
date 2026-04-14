@@ -30,6 +30,7 @@ export type EditableTeam = {
   slug: string
   ciudad: string | null
   estado?: string | null
+  anio_fundacion: number | null
   descripcion: string | null
   historia: string | null
   foto_portada_url: string | null
@@ -57,6 +58,9 @@ export function EditTeamClient({
   const [ciudad, setCiudad] = useState(team.ciudad ?? '')
   const [estado, setEstado] = useState(team.estado ?? '')
   const [ciudadInput, setCiudadInput] = useState(team.ciudad ?? '')
+  const [anioFundacion, setAnioFundacion] = useState<string>(
+    team.anio_fundacion != null ? String(team.anio_fundacion) : ''
+  )
   const [descripcion, setDescripcion] = useState(team.descripcion ?? '')
   const [historia, setHistoria] = useState(team.historia ?? '')
   const [instagram, setInstagram] = useState(team.instagram ?? '')
@@ -97,6 +101,12 @@ export function EditTeamClient({
       nombre: n,
       ciudad: ciudad.trim() || null,
       estado: estado.trim() || null,
+      anio_fundacion: anioFundacion.trim()
+        ? (() => {
+            const parsed = parseInt(anioFundacion.trim(), 10)
+            return Number.isFinite(parsed) ? parsed : null
+          })()
+        : null,
       descripcion: descripcion.trim() || null,
       historia: historia.trim() || null,
       instagram: instagram.trim() || null,
@@ -139,6 +149,7 @@ export function EditTeamClient({
     nombre,
     ciudad,
     estado,
+    anioFundacion,
     descripcion,
     historia,
     instagram,
@@ -257,6 +268,17 @@ export function EditTeamClient({
               ✓ {ciudad}
             </p>
           ) : null}
+        </Field>
+        <Field label="Año de fundación" style={jost}>
+          <input
+            type="number"
+            value={anioFundacion}
+            onChange={(e) => setAnioFundacion(e.target.value)}
+            className={inputClass}
+            placeholder="Ej. 2018"
+            min={1990}
+            max={new Date().getFullYear()}
+          />
         </Field>
         <Field label="Descripción" style={jost}>
           <textarea

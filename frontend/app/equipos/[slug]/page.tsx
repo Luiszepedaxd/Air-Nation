@@ -43,7 +43,7 @@ const getTeamBySlug = cache(async (slug: string): Promise<PublicTeam | null> => 
   const { data, error } = await supabase
     .from('teams')
     .select(
-      'id, nombre, slug, ciudad, descripcion, historia, foto_portada_url, logo_url, galeria_urls, instagram, facebook, whatsapp_url, created_at, created_by, status'
+      'id, nombre, slug, ciudad, anio_fundacion, descripcion, historia, foto_portada_url, logo_url, galeria_urls, instagram, facebook, whatsapp_url, created_at, created_by, status'
     )
     .eq('slug', slug)
     .eq('status', 'activo')
@@ -69,6 +69,11 @@ const getTeamBySlug = cache(async (slug: string): Promise<PublicTeam | null> => 
     slug: row.slug,
     created_by: (row as { created_by?: string | null }).created_by ?? null,
     ciudad: row.ciudad,
+    anio_fundacion: (() => {
+      const v = (row as { anio_fundacion?: number | null }).anio_fundacion
+      if (v == null || !Number.isFinite(Number(v))) return null
+      return Number(v)
+    })(),
     descripcion: row.descripcion ?? null,
     historia: row.historia ?? null,
     foto_portada_url: row.foto_portada_url,
