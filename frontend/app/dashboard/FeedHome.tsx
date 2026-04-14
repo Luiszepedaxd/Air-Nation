@@ -1072,19 +1072,6 @@ function FeedTab({
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const loadingMoreRef = useRef(false)
 
-  const socialFeedItems = useMemo(
-    () => items.filter((i) => i.kind !== 'marketplace_listing'),
-    [items]
-  )
-  const marketplaceFeedItems = useMemo(
-    () =>
-      items.filter(
-        (i): i is Extract<FeedItem, { kind: 'marketplace_listing' }> =>
-          i.kind === 'marketplace_listing'
-      ),
-    [items]
-  )
-
   const load = useCallback(async () => {
       setItems([])
       setHasMore(true)
@@ -1310,19 +1297,13 @@ function FeedTab({
       const pinnedRows = feedItems.filter(
         (i): i is Extract<FeedItem, { kind: 'pinned_post' }> => i.kind === 'pinned_post'
       )
-      const marketplaceRows = feedItems.filter(
-        (i): i is Extract<FeedItem, { kind: 'marketplace_listing' }> =>
-          i.kind === 'marketplace_listing'
-      )
-      const rest = feedItems.filter(
-        (i) => i.kind !== 'pinned_post' && i.kind !== 'marketplace_listing'
-      )
+      const rest = feedItems.filter((i) => i.kind !== 'pinned_post')
       rest.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
-      setItems([...pinnedRows, ...rest, ...marketplaceRows])
+      setItems([...pinnedRows, ...rest])
 
       const teamData = teamPostsRes.data ?? []
       const playerData = playerPostsRes.data ?? []
@@ -1436,23 +1417,7 @@ function FeedTab({
         setCursorPlayerPosts(String(last.created_at))
       }
 
-      setItems((prev) => {
-        const pinned = prev.filter(
-          (i): i is Extract<FeedItem, { kind: 'pinned_post' }> => i.kind === 'pinned_post'
-        )
-        const marketplace = prev.filter(
-          (i): i is Extract<FeedItem, { kind: 'marketplace_listing' }> =>
-            i.kind === 'marketplace_listing'
-        )
-        const middle = prev.filter(
-          (i) => i.kind !== 'pinned_post' && i.kind !== 'marketplace_listing'
-        )
-        const mergedMiddle = [...middle, ...newItems].sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
-        return [...pinned, ...mergedMiddle, ...marketplace]
-      })
+      setItems((prev) => [...prev, ...newItems])
     } finally {
       loadingMoreRef.current = false
       setLoadingMore(false)
@@ -1514,7 +1479,7 @@ function FeedTab({
 
   return (
     <div className="flex flex-col gap-3">
-      {socialFeedItems.map(item => {
+      {items.map(item => {
         if (item.kind === 'pinned_post') return (
           <PinnedPostCard
             key={`pin-${item.id}`}
@@ -1604,21 +1569,10 @@ function FeedTab({
               currentUserAvatar={currentUserAvatar}
             />
           )
+        if (item.kind === 'marketplace_listing')
+          return <MarketplaceFeedCard key={`ml-${item.id}`} item={item} />
         return null
       })}
-      {marketplaceFeedItems.length > 0 ? (
-        <>
-          <p
-            style={jost}
-            className="px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
-          >
-            En venta cerca de ti
-          </p>
-          {marketplaceFeedItems.map((item) => (
-            <MarketplaceFeedCard key={`ml-${item.id}`} item={item} />
-          ))}
-        </>
-      ) : null}
       <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
       {loadingMore ? (
         <div className="flex justify-center py-4">
