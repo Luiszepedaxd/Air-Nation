@@ -2,15 +2,19 @@
 
 import {
   useCallback,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useLoadScript, Autocomplete } from '@react-google-maps/api'
 import { updateTeamAdmin } from '@/app/admin/equipos/actions'
 import { supabase } from '@/lib/supabase'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
+
+const GOOGLE_LIBRARIES: ('places')[] = ['places']
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -25,6 +29,7 @@ export type EditableTeam = {
   nombre: string
   slug: string
   ciudad: string | null
+  estado?: string | null
   descripcion: string | null
   historia: string | null
   foto_portada_url: string | null
@@ -50,6 +55,8 @@ export function EditTeamClient({
   const router = useRouter()
   const [nombre, setNombre] = useState(team.nombre)
   const [ciudad, setCiudad] = useState(team.ciudad ?? '')
+  const [estado, setEstado] = useState(team.estado ?? '')
+  const [ciudadInput, setCiudadInput] = useState(team.ciudad ?? '')
   const [descripcion, setDescripcion] = useState(team.descripcion ?? '')
   const [historia, setHistoria] = useState(team.historia ?? '')
   const [instagram, setInstagram] = useState(team.instagram ?? '')
@@ -62,6 +69,12 @@ export function EditTeamClient({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [activeUploads, setActiveUploads] = useState(0)
+
+  const { isLoaded: mapsLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? '',
+    libraries: GOOGLE_LIBRARIES,
+  })
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null)
 
   const handleSave = useCallback(async () => {
     const n = nombre.trim()
@@ -83,6 +96,7 @@ export function EditTeamClient({
     const payload = {
       nombre: n,
       ciudad: ciudad.trim() || null,
+      estado: estado.trim() || null,
       descripcion: descripcion.trim() || null,
       historia: historia.trim() || null,
       instagram: instagram.trim() || null,
@@ -124,6 +138,7 @@ export function EditTeamClient({
   }, [
     nombre,
     ciudad,
+    estado,
     descripcion,
     historia,
     instagram,
@@ -180,13 +195,68 @@ export function EditTeamClient({
           />
         </Field>
         <Field label="Ciudad" style={jost}>
-          <input
-            type="text"
-            value={ciudad}
-            onChange={(e) => setCiudad(e.target.value)}
-            className={inputClass}
-            maxLength={120}
-          />
+          {mapsLoaded ? (
+            <Autocomplete
+              onLoad={(ac) => {
+                autocompleteRef.current = ac
+              }}
+              onPlaceChanged={() => {
+                const place = autocompleteRef.current?.getPlace()
+                if (!place?.address_components) return
+                const estadoLugar =
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_1')
+                  )?.long_name?.trim() ?? ''
+                const locality =
+                  place.address_components.find((c) =>
+                    c.types.includes('locality')
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_2')
+                  )?.long_name ||
+                  place.address_components.find((c) =>
+                    c.types.includes('administrative_area_level_1')
+                  )?.long_name ||
+                  ''
+                setEstado(estadoLugar)
+                if (locality) {
+                  setCiudad(locality)
+                  setCiudadInput(locality)
+                }
+              }}
+              options={{
+                types: ['(cities)'],
+                componentRestrictions: { country: 'mx' },
+              }}
+            >
+              <input
+                type="text"
+                className={inputClass}
+                placeholder="Busca tu ciudad..."
+                value={ciudadInput}
+                onChange={(e) => {
+                  setCiudadInput(e.target.value)
+                  if (e.target.value === '') {
+                    setCiudad('')
+                    setEstado('')
+                  }
+                }}
+                autoComplete="off"
+              />
+            </Autocomplete>
+          ) : (
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="Cargando..."
+              disabled
+            />
+          )}
+          {ciudad ? (
+            <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
+              ✓ {ciudad}
+            </p>
+          ) : null}
         </Field>
         <Field label="Descripción" style={jost}>
           <textarea

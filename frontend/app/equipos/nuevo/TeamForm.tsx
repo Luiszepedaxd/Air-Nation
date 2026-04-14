@@ -38,6 +38,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
 export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
   const [nombre, setNombre] = useState("");
   const [ciudad, setCiudad] = useState("");
+  const [estado, setEstado] = useState("");
   const [ciudadInput, setCiudadInput] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [portadaUrl, setPortadaUrl] = useState("");
@@ -82,6 +83,7 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
         readOnly
         aria-hidden
       />
+      <input type="hidden" name="estado" value={estado} readOnly aria-hidden />
 
       <h1
         className="text-[22px] font-extrabold leading-tight text-[#111111] md:text-[26px]"
@@ -128,6 +130,10 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
               onPlaceChanged={() => {
                 const place = autocompleteRef.current?.getPlace();
                 if (!place?.address_components) return;
+                const estadoLugar =
+                  place.address_components.find((c) =>
+                    c.types.includes("administrative_area_level_1")
+                  )?.long_name?.trim() ?? "";
                 const locality =
                   place.address_components.find((c) =>
                     c.types.includes("locality")
@@ -139,6 +145,7 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
                     c.types.includes("administrative_area_level_1")
                   )?.long_name ||
                   "";
+                setEstado(estadoLugar);
                 if (locality) {
                   setCiudad(locality);
                   setCiudadInput(locality);
@@ -156,7 +163,10 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
                 value={ciudadInput}
                 onChange={(e) => {
                   setCiudadInput(e.target.value);
-                  if (e.target.value === "") setCiudad("");
+                  if (e.target.value === "") {
+                    setCiudad("");
+                    setEstado("");
+                  }
                 }}
                 autoComplete="off"
               />

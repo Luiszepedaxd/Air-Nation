@@ -14,7 +14,7 @@ export default async function AdminEditarEquipoPage({
   const { data: team, error } = await supabase
     .from('teams')
     .select(
-      'id, nombre, slug, ciudad, descripcion, historia, foto_portada_url, logo_url, instagram, facebook, whatsapp_url, status'
+      'id, nombre, slug, ciudad, estado, descripcion, historia, foto_portada_url, logo_url, instagram, facebook, whatsapp_url, status'
     )
     .eq('id', params.id)
     .maybeSingle()
@@ -34,6 +34,7 @@ export default async function AdminEditarEquipoPage({
           nombre: team.nombre as string,
           slug,
           ciudad: team.ciudad as string | null,
+          estado: team.estado as string | null,
           descripcion: team.descripcion as string | null,
           historia: team.historia as string | null,
           foto_portada_url: team.foto_portada_url as string | null,

@@ -43,6 +43,7 @@ export async function createTeamAction(
 
   const nombre = String(formData.get('nombre') ?? '').trim()
   const ciudad = String(formData.get('ciudad') ?? '').trim()
+  const estado = String(formData.get('estado') ?? '').trim()
   const rawSlug = String(formData.get('slug') ?? '').trim()
   const logoUrl = String(formData.get('logo_url') ?? '').trim()
   const fotoPortadaUrl = String(formData.get('foto_portada_url') ?? '').trim()
@@ -79,6 +80,7 @@ export async function createTeamAction(
       .insert({
         nombre,
         ciudad,
+        estado: estado || null,
         created_by: adminId,
         slug: uniqueSlug,
         status: 'activo',
@@ -138,6 +140,7 @@ export async function createTeamAction(
     .insert({
       nombre,
       ciudad,
+      estado: estado || null,
       created_by: user.id,
       slug: uniqueSlug,
       status: 'activo',
