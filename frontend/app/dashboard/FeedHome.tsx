@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
@@ -49,6 +49,72 @@ type FeedItem =
       nuevo_usado: string
       created_at: string
     }
+
+const FEED_SCROLL_Y_KEY = 'feed_scroll_y'
+const FEED_ITEMS_CACHE_KEY = 'feed_items_cache'
+const FEED_ITEMS_TS_KEY = 'feed_items_ts'
+const FEED_CACHE_MAX_MS = 5 * 60 * 1000
+
+type FeedTabSessionPayload = {
+  items: FeedItem[]
+  cursorPlayerPosts: string | null
+  cursorTeamPosts: string | null
+  hasMore: boolean
+}
+
+function clearFeedSessionCache() {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.removeItem(FEED_SCROLL_Y_KEY)
+    sessionStorage.removeItem(FEED_ITEMS_CACHE_KEY)
+    sessionStorage.removeItem(FEED_ITEMS_TS_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function readFeedTabSessionCache(): FeedTabSessionPayload | null {
+  if (typeof window === 'undefined') return null
+  const tsRaw = sessionStorage.getItem(FEED_ITEMS_TS_KEY)
+  const cacheRaw = sessionStorage.getItem(FEED_ITEMS_CACHE_KEY)
+  if (!cacheRaw || !tsRaw) return null
+  const ts = Number(tsRaw)
+  if (!Number.isFinite(ts) || Date.now() - ts >= FEED_CACHE_MAX_MS) return null
+  try {
+    const parsed = JSON.parse(cacheRaw) as unknown
+    if (!parsed || typeof parsed !== 'object') return null
+    const o = parsed as Record<string, unknown>
+    if (!Array.isArray(o.items) || o.items.length === 0) return null
+    const cp = o.cursorPlayerPosts != null ? String(o.cursorPlayerPosts) : null
+    const ct = o.cursorTeamPosts != null ? String(o.cursorTeamPosts) : null
+    return {
+      items: o.items as FeedItem[],
+      cursorPlayerPosts: cp && cp.length > 0 ? cp : null,
+      cursorTeamPosts: ct && ct.length > 0 ? ct : null,
+      hasMore: typeof o.hasMore === 'boolean' ? o.hasMore : true,
+    }
+  } catch {
+    return null
+  }
+}
+
+function writeFeedItemsCacheOnly(payload: FeedTabSessionPayload) {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(FEED_ITEMS_CACHE_KEY, JSON.stringify(payload))
+  } catch {
+    /* ignore */
+  }
+}
+
+function touchFeedItemsTimestamp() {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(FEED_ITEMS_TS_KEY, String(Date.now()))
+  } catch {
+    /* ignore */
+  }
+}
 
 type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
@@ -991,8 +1057,8 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
   const sublabel = item.supercategoria?.trim() || 'Marketplace'
 
   return (
-    <div className="border-b border-[#EEEEEE] bg-[#FFFFFF]">
-      <div className="flex items-center gap-3 pt-4">
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+      <div className="flex items-center gap-3">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4F4F4]"
           aria-hidden
@@ -1039,7 +1105,7 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
           )}
         </div>
 
-        <div className="px-3 pt-3">
+        <div className="pt-3">
           <p style={lato} className="line-clamp-2 text-[15px] font-medium leading-snug text-[#111111]">
             {item.titulo}
           </p>
@@ -1066,7 +1132,7 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
         </div>
       </Link>
 
-      <div className="mt-3 flex items-center justify-between border-t border-[#EEEEEE] px-3 pb-3 pt-3">
+      <div className="mt-3 flex items-center justify-between border-t border-[#EEEEEE] pt-3">
         <Link
           href={`/marketplace/${item.id}`}
           style={jost}
@@ -1075,7 +1141,7 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
           Ver publicación →
         </Link>
         <Link
-          href="/marketplace"
+          href="/dashboard/arsenal?tab=explorar"
           style={jost}
           className="text-[11px] font-extrabold uppercase text-[#999999]"
         >
@@ -1111,6 +1177,7 @@ function FeedTab({
   const loadingMoreRef = useRef(false)
 
   const load = useCallback(async () => {
+      clearFeedSessionCache()
       setItems([])
       setHasMore(true)
       setCursorPlayerPosts(null)
@@ -1359,6 +1426,7 @@ function FeedTab({
       }
 
       setLoading(false)
+      touchFeedItemsTimestamp()
   }, [])
 
   const loadMore = useCallback(async () => {
@@ -1370,6 +1438,7 @@ function FeedTab({
 
     loadingMoreRef.current = true
     setLoadingMore(true)
+    let didAppendFromServer = false
     try {
       const [teamRes, playerRes] = await Promise.all([
         cursorTeamPosts
@@ -1401,6 +1470,7 @@ function FeedTab({
         return
       }
 
+      didAppendFromServer = true
       const newItems: FeedItem[] = []
 
       for (const row of teamRows) {
@@ -1459,12 +1529,58 @@ function FeedTab({
     } finally {
       loadingMoreRef.current = false
       setLoadingMore(false)
+      if (didAppendFromServer) touchFeedItemsTimestamp()
     }
   }, [cursorPlayerPosts, cursorTeamPosts, hasMore, loading])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const cached = readFeedTabSessionCache()
+    if (cached) {
+      setItems(cached.items)
+      setCursorPlayerPosts(cached.cursorPlayerPosts)
+      setCursorTeamPosts(cached.cursorTeamPosts)
+      setHasMore(cached.hasMore)
+      setLoading(false)
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+      const yRaw = sessionStorage.getItem(FEED_SCROLL_Y_KEY)
+      const y = yRaw != null ? Number(yRaw) : 0
+      requestAnimationFrame(() => {
+        window.scrollTo(0, Number.isFinite(y) && y >= 0 ? y : 0)
+      })
+      return
+    }
     void load()
   }, [load])
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
+    const onScroll = () => {
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        try {
+          sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(window.scrollY))
+        } catch {
+          /* ignore */
+        }
+      }, 150)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (timeoutId !== undefined) clearTimeout(timeoutId)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (loading || typeof window === 'undefined') return
+    writeFeedItemsCacheOnly({
+      items,
+      cursorPlayerPosts,
+      cursorTeamPosts,
+      hasMore,
+    })
+  }, [items, cursorPlayerPosts, cursorTeamPosts, hasMore, loading])
 
   useEffect(() => {
     const onDeleted = () => {
