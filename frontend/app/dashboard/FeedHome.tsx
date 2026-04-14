@@ -34,6 +34,21 @@ type FeedItem =
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
   | { kind: 'noticia'; id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
+  | {
+      kind: 'marketplace_listing'
+      id: string
+      titulo: string
+      precio: number | null
+      precio_original: number | null
+      modalidad: 'fijo' | 'desde'
+      supercategoria: string | null
+      fotos_urls: string[]
+      ciudad: string | null
+      estado: string | null
+      vendido: boolean
+      nuevo_usado: string
+      created_at: string
+    }
 
 type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
@@ -970,6 +985,69 @@ function NoticiaFeedCard({
   )
 }
 
+function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'marketplace_listing' }> }) {
+  const foto = item.fotos_urls?.[0] ?? null
+  const ubicacion = [item.ciudad, item.estado].filter(Boolean).join(', ')
+
+  return (
+    <Link
+      href={`/marketplace/${item.id}`}
+      className="flex gap-3 rounded-[12px] border border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-shadow hover:shadow-md"
+    >
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[8px] bg-[#EEEEEE]">
+        {foto ? (
+          <img src={foto} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                stroke="#CCCCCC"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M3 6h18M16 10a4 4 0 01-8 0"
+                stroke="#CCCCCC"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p style={jost} className="text-[9px] font-extrabold uppercase text-[#CC4B37]">
+          En venta
+        </p>
+        <p style={lato} className="mt-1 line-clamp-2 text-[13px] leading-snug text-[#111111]">
+          {item.titulo}
+        </p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+          {item.precio_original != null ? (
+            <span style={lato} className="text-[14px] text-[#999999] line-through">
+              ${item.precio_original.toLocaleString('es-MX')}
+            </span>
+          ) : null}
+          <p style={jost} className="text-[14px] font-extrabold text-[#111111]">
+            {item.modalidad === 'desde' && (
+              <span style={lato} className="mr-1 text-[10px] font-normal normal-case text-[#999999]">
+                Desde{' '}
+              </span>
+            )}
+            ${item.precio?.toLocaleString('es-MX') ?? '—'}
+          </p>
+        </div>
+        {ubicacion ? (
+          <p style={lato} className="mt-0.5 truncate text-[11px] text-[#999999]">
+            {ubicacion}
+          </p>
+        ) : null}
+      </div>
+    </Link>
+  )
+}
+
 // ─── FEED TAB ───
 /** Recarga con `key` desde el padre tras publicar. Paginación / scroll infinito: ampliar límites y cursores aquí. */
 function FeedTab({
@@ -987,35 +1065,68 @@ function FeedTab({
 }) {
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [cursorPlayerPosts, setCursorPlayerPosts] = useState<string | null>(null)
+  const [cursorTeamPosts, setCursorTeamPosts] = useState<string | null>(null)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const loadingMoreRef = useRef(false)
+
+  const socialFeedItems = useMemo(
+    () => items.filter((i) => i.kind !== 'marketplace_listing'),
+    [items]
+  )
+  const marketplaceFeedItems = useMemo(
+    () =>
+      items.filter(
+        (i): i is Extract<FeedItem, { kind: 'marketplace_listing' }> =>
+          i.kind === 'marketplace_listing'
+      ),
+    [items]
+  )
 
   const load = useCallback(async () => {
+      setItems([])
+      setHasMore(true)
+      setCursorPlayerPosts(null)
+      setCursorTeamPosts(null)
+      loadingMoreRef.current = false
+      setLoadingMore(false)
       setLoading(true)
       const [
         teamPostsRes,
+        pinnedPlayerPostRes,
         playerPostsRes,
         fieldPostsRes,
         eventsRes,
         teamsRes,
         videosRes,
         noticiasRes,
+        marketplaceListingsRes,
       ] = await Promise.all([
         supabase.from('team_posts')
           .select('id, team_id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
           .eq('published', true)
           .order('created_at', { ascending: false })
-          .limit(10),
+          .limit(20),
         supabase.from('player_posts')
           .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
           .eq('published', true)
+          .eq('pinned', true)
+          .limit(1),
+        supabase.from('player_posts')
+          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
+          .eq('published', true)
+          .eq('pinned', false)
           .order('created_at', { ascending: false })
-          .limit(10),
+          .limit(25),
         supabase
           .from('field_posts')
           .select(
             'id, content, fotos_urls, created_at, created_by, fields(nombre, slug, foto_portada_url)'
           )
           .order('created_at', { ascending: false })
-          .limit(10),
+          .limit(20),
         supabase.from('events')
           .select('id, title, fecha, imagen_url, created_at, fields(nombre, ciudad, foto_portada_url)')
           .eq('published', true)
@@ -1032,12 +1143,21 @@ function FeedTab({
           .select('id, title, youtube_url, thumbnail_url, created_at')
           .eq('published', true)
           .order('created_at', { ascending: false })
-          .limit(3),
+          .limit(5),
         supabase.from('posts')
           .select('id, title, slug, excerpt, cover_url, category, created_at')
           .eq('published', true)
           .order('created_at', { ascending: false })
-          .limit(3),
+          .limit(5),
+        supabase
+          .from('marketplace')
+          .select(
+            'id, titulo, precio, precio_original, modalidad, supercategoria, fotos_urls, ciudad, estado, vendido, nuevo_usado, created_at'
+          )
+          .eq('status', 'activo')
+          .eq('vendido', false)
+          .order('created_at', { ascending: false })
+          .limit(6),
       ])
 
       const feedItems: FeedItem[] = []
@@ -1058,10 +1178,11 @@ function FeedTab({
         })
       }
 
-      for (const row of playerPostsRes.data ?? []) {
+      for (const row of pinnedPlayerPostRes.data ?? []) {
         const r = row as Record<string, unknown>
         const u = Array.isArray(r.users) ? r.users[0] : r.users
-        const common = {
+        feedItems.push({
+          kind: 'pinned_post',
           id: String(r.id),
           post_owner_id: String(r.user_id ?? ''),
           user_id: String(r.user_id ?? ''),
@@ -1069,12 +1190,22 @@ function FeedTab({
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
           user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
-        }
-        if (Boolean(r.pinned)) {
-          feedItems.push({ kind: 'pinned_post', ...common })
-        } else {
-          feedItems.push({ kind: 'player_post', ...common })
-        }
+        })
+      }
+
+      for (const row of playerPostsRes.data ?? []) {
+        const r = row as Record<string, unknown>
+        const u = Array.isArray(r.users) ? r.users[0] : r.users
+        feedItems.push({
+          kind: 'player_post',
+          id: String(r.id),
+          post_owner_id: String(r.user_id ?? ''),
+          user_id: String(r.user_id ?? ''),
+          content: (r.content as string | null) ?? null,
+          fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
+          created_at: String(r.created_at),
+          user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
+        })
       }
 
       for (const row of fieldPostsRes.data ?? []) {
@@ -1155,18 +1286,178 @@ function FeedTab({
         })
       }
 
+      for (const row of marketplaceListingsRes.data ?? []) {
+        const r = row as Record<string, unknown>
+        const modalidadRaw = r.modalidad
+        const modalidad: 'fijo' | 'desde' = modalidadRaw === 'desde' ? 'desde' : 'fijo'
+        feedItems.push({
+          kind: 'marketplace_listing',
+          id: String(r.id ?? ''),
+          titulo: String(r.titulo ?? ''),
+          precio: r.precio != null ? Number(r.precio) : null,
+          precio_original: r.precio_original != null ? Number(r.precio_original) : null,
+          modalidad,
+          supercategoria: r.supercategoria != null ? String(r.supercategoria) : null,
+          fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : [],
+          ciudad: r.ciudad != null ? String(r.ciudad) : null,
+          estado: r.estado != null ? String(r.estado) : null,
+          vendido: Boolean(r.vendido),
+          nuevo_usado: String(r.nuevo_usado ?? 'usado'),
+          created_at: String(r.created_at ?? ''),
+        })
+      }
+
       const pinnedRows = feedItems.filter(
         (i): i is Extract<FeedItem, { kind: 'pinned_post' }> => i.kind === 'pinned_post'
       )
-      const rest = feedItems.filter(i => i.kind !== 'pinned_post')
+      const marketplaceRows = feedItems.filter(
+        (i): i is Extract<FeedItem, { kind: 'marketplace_listing' }> =>
+          i.kind === 'marketplace_listing'
+      )
+      const rest = feedItems.filter(
+        (i) => i.kind !== 'pinned_post' && i.kind !== 'marketplace_listing'
+      )
       rest.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
-      setItems([...pinnedRows, ...rest])
+      setItems([...pinnedRows, ...rest, ...marketplaceRows])
+
+      const teamData = teamPostsRes.data ?? []
+      const playerData = playerPostsRes.data ?? []
+      if (teamData.length > 0) {
+        const last = teamData[teamData.length - 1] as Record<string, unknown>
+        setCursorTeamPosts(String(last.created_at))
+      } else {
+        setCursorTeamPosts(null)
+      }
+      if (playerData.length > 0) {
+        const last = playerData[playerData.length - 1] as Record<string, unknown>
+        setCursorPlayerPosts(String(last.created_at))
+      } else {
+        setCursorPlayerPosts(null)
+      }
+
       setLoading(false)
   }, [])
+
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMore || loading) return
+    if (!cursorPlayerPosts && !cursorTeamPosts) {
+      setHasMore(false)
+      return
+    }
+
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    try {
+      const [teamRes, playerRes] = await Promise.all([
+        cursorTeamPosts
+          ? supabase
+              .from('team_posts')
+              .select('id, team_id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
+              .eq('published', true)
+              .lt('created_at', cursorTeamPosts)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+        cursorPlayerPosts
+          ? supabase
+              .from('player_posts')
+              .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
+              .eq('published', true)
+              .eq('pinned', false)
+              .lt('created_at', cursorPlayerPosts)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      ])
+
+      const teamRows = teamRes.data ?? []
+      const playerRows = playerRes.data ?? []
+
+      if (teamRows.length === 0 && playerRows.length === 0) {
+        setHasMore(false)
+        return
+      }
+
+      const newItems: FeedItem[] = []
+
+      for (const row of teamRows) {
+        const r = row as Record<string, unknown>
+        const t = Array.isArray(r.teams) ? r.teams[0] : r.teams
+        if (!t) continue
+        newItems.push({
+          kind: 'team_post',
+          id: String(r.id),
+          team_id: String(r.team_id ?? ''),
+          post_owner_id: r.created_by ? String(r.created_by) : null,
+          content: (r.content as string | null) ?? null,
+          fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+          created_at: String(r.created_at),
+          team: {
+            nombre: String((t as Record<string, unknown>).nombre ?? ''),
+            slug: String((t as Record<string, unknown>).slug ?? ''),
+            logo_url: (t as Record<string, unknown>).logo_url as string | null,
+          },
+        })
+      }
+
+      for (const row of playerRows) {
+        const r = row as Record<string, unknown>
+        const u = Array.isArray(r.users) ? r.users[0] : r.users
+        newItems.push({
+          kind: 'player_post',
+          id: String(r.id),
+          post_owner_id: String(r.user_id ?? ''),
+          user_id: String(r.user_id ?? ''),
+          content: (r.content as string | null) ?? null,
+          fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+          created_at: String(r.created_at),
+          user: {
+            alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null,
+            nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null,
+            avatar_url: u ? ((u as Record<string, unknown>).avatar_url as string | null) : null,
+          },
+        })
+      }
+
+      newItems.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      if (teamRows.length > 0) {
+        const last = teamRows[teamRows.length - 1] as Record<string, unknown>
+        setCursorTeamPosts(String(last.created_at))
+      }
+      if (playerRows.length > 0) {
+        const last = playerRows[playerRows.length - 1] as Record<string, unknown>
+        setCursorPlayerPosts(String(last.created_at))
+      }
+
+      setItems((prev) => {
+        const pinned = prev.filter(
+          (i): i is Extract<FeedItem, { kind: 'pinned_post' }> => i.kind === 'pinned_post'
+        )
+        const marketplace = prev.filter(
+          (i): i is Extract<FeedItem, { kind: 'marketplace_listing' }> =>
+            i.kind === 'marketplace_listing'
+        )
+        const middle = prev.filter(
+          (i) => i.kind !== 'pinned_post' && i.kind !== 'marketplace_listing'
+        )
+        const mergedMiddle = [...middle, ...newItems].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        return [...pinned, ...mergedMiddle, ...marketplace]
+      })
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
+  }, [cursorPlayerPosts, cursorTeamPosts, hasMore, loading])
 
   useEffect(() => {
     void load()
@@ -1179,6 +1470,22 @@ function FeedTab({
     window.addEventListener('airnation:post-deleted', onDeleted)
     return () => window.removeEventListener('airnation:post-deleted', onDeleted)
   }, [load])
+
+  useEffect(() => {
+    if (loading) return
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMore()
+        }
+      },
+      { threshold: 0.1 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loading, loadMore, items.length])
 
   if (loading) return (
     <div className="flex flex-col gap-3">
@@ -1207,7 +1514,7 @@ function FeedTab({
 
   return (
     <div className="flex flex-col gap-3">
-      {items.map(item => {
+      {socialFeedItems.map(item => {
         if (item.kind === 'pinned_post') return (
           <PinnedPostCard
             key={`pin-${item.id}`}
@@ -1299,6 +1606,36 @@ function FeedTab({
           )
         return null
       })}
+      {marketplaceFeedItems.length > 0 ? (
+        <>
+          <p
+            style={jost}
+            className="px-4 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
+          >
+            En venta cerca de ti
+          </p>
+          {marketplaceFeedItems.map((item) => (
+            <MarketplaceFeedCard key={`ml-${item.id}`} item={item} />
+          ))}
+        </>
+      ) : null}
+      <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
+      {loadingMore ? (
+        <div className="flex justify-center py-4">
+          <div
+            className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-solid border-[#EEEEEE] border-t-[#CC4B37]"
+            aria-hidden
+          />
+        </div>
+      ) : null}
+      {!hasMore && !loadingMore ? (
+        <p
+          style={jost}
+          className="py-3 text-center text-[11px] font-extrabold uppercase tracking-wide text-[#999999]"
+        >
+          Ya viste todo por ahora
+        </p>
+      ) : null}
     </div>
   )
 }
