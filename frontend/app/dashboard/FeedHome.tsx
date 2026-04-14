@@ -988,63 +988,101 @@ function NoticiaFeedCard({
 function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'marketplace_listing' }> }) {
   const foto = item.fotos_urls?.[0] ?? null
   const ubicacion = [item.ciudad, item.estado].filter(Boolean).join(', ')
+  const sublabel = item.supercategoria?.trim() || 'Marketplace'
 
   return (
-    <Link
-      href={`/marketplace/${item.id}`}
-      className="flex gap-3 rounded-[12px] border border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-shadow hover:shadow-md"
-    >
-      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[8px] bg-[#EEEEEE]">
-        {foto ? (
-          <img src={foto} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                stroke="#CCCCCC"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M3 6h18M16 10a4 4 0 01-8 0"
-                stroke="#CCCCCC"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p style={jost} className="text-[9px] font-extrabold uppercase text-[#CC4B37]">
-          En venta
-        </p>
-        <p style={lato} className="mt-1 line-clamp-2 text-[13px] leading-snug text-[#111111]">
-          {item.titulo}
-        </p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-          {item.precio_original != null ? (
-            <span style={lato} className="text-[14px] text-[#999999] line-through">
-              ${item.precio_original.toLocaleString('es-MX')}
-            </span>
-          ) : null}
-          <p style={jost} className="text-[14px] font-extrabold text-[#111111]">
-            {item.modalidad === 'desde' && (
-              <span style={lato} className="mr-1 text-[10px] font-normal normal-case text-[#999999]">
-                Desde{' '}
-              </span>
-            )}
-            ${item.precio?.toLocaleString('es-MX') ?? '—'}
+    <div className="border-b border-[#EEEEEE] bg-[#FFFFFF]">
+      <div className="flex items-center gap-3 pt-4">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4F4F4]"
+          aria-hidden
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M4 10V20a1 1 0 001 1h14a1 1 0 001-1V10M4 10h16M4 10L5.5 5h13L20 10M9 14v3M15 14v3"
+              stroke="#CC4B37"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p style={jost} className="text-[11px] font-extrabold uppercase text-[#CC4B37]">
+            En venta
+          </p>
+          <p style={lato} className="text-[11px] text-[#999999]">
+            {sublabel}
           </p>
         </div>
-        {ubicacion ? (
-          <p style={lato} className="mt-0.5 truncate text-[11px] text-[#999999]">
-            {ubicacion}
-          </p>
-        ) : null}
       </div>
-    </Link>
+
+      <Link href={`/marketplace/${item.id}`} className="mt-3 block w-full">
+        <div
+          className="relative w-full overflow-hidden bg-[#F0F2F5]"
+          style={{ aspectRatio: '4/3' }}
+        >
+          {foto ? (
+            <img src={foto} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M4 7h4l2-2h4l2 2h4v12H4V7z"
+                  stroke="#CCCCCC"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="13" r="3" stroke="#CCCCCC" strokeWidth="1.4" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        <div className="px-3 pt-3">
+          <p style={lato} className="line-clamp-2 text-[15px] font-medium leading-snug text-[#111111]">
+            {item.titulo}
+          </p>
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
+            {item.precio_original != null ? (
+              <span style={lato} className="text-[13px] text-[#999999] line-through">
+                ${item.precio_original.toLocaleString('es-MX')}
+              </span>
+            ) : null}
+            <p style={jost} className="text-[16px] font-extrabold text-[#111111]">
+              {item.modalidad === 'desde' ? (
+                <span style={lato} className="mr-1 text-[13px] font-normal normal-case text-[#999999]">
+                  Desde
+                </span>
+              ) : null}
+              ${item.precio?.toLocaleString('es-MX') ?? '—'}
+            </p>
+          </div>
+          {ubicacion ? (
+            <p style={lato} className="mt-1 text-[11px] text-[#999999]">
+              {ubicacion}
+            </p>
+          ) : null}
+        </div>
+      </Link>
+
+      <div className="mt-3 flex items-center justify-between border-t border-[#EEEEEE] px-3 pb-3 pt-3">
+        <Link
+          href={`/marketplace/${item.id}`}
+          style={jost}
+          className="text-[11px] font-extrabold uppercase text-[#CC4B37]"
+        >
+          Ver publicación →
+        </Link>
+        <Link
+          href="/marketplace"
+          style={jost}
+          className="text-[11px] font-extrabold uppercase text-[#999999]"
+        >
+          Explorar más en venta →
+        </Link>
+      </div>
+    </div>
   )
 }
 
