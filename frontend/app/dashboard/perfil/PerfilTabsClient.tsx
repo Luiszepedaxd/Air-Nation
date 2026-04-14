@@ -513,6 +513,12 @@ export function PerfilTabsClient({
     })),
   }
 
+  const isVerified =
+    !!publicUser.avatar_url &&
+    !!publicUser.foto_portada_url &&
+    (publicUser.teams_list?.length ?? 0) > 0 &&
+    replicas.length > 0
+
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] pb-10">
       <div className="sticky top-0 z-40 -mx-0 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] md:top-16">
@@ -573,6 +579,7 @@ export function PerfilTabsClient({
               isFollowing={false}
               currentUserId={user.id}
               teamRole={null}
+              isVerified={isVerified}
               isOwner
               onEditClick={() => setActiveTab('configuracion')}
             />

@@ -18,8 +18,8 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 // Tipos de items del feed
 type FeedItem =
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
-  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null } }
+  | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
+  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
   | {
       kind: 'field_post'
       id: string
@@ -148,6 +148,30 @@ type TeamDirItem = {
   logo_url: string | null
   foto_portada_url: string | null
   destacado: boolean
+}
+
+/** Aproximación en feed (sin contar arsenal): avatar + portada + equipo. */
+function mapJoinedUserForPlayerPost(u: Record<string, unknown> | null | undefined): {
+  alias: string | null
+  nombre: string | null
+  avatar_url: string | null
+  is_verified: boolean
+} {
+  if (!u) {
+    return { alias: null, nombre: null, avatar_url: null, is_verified: false }
+  }
+  const avatar_url = (u.avatar_url as string | null) ?? null
+  const foto_portada_url = (u.foto_portada_url as string | null) ?? null
+  const team_id = (u.team_id as string | null) ?? null
+  return {
+    alias: String(u.alias ?? '') || null,
+    nombre: String(u.nombre ?? '') || null,
+    avatar_url,
+    is_verified:
+      !!avatar_url &&
+      !!foto_portada_url &&
+      team_id != null,
+  }
 }
 
 function formatRelativeTime(iso: string) {
@@ -635,7 +659,28 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
                 : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
               }
             </div>
-            <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+            <span className="flex min-w-0 items-center gap-1">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+              {item.user.is_verified && (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-label="Verificado"
+                  className="inline-block shrink-0"
+                >
+                  <circle cx="7" cy="7" r="7" fill="#CC4B37" />
+                  <path
+                    d="M3.5 7.5L6 10L10.5 4.5"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </span>
           </Link>
           <PostMenu
             canDelete={isOwner}
@@ -706,7 +751,28 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
                 : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
               }
             </div>
-            <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+            <span className="flex min-w-0 items-center gap-1">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+              {item.user.is_verified && (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-label="Verificado"
+                  className="inline-block shrink-0"
+                >
+                  <circle cx="7" cy="7" r="7" fill="#CC4B37" />
+                  <path
+                    d="M3.5 7.5L6 10L10.5 4.5"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </span>
           </Link>
           <PostMenu
             canPin={isAdmin}
@@ -1211,12 +1277,12 @@ function FeedTab({
           .order('created_at', { ascending: false })
           .limit(20),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
+          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
+          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
           .eq('published', true)
           .eq('pinned', false)
           .order('created_at', { ascending: false })
@@ -1290,7 +1356,9 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
-          user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
+          user: mapJoinedUserForPlayerPost(
+            u ? (u as Record<string, unknown>) : null
+          ),
         })
       }
 
@@ -1305,7 +1373,9 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           created_at: String(r.created_at),
-          user: { alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null, nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null, avatar_url: u ? (u as Record<string, unknown>).avatar_url as string | null : null },
+          user: mapJoinedUserForPlayerPost(
+            u ? (u as Record<string, unknown>) : null
+          ),
         })
       }
 
@@ -1462,7 +1532,7 @@ function FeedTab({
         cursorPlayerPosts
           ? supabase
               .from('player_posts')
-              .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url)')
+              .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
               .eq('published', true)
               .eq('pinned', false)
               .lt('created_at', cursorPlayerPosts)
@@ -1513,11 +1583,9 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
           created_at: String(r.created_at),
-          user: {
-            alias: u ? String((u as Record<string, unknown>).alias ?? '') || null : null,
-            nombre: u ? String((u as Record<string, unknown>).nombre ?? '') || null : null,
-            avatar_url: u ? ((u as Record<string, unknown>).avatar_url as string | null) : null,
-          },
+          user: mapJoinedUserForPlayerPost(
+            u ? (u as Record<string, unknown>) : null
+          ),
         })
       }
 

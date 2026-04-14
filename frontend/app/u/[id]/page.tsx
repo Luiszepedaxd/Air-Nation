@@ -240,6 +240,12 @@ export default async function PublicProfilePage({
     [user.ciudad, user.rol ? rolLabel(user.rol) : null].filter(Boolean).join(' · ') ||
     '—'
 
+  const isVerified =
+    !!user.avatar_url &&
+    !!user.foto_portada_url &&
+    (user.teams_list?.length ?? 0) > 0 &&
+    replicas.length > 0
+
   const supabasePublic = createPublicSupabaseClient()
   const [
     { count: followersCount },
@@ -288,6 +294,7 @@ export default async function PublicProfilePage({
         isFollowing={!!followRow?.data}
         currentUserId={currentUser?.id ?? null}
         teamRole={teamRole}
+        isVerified={isVerified}
       />
 
       <PlayerProfileClient

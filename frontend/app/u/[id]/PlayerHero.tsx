@@ -176,6 +176,7 @@ export function PlayerHero({
   isFollowing,
   currentUserId,
   teamRole,
+  isVerified,
   isOwner = false,
   onEditClick,
 }: {
@@ -186,6 +187,7 @@ export function PlayerHero({
   isFollowing: boolean
   currentUserId: string | null
   teamRole: string | null
+  isVerified: boolean
   isOwner?: boolean
   onEditClick?: () => void
 }) {
@@ -358,10 +360,10 @@ export function PlayerHero({
           <h1 className="text-[17px] font-extrabold text-[#111111]" style={jostName}>
             {user.alias}
           </h1>
-          {hasMemberNo ? (
+          {isVerified ? (
             <span
               style={jost}
-              className="inline-flex items-center gap-1 rounded-[2px] bg-[#111111] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+              className="inline-flex items-center gap-1 rounded-[2px] bg-[#CC4B37] px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
             >
               <CheckIcon />
               VERIFICADO
