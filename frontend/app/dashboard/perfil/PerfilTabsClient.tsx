@@ -51,6 +51,265 @@ type SubTabAdmin = 'eventos' | 'equipos' | 'campos'
 const tabBase =
   'relative shrink-0 pt-[14px] text-[12px] font-extrabold uppercase transition-[color,border-color] duration-150'
 
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+const permisosLabelStyle = {
+  ...jost,
+  fontSize: 10,
+  color: '#999999',
+} as const
+
+function IosToggle({
+  checked,
+  disabled,
+  onToggle,
+  ariaLabel,
+}: {
+  checked: boolean
+  disabled?: boolean
+  onToggle: () => void
+  ariaLabel: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) onToggle()
+      }}
+      className={`relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 ${
+        checked ? 'bg-[#CC4B37]' : 'bg-[#DDDDDD]'
+      } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+    >
+      <span
+        className={`absolute top-[3px] h-[25px] w-[25px] rounded-full bg-white shadow transition-[left] duration-200 ${
+          checked ? 'left-[23px]' : 'left-[3px]'
+        }`}
+      />
+    </button>
+  )
+}
+
+function PermisosSection({
+  userId,
+  triggerPush,
+  pushLoading,
+}: {
+  userId: string
+  triggerPush: () => void | Promise<void>
+  pushLoading: boolean
+}) {
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(() =>
+    typeof window !== 'undefined' && 'Notification' in window
+      ? Notification.permission
+      : 'default'
+  )
+  const [locationGranted, setLocationGranted] = useState(false)
+  const [geoDenied, setGeoDenied] = useState(false)
+  const [locationLoading, setLocationLoading] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPerm(Notification.permission)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!pushLoading && typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifPerm(Notification.permission)
+    }
+  }, [pushLoading])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return
+
+    let cancelled = false
+    let permStatus: PermissionStatus | null = null
+
+    const persistCoords = (lat: number, lng: number) =>
+      supabase
+        .from('users')
+        .update({ location_lat: lat, location_lng: lng })
+        .eq('id', userId)
+
+    const refreshCoords = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!cancelled) {
+            void persistCoords(pos.coords.latitude, pos.coords.longitude)
+          }
+        },
+        () => {},
+        { enableHighAccuracy: false, maximumAge: 300_000, timeout: 15_000 }
+      )
+    }
+
+    const onGranted = () => {
+      if (cancelled) return
+      setLocationGranted(true)
+      setGeoDenied(false)
+      refreshCoords()
+    }
+
+    const onDenied = () => {
+      if (cancelled) return
+      setGeoDenied(true)
+      setLocationGranted(false)
+    }
+
+    const onPrompt = () => {
+      if (cancelled) return
+      setGeoDenied(false)
+      setLocationGranted(false)
+    }
+
+    const onPermChange = () => {
+      if (!permStatus || cancelled) return
+      if (permStatus.state === 'granted') onGranted()
+      else if (permStatus.state === 'denied') onDenied()
+      else onPrompt()
+    }
+
+    ;(async () => {
+      try {
+        const status = await navigator.permissions.query({
+          name: 'geolocation' as PermissionName,
+        })
+        if (cancelled) return
+        permStatus = status
+        if (status.state === 'granted') onGranted()
+        else if (status.state === 'denied') onDenied()
+        else onPrompt()
+
+        status.addEventListener('change', onPermChange)
+      } catch {
+        if (!cancelled) onPrompt()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      permStatus?.removeEventListener('change', onPermChange)
+    }
+  }, [userId])
+
+  const onNotifToggle = () => {
+    if (pushLoading || notifPerm === 'denied') return
+    if (notifPerm === 'granted') return
+    void (async () => {
+      await triggerPush()
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        setNotifPerm(Notification.permission)
+      }
+    })()
+  }
+
+  const onLocationToggle = () => {
+    if (locationLoading || geoDenied || locationGranted) return
+    if (!navigator.geolocation) return
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { error } = await supabase
+          .from('users')
+          .update({
+            location_lat: pos.coords.latitude,
+            location_lng: pos.coords.longitude,
+          })
+          .eq('id', userId)
+        setLocationLoading(false)
+        if (error) {
+          console.error('[perfil] ubicación:', error)
+          return
+        }
+        setLocationGranted(true)
+        setGeoDenied(false)
+      },
+      () => {
+        setLocationLoading(false)
+        void navigator.permissions
+          .query({ name: 'geolocation' as PermissionName })
+          .then((st) => {
+            if (st.state === 'denied') {
+              setGeoDenied(true)
+              setLocationGranted(false)
+            }
+          })
+          .catch(() => {})
+      },
+      { enableHighAccuracy: false, maximumAge: 0, timeout: 15_000 }
+    )
+  }
+
+  const notifOn = notifPerm === 'granted'
+  const notifDisabled = notifPerm === 'denied' || pushLoading
+  const notifSub =
+    notifPerm === 'denied'
+      ? 'Bloqueadas en tu navegador'
+      : 'Recibe alertas de mensajes y eventos'
+
+  const locSub = geoDenied
+    ? 'Bloqueada en tu navegador'
+    : 'Mejora tu feed con contenido cercano'
+  const locDisabled = geoDenied || locationLoading
+  const locOn = locationGranted
+
+  return (
+    <section className="mt-8 border-t border-[#EEEEEE] pt-8">
+      <h2 style={permisosLabelStyle} className="mb-4">
+        PERMISOS
+      </h2>
+      <div className="divide-y divide-[#EEEEEE] border border-[#EEEEEE] bg-[#FFFFFF]">
+        <div className="flex items-center justify-between gap-3 px-3 py-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="shrink-0 text-[22px] leading-none" aria-hidden>
+              🔔
+            </span>
+            <div className="min-w-0">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                Notificaciones push
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                {notifSub}
+              </p>
+            </div>
+          </div>
+          <IosToggle
+            checked={notifOn}
+            disabled={notifDisabled}
+            onToggle={onNotifToggle}
+            ariaLabel="Notificaciones push"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 px-3 py-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="shrink-0 text-[22px] leading-none" aria-hidden>
+              📍
+            </span>
+            <div className="min-w-0">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                Ubicación
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                {locSub}
+              </p>
+            </div>
+          </div>
+          <IosToggle
+            checked={locOn}
+            disabled={locDisabled}
+            onToggle={onLocationToggle}
+            ariaLabel="Ubicación"
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function PerfilPwaInstallBlock() {
   const { canInstall, triggerInstall } = usePwaInstall()
   if (!canInstall) return null
@@ -118,11 +377,7 @@ export function PerfilTabsClient({
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
-  const {
-    canShow: canShowPush,
-    trigger: triggerPush,
-    loading: pushLoading,
-  } = usePushNotifButton()
+  const { trigger: triggerPush, loading: pushLoading } = usePushNotifButton()
 
   const pendingCount =
     joinRequests.length +
@@ -422,6 +677,11 @@ export function PerfilTabsClient({
               teamSlug={teamSlug}
               pendingJoinPending={pendingJoinPending}
             />
+            <PermisosSection
+              userId={user.id}
+              triggerPush={triggerPush}
+              pushLoading={pushLoading}
+            />
             <div className="mt-8 space-y-3">
               {isAdmin && (
                 <Link
@@ -433,17 +693,6 @@ export function PerfilTabsClient({
                 </Link>
               )}
               <PerfilPwaInstallBlock />
-              {canShowPush && (
-                <button
-                  type="button"
-                  onClick={() => void triggerPush()}
-                  disabled={pushLoading}
-                  style={jost}
-                  className="flex h-12 w-full items-center justify-center gap-2 bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] disabled:opacity-60"
-                >
-                  {pushLoading ? 'ACTIVANDO...' : 'ACTIVAR NOTIFICACIONES'}
-                </button>
-              )}
               <div className="border-t border-[#EEEEEE] pt-8">
                 <PerfilLogoutButton />
               </div>
