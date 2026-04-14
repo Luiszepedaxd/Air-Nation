@@ -422,7 +422,7 @@ export default async function EquipoPublicPage({
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <PublicSiteHeader />
       <TeamHero team={team} members={members} />
-      <TeamStats memberCount={members.length} createdAt={team.created_at} />
+      <TeamStats memberCount={members.length} anioFundacion={team.anio_fundacion ?? null} />
       <TeamPublicTabs
         team={team}
         slug={params.slug}

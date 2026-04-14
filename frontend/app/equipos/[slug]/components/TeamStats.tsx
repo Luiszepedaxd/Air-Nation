@@ -6,20 +6,12 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-function yearFromCreated(iso: string) {
-  try {
-    return String(new Date(iso).getFullYear())
-  } catch {
-    return '—'
-  }
-}
-
 export function TeamStats({
   memberCount,
-  createdAt,
+  anioFundacion,
 }: {
   memberCount: number
-  createdAt: string
+  anioFundacion: number | null
 }) {
   return (
     <section
@@ -46,7 +38,7 @@ export function TeamStats({
             style={jost}
             className="text-[24px] font-extrabold text-[#111111]"
           >
-            {yearFromCreated(createdAt)}
+            {anioFundacion ?? '—'}
           </p>
           <p
             style={lato}
