@@ -561,7 +561,7 @@ export function CommentsSection({
       `, { count: 'exact' })
       .eq('post_type', postType)
       .eq('post_id', postId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .range(from, to)
 
     if (!data) return
@@ -662,7 +662,7 @@ export function CommentsSection({
         likeCount: 0,
         likedByMe: false,
       }
-      setComments(prev => [newComment, ...prev])
+      setComments(prev => [...prev, newComment])
       setTotal(t => t + 1)
       setText('')
       if (postOwnerId && postOwnerId !== currentUserId) {
