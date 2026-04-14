@@ -295,6 +295,7 @@ export default async function PublicProfilePage({
         currentUserId={currentUser?.id ?? null}
         teamRole={teamRole}
         isVerified={isVerified}
+        arsenalCount={replicas.length}
       />
 
       <PlayerProfileClient

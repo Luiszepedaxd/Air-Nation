@@ -582,6 +582,7 @@ export function PerfilTabsClient({
               isVerified={isVerified}
               isOwner
               onEditClick={() => setActiveTab('configuracion')}
+              arsenalCount={replicas.length}
             />
             <PlayerProfileClient
               user={publicUser}
@@ -735,33 +736,6 @@ export function PerfilTabsClient({
             </h1>
             {!configProfileEditing ? (
               <div className="mb-2 max-w-[640px]">
-                {!configProfileUser.avatar_url ? (
-                  <div className="mb-4 flex w-full items-start gap-2 rounded-[2px] border border-[#FFCCC7] bg-[#FFF5F4] px-3 py-2">
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="mt-0.5 shrink-0"
-                      aria-hidden
-                    >
-                      <circle cx="12" cy="12" r="9" stroke="#CC4B37" strokeWidth="1.8" />
-                      <path
-                        d="M12 8v4M12 16h.01"
-                        stroke="#CC4B37"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <p
-                      className="text-[11px] leading-snug text-[#CC4B37]"
-                      style={lato}
-                    >
-                      <strong>Tu perfil está incompleto.</strong> Sin foto de perfil no puedes
-                      acceder a tu credencial digital.
-                    </p>
-                  </div>
-                ) : null}
                 <div className="flex flex-col items-center border-b border-[#EEEEEE] pb-6">
                   <div
                     className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full bg-[#CC4B37] md:h-[88px] md:w-[88px]"

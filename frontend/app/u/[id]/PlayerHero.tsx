@@ -179,6 +179,7 @@ export function PlayerHero({
   isVerified,
   isOwner = false,
   onEditClick,
+  arsenalCount,
 }: {
   user: PublicUserProfile
   subtitle: string
@@ -190,10 +191,12 @@ export function PlayerHero({
   isVerified: boolean
   isOwner?: boolean
   onEditClick?: () => void
+  arsenalCount?: number
 }) {
   const router = useRouter()
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
   const [showAllSocials, setShowAllSocials] = useState(false)
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
 
   const initial = (user.alias?.trim()?.[0] || '?').toUpperCase()
   const hasMemberNo =
@@ -360,6 +363,26 @@ export function PlayerHero({
           <h1 className="text-[17px] font-extrabold text-[#111111]" style={jostName}>
             {user.alias}
           </h1>
+          {!isVerified && isOwner ? (
+            <button
+              type="button"
+              onClick={() => setShowVerifyModal(true)}
+              aria-label="Ver requisitos de verificación"
+              className="relative inline-flex items-center justify-center"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+                <circle cx="10" cy="10" r="9" stroke="#CCCCCC" strokeWidth="1.6" />
+                <path
+                  d="M6 10.5L8.5 13L14 7"
+                  stroke="#CCCCCC"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="absolute -right-[3px] -top-[3px] h-[8px] w-[8px] rounded-full bg-[#CC4B37]" />
+            </button>
+          ) : null}
           {isVerified ? (
             <span
               style={jost}
@@ -501,6 +524,66 @@ export function PlayerHero({
 
         <div className="mt-4" />
       </div>
+
+      {showVerifyModal && isOwner ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
+          onClick={() => setShowVerifyModal(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-t-[12px] bg-[#FFFFFF] p-6 md:rounded-[8px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 style={jost} className="text-[16px] font-extrabold uppercase text-[#111111]">
+                VERIFICACIÓN DE PERFIL
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowVerifyModal(false)}
+                className="text-[#999999]"
+                aria-label="Cerrar"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+            <p className="mb-5 text-[13px] leading-relaxed text-[#666666]" style={lato}>
+              Completa estos requisitos para obtener tu badge de jugador verificado.
+            </p>
+            <div className="space-y-3">
+              {[
+                { label: 'Foto de perfil', done: !!user.avatar_url },
+                { label: 'Foto de portada', done: !!user.foto_portada_url },
+                { label: 'Pertenecer a un equipo', done: (user.teams_list?.length ?? 0) > 0 },
+                { label: 'Al menos una réplica en arsenal', done: (arsenalCount ?? 0) > 0 },
+              ].map(({ label, done }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <div
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${done ? 'bg-[#CC4B37]' : 'border-2 border-[#DDDDDD]'}`}
+                  >
+                    {done ? (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+                        <path
+                          d="M2.5 6.5L5 9L9.5 3.5"
+                          stroke="#FFFFFF"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    ) : null}
+                  </div>
+                  <span className={`text-[14px] ${done ? 'text-[#111111]' : 'text-[#999999]'}`} style={lato}>
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </header>
   )
 }
