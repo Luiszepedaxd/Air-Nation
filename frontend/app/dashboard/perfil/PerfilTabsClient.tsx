@@ -153,6 +153,23 @@ function PermisosSection({
   }, [pushLoading])
 
   useEffect(() => {
+    let cancelled = false
+    void supabase
+      .from('users')
+      .select('location_lat')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled && data?.location_lat != null) {
+          setLocationGranted(true)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) return
 
     let cancelled = false
