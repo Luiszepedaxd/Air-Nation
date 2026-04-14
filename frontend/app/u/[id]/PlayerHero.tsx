@@ -180,6 +180,7 @@ export function PlayerHero({
   isOwner = false,
   onEditClick,
   arsenalCount,
+  postsCount,
 }: {
   user: PublicUserProfile
   subtitle: string
@@ -192,6 +193,7 @@ export function PlayerHero({
   isOwner?: boolean
   onEditClick?: () => void
   arsenalCount?: number
+  postsCount?: number
 }) {
   const router = useRouter()
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
@@ -557,8 +559,10 @@ export function PlayerHero({
               {[
                 { label: 'Foto de perfil', done: !!user.avatar_url },
                 { label: 'Foto de portada', done: !!user.foto_portada_url },
-                { label: 'Pertenecer a un equipo', done: (user.teams_list?.length ?? 0) > 0 },
-                { label: 'Al menos una réplica en arsenal', done: (arsenalCount ?? 0) > 0 },
+                {
+                  label: 'Réplica en arsenal o publicación en el feed',
+                  done: (arsenalCount ?? 0) > 0 || (postsCount ?? 0) > 0,
+                },
               ].map(({ label, done }) => (
                 <div key={label} className="flex items-center gap-3">
                   <div

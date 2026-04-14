@@ -516,8 +516,7 @@ export function PerfilTabsClient({
   const isVerified =
     !!publicUser.avatar_url &&
     !!publicUser.foto_portada_url &&
-    (publicUser.teams_list?.length ?? 0) > 0 &&
-    replicas.length > 0
+    (replicas.length > 0 || posts.length > 0)
 
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] pb-10">
@@ -583,6 +582,7 @@ export function PerfilTabsClient({
               isOwner
               onEditClick={() => setActiveTab('configuracion')}
               arsenalCount={replicas.length}
+              postsCount={posts.length}
             />
             <PlayerProfileClient
               user={publicUser}

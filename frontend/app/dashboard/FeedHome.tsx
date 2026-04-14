@@ -150,7 +150,7 @@ type TeamDirItem = {
   destacado: boolean
 }
 
-/** Aproximación en feed (sin contar arsenal): avatar + portada + equipo. */
+/** Aproximación en feed (solo campos del select): avatar + portada. */
 function mapJoinedUserForPlayerPost(u: Record<string, unknown> | null | undefined): {
   alias: string | null
   nombre: string | null
@@ -162,15 +162,11 @@ function mapJoinedUserForPlayerPost(u: Record<string, unknown> | null | undefine
   }
   const avatar_url = (u.avatar_url as string | null) ?? null
   const foto_portada_url = (u.foto_portada_url as string | null) ?? null
-  const team_id = (u.team_id as string | null) ?? null
   return {
     alias: String(u.alias ?? '') || null,
     nombre: String(u.nombre ?? '') || null,
     avatar_url,
-    is_verified:
-      !!avatar_url &&
-      !!foto_portada_url &&
-      team_id != null,
+    is_verified: !!avatar_url && !!foto_portada_url,
   }
 }
 

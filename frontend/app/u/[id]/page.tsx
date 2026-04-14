@@ -243,8 +243,7 @@ export default async function PublicProfilePage({
   const isVerified =
     !!user.avatar_url &&
     !!user.foto_portada_url &&
-    (user.teams_list?.length ?? 0) > 0 &&
-    replicas.length > 0
+    (replicas.length > 0 || posts.length > 0)
 
   const supabasePublic = createPublicSupabaseClient()
   const [
@@ -296,6 +295,7 @@ export default async function PublicProfilePage({
         teamRole={teamRole}
         isVerified={isVerified}
         arsenalCount={replicas.length}
+        postsCount={posts.length}
       />
 
       <PlayerProfileClient
