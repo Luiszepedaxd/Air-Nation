@@ -18,6 +18,17 @@ type ConvItem = {
   listing: { id: string; titulo: string; foto: string | null } | null
 }
 
+type GroupItem = {
+  id: string
+  name: string
+  avatar_url: string | null
+  last_message: string | null
+  last_message_at: string | null
+  team_id: string | null
+  unread: number
+  member_count: number
+}
+
 function timeAgo(iso: string | null): string {
   if (!iso) return ''
   try {
@@ -223,15 +234,74 @@ function SwipeableConvRow({
   )
 }
 
+function GroupRow({ group }: { group: GroupItem }) {
+  const initial = (group.name.trim()[0] || 'G').toUpperCase()
+
+  return (
+    <div className="relative border-b border-[#EEEEEE] last:border-b-0">
+      <Link
+        href={`/dashboard/mensajes/grupo/${group.id}`}
+        className="flex items-center gap-3 px-4 py-3"
+      >
+        <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-[#111111]">
+          {group.avatar_url ? (
+            <img src={group.avatar_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[13px] font-bold text-white" style={jost}>
+              {initial}
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className={`truncate text-[13px] uppercase ${group.unread > 0 ? 'font-extrabold text-[#111111]' : 'font-semibold text-[#444444]'}`} style={jost}>
+              {group.name}
+            </p>
+            <span className="shrink-0 text-[11px] text-[#999999]" style={lato}>
+              {timeAgo(group.last_message_at)}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] text-[#999999]" style={lato}>
+            {group.member_count} integrantes
+          </p>
+          <p className={`truncate text-[12px] ${group.unread > 0 ? 'font-semibold text-[#111111]' : 'text-[#666666]'}`} style={lato}>
+            {group.last_message === '[FOTO]' ? (
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-current" aria-hidden>
+                  <path d="M4 7h3l1.5-2h7L17 7h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                  <circle cx="12" cy="13" r="3.5" stroke="currentColor" strokeWidth="1.6"/>
+                </svg>
+                Foto
+              </span>
+            ) : (
+              group.last_message?.split('\n')[0]?.trim() || 'Sin mensajes aún'
+            )}
+          </p>
+        </div>
+
+        {group.unread > 0 && (
+          <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#CC4B37] text-[10px] font-extrabold text-white" style={jost}>
+            {group.unread > 9 ? '9+' : group.unread}
+          </span>
+        )}
+      </Link>
+    </div>
+  )
+}
+
 export function BandejaClient({
   currentUserId,
   conversations: initialConvs,
+  groups: initialGroups,
 }: {
   currentUserId: string
   conversations: ConvItem[]
+  groups: GroupItem[]
 }) {
   const router = useRouter()
   const [convs, setConvs] = useState(initialConvs)
+  const [groups, setGroups] = useState(initialGroups)
 
   useEffect(() => {
     router.refresh()
@@ -239,7 +309,8 @@ export function BandejaClient({
 
   useEffect(() => {
     setConvs(initialConvs)
-  }, [initialConvs])
+    setGroups(initialGroups)
+  }, [initialConvs, initialGroups])
 
   const handleDelete = async (convId: string) => {
     setConvs(prev => prev.filter(c => c.id !== convId))
@@ -262,6 +333,19 @@ export function BandejaClient({
     }).eq('id', convId)
   }
 
+  type UnifiedItem =
+    | { kind: 'conv'; data: ConvItem }
+    | { kind: 'group'; data: GroupItem }
+
+  const unified: UnifiedItem[] = [
+    ...convs.map(c => ({ kind: 'conv' as const, data: c })),
+    ...groups.map(g => ({ kind: 'group' as const, data: g })),
+  ].sort((a, b) => {
+    const aTime = a.data.last_message_at ? new Date(a.data.last_message_at).getTime() : 0
+    const bTime = b.data.last_message_at ? new Date(b.data.last_message_at).getTime() : 0
+    return bTime - aTime
+  })
+
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
       <div className="max-w-[640px] mx-auto">
@@ -271,7 +355,7 @@ export function BandejaClient({
           </h1>
         </div>
 
-        {convs.length === 0 ? (
+        {unified.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center px-4">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
@@ -284,13 +368,23 @@ export function BandejaClient({
           </div>
         ) : (
           <div className="border-t border-[#EEEEEE]">
-            {convs.map(conv => (
-              <SwipeableConvRow
-                key={conv.id}
-                conv={conv}
-                onDelete={handleDelete}
-              />
-            ))}
+            {unified.map(item => {
+              if (item.kind === 'conv') {
+                return (
+                  <SwipeableConvRow
+                    key={`conv-${item.data.id}`}
+                    conv={item.data}
+                    onDelete={handleDelete}
+                  />
+                )
+              }
+              return (
+                <GroupRow
+                  key={`group-${item.data.id}`}
+                  group={item.data}
+                />
+              )
+            })}
           </div>
         )}
       </div>
