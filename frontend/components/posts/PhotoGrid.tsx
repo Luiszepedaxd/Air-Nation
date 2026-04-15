@@ -220,12 +220,24 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
           className="flex touch-pan-y"
           style={{
             willChange: 'transform',
-            cursor: count <= 1 ? 'default' : dragging ? 'grabbing' : 'grab',
+            cursor: 'default',
           }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerDown={(e) => {
+            if (e.pointerType === 'mouse') return
+            onPointerDown(e)
+          }}
+          onPointerMove={(e) => {
+            if (e.pointerType === 'mouse') return
+            onPointerMove(e)
+          }}
+          onPointerUp={(e) => {
+            if (e.pointerType === 'mouse') return
+            onPointerUp()
+          }}
+          onPointerCancel={(e) => {
+            if (e.pointerType === 'mouse') return
+            onPointerUp()
+          }}
         >
           {urls.map((url, i) => (
             <div
