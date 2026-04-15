@@ -288,6 +288,7 @@ export function TeamPublicTabs({
                 slug={slug}
                 teamNombre={team.nombre}
                 members={members}
+                founderId={team.created_by ?? null}
               />
             </div>
           </div>

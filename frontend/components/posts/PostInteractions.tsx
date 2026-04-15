@@ -3,43 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { sendPushNotif } from '@/lib/sendPushNotif'
 import { notifyNotifUpdated } from '@/lib/user-notifications'
-
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
-
-async function sendPushNotif(
-  recipientId: string,
-  title: string,
-  body: string,
-  url: string
-) {
-  try {
-    const { supabase } = await import('@/lib/supabase')
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) {
-      console.warn('[push] no session token')
-      return
-    }
-    const res = await fetch(`${API_URL}/push/notify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ recipientId, title, body, url }),
-    })
-    if (!res.ok) {
-      console.warn('[push] notify failed:', res.status, await res.text())
-    } else {
-      console.log('[push] notify ok para', recipientId)
-    }
-  } catch (err) {
-    console.warn('[push] sendPushNotif error:', err)
-  }
-}
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -404,8 +369,8 @@ export function PostActions({
         notifyNotifUpdated()
         void sendPushNotif(
           postOwnerId,
-          'Nueva reacción',
-          `Alguien reaccionó a tu publicación`,
+          'Le gustó tu publicación',
+          `${currentUserAlias ?? 'Alguien'} reaccionó a tu post`,
           postHref
         )
       }
@@ -649,6 +614,7 @@ export function CommentsSection({
       const r = data as Record<string, unknown>
       const u = Array.isArray(r.users) ? r.users[0] : r.users
       const uo = (u ?? {}) as Record<string, unknown>
+      const trimmed = text.trim()
       const newComment: PostComment = {
         id: String(r.id),
         user_id: String(r.user_id),
@@ -678,7 +644,7 @@ export function CommentsSection({
         void sendPushNotif(
           postOwnerId,
           'Nuevo comentario',
-          `Alguien comentó tu publicación`,
+          `${currentUserAlias ?? 'Alguien'}: ${trimmed.length > 50 ? trimmed.slice(0, 50) + '…' : trimmed}`,
           postHref
         )
       }
@@ -721,7 +687,7 @@ export function CommentsSection({
           void sendPushNotif(
             comment.user_id,
             'Nueva reacción',
-            `Alguien reaccionó a tu comentario`,
+            `${currentUserAlias ?? 'Alguien'} reaccionó a tu comentario`,
             postHref
           )
         }

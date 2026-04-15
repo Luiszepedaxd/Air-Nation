@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
+import { sendPushNotif } from '@/lib/sendPushNotif'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -132,6 +133,12 @@ export function ConversacionClient({
           last_message_at: new Date().toISOString(),
           [field]: current + 1,
         }).eq('id', conversationId)
+        void sendPushNotif(
+          isP1 ? String(cr.participant_2) : String(cr.participant_1),
+          otherName,
+          content.length > 60 ? content.slice(0, 60) + '…' : content,
+          `/dashboard/mensajes/${conversationId}`
+        )
       }
     } catch {
       setMessages(prev => prev.filter(m => m.id !== tempId))
@@ -193,6 +200,12 @@ export function ConversacionClient({
           last_message_at: new Date().toISOString(),
           [field]: current + 1,
         }).eq('id', conversationId)
+        void sendPushNotif(
+          isP1 ? String(cr.participant_2) : String(cr.participant_1),
+          otherName,
+          'Te envió una foto 📷',
+          `/dashboard/mensajes/${conversationId}`
+        )
       }
     } catch {
       URL.revokeObjectURL(previewUrl)

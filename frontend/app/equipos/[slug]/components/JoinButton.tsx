@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { notifyTeamJoinRequest } from '@/lib/notify-team-join-request'
+import { sendPushNotif } from '@/lib/sendPushNotif'
 import type { MemberDisplay } from '../types'
 
 const jost = {
@@ -31,11 +32,13 @@ export function JoinButton({
   slug,
   teamNombre,
   members,
+  founderId = null,
 }: {
   teamId: string
   slug: string
   teamNombre: string
   members: MemberDisplay[]
+  founderId?: string | null
 }) {
   const router = useRouter()
   const [state, setState] = useState<JoinUiState>('checking')
@@ -139,9 +142,22 @@ export function JoinButton({
       team_nombre: teamNombre,
     })
 
+    const aliasDelSolicitante =
+      (profile?.alias as string | null)?.trim() ||
+      (profile?.nombre as string | null)?.trim() ||
+      'Alguien'
+    if (founderId && founderId !== uid) {
+      void sendPushNotif(
+        founderId,
+        'Nueva solicitud de equipo',
+        `${aliasDelSolicitante} quiere unirse a ${teamNombre}`,
+        `/equipos/${encodeURIComponent(slug)}/admin`
+      )
+    }
+
     setState('pendiente')
     return true
-  }, [teamId, teamNombre])
+  }, [teamId, teamNombre, founderId, slug])
 
   const handleClick = useCallback(async () => {
     const {
