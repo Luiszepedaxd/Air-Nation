@@ -60,7 +60,8 @@ export async function EquiposSection() {
   return (
     <section>
       <SectionHeader title="EQUIPOS" href="/equipos" linkLabel="Ver todos →" />
-      <Carrusel>
+      <div className="px-4 md:px-6">
+        <Carrusel>
         {teams.map((team) => (
           <Link
             key={team.id}
@@ -119,7 +120,8 @@ export async function EquiposSection() {
             </div>
           </Link>
         ))}
-      </Carrusel>
+        </Carrusel>
+      </div>
     </section>
   )
 }

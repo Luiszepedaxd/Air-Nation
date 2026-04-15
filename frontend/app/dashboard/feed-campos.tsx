@@ -99,6 +99,7 @@ export async function CamposSection() {
           Aún no hay campos aprobados.
         </p>
       ) : (
+        <div className="px-4 md:px-6">
         <Carrusel>
           {fields.map((field) => {
             return (
@@ -151,6 +152,7 @@ export async function CamposSection() {
             )
           })}
         </Carrusel>
+        </div>
       )}
     </section>
   )

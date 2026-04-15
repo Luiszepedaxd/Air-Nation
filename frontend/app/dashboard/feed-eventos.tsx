@@ -144,7 +144,8 @@ export async function EventosSection() {
   return (
     <section>
       <SectionHeader title="PRÓXIMOS EVENTOS" href="/eventos" linkLabel="Ver todos →" />
-      <Carrusel>
+      <div className="px-4 md:px-6">
+        <Carrusel>
         {events.map((ev) => {
           const f = normalizeFields(ev.fields)
           const imagenFinal =
@@ -201,6 +202,7 @@ export async function EventosSection() {
           )
         })}
       </Carrusel>
+      </div>
     </section>
   )
 }
