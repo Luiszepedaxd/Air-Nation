@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
 import { sendPushNotif } from '@/lib/sendPushNotif'
+import { Lightbox } from '@/components/posts/PhotoGrid'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -48,6 +49,7 @@ export function ConversacionClient({
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [sendingImage, setSendingImage] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -227,11 +229,15 @@ export function ConversacionClient({
   function renderMessageContent(msg: Message, isMe: boolean) {
     if (msg.image_url) {
       return (
-        <div className="overflow-hidden rounded-[8px]" style={{ maxWidth: 220 }}>
+        <div
+          className="overflow-hidden rounded-[8px] cursor-pointer"
+          style={{ maxWidth: 220 }}
+          onClick={() => setLightboxUrl(msg.image_url!)}
+        >
           <img
             src={msg.image_url}
             alt="Imagen"
-            className="h-auto w-full object-cover"
+            className="w-full h-auto object-cover pointer-events-none"
             style={{ display: 'block', maxHeight: 280 }}
           />
         </div>
@@ -409,6 +415,13 @@ export function ConversacionClient({
           </button>
         </div>
       </div>
+      {lightboxUrl && (
+        <Lightbox
+          urls={[lightboxUrl]}
+          startIndex={0}
+          onClose={() => setLightboxUrl(null)}
+        />
+      )}
     </div>
   )
 }
