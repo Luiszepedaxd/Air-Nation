@@ -23,9 +23,9 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-type TabId = 'posts' | 'info' | 'replicas' | 'eventos'
+type TabId = 'posts' | 'replicas' | 'eventos'
 
-const PROFILE_TAB_IDS = ['posts', 'info', 'replicas', 'eventos'] as const
+const PROFILE_TAB_IDS = ['posts', 'replicas', 'eventos'] as const
 
 function profileTabFromSearchParams(
   sp: URLSearchParams | { get: (key: string) => string | null }
@@ -44,18 +44,6 @@ function formatDate(iso: string) {
       month: 'short',
       year: 'numeric',
     }).format(new Date(iso))
-  } catch {
-    return ''
-  }
-}
-
-function formatDMY(iso: string) {
-  try {
-    const d = new Date(iso)
-    const dd = String(d.getDate()).padStart(2, '0')
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const yyyy = d.getFullYear()
-    return `${dd}/${mm}/${yyyy}`
   } catch {
     return ''
   }
@@ -111,13 +99,9 @@ export function PlayerProfileClient({
 
   const tabs: [TabId, string][] = [
     ['posts', 'Posts'],
-    ['info', 'Info'],
     ['replicas', 'Arsenal'],
     ['eventos', 'Eventos'],
   ]
-
-  const fieldShell =
-    'border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-3'
 
   return (
     <div>
@@ -179,10 +163,6 @@ export function PlayerProfileClient({
               currentUserAvatar={currentUserAvatar}
             />
           </>
-        ) : null}
-
-        {tab === 'info' ? (
-          <InfoPanel user={user} rolLabels={rolLabels} fieldShell={fieldShell} />
         ) : null}
 
         {tab === 'replicas' ? (
@@ -280,117 +260,6 @@ function PostsPanel({
           </article>
         )
       })}
-    </div>
-  )
-}
-
-function InfoPanel({
-  user,
-  rolLabels,
-  fieldShell,
-}: {
-  user: PublicUserProfile
-  rolLabels: Record<string, string>
-  fieldShell: string
-}) {
-  return (
-    <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
-      {user.bio ? (
-        <div className={`${fieldShell} md:col-span-2`}>
-          <p
-            style={jost}
-            className="text-[10px] font-extrabold uppercase text-[#666666]"
-          >
-            BIO
-          </p>
-          <p
-            className="mt-1 text-[14px] leading-relaxed text-[#111111]"
-            style={lato}
-          >
-            {user.bio}
-          </p>
-        </div>
-      ) : null}
-
-      <div className={fieldShell}>
-        <p
-          style={jost}
-          className="text-[10px] font-extrabold uppercase text-[#666666]"
-        >
-          CIUDAD
-        </p>
-        <p className="mt-1 text-[15px] text-[#111111]" style={lato}>
-          {user.ciudad || '—'}
-        </p>
-      </div>
-
-      <div className={fieldShell}>
-        <p
-          style={jost}
-          className="text-[10px] font-extrabold uppercase text-[#666666]"
-        >
-          ROL DE JUEGO
-        </p>
-        <p className="mt-1">
-          <span
-            style={jost}
-            className="inline-block rounded-[2px] bg-[#F4F4F4] px-2 py-1 text-[12px] font-extrabold uppercase text-[#111111]"
-          >
-            {user.rol ? rolLabels[user.rol] || user.rol : '—'}
-          </span>
-        </p>
-      </div>
-
-      <div className={fieldShell}>
-        <p
-          style={jost}
-          className="text-[10px] font-extrabold uppercase text-[#666666]"
-        >
-          EQUIPO
-        </p>
-        {user.teams ? (
-          <p className="mt-1 text-[15px]" style={lato}>
-            <Link
-              href={`/equipos/${encodeURIComponent(user.teams.slug)}`}
-              className="font-semibold text-[#111111] underline decoration-[#EEEEEE] underline-offset-2 transition-colors hover:text-[#CC4B37] hover:decoration-[#CC4B37]"
-            >
-              {user.teams.nombre}
-            </Link>
-          </p>
-        ) : (
-          <p className="mt-1 text-[15px] text-[#AAAAAA]" style={lato}>—</p>
-        )}
-      </div>
-
-      <div className={fieldShell}>
-        <p
-          style={jost}
-          className="text-[10px] font-extrabold uppercase text-[#666666]"
-        >
-          MIEMBRO DESDE
-        </p>
-        <p className="mt-1 text-[15px] text-[#111111]" style={lato}>
-          {formatDMY(user.created_at)}
-        </p>
-      </div>
-
-      {user.member_number != null &&
-      String(user.member_number).trim() !== '' ? (
-        <div className={fieldShell}>
-          <p
-            style={jost}
-            className="text-[10px] font-extrabold uppercase text-[#666666]"
-          >
-            Nº MIEMBRO
-          </p>
-          <p
-            style={jost}
-            className="mt-1 text-[20px] font-extrabold text-[#CC4B37]"
-          >
-            #{user.member_number}
-          </p>
-        </div>
-      ) : null}
     </div>
   )
 }
