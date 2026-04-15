@@ -1,9 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, type TouchEvent } from 'react'
-
-const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
-  textTransform: 'uppercase' as const } as const
+import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent } from 'react'
 
 export function Lightbox({ urls, startIndex, onClose }: {
   urls: string[]
@@ -129,56 +126,125 @@ export function Lightbox({ urls, startIndex, onClose }: {
 }
 
 export function PhotoGrid({ urls }: { urls: string[] }) {
-  const [lightbox, setLightbox] = useState<{ open: boolean; index: number }>({ open: false, index: 0 })
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [current, setCurrent] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const dragStartX = useRef(0)
+  const dragOffsetX = useRef(0)
+  const baseOffset = useRef(0)
+
   if (!urls.length) return null
 
-  const open = (i: number) => setLightbox({ open: true, index: i })
+  const count = urls.length
+
+  const slideWidth = () => {
+    const track = trackRef.current
+    if (!track || !track.children[0]) return 0
+    return (track.children[0] as HTMLElement).offsetWidth
+  }
+
+  const setTrackX = (x: number, animated: boolean) => {
+    const track = trackRef.current
+    if (!track) return
+    track.style.transition = animated
+      ? 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+      : 'none'
+    track.style.transform = `translateX(${x}px)`
+  }
+
+  const goTo = (idx: number, animated = true) => {
+    const clamped = Math.max(0, Math.min(idx, count - 1))
+    setCurrent(clamped)
+    setTrackX(-clamped * slideWidth(), animated)
+  }
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const track = trackRef.current
+    if (!track) return
+    track.setPointerCapture(e.pointerId)
+    setDragging(false)
+    dragStartX.current = e.clientX
+    dragOffsetX.current = 0
+    baseOffset.current = -current * slideWidth()
+    setTrackX(baseOffset.current, false)
+  }
+
+  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const delta = e.clientX - dragStartX.current
+    if (Math.abs(delta) > 5) setDragging(true)
+    dragOffsetX.current = delta
+    setTrackX(baseOffset.current + delta, false)
+  }
+
+  const onPointerUp = () => {
+    const w = slideWidth()
+    const delta = dragOffsetX.current
+    const threshold = w * 0.2
+    if (delta < -threshold) {
+      goTo(current + 1)
+    } else if (delta > threshold) {
+      goTo(current - 1)
+    } else {
+      goTo(current)
+    }
+    setTimeout(() => setDragging(false), 10)
+  }
 
   return (
     <>
-      {lightbox.open && (
-        <Lightbox urls={urls} startIndex={lightbox.index} onClose={() => setLightbox({ open: false, index: 0 })} />
+      {lightboxIndex !== null && (
+        <Lightbox
+          urls={urls}
+          startIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
       )}
-      {urls.length === 1 && (
-        <div className="aspect-square w-full overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(0)}>
-          <img src={urls[0]} alt="" className="w-full h-full object-cover" />
-        </div>
-      )}
-      {urls.length === 2 && (
-        <div className="grid grid-cols-2 gap-[2px]">
+
+      <div className="w-full select-none overflow-hidden">
+        <div
+          ref={trackRef}
+          className="flex touch-pan-y"
+          style={{
+            willChange: 'transform',
+            cursor: dragging ? 'grabbing' : 'grab',
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+        >
           {urls.map((url, i) => (
-            <div key={i} className="aspect-square overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(i)}>
-              <img src={url} alt="" className="w-full h-full object-cover" />
+            <div
+              key={i}
+              className="aspect-square w-full shrink-0 overflow-hidden bg-[#F4F4F4]"
+              onClick={() => {
+                if (!dragging) setLightboxIndex(i)
+              }}
+            >
+              <img
+                src={url}
+                alt=""
+                className="h-full w-full object-cover object-center pointer-events-none"
+                draggable={false}
+              />
             </div>
           ))}
         </div>
-      )}
-      {urls.length === 3 && (
-        <div className="grid grid-cols-2 gap-[2px]">
-          <div className="row-span-2 aspect-[2/3] overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(0)}>
-            <img src={urls[0]} alt="" className="w-full h-full object-cover" />
+
+        {count > 1 && (
+          <div className="mt-2 flex items-center justify-center gap-1.5">
+            {urls.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  i === current ? 'w-4 bg-[#CC4B37]' : 'w-1.5 bg-[#DDDDDD]'
+                }`}
+              />
+            ))}
           </div>
-          {urls.slice(1).map((url, i) => (
-            <div key={i} className="aspect-square overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(i + 1)}>
-              <img src={url} alt="" className="w-full h-full object-cover" />
-            </div>
-          ))}
-        </div>
-      )}
-      {urls.length >= 4 && (
-        <div className="grid grid-cols-2 gap-[2px]">
-          {urls.slice(0, 4).map((url, i) => (
-            <div key={i} className="relative aspect-square overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(i)}>
-              <img src={url} alt="" className="w-full h-full object-cover" />
-              {i === 3 && urls.length > 4 && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <span className="text-white text-[18px] font-extrabold" style={jost}>+{urls.length - 4}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </>
   )
 }
