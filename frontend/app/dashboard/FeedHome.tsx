@@ -8,6 +8,7 @@ import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
+import { CropModal } from '@/components/posts/CropModal'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -228,6 +229,8 @@ export function PostBox({
     { id: string; file: File; preview: string }[]
   >([])
   const [publishing, setPublishing] = useState(false)
+  const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
+  const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const postAsOptions: PostAs[] = [
@@ -255,18 +258,39 @@ export function PostBox({
 
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return
-    const next: { id: string; file: File; preview: string }[] = []
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    const queue: { file: File; src: string }[] = []
     for (const file of Array.from(files)) {
-      if (pendingPhotos.length + next.length >= 4) break
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
-        continue
-      const id =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random()}`
-      next.push({ id, file, preview: URL.createObjectURL(file) })
+      if (pendingPhotos.length + queue.length >= 4) break
+      if (!allowed.includes(file.type)) continue
+      queue.push({ file, src: URL.createObjectURL(file) })
     }
-    setPendingPhotos((p) => [...p, ...next])
+    if (!queue.length) return
+    setCropQueue(queue.slice(1))
+    setCurrentCrop(queue[0])
+  }
+
+  const handleCropConfirm = (croppedFile: File, preview: string) => {
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
+    setPendingPhotos((p) => [...p, { id, file: croppedFile, preview }])
+    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
+
+    if (cropQueue.length > 0) {
+      setCurrentCrop(cropQueue[0])
+      setCropQueue((q) => q.slice(1))
+    } else {
+      setCurrentCrop(null)
+    }
+  }
+
+  const handleCropCancel = () => {
+    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
+    for (const q of cropQueue) URL.revokeObjectURL(q.src)
+    setCropQueue([])
+    setCurrentCrop(null)
   }
 
   const clearPendingPhotos = () => {
@@ -546,6 +570,15 @@ export function PostBox({
           </button>
         </div>
       </div>
+
+      {currentCrop && (
+        <CropModal
+          imageSrc={currentCrop.src}
+          originalFile={currentCrop.file}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   )
 }

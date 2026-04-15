@@ -5,6 +5,7 @@ import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
+import { CropModal } from '@/components/posts/CropModal'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -96,6 +97,8 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
   const [publishing, setPublishing] = useState(false)
   const [pickErr, setPickErr] = useState('')
+  const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
+  const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
   const postInputRef = useRef<HTMLInputElement>(null)
   const pendingRef = useRef(pendingPhotos)
   pendingRef.current = pendingPhotos
@@ -135,24 +138,45 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
   const addPostFiles = (files: FileList | null) => {
     if (!files?.length) return
     setPickErr('')
-    const next: PendingPhoto[] = []
+    const queue: { file: File; src: string }[] = []
     let firstErr: string | null = null
     for (const file of Array.from(files)) {
-      if (pendingPhotos.length + next.length >= MAX_POST_PHOTOS) break
+      if (pendingPhotos.length + queue.length >= MAX_POST_PHOTOS) break
       const err = validateImageFile(file)
       if (err) {
         if (!firstErr) firstErr = err
         continue
       }
-      const id =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random()}`
-      next.push({ id, file, preview: URL.createObjectURL(file) })
+      queue.push({ file, src: URL.createObjectURL(file) })
     }
     if (firstErr) setPickErr(firstErr)
-    if (next.length) setPendingPhotos((p) => [...p, ...next])
+    if (!queue.length) return
+    setCropQueue(queue.slice(1))
+    setCurrentCrop(queue[0])
     if (postInputRef.current) postInputRef.current.value = ''
+  }
+
+  const handleCropConfirm = (croppedFile: File, preview: string) => {
+    const id =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
+    setPendingPhotos((p) => [...p, { id, file: croppedFile, preview }])
+    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
+
+    if (cropQueue.length > 0) {
+      setCurrentCrop(cropQueue[0])
+      setCropQueue((q) => q.slice(1))
+    } else {
+      setCurrentCrop(null)
+    }
+  }
+
+  const handleCropCancel = () => {
+    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
+    for (const q of cropQueue) URL.revokeObjectURL(q.src)
+    setCropQueue([])
+    setCurrentCrop(null)
   }
 
   const canPublish = postText.trim().length > 0 || pendingPhotos.length > 0
@@ -353,6 +377,15 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
             )
           })}
         </ul>
+      )}
+
+      {currentCrop && (
+        <CropModal
+          imageSrc={currentCrop.src}
+          originalFile={currentCrop.file}
+          onConfirm={handleCropConfirm}
+          onCancel={handleCropCancel}
+        />
       )}
     </div>
   )
