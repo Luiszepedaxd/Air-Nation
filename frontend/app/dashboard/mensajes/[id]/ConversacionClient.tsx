@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
 import { sendPushNotif } from '@/lib/sendPushNotif'
 import { Lightbox } from '@/components/posts/PhotoGrid'
-import { useVisualViewport } from '@/hooks/useVisualViewport'
+
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -52,7 +52,6 @@ export function ConversacionClient({
   const [sendingImage, setSendingImage] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const viewportStyle = useVisualViewport()
   const inputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -281,10 +280,7 @@ export function ConversacionClient({
   }
 
   return (
-    <div
-      className="fixed inset-x-0 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden"
-      style={viewportStyle}
-    >
+    <div className="fixed inset-x-0 top-0 bottom-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">
         <Link href="/dashboard/mensajes" className="text-[#999999] hover:text-[#111111] mr-1">
@@ -359,7 +355,7 @@ export function ConversacionClient({
       </div>
 
       {/* Input */}
-      <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3 pb-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+      <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3 pb-3" style={{ marginBottom: 'calc(4rem + max(env(safe-area-inset-bottom), 12px))' }}>
         <div className="flex items-center gap-2">
           <input
             ref={imageInputRef}
