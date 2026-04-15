@@ -3,28 +3,33 @@
 import { useEffect, useState } from 'react'
 
 export function useVisualViewport() {
-  const [height, setHeight] = useState<number | null>(null)
+  const [style, setStyle] = useState<{ top: string; height: string }>({
+    top: '0px',
+    height: '100dvh',
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const update = () => {
-      const vh = window.visualViewport?.height ?? window.innerHeight
-      setHeight(vh)
+      const vv = window.visualViewport
+      if (!vv) return
+      setStyle({
+        top: `${vv.offsetTop}px`,
+        height: `${vv.height}px`,
+      })
     }
 
     update()
 
     window.visualViewport?.addEventListener('resize', update)
     window.visualViewport?.addEventListener('scroll', update)
-    window.addEventListener('resize', update)
 
     return () => {
       window.visualViewport?.removeEventListener('resize', update)
       window.visualViewport?.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
     }
   }, [])
 
-  return height
+  return style
 }

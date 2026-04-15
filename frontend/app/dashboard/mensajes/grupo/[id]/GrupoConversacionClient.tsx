@@ -52,7 +52,7 @@ export function GrupoConversacionClient({
   const [sendingImage, setSendingImage] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const viewportHeight = useVisualViewport()
+  const viewportStyle = useVisualViewport()
   const inputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -210,8 +210,8 @@ export function GrupoConversacionClient({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden"
-      style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
+      className="fixed inset-x-0 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden"
+      style={viewportStyle}
     >
 
       {/* Header */}
