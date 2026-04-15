@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
 import { Lightbox } from '@/components/posts/PhotoGrid'
 import { sendPushNotif } from '@/lib/sendPushNotif'
+import { useVisualViewport } from '@/hooks/useVisualViewport'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -51,6 +52,7 @@ export function GrupoConversacionClient({
   const [sendingImage, setSendingImage] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const viewportHeight = useVisualViewport()
   const inputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
@@ -207,7 +209,10 @@ export function GrupoConversacionClient({
   const initial = (groupName.trim()[0] || 'G').toUpperCase()
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
+    <div
+      className="fixed inset-x-0 top-0 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden"
+      style={{ height: viewportHeight ? `${viewportHeight}px` : '100dvh' }}
+    >
 
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">
@@ -328,10 +333,7 @@ export function GrupoConversacionClient({
       </div>
 
       {/* Input */}
-      <div
-        className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3 pb-3"
-        style={{ marginBottom: 'calc(4rem + max(env(safe-area-inset-bottom), 12px))' }}
-      >
+      <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3 pb-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
         <div className="flex items-center gap-2">
           <input
             ref={imageInputRef}
