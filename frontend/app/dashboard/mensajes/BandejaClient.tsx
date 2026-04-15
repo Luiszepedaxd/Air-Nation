@@ -164,10 +164,25 @@ function SwipeableConvRow({
                 {conv.listing.titulo}
               </p>
             )}
-            <p className={`truncate text-[12px] ${conv.unread > 0 ? 'font-semibold text-[#111111]' : 'text-[#666666]'}`} style={lato}>
-              {conv.last_message?.startsWith('[LISTING:')
-                ? 'Consulta sobre una publicacion'
-                : conv.last_message?.split('\n')[0]?.trim() || 'Sin mensajes aún'}
+            <p className={`flex min-w-0 items-center gap-1.5 text-[12px] ${conv.unread > 0 ? 'font-semibold text-[#111111]' : 'text-[#666666]'}`} style={lato}>
+              {conv.last_message === '[FOTO]' ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-current" aria-hidden>
+                    <path
+                      d="M4 7h3l1.5-2h7L17 7h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="13" r="3.5" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                  <span className="truncate">Foto</span>
+                </>
+              ) : conv.last_message?.startsWith('[LISTING:') ? (
+                <span className="truncate">Consulta sobre una publicacion</span>
+              ) : (
+                <span className="truncate">{conv.last_message?.split('\n')[0]?.trim() || 'Sin mensajes aún'}</span>
+              )}
             </p>
           </div>
           {conv.unread > 0 && (

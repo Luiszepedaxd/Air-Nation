@@ -39,7 +39,7 @@ export default async function ConversacionPage({ params }: { params: { id: strin
 
   let msgsQuery = supabase
     .from('messages')
-    .select('id, content, sender_id, read, created_at')
+    .select('id, content, sender_id, read, created_at, image_url')
     .eq('conversation_id', params.id)
     .order('created_at', { ascending: true })
     .limit(100)
@@ -89,6 +89,9 @@ export default async function ConversacionPage({ params }: { params: { id: strin
           sender_id: String(mr.sender_id ?? ''),
           read: Boolean(mr.read),
           created_at: String(mr.created_at ?? ''),
+          image_url: mr.image_url != null && String(mr.image_url).trim() !== ''
+            ? String(mr.image_url)
+            : null,
         }
       })}
     />

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { uploadFile } from '@/lib/apiFetch'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -13,6 +14,7 @@ type Message = {
   sender_id: string
   read: boolean
   created_at: string
+  image_url: string | null
 }
 
 type OtherUser = {
@@ -44,8 +46,10 @@ export function ConversacionClient({
   const [messages, setMessages] = useState(initialMessages)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [sendingImage, setSendingImage] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -60,7 +64,18 @@ export function ConversacionClient({
         table: 'messages',
         filter: `conversation_id=eq.${conversationId}`,
       }, (payload) => {
-        const m = payload.new as Message
+        const raw = payload.new as Record<string, unknown>
+        const m: Message = {
+          id: String(raw.id ?? ''),
+          content: String(raw.content ?? ''),
+          sender_id: String(raw.sender_id ?? ''),
+          read: Boolean(raw.read),
+          created_at: String(raw.created_at ?? ''),
+          image_url:
+            raw.image_url != null && String(raw.image_url).trim() !== ''
+              ? String(raw.image_url)
+              : null,
+        }
         if (m.sender_id === currentUserId) return
         setMessages(prev => {
           if (prev.some(x => x.id === m.id)) return prev
@@ -86,6 +101,7 @@ export function ConversacionClient({
       sender_id: currentUserId,
       read: false,
       created_at: new Date().toISOString(),
+      image_url: null,
     }
     setMessages(prev => [...prev, tempMsg])
 
@@ -126,6 +142,67 @@ export function ConversacionClient({
     }
   }
 
+  const handleSendImage = async (file: File) => {
+    if (sendingImage) return
+    setSendingImage(true)
+
+    const tempId = `temp-img-${Date.now()}`
+    const previewUrl = URL.createObjectURL(file)
+    const tempMsg: Message = {
+      id: tempId,
+      content: '',
+      sender_id: currentUserId,
+      read: false,
+      created_at: new Date().toISOString(),
+      image_url: previewUrl,
+    }
+    setMessages(prev => [...prev, tempMsg])
+
+    try {
+      const imageUrl = await uploadFile(file)
+
+      const { data: newMsg, error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: currentUserId,
+          content: '',
+          image_url: imageUrl,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      URL.revokeObjectURL(previewUrl)
+      setMessages(prev => prev.map(m => m.id === tempId ? newMsg as Message : m))
+
+      const { data: convRow } = await supabase
+        .from('conversations')
+        .select('participant_1, participant_2, unread_1, unread_2')
+        .eq('id', conversationId)
+        .maybeSingle()
+
+      if (convRow) {
+        const cr = convRow as Record<string, unknown>
+        const isP1 = String(cr.participant_1) === currentUserId
+        const field = isP1 ? 'unread_2' : 'unread_1'
+        const current = isP1 ? Number(cr.unread_2 ?? 0) : Number(cr.unread_1 ?? 0)
+        await supabase.from('conversations').update({
+          last_message: '[FOTO]',
+          last_message_at: new Date().toISOString(),
+          [field]: current + 1,
+        }).eq('id', conversationId)
+      }
+    } catch {
+      URL.revokeObjectURL(previewUrl)
+      setMessages(prev => prev.filter(m => m.id !== tempId))
+    } finally {
+      setSendingImage(false)
+      if (imageInputRef.current) imageInputRef.current.value = ''
+    }
+  }
+
   const otherName = otherUser.alias || otherUser.nombre || 'Operador'
 
   function parseListing(content: string): { listingId: string; titulo: string; precio: string; resto: string } | null {
@@ -134,8 +211,21 @@ export function ConversacionClient({
     return { listingId: match[1], titulo: match[2], precio: match[3], resto: match[4] }
   }
 
-  function renderMessageContent(content: string, isMe: boolean) {
-    const parsed = parseListing(content)
+  function renderMessageContent(msg: Message, isMe: boolean) {
+    if (msg.image_url) {
+      return (
+        <div className="overflow-hidden rounded-[8px]" style={{ maxWidth: 220 }}>
+          <img
+            src={msg.image_url}
+            alt="Imagen"
+            className="h-auto w-full object-cover"
+            style={{ display: 'block', maxHeight: 280 }}
+          />
+        </div>
+      )
+    }
+
+    const parsed = parseListing(msg.content)
     if (parsed) {
       const cardBorder = isMe ? 'border-white/30 bg-white/10' : 'border-[#CCCCCC] bg-white'
       const labelColor = isMe ? 'text-white/70' : 'text-[#999999]'
@@ -166,7 +256,7 @@ export function ConversacionClient({
         </div>
       )
     }
-    return <span>{content}</span>
+    return <span>{msg.content}</span>
   }
 
   return (
@@ -221,12 +311,14 @@ export function ConversacionClient({
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${sameSenderAsPrev ? 'mt-0.5' : 'mt-3'}`}>
               <div className="flex max-w-[75%] flex-col">
-                <div className={`px-3 py-2 text-[13px] leading-relaxed rounded-[12px] ${
-                  isMe
-                    ? 'bg-[#CC4B37] text-white rounded-br-[4px]'
-                    : 'bg-[#F4F4F4] text-[#111111] rounded-bl-[4px]'
+                <div className={`text-[13px] leading-relaxed rounded-[12px] ${
+                  msg.image_url
+                    ? 'overflow-hidden p-0'
+                    : isMe
+                      ? 'bg-[#CC4B37] text-white rounded-br-[4px] px-3 py-2'
+                      : 'bg-[#F4F4F4] text-[#111111] rounded-bl-[4px] px-3 py-2'
                 }`} style={lato}>
-                  {renderMessageContent(msg.content, isMe)}
+                  {renderMessageContent(msg, isMe)}
                 </div>
                 <p className={`mt-0.5 text-[10px] text-[#AAAAAA] ${isMe ? 'text-right' : 'text-left'}`} style={lato}>
                   {new Date(msg.created_at).toLocaleTimeString('es-MX', {
@@ -245,6 +337,42 @@ export function ConversacionClient({
       {/* Input */}
       <div className="shrink-0 border-t border-[#EEEEEE] px-4 pt-3 pb-3" style={{ marginBottom: 'calc(4rem + max(env(safe-area-inset-bottom), 12px))' }}>
         <div className="flex items-center gap-2">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0]
+              if (file) void handleSendImage(file)
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={sendingImage}
+            className="shrink-0 p-2 text-[#999999] transition-colors hover:text-[#CC4B37] disabled:opacity-40"
+            aria-label="Adjuntar foto"
+          >
+            {sendingImage ? (
+              <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66L9.41 17.41a2 2 0 01-2.83-2.83l8.49-8.48"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+
           <input
             ref={inputRef}
             type="text"
