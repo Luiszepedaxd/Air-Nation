@@ -109,8 +109,8 @@ export function CropModal({ imageSrc, originalFile, onConfirm, onCancel }: Props
         </button>
       </div>
 
-      {/* Cropper área */}
-      <div className="relative flex-1">
+      {/* Cropper área — altura fija para que el slider siempre sea visible */}
+      <div className="relative" style={{ height: 'calc(100dvh - 120px - env(safe-area-inset-bottom))' }}>
         <Cropper
           image={imageSrc}
           crop={crop}
@@ -129,8 +129,11 @@ export function CropModal({ imageSrc, originalFile, onConfirm, onCancel }: Props
         />
       </div>
 
-      {/* Zoom slider */}
-      <div className="flex items-center gap-3 px-6 py-4">
+      {/* Zoom slider — pegado bajo el cropper, sobre safe area */}
+      <div
+        className="flex items-center gap-3 px-6 py-4"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+      >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
           <circle cx="11" cy="11" r="7" stroke="white" strokeWidth="1.8" />
           <path d="M8 11h6M11 8v6" stroke="white" strokeWidth="1.8" strokeLinecap="round" />

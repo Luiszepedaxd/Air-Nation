@@ -160,6 +160,7 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
   }
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (count <= 1) return
     const track = trackRef.current
     if (!track) return
     track.setPointerCapture(e.pointerId)
@@ -171,19 +172,31 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (count <= 1) return
     const delta = e.clientX - dragStartX.current
     if (Math.abs(delta) > 5) setDragging(true)
     dragOffsetX.current = delta
-    setTrackX(baseOffset.current + delta, false)
+
+    const w = slideWidth()
+    const maxOffset = 0
+    const minOffset = -(count - 1) * w
+    const raw = baseOffset.current + delta
+    const resistance = 0.2
+    let clamped = raw
+    if (raw > maxOffset) clamped = maxOffset + (raw - maxOffset) * resistance
+    if (raw < minOffset) clamped = minOffset + (raw - minOffset) * resistance
+
+    setTrackX(clamped, false)
   }
 
   const onPointerUp = () => {
+    if (count <= 1) return
     const w = slideWidth()
     const delta = dragOffsetX.current
     const threshold = w * 0.2
-    if (delta < -threshold) {
+    if (delta < -threshold && current < count - 1) {
       goTo(current + 1)
-    } else if (delta > threshold) {
+    } else if (delta > threshold && current > 0) {
       goTo(current - 1)
     } else {
       goTo(current)
@@ -207,7 +220,7 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
           className="flex touch-pan-y"
           style={{
             willChange: 'transform',
-            cursor: dragging ? 'grabbing' : 'grab',
+            cursor: count <= 1 ? 'default' : dragging ? 'grabbing' : 'grab',
           }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
