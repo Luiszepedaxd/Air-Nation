@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { NuevoGrupoModal } from './NuevoGrupoModal'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -302,6 +303,7 @@ export function BandejaClient({
   const router = useRouter()
   const [convs, setConvs] = useState(initialConvs)
   const [groups, setGroups] = useState(initialGroups)
+  const [showNuevoGrupo, setShowNuevoGrupo] = useState(false)
 
   useEffect(() => {
     router.refresh()
@@ -350,9 +352,21 @@ export function BandejaClient({
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
       <div className="max-w-[640px] mx-auto">
         <div className="px-4 pt-6 pb-4">
-          <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
-            Mensajes
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 style={jost} className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]">
+              Mensajes
+            </h1>
+            <button
+              type="button"
+              onClick={() => setShowNuevoGrupo(true)}
+              className="flex h-9 w-9 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] text-[#111111] hover:border-[#CC4B37] hover:text-[#CC4B37] transition-colors"
+              aria-label="Nuevo grupo"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
         {unified.length === 0 ? (
@@ -388,6 +402,13 @@ export function BandejaClient({
           </div>
         )}
       </div>
+
+      {showNuevoGrupo && (
+        <NuevoGrupoModal
+          currentUserId={currentUserId}
+          onClose={() => setShowNuevoGrupo(false)}
+        />
+      )}
     </main>
   )
 }
