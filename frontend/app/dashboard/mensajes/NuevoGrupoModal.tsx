@@ -73,36 +73,15 @@ export function NuevoGrupoModal({
     if (!groupName.trim() || creating) return
     setCreating(true)
     try {
-      const { data: group, error: groupErr } = await supabase
-        .from('group_conversations')
-        .insert({
-          name: groupName.trim(),
-          created_by: currentUserId,
-          team_id: null,
-        })
-        .select('id')
-        .single()
+      const { data, error } = await supabase.rpc('create_manual_group', {
+        p_name: groupName.trim(),
+        p_creator_id: currentUserId,
+        p_member_ids: selectedMembers.map(m => m.id),
+      } as any)
 
-      if (groupErr || !group) throw groupErr
+      if (error) throw error
 
-      const groupId = (group as Record<string, unknown>).id as string
-
-      await supabase.from('group_members').insert({
-        group_id: groupId,
-        user_id: currentUserId,
-        role: 'admin',
-      })
-
-      if (selectedMembers.length > 0) {
-        await supabase.from('group_members').insert(
-          selectedMembers.map(m => ({
-            group_id: groupId,
-            user_id: m.id,
-            role: 'member',
-          }))
-        )
-      }
-
+      const groupId = data as string
       onClose()
       router.push(`/dashboard/mensajes/grupo/${groupId}`)
     } catch {

@@ -86,9 +86,11 @@ export function GrupoInfoClient({
   const handleInvite = async (user: SearchResult) => {
     setBusyId(user.id)
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .insert({ group_id: groupId, user_id: user.id, role: 'member' })
+      const { error } = await supabase.rpc('add_member_to_group', {
+        p_group_id: groupId,
+        p_user_id: user.id,
+        p_requester_id: currentUserId,
+      } as any)
       if (error) throw error
 
       setMembers(prev => [...prev, {
@@ -112,11 +114,11 @@ export function GrupoInfoClient({
     if (!isAdmin || userId === currentUserId) return
     setBusyId(userId)
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', userId)
+      const { error } = await supabase.rpc('remove_member_from_group', {
+        p_group_id: groupId,
+        p_user_id: userId,
+        p_requester_id: currentUserId,
+      } as any)
       if (error) throw error
       setMembers(prev => prev.filter(m => m.user_id !== userId))
     } catch {
@@ -130,11 +132,11 @@ export function GrupoInfoClient({
     if (!isAdmin) return
     setBusyId(userId)
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .update({ role: 'admin' })
-        .eq('group_id', groupId)
-        .eq('user_id', userId)
+      const { error } = await supabase.rpc('promote_group_member', {
+        p_group_id: groupId,
+        p_user_id: userId,
+        p_requester_id: currentUserId,
+      } as any)
       if (error) throw error
       setMembers(prev => prev.map(m =>
         m.user_id === userId ? { ...m, role: 'admin' } : m
@@ -150,11 +152,11 @@ export function GrupoInfoClient({
     if (leaving) return
     setLeaving(true)
     try {
-      const { error } = await supabase
-        .from('group_members')
-        .delete()
-        .eq('group_id', groupId)
-        .eq('user_id', currentUserId)
+      const { error } = await supabase.rpc('remove_member_from_group', {
+        p_group_id: groupId,
+        p_user_id: currentUserId,
+        p_requester_id: currentUserId,
+      } as any)
       if (error) throw error
       router.replace('/dashboard/mensajes')
     } catch {
