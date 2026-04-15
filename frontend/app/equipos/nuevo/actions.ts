@@ -111,6 +111,14 @@ export async function createTeamAction(
       console.error('[createTeamAction] team_members INSERT (admin):', memberErr)
     }
 
+    // Crear grupo de chat del equipo
+    await (db.rpc as any)('create_team_group', {
+      p_team_id: team.id,
+      p_team_name: nombre,
+      p_founder_id: adminId,
+      p_avatar_url: logoUrl || null,
+    })
+
     redirect('/admin/equipos')
   }
 
@@ -182,6 +190,14 @@ export async function createTeamAction(
       user_id: user.id,
     })
   }
+
+  // Crear grupo de chat del equipo
+  await (supabase.rpc as any)('create_team_group', {
+    p_team_id: team.id,
+    p_team_name: nombre,
+    p_founder_id: user.id,
+    p_avatar_url: logoUrl || null,
+  })
 
   redirect(`/equipos/${encodeURIComponent(team.slug)}`)
 }

@@ -304,6 +304,14 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // Crear grupo de chat del equipo
+    await supabase.rpc("create_team_group", {
+      p_team_id: team.id,
+      p_team_name: team.nombre,
+      p_founder_id: team.created_by,
+      p_avatar_url: team.logo_url || null,
+    });
+
     res.status(201).json({ team });
   } catch (err) {
     res.status(500).json({ error: err.message });

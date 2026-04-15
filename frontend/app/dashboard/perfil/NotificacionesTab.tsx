@@ -205,6 +205,11 @@ export function NotificacionesTab({
         status: 'activo',
       })
       if (iErr) throw iErr
+      // Agregar al grupo de chat del equipo
+      await (supabase.rpc as any)('add_user_to_team_group', {
+        p_team_id: row.team_id,
+        p_user_id: row.user_id,
+      })
       setResolvedIds(prev => {
         const next = new Set(prev)
         next.add(row.id)
