@@ -140,7 +140,7 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
         <Lightbox urls={urls} startIndex={lightbox.index} onClose={() => setLightbox({ open: false, index: 0 })} />
       )}
       {urls.length === 1 && (
-        <div className="aspect-[4/3] w-full overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(0)}>
+        <div className="aspect-square w-full overflow-hidden bg-[#F4F4F4] cursor-pointer" onClick={() => open(0)}>
           <img src={urls[0]} alt="" className="w-full h-full object-cover" />
         </div>
       )}
