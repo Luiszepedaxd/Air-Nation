@@ -180,21 +180,25 @@ export function RegistrarForm({
         .single()
       if (dbErr) throw dbErr
       try {
-        let nombreUsuario = 'El usuario'
-        const { data: urow } = await supabase
-          .from('users')
-          .select('alias, nombre')
-          .eq('id', userId)
-          .maybeSingle()
-        if (urow) {
-          const a = typeof urow.alias === 'string' ? urow.alias.trim() : ''
-          const n = typeof urow.nombre === 'string' ? urow.nombre.trim() : ''
-          nombreUsuario = a || n || 'El usuario'
+        let displayName = 'Jugador'
+        try {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('alias, nombre')
+            .eq('id', userId)
+            .single()
+          displayName =
+            userData?.alias?.trim() ||
+            userData?.nombre?.trim() ||
+            'Jugador'
+        } catch (e) {
+          console.error(e)
         }
+        const replicaUrl = `https://www.airnation.online/replicas/${data.id}`
         const postContent =
           condicion === 'upgrades'
-            ? `${nombreUsuario} agregó ${nombre.trim()} a su arsenal. Checa su build.`
-            : `${nombreUsuario} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas?`
+            ? `${displayName} agregó ${nombre.trim()} a su arsenal. Checa su build: ${replicaUrl}`
+            : `${displayName} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas? ${replicaUrl}`
         const { error: postErr } = await supabase.from('player_posts').insert({
           user_id: userId,
           content: postContent,
