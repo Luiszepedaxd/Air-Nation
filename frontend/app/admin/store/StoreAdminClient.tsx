@@ -65,6 +65,9 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
   const [productSlugManual, setProductSlugManual] = useState(false)
   const [stockVisible, setStockVisible] = useState(false)
   const [productDestacado, setProductDestacado] = useState(false)
+  const [catNivel1, setCatNivel1] = useState('')
+  const [catNivel2, setCatNivel2] = useState('')
+  const [catNivel3, setCatNivel3] = useState('')
 
   const [catNombre, setCatNombre] = useState('')
   const [catSlug, setCatSlug] = useState('')
@@ -79,6 +82,21 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
     for (const c of categories) m.set(c.id, c)
     return m
   }, [categories])
+
+  const cats1 = useMemo(
+    () => categories.filter((c) => c.parent_id === null),
+    [categories]
+  )
+  const cats2 = useMemo(
+    () => categories.filter((c) => c.parent_id === catNivel1),
+    [categories, catNivel1]
+  )
+  const cats3 = useMemo(
+    () => categories.filter((c) => c.parent_id === catNivel2),
+    [categories, catNivel2]
+  )
+
+  const selectedCategoriaId = catNivel3 || catNivel2 || catNivel1 || ''
 
   const refresh = useCallback(() => {
     router.refresh()
@@ -114,6 +132,9 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
     setStockVisible(false)
     setProductDestacado(false)
     setProductModalOpen(false)
+    setCatNivel1('')
+    setCatNivel2('')
+    setCatNivel3('')
     refresh()
   }
 
@@ -495,22 +516,69 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
                       <option value="outlet">Outlet</option>
                     </select>
                   </label>
+                  <input type="hidden" name="categoria_id" value={selectedCategoriaId} />
+
                   <label className="block text-[11px] text-[#666666]">
                     Categoría
                     <select
-                      name="categoria_id"
                       className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
                       style={{ borderRadius: 2 }}
-                      defaultValue=""
+                      value={catNivel1}
+                      onChange={(e) => {
+                        setCatNivel1(e.target.value)
+                        setCatNivel2('')
+                        setCatNivel3('')
+                      }}
                     >
                       <option value="">—</option>
-                      {categories.map((c) => (
+                      {cats1.map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.nombre}
                         </option>
                       ))}
                     </select>
                   </label>
+
+                  {cats2.length > 0 && (
+                    <label className="block text-[11px] text-[#666666]">
+                      Subcategoría
+                      <select
+                        className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                        style={{ borderRadius: 2 }}
+                        value={catNivel2}
+                        onChange={(e) => {
+                          setCatNivel2(e.target.value)
+                          setCatNivel3('')
+                        }}
+                      >
+                        <option value="">—</option>
+                        {cats2.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+
+                  {cats3.length > 0 && (
+                    <label className="block text-[11px] text-[#666666]">
+                      Sub-subcategoría
+                      <select
+                        className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                        style={{ borderRadius: 2 }}
+                        value={catNivel3}
+                        onChange={(e) => setCatNivel3(e.target.value)}
+                      >
+                        <option value="">—</option>
+                        {cats3.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
                   <label className="block text-[11px] text-[#666666]">
                     Marca
                     <select
