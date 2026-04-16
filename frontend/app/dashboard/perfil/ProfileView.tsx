@@ -300,9 +300,11 @@ export const ProfileView = forwardRef<ProfileViewHandle, Props>(function Profile
         if (body.user) setUser(body.user)
         else setUser((s) => ({ ...s, avatar_url: url ?? null }))
         try {
+          const displayName =
+            user.alias?.trim() || user.nombre?.trim() || 'El usuario'
           const { error: postErr } = await supabase.from('player_posts').insert({
             user_id: user.id,
-            content: 'actualizó su foto de perfil',
+            content: `${displayName} actualizó su foto de perfil`,
             fotos_urls: [url],
             published: true,
           })
@@ -316,7 +318,7 @@ export const ProfileView = forwardRef<ProfileViewHandle, Props>(function Profile
         setAvatarUploading(false)
       }
     },
-    [user.id]
+    [user.id, user.alias, user.nombre]
   )
 
   const onPortadaChange = useCallback(
@@ -349,9 +351,11 @@ export const ProfileView = forwardRef<ProfileViewHandle, Props>(function Profile
         else setUser((s) => ({ ...s, foto_portada_url: url ?? null }))
         setPortadaUrl(url ?? null)
         try {
+          const displayName =
+            user.alias?.trim() || user.nombre?.trim() || 'El usuario'
           const { error: postErr } = await supabase.from('player_posts').insert({
             user_id: user.id,
-            content: 'actualizó su foto de portada',
+            content: `${displayName} actualizó su foto de portada`,
             fotos_urls: [url],
             published: true,
           })
@@ -365,7 +369,7 @@ export const ProfileView = forwardRef<ProfileViewHandle, Props>(function Profile
         setPortadaUploading(false)
       }
     },
-    [user.id]
+    [user.id, user.alias, user.nombre]
   )
 
   const startEdit = useCallback(() => {
