@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { FollowUser } from '@/types/follows'
 
@@ -23,7 +23,6 @@ type Props = {
 export function FollowListModal({ isOpen, onClose, userId, mode, title }: Props) {
   const [users, setUsers] = useState<FollowUser[]>([])
   const [loading, setLoading] = useState(false)
-  const backdropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -44,42 +43,49 @@ export function FollowListModal({ isOpen, onClose, userId, mode, title }: Props)
     return () => document.removeEventListener('keydown', handler)
   }, [isOpen, onClose])
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const emptyLabel = mode === 'followers' ? 'seguidores' : 'siguiendo'
 
   return (
     <div
-      ref={backdropRef}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => {
-        if (e.target === backdropRef.current) onClose()
+        if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="flex w-full max-w-[420px] flex-col bg-[#FFFFFF] md:max-h-[70vh]"
-        style={{ borderRadius: 0, maxHeight: '70vh' }}
+        className="relative w-full max-w-sm bg-[#FFFFFF]"
+        style={{ borderRadius: 0, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#EEEEEE] px-5 py-4">
-          <h2 className="text-[15px] text-[#111111]" style={jost}>
+        <div className="flex shrink-0 items-center justify-between border-b border-[#EEEEEE] px-4 py-3">
+          <p className="text-[12px] font-extrabold uppercase text-[#111111]" style={jost}>
             {title}
-          </h2>
+          </p>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center text-[#999999] hover:text-[#111111]"
-            style={{ borderRadius: 0 }}
+            className="text-[#999999] hover:text-[#111111]"
             aria-label="Cerrar"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-3" style={{ minHeight: 120 }}>
+        <div className="overflow-y-auto" style={{ maxHeight: '60vh' }}>
+          <div className="px-4 py-3">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
@@ -158,6 +164,7 @@ export function FollowListModal({ isOpen, onClose, userId, mode, title }: Props)
               })}
             </ul>
           )}
+          </div>
         </div>
       </div>
     </div>
