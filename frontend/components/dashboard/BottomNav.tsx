@@ -264,32 +264,27 @@ export default function BottomNav() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
-      const { data } = await supabase
-        .from('users')
-        .select('app_role')
-        .eq('id', user.id)
-        .maybeSingle()
-      if (data?.app_role === 'admin') setIsAdmin(true)
-
-      const { data: perfil } = await supabase
-        .from('users')
-        .select('avatar_url')
-        .eq('id', user.id)
-        .maybeSingle()
-      setHasAvatar(!!(perfil?.avatar_url))
-
+      const [userData, q1, q2] = await Promise.all([
+        supabase
+          .from('users')
+          .select('app_role, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('conversations')
+          .select('*', { count: 'exact', head: true })
+          .eq('participant_1', user.id)
+          .gt('unread_1', 0),
+        supabase
+          .from('conversations')
+          .select('*', { count: 'exact', head: true })
+          .eq('participant_2', user.id)
+          .gt('unread_2', 0),
+      ])
+      if (userData.data?.app_role === 'admin') setIsAdmin(true)
+      setHasAvatar(!!(userData.data?.avatar_url))
       let msgUnread = 0
-      const q1 = await supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true })
-        .eq('participant_1', user.id)
-        .gt('unread_1', 0)
       if (!q1.error) msgUnread += q1.count ?? 0
-      const q2 = await supabase
-        .from('conversations')
-        .select('*', { count: 'exact', head: true })
-        .eq('participant_2', user.id)
-        .gt('unread_2', 0)
       if (!q2.error) msgUnread += q2.count ?? 0
       setUnreadMsgCount(msgUnread)
     })

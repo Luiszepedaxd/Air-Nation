@@ -21,6 +21,7 @@ export default async function PerfilPage({
 
   if (!authUser) redirect('/login')
 
+  // ── Block 1: user row (needed for team_id, isAdmin, props) ────────────
   const { data: row, error } = await supabase
     .from('users')
     .select('*')
@@ -29,41 +30,241 @@ export default async function PerfilPage({
 
   if (error || !row) redirect('/login')
 
-  let teamNombre: string | null = null
-  let teamSlug: string | null = null
-  if (row.team_id) {
-    const { data: team } = await supabase
-      .from('teams')
-      .select('nombre, slug')
-      .eq('id', row.team_id)
-      .maybeSingle()
-    teamNombre = team?.nombre ?? null
-    teamSlug = (team?.slug as string | undefined) ?? null
-  }
-
   const isAdmin = row.app_role === 'admin'
 
-  const { data: memberships } = await supabase
-    .from('team_members')
-    .select('team_id, rol_plataforma, rango_militar')
-    .eq('user_id', authUser.id)
-    .eq('status', 'activo')
+  const weekAgo = new Date()
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const weekAgoIso = weekAgo.toISOString()
 
+  // ── Block 2: parallel (all depend only on authUser.id / row) ──────────
+  const [
+    teamResult,
+    membershipsResult,
+    initialJoinRequests,
+    approvedFieldResult,
+    pendingJoinRowsResult,
+    misCamposResult,
+    rsvpResult,
+    userWithTeamResult,
+    postsResult,
+    replicasResult,
+  ] = await Promise.all([
+    row.team_id
+      ? supabase
+          .from('teams')
+          .select('nombre, slug')
+          .eq('id', row.team_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null } as { data: null }),
+    supabase
+      .from('team_members')
+      .select('team_id, rol_plataforma, rango_militar')
+      .eq('user_id', authUser.id)
+      .eq('status', 'activo'),
+    fetchPendingJoinRequestsForModerator(supabase, authUser.id),
+    supabase
+      .from('field_requests')
+      .select(
+        `
+      id,
+      fecha_deseada,
+      created_at,
+      updated_at,
+      approved_event_id,
+      fields ( nombre, slug )
+    `
+      )
+      .eq('solicitante_id', authUser.id)
+      .eq('status', 'aprobado')
+      .gte('updated_at', weekAgoIso)
+      .not('approved_event_id', 'is', null)
+      .order('updated_at', { ascending: false }),
+    supabase
+      .from('team_join_requests')
+      .select('id, teams ( nombre )')
+      .eq('user_id', authUser.id)
+      .eq('status', 'pendiente'),
+    supabase
+      .from('fields')
+      .select(
+        'id, nombre, slug, ciudad, tipo, foto_portada_url, status, destacado'
+      )
+      .eq('created_by', authUser.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('event_rsvps')
+      .select('event_id')
+      .eq('user_id', authUser.id),
+    supabase
+      .from('users')
+      .select('teams(nombre)')
+      .eq('id', authUser.id)
+      .maybeSingle(),
+    supabase
+      .from('player_posts')
+      .select('id, content, fotos_urls, created_at')
+      .eq('user_id', authUser.id)
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('arsenal')
+      .select(
+        'id, nombre, sistema, mecanismo, condicion, foto_url, verificada, ciudad, estado'
+      )
+      .eq('user_id', authUser.id)
+      .order('created_at', { ascending: false }),
+  ])
+
+  // ── Extract & derive from Block 2 ────────────────────────────────────
+  const teamNombre = teamResult.data?.nombre ?? null
+  const teamSlug = (teamResult.data?.slug as string | undefined) ?? null
+
+  const memberships = membershipsResult.data
   const teamIds = Array.from(
     new Set((memberships ?? []).map((m) => m.team_id as string))
   )
 
+  if (approvedFieldResult.error) {
+    console.error(
+      '[perfil] approved field notices:',
+      approvedFieldResult.error.message
+    )
+  }
+
+  const approvedFieldNotices: ApprovedFieldNotice[] = []
+  for (const r of approvedFieldResult.data ?? []) {
+    const raw = r as {
+      id?: string
+      fecha_deseada?: string | null
+      created_at?: string
+      updated_at?: string
+      approved_event_id?: string | null
+      fields?:
+        | { nombre?: string; slug?: string }
+        | { nombre?: string; slug?: string }[]
+        | null
+    }
+    const eid = raw.approved_event_id
+    const rid = raw.id
+    if (!eid || !rid) continue
+    const f = Array.isArray(raw.fields) ? raw.fields[0] : raw.fields
+    approvedFieldNotices.push({
+      id: rid,
+      fecha_deseada: raw.fecha_deseada ?? null,
+      created_at: String(raw.created_at ?? ''),
+      updated_at: String(raw.updated_at ?? raw.created_at ?? ''),
+      field_nombre: f?.nombre?.trim() || 'Campo',
+      field_slug: f?.slug?.trim() || '',
+      event_id: eid,
+    })
+  }
+
+  const pendingJoinRows = pendingJoinRowsResult.data
+
+  const misCampos = (misCamposResult.data ?? []).map((r) => ({
+    id: r.id as string,
+    nombre: r.nombre as string,
+    slug: r.slug as string,
+    ciudad: (r.ciudad as string | null) ?? null,
+    tipo: (r.tipo as string | null) ?? null,
+    foto_portada_url: (r.foto_portada_url as string | null) ?? null,
+    status: String(r.status ?? ''),
+    destacado: Boolean(r.destacado),
+  }))
+  const ownedFieldIds = misCampos.map((c) => c.id)
+
+  const rsvpEventIds = Array.from(
+    new Set(
+      (rsvpResult.data ?? [])
+        .map((r) => r.event_id as string | undefined)
+        .filter((id): id is string => Boolean(id))
+    )
+  )
+
+  let credencialTeamNombre: string | null = null
+  const teamsEmbed = (userWithTeamResult.data as { teams?: unknown } | null)
+    ?.teams
+  if (teamsEmbed) {
+    credencialTeamNombre = Array.isArray(teamsEmbed)
+      ? (teamsEmbed[0] as { nombre?: string } | undefined)?.nombre ?? null
+      : (teamsEmbed as { nombre?: string }).nombre ?? null
+  }
+
+  const postsData = postsResult.data
+  const replicasData = replicasResult.data
+
+  const nowIso = new Date().toISOString()
+
+  // ── Block 3: parallel (depend on Block 2 results) ─────────────────────
+  const [
+    teamsRowsResult,
+    frOwnerPendingResult,
+    proxRowsResult,
+    pastRowsResult,
+  ] = await Promise.all([
+    teamIds.length > 0
+      ? supabase
+          .from('teams')
+          .select('id, nombre, slug, logo_url, ciudad, status')
+          .in('id', teamIds)
+          .eq('status', 'activo')
+      : Promise.resolve({ data: null } as { data: null }),
+    ownedFieldIds.length > 0
+      ? supabase
+          .from('field_requests')
+          .select(
+            `
+        id,
+        field_id,
+        fecha_deseada,
+        num_jugadores,
+        created_at,
+        fields ( nombre ),
+        users ( nombre, alias )
+      `
+          )
+          .in('field_id', ownedFieldIds)
+          .eq('status', 'pendiente')
+          .order('created_at', { ascending: false })
+      : Promise.resolve({
+          data: null,
+          error: null,
+        } as { data: null; error: null }),
+    rsvpEventIds.length > 0
+      ? supabase
+          .from('events')
+          .select(
+            'id, title, fecha, imagen_url, organizador_id, fields ( nombre, slug, foto_portada_url )'
+          )
+          .in('id', rsvpEventIds)
+          .eq('status', 'publicado')
+          .eq('published', true)
+          .gte('fecha', nowIso)
+          .order('fecha', { ascending: true })
+      : Promise.resolve({ data: null } as { data: null }),
+    rsvpEventIds.length > 0
+      ? supabase
+          .from('events')
+          .select(
+            'id, title, fecha, imagen_url, organizador_id, fields ( nombre, slug, foto_portada_url )'
+          )
+          .in('id', rsvpEventIds)
+          .eq('status', 'publicado')
+          .eq('published', true)
+          .lt('fecha', nowIso)
+          .order('fecha', { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: null } as { data: null }),
+  ])
+
+  // ── Process Block 3 results ───────────────────────────────────────────
+
   let misEquipos: MisEquipoItem[] = []
-
-  if (teamIds.length > 0) {
-    const { data: teamsRows } = await supabase
-      .from('teams')
-      .select('id, nombre, slug, logo_url, ciudad, status')
-      .in('id', teamIds)
-      .eq('status', 'activo')
-
-    const byId = new Map((teamsRows ?? []).map((t) => [t.id as string, t]))
-
+  if (teamIds.length > 0 && teamsRowsResult.data) {
+    const byId = new Map(
+      (teamsRowsResult.data ?? []).map((t) => [t.id as string, t])
+    )
     misEquipos = (memberships ?? [])
       .map((m) => {
         const tid = m.team_id as string
@@ -82,115 +283,15 @@ export default async function PerfilPage({
       .filter((x): x is MisEquipoItem => x != null)
   }
 
-  const initialJoinRequests = await fetchPendingJoinRequestsForModerator(
-    supabase,
-    authUser.id
-  )
-
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
-  const weekAgoIso = weekAgo.toISOString()
-
-  const { data: approvedFieldRaw, error: approvedFieldErr } = await supabase
-    .from('field_requests')
-    .select(
-      `
-      id,
-      fecha_deseada,
-      created_at,
-      updated_at,
-      approved_event_id,
-      fields ( nombre, slug )
-    `
-    )
-    .eq('solicitante_id', authUser.id)
-    .eq('status', 'aprobado')
-    .gte('updated_at', weekAgoIso)
-    .not('approved_event_id', 'is', null)
-    .order('updated_at', { ascending: false })
-
-  if (approvedFieldErr) {
-    console.error('[perfil] approved field notices:', approvedFieldErr.message)
-  }
-
-  const approvedFieldNotices: ApprovedFieldNotice[] = []
-  for (const r of approvedFieldRaw ?? []) {
-    const raw = r as {
-      id?: string
-      fecha_deseada?: string | null
-      created_at?: string
-      updated_at?: string
-      approved_event_id?: string | null
-      fields?: { nombre?: string; slug?: string } | { nombre?: string; slug?: string }[] | null
-    }
-    const eid = raw.approved_event_id
-    const rid = raw.id
-    if (!eid || !rid) continue
-    const f = Array.isArray(raw.fields) ? raw.fields[0] : raw.fields
-    approvedFieldNotices.push({
-      id: rid,
-      fecha_deseada: raw.fecha_deseada ?? null,
-      created_at: String(raw.created_at ?? ''),
-      updated_at: String(raw.updated_at ?? raw.created_at ?? ''),
-      field_nombre: f?.nombre?.trim() || 'Campo',
-      field_slug: f?.slug?.trim() || '',
-      event_id: eid,
-    })
-  }
-
-  const { data: pendingJoinRows } = await supabase
-    .from('team_join_requests')
-    .select('id, teams ( nombre )')
-    .eq('user_id', authUser.id)
-    .eq('status', 'pendiente')
-
-  const { data: misCamposRows } = await supabase
-    .from('fields')
-    .select(
-      'id, nombre, slug, ciudad, tipo, foto_portada_url, status, destacado'
-    )
-    .eq('created_by', authUser.id)
-    .order('created_at', { ascending: false })
-
-  const misCampos = (misCamposRows ?? []).map((r) => ({
-    id: r.id as string,
-    nombre: r.nombre as string,
-    slug: r.slug as string,
-    ciudad: (r.ciudad as string | null) ?? null,
-    tipo: (r.tipo as string | null) ?? null,
-    foto_portada_url: (r.foto_portada_url as string | null) ?? null,
-    status: String(r.status ?? ''),
-    destacado: Boolean(r.destacado),
-  }))
-
-  const ownedFieldIds = misCampos.map((c) => c.id)
   const ownerPendingFieldRequests: PendingFieldOwnerRequest[] = []
   if (ownedFieldIds.length > 0) {
-    const { data: frOwnerPending, error: frOwnerErr } = await supabase
-      .from('field_requests')
-      .select(
-        `
-        id,
-        field_id,
-        fecha_deseada,
-        num_jugadores,
-        created_at,
-        fields ( nombre ),
-        users ( nombre, alias )
-      `
-      )
-      .in('field_id', ownedFieldIds)
-      .eq('status', 'pendiente')
-      .order('created_at', { ascending: false })
-
-    if (frOwnerErr) {
+    if (frOwnerPendingResult.error) {
       console.error(
         '[perfil] owner pending field requests:',
-        frOwnerErr.message
+        frOwnerPendingResult.error.message
       )
     }
-
-    for (const raw of frOwnerPending ?? []) {
+    for (const raw of frOwnerPendingResult.data ?? []) {
       const r = raw as {
         id?: string
         field_id?: string
@@ -262,73 +363,21 @@ export default async function PerfilPage({
     }
   }
 
-  let misEventosProximos: MisEventoRsvpItem[] = []
-  let misEventosPasados: MisEventoRsvpItem[] = []
-  const { data: rsvpIdRows } = await supabase
-    .from('event_rsvps')
-    .select('event_id')
-    .eq('user_id', authUser.id)
-
-  const rsvpEventIds = Array.from(
-    new Set(
-      (rsvpIdRows ?? [])
-        .map((r) => r.event_id as string | undefined)
-        .filter((id): id is string => Boolean(id))
-    )
-  )
-
-  const nowIso = new Date().toISOString()
-
-  if (rsvpEventIds.length > 0) {
-    const { data: proxRows } = await supabase
-      .from('events')
-      .select(
-        'id, title, fecha, imagen_url, organizador_id, fields ( nombre, slug, foto_portada_url )'
-      )
-      .in('id', rsvpEventIds)
-      .eq('status', 'publicado')
-      .eq('published', true)
-      .gte('fecha', nowIso)
-      .order('fecha', { ascending: true })
-
-    misEventosProximos = (proxRows ?? []).map((row) =>
-      mapEventRow(
-        row as {
-          id: string
-          title: string
-          fecha: string
-          imagen_url: string | null
-          organizador_id: string | null
-          fields: unknown
-        }
-      )
-    )
-
-    const { data: pastRows } = await supabase
-      .from('events')
-      .select(
-        'id, title, fecha, imagen_url, organizador_id, fields ( nombre, slug, foto_portada_url )'
-      )
-      .in('id', rsvpEventIds)
-      .eq('status', 'publicado')
-      .eq('published', true)
-      .lt('fecha', nowIso)
-      .order('fecha', { ascending: false })
-      .limit(10)
-
-    misEventosPasados = (pastRows ?? []).map((row) =>
-      mapEventRow(
-        row as {
-          id: string
-          title: string
-          fecha: string
-          imagen_url: string | null
-          organizador_id: string | null
-          fields: unknown
-        }
-      )
-    )
+  type EventRowShape = {
+    id: string
+    title: string
+    fecha: string
+    imagen_url: string | null
+    organizador_id: string | null
+    fields: unknown
   }
+
+  const misEventosProximos = (proxRowsResult.data ?? []).map((row) =>
+    mapEventRow(row as EventRowShape)
+  )
+  const misEventosPasados = (pastRowsResult.data ?? []).map((row) =>
+    mapEventRow(row as EventRowShape)
+  )
 
   const pendingJoinPending: { id: string; nombre: string }[] = []
   for (const r of pendingJoinRows ?? []) {
@@ -343,19 +392,6 @@ export default async function PerfilPage({
     if (name && rid) pendingJoinPending.push({ id: rid, nombre: name })
   }
 
-  let credencialTeamNombre: string | null = null
-  const { data: userWithTeam } = await supabase
-    .from('users')
-    .select('teams(nombre)')
-    .eq('id', authUser.id)
-    .maybeSingle()
-  const teams = (userWithTeam as { teams?: unknown } | null)?.teams
-  if (teams) {
-    credencialTeamNombre = Array.isArray(teams)
-      ? (teams[0] as { nombre?: string } | undefined)?.nombre ?? null
-      : (teams as { nombre?: string }).nombre ?? null
-  }
-
   const credencialData: CredentialUserData = {
     id: row.id as string,
     nombre: row.nombre ?? null,
@@ -367,22 +403,6 @@ export default async function PerfilPage({
     created_at: String(row.created_at ?? ''),
     teamNombre: credencialTeamNombre,
   }
-
-  const { data: postsData } = await supabase
-    .from('player_posts')
-    .select('id, content, fotos_urls, created_at')
-    .eq('user_id', authUser.id)
-    .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  const { data: replicasData } = await supabase
-    .from('arsenal')
-    .select(
-      'id, nombre, sistema, mecanismo, condicion, foto_url, verificada, ciudad, estado'
-    )
-    .eq('user_id', authUser.id)
-    .order('created_at', { ascending: false })
 
   return (
     <PerfilTabsClient

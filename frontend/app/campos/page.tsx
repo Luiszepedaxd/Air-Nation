@@ -4,7 +4,7 @@ import { isDestacadoTrue } from './components/DestacadoBadge'
 import { CamposGrid } from './components/CamposGrid'
 import type { CampoListRow } from './types'
 
-export const revalidate = 0
+export const revalidate = 60
 
 export const metadata: Metadata = {
   title: 'Campos de airsoft en México — AirNation',

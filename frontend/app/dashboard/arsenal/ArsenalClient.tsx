@@ -72,7 +72,7 @@ function ReplicaCard({ replica }: { replica: ReplicaRow }) {
     >
       <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
         {replica.foto_url ? (
-          <img src={replica.foto_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+          <img loading="lazy" decoding="async" src={replica.foto_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <ArsenalIcon />
@@ -201,7 +201,7 @@ export function RegistrarForm({
           <p className={labelClass} style={jost}>Foto</p>
           <div className="relative aspect-video w-full overflow-hidden border border-[#EEEEEE] bg-[#F4F4F4]">
             {fotoUrl ? (
-              <img src={fotoUrl} alt="" className="h-full w-full object-cover" />
+              <img loading="lazy" decoding="async" src={fotoUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2">
                 <ArsenalIcon />
@@ -906,7 +906,7 @@ export function NuevoListingForm({
                   >
                     <div className="w-10 h-10 shrink-0 overflow-hidden bg-[#F4F4F4]">
                       {r.foto_url
-                        ? <img src={r.foto_url} alt="" className="w-full h-full object-cover" />
+                        ? <img loading="lazy" decoding="async" src={r.foto_url} alt="" className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><ArsenalIcon /></div>
                       }
                     </div>
@@ -1240,7 +1240,7 @@ export function NuevoListingForm({
             <div className="grid grid-cols-3 gap-2">
               {fotos.map((url, i) => (
                 <div key={i} className="relative aspect-square overflow-hidden bg-[#F4F4F4]">
-                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <img loading="lazy" decoding="async" src={url} alt="" className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => setFotos(prev => prev.filter((_, j) => j !== i))}
@@ -1776,7 +1776,7 @@ function MisVentasCard({
       {/* Foto */}
       <div className="relative w-full overflow-hidden rounded-t-[12px] bg-[#F0F2F5]" style={{ aspectRatio: '1/1' }}>
         {foto ? (
-          <img src={foto} alt="" className="h-full w-full object-cover" />
+          <img loading="lazy" decoding="async" src={foto} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">

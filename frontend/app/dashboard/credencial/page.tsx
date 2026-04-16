@@ -3,6 +3,8 @@ import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { CredencialClient } from '@/components/credential/CredencialClient'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
 
+export const revalidate = 60
+
 const jost = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,

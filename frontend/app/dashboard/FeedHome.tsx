@@ -489,7 +489,7 @@ export function PostBox({
               key={p.id}
               className="relative h-16 w-16 overflow-hidden bg-[#F4F4F4]"
             >
-              <img src={p.preview} alt="" className="h-full w-full object-cover" />
+              <img loading="lazy" decoding="async" src={p.preview} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => {
@@ -599,7 +599,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         <Link href={`/equipos/${item.team.slug}`}>
           <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0">
             {item.team.logo_url
-              ? <img src={item.team.logo_url} alt="" className="w-full h-full object-cover" />
+              ? <img loading="lazy" decoding="async" src={item.team.logo_url} alt="" className="w-full h-full object-cover" />
               : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{item.team.nombre[0]}</div>
             }
           </div>
@@ -684,7 +684,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
             <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
               {item.user.avatar_url
-                ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <img loading="lazy" decoding="async" src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
               }
             </div>
@@ -776,7 +776,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
             <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
               {item.user.avatar_url
-                ? <img src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <img loading="lazy" decoding="async" src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
               }
             </div>
@@ -934,7 +934,7 @@ function EventCard({
       <Link href={`/eventos/${item.id}`} className="block">
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
           {imagenFinal
-            ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" />
+            ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />
             : <div className="w-full h-full flex items-center justify-center">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
                   <rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#444" strokeWidth="1.4"/>
@@ -990,14 +990,14 @@ function NewTeamCard({
       <Link href={`/equipos/${encodeURIComponent(item.slug)}`} className="block">
         {item.foto_portada_url && (
           <div className="relative h-[140px] w-full overflow-hidden bg-[#111111]">
-            <img src={item.foto_portada_url} alt="" className="w-full h-full object-cover opacity-80" />
+            <img loading="lazy" decoding="async" src={item.foto_portada_url} alt="" className="w-full h-full object-cover opacity-80" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
         )}
         <div className="flex items-center gap-3 p-3">
           <div className="w-12 h-12 shrink-0 overflow-hidden bg-[#F4F4F4] border border-[#EEEEEE]">
             {item.logo_url
-              ? <img src={item.logo_url} alt="" className="w-full h-full object-cover" />
+              ? <img loading="lazy" decoding="async" src={item.logo_url} alt="" className="w-full h-full object-cover" />
               : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-lg font-bold" style={jost}>{initial}</div>
             }
           </div>
@@ -1065,7 +1065,7 @@ function VideoCard({
             className="w-full h-full relative"
           >
             {thumb && (
-              <img src={thumb} alt="" className="w-full h-full object-cover opacity-90"/>
+              <img loading="lazy" decoding="async" src={thumb} alt="" className="w-full h-full object-cover opacity-90"/>
             )}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-14 h-14 bg-[#CC4B37] flex items-center justify-center hover:opacity-90 transition-opacity">
@@ -1116,7 +1116,7 @@ function NoticiaFeedCard({
       <Link href={`/blog/${item.slug}`} className="block">
         {item.cover_url && (
           <div className="aspect-[16/7] w-full overflow-hidden bg-[#F4F4F4]">
-            <img src={item.cover_url} alt="" className="w-full h-full object-cover" />
+            <img loading="lazy" decoding="async" src={item.cover_url} alt="" className="w-full h-full object-cover" />
           </div>
         )}
         <div className="p-3">
@@ -1193,7 +1193,7 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
           style={{ aspectRatio: '4/3' }}
         >
           {foto ? (
-            <img src={foto} alt="" className="h-full w-full object-cover" />
+            <img loading="lazy" decoding="async" src={foto} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -1914,7 +1914,7 @@ function EventosTab({
             <Link href={`/eventos/${item.id}`} className="flex gap-3 p-3">
               <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
                 {imagenFinal
-                  ? <img src={imagenFinal} alt="" className="w-full h-full object-cover" />
+                  ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />
                   : <div className="w-full h-full flex items-center justify-center">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <rect x="3" y="5" width="18" height="16" rx="1.5" stroke="#AAAAAA" strokeWidth="1.4" />
@@ -2150,7 +2150,7 @@ function EquiposTab() {
               >
                 <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
                   {team.foto_portada_url ? (
-                    <img src={team.foto_portada_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                    <img loading="lazy" decoding="async" src={team.foto_portada_url} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
                       <span className="text-3xl font-extrabold text-white/90" style={jost}>{initial}</span>
@@ -2161,7 +2161,7 @@ function EquiposTab() {
                   )}
                   <div className="absolute bottom-2 left-2 h-10 w-10 shrink-0 overflow-hidden border-2 border-white bg-[#111111]">
                     {team.logo_url ? (
-                      <img src={team.logo_url} alt="" className="h-full w-full object-cover" />
+                      <img loading="lazy" decoding="async" src={team.logo_url} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-[13px] font-extrabold text-[#CC4B37]" style={jost}>{initial}</div>
                     )}
@@ -2226,7 +2226,7 @@ function NoticiasTab({
           <Link href={`/blog/${item.slug}`} className="flex gap-3 p-3">
             <div className="w-20 h-20 shrink-0 overflow-hidden bg-[#F4F4F4]">
               {item.cover_url
-                ? <img src={item.cover_url} alt="" className="w-full h-full object-cover" />
+                ? <img loading="lazy" decoding="async" src={item.cover_url} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                       <path d="M7 3h8l4 4v14a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1Z" stroke="#AAAAAA" strokeWidth="1.4" strokeLinejoin="round" />
