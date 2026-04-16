@@ -299,6 +299,17 @@ export const ProfileView = forwardRef<ProfileViewHandle, Props>(function Profile
         const body = (await patch.json()) as { user?: ProfileUserRow }
         if (body.user) setUser(body.user)
         else setUser((s) => ({ ...s, avatar_url: url ?? null }))
+        try {
+          const { error: postErr } = await supabase.from('player_posts').insert({
+            user_id: user.id,
+            content: 'actualizó su foto de perfil',
+            fotos_urls: [url],
+            published: true,
+          })
+          if (postErr) console.error(postErr)
+        } catch (e) {
+          console.error(e)
+        }
       } catch {
         setAvatarError('Error de red. Intenta de nuevo.')
       } finally {
@@ -337,6 +348,17 @@ export const ProfileView = forwardRef<ProfileViewHandle, Props>(function Profile
         if (body.user) setUser(body.user)
         else setUser((s) => ({ ...s, foto_portada_url: url ?? null }))
         setPortadaUrl(url ?? null)
+        try {
+          const { error: postErr } = await supabase.from('player_posts').insert({
+            user_id: user.id,
+            content: 'actualizó su foto de portada',
+            fotos_urls: [url],
+            published: true,
+          })
+          if (postErr) console.error(postErr)
+        } catch (e) {
+          console.error(e)
+        }
       } catch {
         setPortadaError('Error de red. Intenta de nuevo.')
       } finally {
