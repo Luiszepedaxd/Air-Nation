@@ -722,12 +722,20 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
       </div>
       {item.replica_id ? (
-        <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
+        <>
           {item.content?.trim() && (
-            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+            <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
+              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+            </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-        </Link>
+          <Link
+            href={`/replicas/${item.replica_id}`}
+            className="block text-[12px] text-[#888888] mt-2 hover:underline"
+          >
+            Ver réplica
+          </Link>
+        </>
       ) : (
         <>
           {item.content?.trim() && (
@@ -825,12 +833,20 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
       </div>
       {item.replica_id ? (
-        <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
+        <>
           {item.content?.trim() && (
-            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+            <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
+              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+            </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-        </Link>
+          <Link
+            href={`/replicas/${item.replica_id}`}
+            className="block text-[12px] text-[#888888] mt-2 hover:underline"
+          >
+            Ver réplica
+          </Link>
+        </>
       ) : (
         <>
           {item.content?.trim() && (
