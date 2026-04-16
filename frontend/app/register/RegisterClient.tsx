@@ -124,6 +124,23 @@ export default function RegisterClient({
                   />
                 </div>
                 {error && <p className="text-xs text-[#CC4B37]">{error}</p>}
+                <p className="text-[0.7rem] leading-relaxed text-[#767676]">
+                  Al crear cuenta aceptas los{" "}
+                  <Link
+                    href="/terminos"
+                    className="font-semibold text-[#CC4B37] hover:underline"
+                  >
+                    Términos y Condiciones
+                  </Link>{" "}
+                  y el{" "}
+                  <Link
+                    href="/privacidad"
+                    className="font-semibold text-[#CC4B37] hover:underline"
+                  >
+                    Aviso de Privacidad
+                  </Link>
+                  .
+                </p>
                 <button
                   type="button"
                   onClick={handleRegister}

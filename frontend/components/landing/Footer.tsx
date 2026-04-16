@@ -9,8 +9,8 @@ const LINKS = {
     { label: "Iniciar sesión",href: "/login"    },
   ],
   Legal: [
-    { label: "Privacidad",    href: "/privacidad" },
-    { label: "Términos",      href: "/terminos"   },
+    { label: "Aviso de Privacidad", href: "/privacidad" },
+    { label: "Términos y Condiciones", href: "/terminos" },
   ],
 };
 

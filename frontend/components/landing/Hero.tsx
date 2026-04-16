@@ -74,6 +74,23 @@ export default async function Hero() {
               Ya tengo cuenta
             </Link>
           </div>
+          <p className="mt-5 max-w-[600px] font-body text-[0.7rem] leading-relaxed text-white/55 sm:text-xs">
+            Al crear cuenta aceptas los{' '}
+            <Link
+              href="/terminos"
+              className="text-white/90 underline decoration-white/40 underline-offset-2 hover:text-white"
+            >
+              Términos y Condiciones
+            </Link>{' '}
+            y el{' '}
+            <Link
+              href="/privacidad"
+              className="text-white/90 underline decoration-white/40 underline-offset-2 hover:text-white"
+            >
+              Aviso de Privacidad
+            </Link>
+            .
+          </p>
         </div>
       </div>
 
