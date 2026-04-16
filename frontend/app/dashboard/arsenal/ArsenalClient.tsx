@@ -179,6 +179,17 @@ export function RegistrarForm({
         .select()
         .single()
       if (dbErr) throw dbErr
+      try {
+        const { error: postErr } = await supabase.from('player_posts').insert({
+          user_id: userId,
+          content: `agregó "${nombre.trim()}" a su arsenal`,
+          fotos_urls: fotoUrl ? [fotoUrl] : [],
+          published: true,
+        })
+        if (postErr) console.error(postErr)
+      } catch (e) {
+        console.error(e)
+      }
       onSuccess(data as ReplicaRow)
     } catch { setError('Error al guardar. Intenta de nuevo.') }
     finally { setSaving(false) }
