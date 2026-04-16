@@ -7,6 +7,7 @@ import { ClickableImage } from '@/components/ui/ClickableImage'
 import type { PublicUserProfile } from './types'
 import { FollowButton } from './FollowButton'
 import { MessageButton } from './MessageButton'
+import { FollowListModal } from './FollowListModal'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -199,6 +200,7 @@ export function PlayerHero({
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
   const [showAllSocials, setShowAllSocials] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [followModal, setFollowModal] = useState<'followers' | 'following' | null>(null)
 
   const initial = (user.alias?.trim()?.[0] || '?').toUpperCase()
   const hasMemberNo =
@@ -327,22 +329,32 @@ export function PlayerHero({
             )}
           </div>
           <div className="flex min-w-0 flex-1 items-center gap-6">
-            <div className="flex flex-col items-center">
+            <button
+              type="button"
+              onClick={() => setFollowModal('followers')}
+              className="flex cursor-pointer flex-col items-center bg-transparent p-0 hover:underline"
+              style={{ border: 'none' }}
+            >
               <span className="text-[17px] font-extrabold text-[#111111]" style={jost}>
                 {followersCount}
               </span>
               <span className="text-[12px] text-[#666666]" style={lato}>
                 Seguidores
               </span>
-            </div>
-            <div className="flex flex-col items-center">
+            </button>
+            <button
+              type="button"
+              onClick={() => setFollowModal('following')}
+              className="flex cursor-pointer flex-col items-center bg-transparent p-0 hover:underline"
+              style={{ border: 'none' }}
+            >
               <span className="text-[17px] font-extrabold text-[#111111]" style={jost}>
                 {followingCount}
               </span>
               <span className="text-[12px] text-[#666666]" style={lato}>
                 Siguiendo
               </span>
-            </div>
+            </button>
             {isOwner && onEditClick ? (
               <button
                 type="button"
@@ -589,6 +601,14 @@ export function PlayerHero({
           </div>
         </div>
       ) : null}
+
+      <FollowListModal
+        isOpen={followModal !== null}
+        onClose={() => setFollowModal(null)}
+        userId={user.id}
+        mode={followModal ?? 'followers'}
+        title={followModal === 'following' ? 'Siguiendo' : 'Seguidores'}
+      />
     </header>
   )
 }
