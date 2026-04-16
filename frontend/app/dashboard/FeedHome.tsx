@@ -1862,6 +1862,31 @@ function FeedTab({
 }
 
 // ─── EVENTOS TAB ───
+function CrearEventoBanner() {
+  return (
+    <Link
+      href="/eventos/nuevo"
+      style={jost}
+      className="mb-4 flex items-center justify-between bg-[#CC4B37] px-4 py-4"
+    >
+      <div>
+        <p className="text-[12px] font-extrabold uppercase tracking-wide text-[#FFFFFF]">
+          LA COMUNIDAD NECESITA EVENTOS
+        </p>
+        <p
+          className="mt-0.5 text-[11px] font-normal uppercase tracking-wide text-white/75"
+          style={{ fontFamily: "'Lato', sans-serif", textTransform: 'none', fontWeight: 400 }}
+        >
+          Organiza tu partida y compártela con todos.
+        </p>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginLeft: 12 }}>
+        <path d="M5 12h14M13 6l6 6-6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </Link>
+  )
+}
+
 function EventosTab({
   currentUserId,
   currentUserAlias,
@@ -1873,18 +1898,29 @@ function EventosTab({
 }) {
   const [items, setItems] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasOwnActiveEvent, setHasOwnActiveEvent] = useState(false)
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from('events')
-        .select('id, title, fecha, imagen_url, fields(nombre, ciudad, foto_portada_url)')
-        .eq('published', true)
-        .eq('status', 'publicado')
-        .gte('fecha', new Date().toISOString())
-        .order('fecha', { ascending: true })
-        .limit(20)
+      const [eventsResult, myEventResult] = await Promise.all([
+        supabase.from('events')
+          .select('id, title, fecha, imagen_url, fields(nombre, ciudad, foto_portada_url)')
+          .eq('published', true)
+          .eq('status', 'publicado')
+          .gte('fecha', new Date().toISOString())
+          .order('fecha', { ascending: true })
+          .limit(20),
+        supabase.from('events')
+          .select('id')
+          .eq('created_by', currentUserId ?? '')
+          .eq('published', true)
+          .gte('fecha', new Date().toISOString())
+          .limit(1),
+      ])
 
-      setItems((data ?? []).map(row => {
+      setHasOwnActiveEvent((myEventResult.data ?? []).length > 0)
+
+      setItems((eventsResult.data ?? []).map(row => {
         const r = row as Record<string, unknown>
         const f = Array.isArray(r.fields) ? r.fields[0] : r.fields
         return {
@@ -1900,13 +1936,20 @@ function EventosTab({
       setLoading(false)
     }
     void load()
-  }, [])
+  }, [currentUserId])
 
   if (loading) return <div className="flex flex-col gap-3">{[0, 1, 2].map(i => <div key={i} className="h-20 border border-[#EEEEEE] animate-pulse" />)}</div>
-  if (!items.length) return <p style={lato} className="py-12 text-center text-[13px] text-[#999999]">No hay eventos próximos</p>
+
+  if (!items.length) return (
+    <div>
+      {!hasOwnActiveEvent && <CrearEventoBanner />}
+      <p style={lato} className="py-12 text-center text-[13px] text-[#999999]">No hay eventos próximos</p>
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-3">
+      {!hasOwnActiveEvent && <CrearEventoBanner />}
       {items.map(item => {
         const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
         return (
