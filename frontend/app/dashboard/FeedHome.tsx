@@ -19,8 +19,8 @@ type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 // Tipos de items del feed
 type FeedItem =
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
-  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
+  | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
+  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
   | {
       kind: 'field_post'
       id: string
@@ -721,10 +721,21 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
       </div>
-      {item.content?.trim() && (
-        <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+      {item.replica_id ? (
+        <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
+          {item.content?.trim() && (
+            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+          )}
+          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+        </Link>
+      ) : (
+        <>
+          {item.content?.trim() && (
+            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+          )}
+          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+        </>
       )}
-      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
       <PostActions
         postType="player"
         postId={item.id}
@@ -813,10 +824,21 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
       </div>
-      {item.content?.trim() && (
-        <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+      {item.replica_id ? (
+        <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
+          {item.content?.trim() && (
+            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+          )}
+          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+        </Link>
+      ) : (
+        <>
+          {item.content?.trim() && (
+            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+          )}
+          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+        </>
       )}
-      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
       <PostActions
         postType="player"
         postId={item.id}
@@ -1306,12 +1328,12 @@ function FeedTab({
           .order('created_at', { ascending: false })
           .limit(20),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
+          .select('id, user_id, content, fotos_urls, replica_id, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
+          .select('id, user_id, content, fotos_urls, replica_id, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
           .eq('published', true)
           .eq('pinned', false)
           .order('created_at', { ascending: false })
@@ -1384,6 +1406,7 @@ function FeedTab({
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
+          replica_id: r.replica_id ? String(r.replica_id) : null,
           created_at: String(r.created_at),
           user: mapJoinedUserForPlayerPost(
             u ? (u as Record<string, unknown>) : null
@@ -1401,6 +1424,7 @@ function FeedTab({
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
+          replica_id: r.replica_id ? String(r.replica_id) : null,
           created_at: String(r.created_at),
           user: mapJoinedUserForPlayerPost(
             u ? (u as Record<string, unknown>) : null
@@ -1561,7 +1585,7 @@ function FeedTab({
         cursorPlayerPosts
           ? supabase
               .from('player_posts')
-              .select('id, user_id, content, fotos_urls, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
+              .select('id, user_id, content, fotos_urls, replica_id, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
               .eq('published', true)
               .eq('pinned', false)
               .lt('created_at', cursorPlayerPosts)
@@ -1611,6 +1635,7 @@ function FeedTab({
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+          replica_id: r.replica_id ? String(r.replica_id) : null,
           created_at: String(r.created_at),
           user: mapJoinedUserForPlayerPost(
             u ? (u as Record<string, unknown>) : null

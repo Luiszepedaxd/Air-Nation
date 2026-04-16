@@ -194,16 +194,16 @@ export function RegistrarForm({
         } catch (e) {
           console.error(e)
         }
-        const replicaUrl = `https://www.airnation.online/replicas/${data.id}`
         const postContent =
           condicion === 'upgrades'
-            ? `${displayName} agregó ${nombre.trim()} a su arsenal. Checa su build: ${replicaUrl}`
-            : `${displayName} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas? ${replicaUrl}`
+            ? `${displayName} agregó ${nombre.trim()} a su arsenal. Checa su build.`
+            : `${displayName} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas?`
         const { error: postErr } = await supabase.from('player_posts').insert({
           user_id: userId,
           content: postContent,
           fotos_urls: fotoUrl ? [fotoUrl] : [],
           published: true,
+          replica_id: data.id,
         })
         if (postErr) console.error(postErr)
       } catch (e) {
