@@ -180,9 +180,24 @@ export function RegistrarForm({
         .single()
       if (dbErr) throw dbErr
       try {
+        let nombreUsuario = 'El usuario'
+        const { data: urow } = await supabase
+          .from('users')
+          .select('alias, nombre')
+          .eq('id', userId)
+          .maybeSingle()
+        if (urow) {
+          const a = typeof urow.alias === 'string' ? urow.alias.trim() : ''
+          const n = typeof urow.nombre === 'string' ? urow.nombre.trim() : ''
+          nombreUsuario = a || n || 'El usuario'
+        }
+        const postContent =
+          condicion === 'upgrades'
+            ? `${nombreUsuario} agregó ${nombre.trim()} a su arsenal. Checa su build.`
+            : `${nombreUsuario} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas?`
         const { error: postErr } = await supabase.from('player_posts').insert({
           user_id: userId,
-          content: `agregó "${nombre.trim()}" a su arsenal`,
+          content: postContent,
           fotos_urls: fotoUrl ? [fotoUrl] : [],
           published: true,
         })
