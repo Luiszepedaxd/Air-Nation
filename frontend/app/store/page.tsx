@@ -92,40 +92,13 @@ async function fetchStoreData(): Promise<{
   return { products, categories, brands }
 }
 
-const jost = { fontFamily: "'Jost', sans-serif" } as const
-const lato = { fontFamily: "'Lato', sans-serif" } as const
-
 export default async function StorePage() {
   await ensureAppAdminOrRedirect('/store')
   const { products, categories, brands } = await fetchStoreData()
 
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
-      <header className="bg-[#111111] px-4 py-8 md:py-10">
-        <div className="mx-auto max-w-[1200px] md:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1
-              className="text-2xl font-extrabold uppercase leading-tight text-white"
-              style={jost}
-            >
-              Store
-            </h1>
-            <span
-              style={jost}
-              className="bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-extrabold uppercase leading-none text-white"
-            >
-              Admin preview
-            </span>
-          </div>
-          <p className="mt-2 text-sm text-[#999999]" style={lato}>
-            La tienda oficial de AirNation
-          </p>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
-        <StoreExploreClient products={products} categories={categories} brands={brands} />
-      </div>
+    <div className="min-h-screen min-w-[375px] bg-[#F7F7F7] text-[#111111]">
+      <StoreExploreClient products={products} categories={categories} brands={brands} />
     </div>
   )
 }
