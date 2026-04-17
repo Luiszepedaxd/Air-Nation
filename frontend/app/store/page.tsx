@@ -85,7 +85,7 @@ async function fetchStoreData(): Promise<{
     supabase.from('store_brands').select('id, nombre, slug, logo_url').eq('activo', true),
     supabase
       .from('store_homepage_blocks')
-      .select('tipo, config')
+      .select('tipo, config, activo')
       .in('tipo', EDITORIAL_SLUGS as unknown as string[]),
   ])
 
@@ -111,7 +111,8 @@ async function fetchStoreData(): Promise<{
   const brands = (brandsRes.data ?? []).map((row) => mapBrand(row as Record<string, unknown>))
 
   const editorial: Partial<EditorialData> = {}
-  const rows = (blocksRes.data ?? []) as { tipo: string; config: unknown }[]
+  const bloques_activos: Record<string, boolean> = {}
+  const rows = (blocksRes.data ?? []) as { tipo: string; config: unknown; activo: unknown }[]
   for (const row of rows) {
     const slug = row.tipo
     if ((EDITORIAL_SLUGS as readonly string[]).includes(slug)) {
@@ -120,8 +121,15 @@ async function fetchStoreData(): Promise<{
           ? (row.config as Record<string, unknown>)
           : {}
       ;(editorial as Record<EditorialSlug, unknown>)[slug as EditorialSlug] = cfg
+      bloques_activos[slug] = Boolean(row.activo)
     }
   }
+
+  for (const slug of EDITORIAL_SLUGS) {
+    if (!(slug in bloques_activos)) bloques_activos[slug] = true
+  }
+
+  editorial.bloques_activos = bloques_activos as EditorialData['bloques_activos']
 
   return { products, categories, brands, editorial }
 }

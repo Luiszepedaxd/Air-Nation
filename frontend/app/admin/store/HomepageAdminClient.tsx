@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { uploadFile } from '@/lib/apiFetch'
-import { upsertHomepageBlock } from './homepage-actions'
+import { upsertHomepageBlock, toggleHomepageBlock } from './homepage-actions'
 import type { BloqueSlug } from './homepage-actions'
 
 const jost = {
@@ -250,6 +250,7 @@ export type BloqueRecord = {
   id: string | null
   slug: BloqueSlug
   config: Record<string, unknown>
+  activo: boolean
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -463,6 +464,16 @@ export function HomepageAdminClient({ initialBlocks }: { initialBlocks: BloqueRe
     return map
   })
 
+  const [activos, setActivos] = useState<Record<BloqueSlug, boolean>>(() => {
+    const map = {} as Record<BloqueSlug, boolean>
+    for (const def of BLOQUES) {
+      const found = initialBlocks.find((b) => b.slug === def.slug)
+      map[def.slug] = found?.activo ?? true
+    }
+    return map
+  })
+
+  const [toggling, setToggling] = useState<BloqueSlug | null>(null)
   const [expandido, setExpandido] = useState<BloqueSlug | null>('hero')
   const [saving, setSaving] = useState<BloqueSlug | null>(null)
   const [saved, setSaved] = useState<BloqueSlug | null>(null)
@@ -504,6 +515,40 @@ export function HomepageAdminClient({ initialBlocks }: { initialBlocks: BloqueRe
     }
     setSaved(slug)
     setTimeout(() => setSaved((s) => (s === slug ? null : s)), 2500)
+    router.refresh()
+  }
+
+  async function handleToggle(slug: BloqueSlug) {
+    const currentId = ids[slug]
+    const newActivo = !activos[slug]
+
+    setToggling(slug)
+    setError(null)
+
+    if (!currentId) {
+      const res = await upsertHomepageBlock(slug, configs[slug] ?? {})
+      if ('error' in res) {
+        setError(res.error)
+        setToggling(null)
+        return
+      }
+      setIds((prev) => ({ ...prev, [slug]: res.id }))
+      const res2 = await toggleHomepageBlock(res.id, newActivo)
+      setToggling(null)
+      if ('error' in res2) {
+        setError(res2.error)
+        return
+      }
+    } else {
+      const res = await toggleHomepageBlock(currentId, newActivo)
+      setToggling(null)
+      if ('error' in res) {
+        setError(res.error)
+        return
+      }
+    }
+
+    setActivos((prev) => ({ ...prev, [slug]: newActivo }))
     router.refresh()
   }
 
@@ -550,7 +595,7 @@ export function HomepageAdminClient({ initialBlocks }: { initialBlocks: BloqueRe
               <button
                 type="button"
                 onClick={() => setExpandido(isOpen ? null : def.slug)}
-                className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#FAFAFA]"
+                className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#FAFAFA] ${!activos[def.slug] ? 'opacity-60' : ''}`}
               >
                 <span
                   className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#F4F4F4] text-[10px] text-[#666666]"
@@ -608,7 +653,7 @@ export function HomepageAdminClient({ initialBlocks }: { initialBlocks: BloqueRe
                   </p>
                 </div>
                 {/* Badges */}
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-3">
                   {isSaved && (
                     <span
                       className="flex items-center gap-1 text-[10px] font-bold text-[#22C55E]"
@@ -634,6 +679,51 @@ export function HomepageAdminClient({ initialBlocks }: { initialBlocks: BloqueRe
                       Sin configurar
                     </span>
                   )}
+                  {/* Toggle activo/inactivo */}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (toggling !== def.slug) handleToggle(def.slug)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (toggling !== def.slug) handleToggle(def.slug)
+                      }
+                    }}
+                    aria-pressed={activos[def.slug]}
+                    aria-disabled={toggling === def.slug}
+                    className={`flex items-center gap-1.5 transition-opacity ${toggling === def.slug ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                    title={
+                      activos[def.slug]
+                        ? 'Visible en store — click para ocultar'
+                        : 'Oculto en store — click para mostrar'
+                    }
+                  >
+                    <span
+                      className={`relative block h-5 w-9 transition-colors ${activos[def.slug] ? 'bg-[#22C55E]' : 'bg-[#DDDDDD]'}`}
+                      style={{ borderRadius: 10 }}
+                    >
+                      <span
+                        className="absolute top-0.5 block h-4 w-4 bg-white shadow transition-transform"
+                        style={{
+                          borderRadius: '50%',
+                          transform: activos[def.slug]
+                            ? 'translateX(18px)'
+                            : 'translateX(2px)',
+                        }}
+                      />
+                    </span>
+                    <span
+                      className={`text-[9px] font-extrabold uppercase tracking-wide ${activos[def.slug] ? 'text-[#22C55E]' : 'text-[#AAAAAA]'}`}
+                      style={jost}
+                    >
+                      {toggling === def.slug ? '…' : activos[def.slug] ? 'ON' : 'OFF'}
+                    </span>
+                  </span>
                   <svg
                     width="13"
                     height="13"

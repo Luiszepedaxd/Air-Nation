@@ -71,6 +71,16 @@ export type EditorialData = {
     item4_titulo: string
     item4_desc: string
   }
+  bloques_activos: {
+    header: boolean
+    hero: boolean
+    ticker: boolean
+    banner1: boolean
+    banner2: boolean
+    categorias_carousel: boolean
+    promoBanner: boolean
+    footer: boolean
+  }
 }
 
 const DEFAULTS: EditorialData = {
@@ -129,6 +139,16 @@ const DEFAULTS: EditorialData = {
     item3_desc: 'Descuento automático al pagar con banco.',
     item4_titulo: 'Stock real',
     item4_desc: 'Solo publicamos lo que tenemos en almacén.',
+  },
+  bloques_activos: {
+    header: true,
+    hero: true,
+    ticker: true,
+    banner1: true,
+    banner2: true,
+    categorias_carousel: true,
+    promoBanner: true,
+    footer: true,
   },
 }
 // ─────────────────────────────────────────────────────────────
@@ -317,6 +337,10 @@ export function StoreExploreClient({
     },
     promoBanner: { ...DEFAULTS.promoBanner, ...(editorial?.promoBanner ?? {}) },
     footer: { ...DEFAULTS.footer, ...(editorial?.footer ?? {}) },
+    bloques_activos: {
+      ...DEFAULTS.bloques_activos,
+      ...(editorial?.bloques_activos ?? {}),
+    },
   }
 
   const [busqueda, setBusqueda] = useState('')
@@ -394,19 +418,21 @@ export function StoreExploreClient({
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-30 bg-white shadow-sm">
         {/* Promo bar */}
-        <div className="bg-[#111111] px-4 py-2">
-          <p
-            className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white"
-            style={jost}
-          >
-            <span className="text-[#CC4B37]">{EDITORIAL.header.texto_descuento}</span>{' '}
-            {EDITORIAL.header.texto_medio}
-            <span className="mx-3 text-white/30">·</span>
-            ENVIAMOS A <span className="text-[#CC4B37]">{EDITORIAL.header.texto_envio}</span>
-            <span className="mx-3 hidden text-white/30 sm:inline">·</span>
-            <span className="hidden sm:inline">{EDITORIAL.header.texto_derecha}</span>
-          </p>
-        </div>
+        {EDITORIAL.bloques_activos.header && (
+          <div className="bg-[#111111] px-4 py-2">
+            <p
+              className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+              style={jost}
+            >
+              <span className="text-[#CC4B37]">{EDITORIAL.header.texto_descuento}</span>{' '}
+              {EDITORIAL.header.texto_medio}
+              <span className="mx-3 text-white/30">·</span>
+              ENVIAMOS A <span className="text-[#CC4B37]">{EDITORIAL.header.texto_envio}</span>
+              <span className="mx-3 hidden text-white/30 sm:inline">·</span>
+              <span className="hidden sm:inline">{EDITORIAL.header.texto_derecha}</span>
+            </p>
+          </div>
+        )}
 
         {/* Header principal */}
         <div className="border-b border-[#EEEEEE]">
@@ -615,6 +641,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           HERO — Imagen full-width + claim
       ══════════════════════════════════════ */}
+      {EDITORIAL.bloques_activos.hero && (
       <section id="hero" className="relative overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 480 }}>
         {EDITORIAL.hero.imagen_url ? (
           <img
@@ -697,10 +724,12 @@ export function StoreExploreClient({
           </div>
         </div>
       </section>
+      )}
 
       {/* ══════════════════════════════════════
           TICKER TAPE — Franja animada
       ══════════════════════════════════════ */}
+      {EDITORIAL.bloques_activos.ticker && (
       <div className="overflow-hidden bg-[#CC4B37] py-2.5">
         <div
           className="flex animate-[ticker_18s_linear_infinite] whitespace-nowrap"
@@ -719,6 +748,7 @@ export function StoreExploreClient({
           ))}
         </div>
       </div>
+      )}
       <style>{`
         @keyframes ticker { from { transform: translateX(0) } to { transform: translateX(-50%) } }
       `}</style>
@@ -826,8 +856,12 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           BANNERS DOBLES — 2 columnas editoriales
       ══════════════════════════════════════ */}
-      <section className="grid grid-cols-1 md:grid-cols-2">
-        {/* Banner 1 */}
+      {(EDITORIAL.bloques_activos.banner1 || EDITORIAL.bloques_activos.banner2) && (
+      <section
+        className={`grid grid-cols-1 ${EDITORIAL.bloques_activos.banner1 && EDITORIAL.bloques_activos.banner2 ? 'md:grid-cols-2' : ''}`}
+      >
+        {EDITORIAL.bloques_activos.banner1 && (
+        /* Banner 1 */
         <div className="relative overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 300 }}>
           {EDITORIAL.banner1.imagen_url ? (
             <img
@@ -886,8 +920,10 @@ export function StoreExploreClient({
             </Link>
           </div>
         </div>
+        )}
 
-        {/* Banner 2 */}
+        {EDITORIAL.bloques_activos.banner2 && (
+        /* Banner 2 */
         <div
           className="relative overflow-hidden"
           style={{ minHeight: 300, backgroundColor: '#CC4B37' }}
@@ -949,12 +985,15 @@ export function StoreExploreClient({
             </Link>
           </div>
         </div>
+        )}
       </section>
+      )}
 
       {/* ══════════════════════════════════════
           CATEGORÍAS — Carrusel con loop infinito
       ══════════════════════════════════════ */}
-      {(() => {
+      {EDITORIAL.bloques_activos.categorias_carousel &&
+        (() => {
         const carouselItems: {
           imagen_url: string
           nombre: string
@@ -1110,6 +1149,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           PROMO BANNER — Full width oscuro
       ══════════════════════════════════════ */}
+      {EDITORIAL.bloques_activos.promoBanner && (
       <section className="relative overflow-hidden border-y border-[#EEEEEE] bg-[#F5F5F5]">
         <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-10">
           <div className="relative overflow-hidden bg-[#0A0A0A]">
@@ -1160,6 +1200,7 @@ export function StoreExploreClient({
           </div>
         </div>
       </section>
+      )}
 
       {/* ══════════════════════════════════════
           HEADER SECCIÓN PRODUCTOS
@@ -1308,6 +1349,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           FOOTER STORE — Confianza + info
       ══════════════════════════════════════ */}
+      {EDITORIAL.bloques_activos.footer && (
       <footer className="border-t border-[#EEEEEE] bg-[#111111] px-4 py-10 md:px-6">
         <div className="mx-auto max-w-[1200px]">
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
@@ -1348,6 +1390,7 @@ export function StoreExploreClient({
           </div>
         </div>
       </footer>
+      )}
 
       {/* ══════════════════════════════════════
           DRAWER DE FILTROS

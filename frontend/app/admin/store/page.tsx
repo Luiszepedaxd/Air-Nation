@@ -63,7 +63,7 @@ export default async function AdminStorePage({
       .order('nombre', { ascending: true }),
     db
       .from('store_homepage_blocks')
-      .select('id, tipo, config')
+      .select('id, tipo, config, activo')
       .in('tipo', BLOQUES_SLUGS as unknown as string[]),
   ])
 
@@ -76,7 +76,12 @@ export default async function AdminStorePage({
   const categories = (categoriesRes.data ?? []) as StoreAdminCategoryRow[]
   const brands = (brandsRes.data ?? []) as StoreAdminBrandRow[]
 
-  const blockRows = (blocksRes.data ?? []) as { id: string; tipo: string; config: unknown }[]
+  const blockRows = (blocksRes.data ?? []) as {
+    id: string
+    tipo: string
+    config: unknown
+    activo: unknown
+  }[]
   const bloqueRecords: BloqueRecord[] = BLOQUES_SLUGS.map((slug) => {
     const found = blockRows.find((b) => b.tipo === slug)
     const cfg =
@@ -87,6 +92,7 @@ export default async function AdminStorePage({
       id: found?.id ? String(found.id) : null,
       slug: slug as BloqueSlug,
       config: cfg,
+      activo: found ? Boolean(found.activo) : true,
     }
   })
 
