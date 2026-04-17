@@ -12,7 +12,16 @@ export const metadata: Metadata = {
   description: 'Vista previa admin de la tienda oficial AirNation.',
 }
 
-const EDITORIAL_SLUGS = ['hero', 'banner1', 'banner2', 'promoBanner'] as const
+const EDITORIAL_SLUGS = [
+  'hero',
+  'banner1',
+  'banner2',
+  'promoBanner',
+  'ticker',
+  'header',
+  'footer',
+  'categorias_carousel',
+] as const
 type EditorialSlug = (typeof EDITORIAL_SLUGS)[number]
 
 function mapProduct(row: Record<string, unknown>): StoreProduct {

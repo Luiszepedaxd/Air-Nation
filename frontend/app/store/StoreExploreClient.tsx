@@ -8,7 +8,19 @@ import type { StoreBrand, StoreCategory, StoreProduct } from './types'
 // ─────────────────────────────────────────────────────────────
 // CONTENIDO EDITORIAL — Defaults, sobrescribibles desde DB (admin)
 // ─────────────────────────────────────────────────────────────
+export type CatCarouselItem = {
+  imagen_url: string
+  nombre: string
+  link: string
+}
+
 export type EditorialData = {
+  header: {
+    texto_descuento: string
+    texto_medio: string
+    texto_envio: string
+    texto_derecha: string
+  }
   hero: {
     imagen_url: string
     titulo: string
@@ -16,11 +28,19 @@ export type EditorialData = {
     cta_texto: string
     cta_link: string
   }
+  ticker: {
+    item1: string
+    item2: string
+    item3: string
+    item4: string
+    item5: string
+  }
   banner1: {
     imagen_url: string
     eyebrow: string
     titulo: string
     descripcion: string
+    cta_texto: string
     cta_link: string
   }
   banner2: {
@@ -28,17 +48,38 @@ export type EditorialData = {
     eyebrow: string
     titulo: string
     descripcion: string
+    cta_texto: string
     cta_link: string
+  }
+  categorias_carousel: {
+    items: CatCarouselItem[]
   }
   promoBanner: {
     imagen_url: string
     titulo: string
     descripcion: string
+    cta_texto: string
     cta_link: string
+  }
+  footer: {
+    item1_titulo: string
+    item1_desc: string
+    item2_titulo: string
+    item2_desc: string
+    item3_titulo: string
+    item3_desc: string
+    item4_titulo: string
+    item4_desc: string
   }
 }
 
 const DEFAULTS: EditorialData = {
+  header: {
+    texto_descuento: '4% DE DESCUENTO',
+    texto_medio: 'AL PAGAR CON TRANSFERENCIA',
+    texto_envio: 'TODO MÉXICO',
+    texto_derecha: 'PEDIDO PROTEGIDO EN CADA COMPRA',
+  },
   hero: {
     imagen_url: '',
     titulo: 'Equipo táctico. Sin pretextos.',
@@ -46,11 +87,19 @@ const DEFAULTS: EditorialData = {
     cta_texto: 'Ver catálogo',
     cta_link: '#productos',
   },
+  ticker: {
+    item1: 'Envíos a todo México',
+    item2: '4% descuento con transferencia',
+    item3: 'Stock real en productos',
+    item4: 'Pedido protegido',
+    item5: 'Nuevo inventario cada semana',
+  },
   banner1: {
     imagen_url: '',
     eyebrow: 'Nuevo ingreso',
     titulo: 'Tokyo Marui MWS — GBBR de gas de alta gama',
     descripcion: 'Blowback realista, compatibilidad total con partes M4.',
+    cta_texto: 'Ver producto',
     cta_link: '/store',
   },
   banner2: {
@@ -58,13 +107,28 @@ const DEFAULTS: EditorialData = {
     eyebrow: 'Outlet',
     titulo: 'Hasta 30% en réplicas eléctricas seleccionadas',
     descripcion: 'Stock limitado. Última oportunidad.',
+    cta_texto: 'Ver outlet',
     cta_link: '/store',
+  },
+  categorias_carousel: {
+    items: [],
   },
   promoBanner: {
     imagen_url: '',
     titulo: 'BBs de alta precisión desde $149',
     descripcion: 'Bolsas de 2,000 y 5,000 unidades. Compatibles con hop-up estándar.',
+    cta_texto: 'Ver productos',
     cta_link: '/store',
+  },
+  footer: {
+    item1_titulo: 'Pedido protegido',
+    item1_desc: 'Tu compra está asegurada en cada paso.',
+    item2_titulo: 'Envío a todo México',
+    item2_desc: 'Coordinamos desde Guadalajara.',
+    item3_titulo: '4% con transferencia',
+    item3_desc: 'Descuento automático al pagar con banco.',
+    item4_titulo: 'Stock real',
+    item4_desc: 'Solo publicamos lo que tenemos en almacén.',
   },
 }
 // ─────────────────────────────────────────────────────────────
@@ -243,10 +307,16 @@ export function StoreExploreClient({
   editorial?: Partial<EditorialData>
 }) {
   const EDITORIAL: EditorialData = {
+    header: { ...DEFAULTS.header, ...(editorial?.header ?? {}) },
     hero: { ...DEFAULTS.hero, ...(editorial?.hero ?? {}) },
+    ticker: { ...DEFAULTS.ticker, ...(editorial?.ticker ?? {}) },
     banner1: { ...DEFAULTS.banner1, ...(editorial?.banner1 ?? {}) },
     banner2: { ...DEFAULTS.banner2, ...(editorial?.banner2 ?? {}) },
+    categorias_carousel: {
+      items: editorial?.categorias_carousel?.items ?? DEFAULTS.categorias_carousel.items,
+    },
     promoBanner: { ...DEFAULTS.promoBanner, ...(editorial?.promoBanner ?? {}) },
+    footer: { ...DEFAULTS.footer, ...(editorial?.footer ?? {}) },
   }
 
   const [busqueda, setBusqueda] = useState('')
@@ -299,23 +369,23 @@ export function StoreExploreClient({
   const trustItems: { icon: ReactNode; titulo: string; desc: string }[] = [
     {
       icon: <IconShield />,
-      titulo: 'Pedido protegido',
-      desc: 'Tu compra está asegurada en cada paso.',
+      titulo: EDITORIAL.footer.item1_titulo,
+      desc: EDITORIAL.footer.item1_desc,
     },
     {
       icon: <IconTruck />,
-      titulo: 'Envío a todo México',
-      desc: 'Coordinamos desde Guadalajara.',
+      titulo: EDITORIAL.footer.item2_titulo,
+      desc: EDITORIAL.footer.item2_desc,
     },
     {
       icon: <IconCard />,
-      titulo: '4% con transferencia',
-      desc: 'Descuento automático al pagar con banco.',
+      titulo: EDITORIAL.footer.item3_titulo,
+      desc: EDITORIAL.footer.item3_desc,
     },
     {
       icon: <IconBox />,
-      titulo: 'Stock real',
-      desc: 'Solo publicamos lo que tenemos en almacén.',
+      titulo: EDITORIAL.footer.item4_titulo,
+      desc: EDITORIAL.footer.item4_desc,
     },
   ]
 
@@ -329,11 +399,12 @@ export function StoreExploreClient({
             className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white"
             style={jost}
           >
-            <span className="text-[#CC4B37]">4% DE DESCUENTO</span> AL PAGAR CON TRANSFERENCIA
+            <span className="text-[#CC4B37]">{EDITORIAL.header.texto_descuento}</span>{' '}
+            {EDITORIAL.header.texto_medio}
             <span className="mx-3 text-white/30">·</span>
-            ENVIAMOS A <span className="text-[#CC4B37]">TODO MÉXICO</span>
+            ENVIAMOS A <span className="text-[#CC4B37]">{EDITORIAL.header.texto_envio}</span>
             <span className="mx-3 hidden text-white/30 sm:inline">·</span>
-            <span className="hidden sm:inline">PEDIDO PROTEGIDO EN CADA COMPRA</span>
+            <span className="hidden sm:inline">{EDITORIAL.header.texto_derecha}</span>
           </p>
         </div>
 
@@ -572,8 +643,6 @@ export function StoreExploreClient({
           className="absolute inset-0"
           style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)' }}
         />
-        <div className="absolute bottom-0 left-0 top-0 w-1 bg-[#CC4B37]" />
-
         <div
           className="relative z-10 mx-auto max-w-[1200px] px-8 py-16 md:px-16 md:py-24"
           style={{
@@ -626,26 +695,6 @@ export function StoreExploreClient({
               Novedades
             </Link>
           </div>
-          <div className="mt-10 flex flex-wrap items-center gap-6 border-t border-white/10 pt-6">
-            {[
-              { n: products.length.toString(), label: 'productos' },
-              { n: brands.length.toString(), label: 'marcas' },
-              { n: topCategories.length.toString(), label: 'categorías' },
-              { n: '4%', label: 'dcto. transferencia' },
-            ].map(({ n, label }) => (
-              <div key={label} className="flex flex-col">
-                <span className="text-[1.4rem] font-extrabold leading-none text-white" style={jost}>
-                  {n}
-                </span>
-                <span
-                  className="mt-0.5 text-[10px] uppercase tracking-wide text-white/40"
-                  style={jost}
-                >
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -663,9 +712,9 @@ export function StoreExploreClient({
               className="mx-8 text-[10px] font-extrabold uppercase tracking-[0.2em] text-white"
               style={jost}
             >
-              Envíos a todo México &nbsp;·&nbsp; 4% descuento con transferencia &nbsp;·&nbsp; Stock
-              real en productos &nbsp;·&nbsp; Pedido protegido &nbsp;·&nbsp; Nuevo inventario cada
-              semana &nbsp;·&nbsp;
+              {EDITORIAL.ticker.item1} &nbsp;·&nbsp; {EDITORIAL.ticker.item2} &nbsp;·&nbsp;{' '}
+              {EDITORIAL.ticker.item3} &nbsp;·&nbsp; {EDITORIAL.ticker.item4} &nbsp;·&nbsp;{' '}
+              {EDITORIAL.ticker.item5} &nbsp;·&nbsp;
             </span>
           ))}
         </div>
@@ -800,7 +849,6 @@ export function StoreExploreClient({
                 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
             }}
           />
-          <div className="absolute bottom-0 left-0 top-0 w-1 bg-[#CC4B37]" />
           <div
             className="relative z-10 flex h-full flex-col justify-end p-7 md:p-8"
             style={{ minHeight: 300 }}
@@ -825,7 +873,7 @@ export function StoreExploreClient({
               className="mt-5 inline-flex w-fit items-center gap-2 border border-white/30 px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition-all hover:bg-white hover:text-[#0A0A0A]"
               style={jost}
             >
-              Ver producto
+              {EDITORIAL.banner1.cta_texto}
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path
                   d="M5 12h14M12 5l7 7-7 7"
@@ -888,7 +936,7 @@ export function StoreExploreClient({
               className="mt-5 inline-flex w-fit items-center gap-2 bg-white px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#CC4B37] transition-all hover:bg-[#111111] hover:text-white"
               style={jost}
             >
-              Ver outlet
+              {EDITORIAL.banner2.cta_texto}
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path
                   d="M5 12h14M12 5l7 7-7 7"
@@ -904,83 +952,160 @@ export function StoreExploreClient({
       </section>
 
       {/* ══════════════════════════════════════
-          CATEGORÍAS — Grid visual con fondo oscuro
+          CATEGORÍAS — Carrusel con loop infinito
       ══════════════════════════════════════ */}
-      {topCategories.length > 0 && (
-        <section className="bg-[#111111] py-10">
-          <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-            <div className="mb-6 flex items-center gap-2.5">
-              <div className="h-5 w-1 bg-[#CC4B37]" />
-              <h2
-                className="text-[13px] font-extrabold uppercase tracking-[0.18em] text-white"
-                style={jost}
-              >
-                Categorías
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {topCategories.map((cat) => {
-                const isSelected = filtroCategoriaId === cat.id
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setFiltroCategoriaId(isSelected ? '' : cat.id)}
-                    className="group relative overflow-hidden text-left transition-all hover:scale-[1.02]"
-                    style={{
-                      aspectRatio: '3/2',
-                      backgroundColor: isSelected ? '#CC4B37' : '#1A1A1A',
-                      outline: isSelected ? '2px solid #CC4B37' : 'none',
-                      outlineOffset: 2,
-                    }}
-                  >
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        background: isSelected
-                          ? 'rgba(0,0,0,0.2)'
-                          : 'linear-gradient(135deg, #1f1f1f 0%, #0f0f0f 100%)',
-                      }}
-                    />
-                    {!isSelected && (
+      {(() => {
+        const carouselItems: {
+          imagen_url: string
+          nombre: string
+          link: string
+          id?: string
+        }[] =
+          EDITORIAL.categorias_carousel.items.length > 0
+            ? EDITORIAL.categorias_carousel.items
+            : topCategories.map((cat) => ({
+                id: cat.id,
+                imagen_url: '',
+                nombre: cat.nombre,
+                link: '',
+              }))
+
+        if (carouselItems.length === 0) return null
+
+        return (
+          <section className="bg-[#111111] py-10">
+            <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+              <div className="mb-6 flex items-center gap-2.5">
+                <div className="h-5 w-1 bg-[#CC4B37]" />
+                <h2
+                  className="text-[13px] font-extrabold uppercase tracking-[0.18em] text-white"
+                  style={jost}
+                >
+                  Categorías
+                </h2>
+              </div>
+              {/* Carrusel con degradados laterales */}
+              <div className="relative">
+                <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-[#111111] to-transparent" />
+                <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-[#111111] to-transparent" />
+                <div
+                  className="flex gap-3 overflow-x-auto pb-1"
+                  style={{
+                    scrollSnapType: 'x mandatory',
+                    scrollbarWidth: 'none',
+                    WebkitOverflowScrolling: 'touch',
+                  }}
+                >
+                  {[...carouselItems, ...carouselItems].map((cat, idx) => {
+                    const isDbCat = !!cat.id
+                    const isSelected = isDbCat && filtroCategoriaId === cat.id
+                    return (
                       <div
-                        className="absolute inset-0 opacity-20"
-                        style={{
-                          backgroundImage: 'radial-gradient(circle, #CC4B37 1px, transparent 1px)',
-                          backgroundSize: '16px 16px',
-                        }}
-                      />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center p-3">
-                      <p
-                        className="text-center text-[11px] font-extrabold uppercase leading-tight text-white"
-                        style={jost}
+                        key={idx}
+                        className="shrink-0"
+                        style={{ scrollSnapAlign: 'start', width: 140, height: 90 }}
                       >
-                        {cat.nombre}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center bg-white">
-                        <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-                          <path
-                            d="M1.5 5l2.5 2.5 4.5-4.5"
-                            stroke="#CC4B37"
-                            strokeWidth="1.8"
-                            strokeLinecap="round"
-                          />
-                        </svg>
+                        {isDbCat ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFiltroCategoriaId(isSelected ? '' : (cat.id as string))
+                            }
+                            className="group relative h-full w-full overflow-hidden text-left transition-all hover:scale-[1.03]"
+                            style={{
+                              backgroundColor: isSelected ? '#CC4B37' : '#1A1A1A',
+                              outline: isSelected ? '2px solid #CC4B37' : 'none',
+                              outlineOffset: 2,
+                            }}
+                          >
+                            {cat.imagen_url && (
+                              <img
+                                src={cat.imagen_url}
+                                alt=""
+                                className="absolute inset-0 h-full w-full object-cover"
+                                style={{ opacity: isSelected ? 0.6 : 0.45 }}
+                              />
+                            )}
+                            {!cat.imagen_url && (
+                              <div
+                                className="absolute inset-0 opacity-20"
+                                style={{
+                                  backgroundImage:
+                                    'radial-gradient(circle, #CC4B37 1px, transparent 1px)',
+                                  backgroundSize: '14px 14px',
+                                }}
+                              />
+                            )}
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                background:
+                                  'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%)',
+                              }}
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                              <p
+                                className="text-center text-[10px] font-extrabold uppercase leading-tight text-white"
+                                style={jost}
+                              >
+                                {cat.nombre}
+                              </p>
+                            </div>
+                            <div
+                              className={`absolute bottom-0 left-0 h-0.5 transition-all duration-300 ${isSelected ? 'w-full bg-white' : 'w-0 bg-[#CC4B37] group-hover:w-full'}`}
+                            />
+                          </button>
+                        ) : (
+                          <a
+                            href={cat.link || '/store'}
+                            className="group relative flex h-full w-full overflow-hidden transition-all hover:scale-[1.03]"
+                            style={{ backgroundColor: '#1A1A1A' }}
+                          >
+                            {cat.imagen_url && (
+                              <img
+                                src={cat.imagen_url}
+                                alt=""
+                                className="absolute inset-0 h-full w-full object-cover"
+                                style={{ opacity: 0.45 }}
+                              />
+                            )}
+                            {!cat.imagen_url && (
+                              <div
+                                className="absolute inset-0 opacity-20"
+                                style={{
+                                  backgroundImage:
+                                    'radial-gradient(circle, #CC4B37 1px, transparent 1px)',
+                                  backgroundSize: '14px 14px',
+                                }}
+                              />
+                            )}
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                background:
+                                  'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 60%)',
+                              }}
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                              <p
+                                className="text-center text-[10px] font-extrabold uppercase leading-tight text-white"
+                                style={jost}
+                              >
+                                {cat.nombre}
+                              </p>
+                            </div>
+                            <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#CC4B37] transition-all duration-300 group-hover:w-full" />
+                          </a>
+                        )}
                       </div>
-                    )}
-                    <div
-                      className={`absolute bottom-0 left-0 h-0.5 transition-all duration-300 ${isSelected ? 'w-full bg-white' : 'w-0 bg-[#CC4B37] group-hover:w-full'}`}
-                    />
-                  </button>
-                )
-              })}
+                    )
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )
+      })()}
 
       {/* ══════════════════════════════════════
           PROMO BANNER — Full width oscuro
@@ -1003,7 +1128,6 @@ export function StoreExploreClient({
                   'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.7) 55%, rgba(0,0,0,0.3) 100%)',
               }}
             />
-            <div className="absolute bottom-0 left-0 top-0 w-1 bg-[#CC4B37]" />
             <div className="relative z-10 flex flex-col gap-4 px-7 py-9 md:flex-row md:items-center md:justify-between md:px-12 md:py-10">
               <div>
                 <h3
@@ -1021,7 +1145,7 @@ export function StoreExploreClient({
                 className="inline-flex shrink-0 items-center gap-2 border border-white/30 px-7 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white transition-all hover:bg-white hover:text-[#0A0A0A]"
                 style={jost}
               >
-                Ver productos
+                {EDITORIAL.promoBanner.cta_texto}
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
                     d="M5 12h14M12 5l7 7-7 7"

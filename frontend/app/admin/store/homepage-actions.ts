@@ -3,10 +3,19 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '../supabase-server'
 import { requireAppAdminUserId } from '../require-app-admin'
-import type { HomepageBlockTipo } from '@/app/store/types'
 
-export async function createHomepageBlock(
-  tipo: HomepageBlockTipo,
+export type BloqueSlug =
+  | 'hero'
+  | 'banner1'
+  | 'banner2'
+  | 'promoBanner'
+  | 'ticker'
+  | 'header'
+  | 'footer'
+  | 'categorias_carousel'
+
+export async function upsertHomepageBlock(
+  slug: BloqueSlug,
   config: Record<string, unknown>
 ): Promise<{ ok: true; id: string } | { error: string }> {
   const adminId = await requireAppAdminUserId()
@@ -14,26 +23,52 @@ export async function createHomepageBlock(
 
   const db = createAdminClient()
 
-  const { data: maxRow } = await db
+  const { data: existing } = await db
     .from('store_homepage_blocks')
-    .select('orden')
-    .order('orden', { ascending: false })
-    .limit(1)
+    .select('id')
+    .eq('tipo', slug)
     .maybeSingle()
 
-  const orden = ((maxRow?.orden as number | undefined) ?? 0) + 1
+  if (existing?.id) {
+    const { error } = await db
+      .from('store_homepage_blocks')
+      .update({ config })
+      .eq('id', existing.id)
 
-  const { data, error } = await db
-    .from('store_homepage_blocks')
-    .insert({ tipo, config, orden })
-    .select('id')
-    .single()
+    if (error) return { error: error.message }
 
-  if (error) return { error: error.message }
+    revalidatePath('/admin/store')
+    revalidatePath('/store')
+    return { ok: true, id: String(existing.id) }
+  } else {
+    const { data: maxRow } = await db
+      .from('store_homepage_blocks')
+      .select('orden')
+      .order('orden', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-  revalidatePath('/admin/store')
-  revalidatePath('/store')
-  return { ok: true, id: String(data.id) }
+    const orden = ((maxRow?.orden as number | undefined) ?? 0) + 1
+
+    const { data, error } = await db
+      .from('store_homepage_blocks')
+      .insert({ tipo: slug, config, orden, activo: true })
+      .select('id')
+      .single()
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin/store')
+    revalidatePath('/store')
+    return { ok: true, id: String(data.id) }
+  }
+}
+
+export async function createHomepageBlock(
+  tipo: string,
+  config: Record<string, unknown>
+): Promise<{ ok: true; id: string } | { error: string }> {
+  return upsertHomepageBlock(tipo as BloqueSlug, config)
 }
 
 export async function updateHomepageBlock(
@@ -103,14 +138,8 @@ export async function reorderHomepageBlock(
   })
 
   if (error) {
-    const r1 = await db
-      .from('store_homepage_blocks')
-      .update({ orden: b.orden })
-      .eq('id', a.id)
-    const r2 = await db
-      .from('store_homepage_blocks')
-      .update({ orden: a.orden })
-      .eq('id', b.id)
+    const r1 = await db.from('store_homepage_blocks').update({ orden: b.orden }).eq('id', a.id)
+    const r2 = await db.from('store_homepage_blocks').update({ orden: a.orden }).eq('id', b.id)
     if (r1.error) return { error: r1.error.message }
     if (r2.error) return { error: r2.error.message }
   }

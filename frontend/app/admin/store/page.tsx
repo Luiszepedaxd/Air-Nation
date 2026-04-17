@@ -24,7 +24,16 @@ const OUTER_TABS: { id: OuterTab; label: string }[] = [
   { id: 'homepage', label: 'Homepage' },
 ]
 
-const BLOQUES_SLUGS: readonly BloqueSlug[] = ['hero', 'banner1', 'banner2', 'promoBanner'] as const
+const BLOQUES_SLUGS: readonly BloqueSlug[] = [
+  'header',
+  'hero',
+  'ticker',
+  'banner1',
+  'banner2',
+  'categorias_carousel',
+  'promoBanner',
+  'footer',
+] as const
 
 function normalizeTab(raw: string | undefined): OuterTab {
   if (raw === 'categorias' || raw === 'marcas' || raw === 'homepage') return raw
@@ -73,14 +82,10 @@ export default async function AdminStorePage({
       found?.config && typeof found.config === 'object' && !Array.isArray(found.config)
         ? (found.config as Record<string, unknown>)
         : {}
-    const config: Record<string, string> = {}
-    for (const [k, v] of Object.entries(cfg)) {
-      config[k] = v == null ? '' : String(v)
-    }
     return {
       id: found?.id ? String(found.id) : null,
-      slug,
-      config,
+      slug: slug as BloqueSlug,
+      config: cfg,
     }
   })
 
