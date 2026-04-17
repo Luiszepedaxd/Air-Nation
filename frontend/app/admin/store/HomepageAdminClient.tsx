@@ -231,6 +231,10 @@ export function HomepageAdminClient({ initialBlocks, products, categories }: Pro
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   const refresh = () => router.refresh()
 
   async function onToggle(id: string, activo: boolean) {
@@ -297,11 +301,62 @@ export function HomepageAdminClient({ initialBlocks, products, categories }: Pro
     refresh()
   }
 
+  async function handleDrop(targetId: string) {
+    const currentDragged = draggedId
+    setDraggedId(null)
+    setDragOverId(null)
+    if (!currentDragged || currentDragged === targetId) return
+
+    const sortedNow = [...blocks].sort((a, b) => a.orden - b.orden)
+    const fromIdx = sortedNow.findIndex((b) => b.id === currentDragged)
+    const toIdx = sortedNow.findIndex((b) => b.id === targetId)
+    if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+
+    // Reorder optimistic local
+    const reordered = [...sortedNow]
+    const [moved] = reordered.splice(fromIdx, 1)
+    reordered.splice(toIdx, 0, moved)
+    const updated = reordered.map((b, i) => ({ ...b, orden: i + 1 }))
+    setBlocks(updated)
+
+    // Persist como swaps adyacentes usando la acción existente
+    setError(null)
+    const direction: 'up' | 'down' = fromIdx < toIdx ? 'down' : 'up'
+    const steps = Math.abs(toIdx - fromIdx)
+
+    let working = sortedNow.map((b) => ({ id: b.id, orden: b.orden }))
+
+    for (let i = 0; i < steps; i++) {
+      const res = await reorderHomepageBlock(currentDragged, direction, working)
+      if ('error' in res) {
+        setError(res.error)
+        setBlocks(initialBlocks)
+        refresh()
+        return
+      }
+      // Simular swap sobre working para la próxima iteración
+      const srt = [...working].sort((a, b) => a.orden - b.orden)
+      const currIdx = srt.findIndex((x) => x.id === currentDragged)
+      const swapIdx = direction === 'up' ? currIdx - 1 : currIdx + 1
+      if (swapIdx < 0 || swapIdx >= srt.length) break
+      const a = srt[currIdx]
+      const b = srt[swapIdx]
+      working = working.map((x) => {
+        if (x.id === a.id) return { ...x, orden: b.orden }
+        if (x.id === b.id) return { ...x, orden: a.orden }
+        return x
+      })
+    }
+
+    refresh()
+  }
+
   const sorted = [...blocks].sort((a, b) => a.orden - b.orden)
 
   return (
-    <div className="flex flex-col gap-4" style={latoBody}>
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-0" style={latoBody}>
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h2
             className="text-[14px] tracking-[0.14em] text-[#111111]"
@@ -309,193 +364,664 @@ export function HomepageAdminClient({ initialBlocks, products, categories }: Pro
           >
             Homepage
           </h2>
-          <p className="mt-1 text-[12px] text-[#666666]" style={latoBody}>
-            Bloques que se renderizan en orden en <code>/store</code>. Arrastra con las
-            flechas para reordenar.
+          <p className="mt-0.5 text-[11px] text-[#999999]" style={latoBody}>
+            Arrastra para reordenar · Los cambios se guardan al soltar
           </p>
         </div>
-        {!creando && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => {
-              setCreando(true)
-              setTipoNuevo('hero')
-              setError(null)
-            }}
-            className="bg-[#CC4B37] px-3 py-2 text-[11px] tracking-[0.12em] text-white"
+            onClick={() => setPreviewOpen(true)}
+            className="flex items-center gap-1.5 border border-[#EEEEEE] bg-white px-3 py-2 text-[10px] text-[#666666] hover:border-[#111111] lg:hidden"
             style={{ ...jostHeading, borderRadius: 2 }}
           >
-            + Nuevo bloque
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <rect
+                x="5"
+                y="2"
+                width="14"
+                height="20"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+              <path
+                d="M12 18h.01"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            Preview
           </button>
-        )}
+          {!creando && (
+            <button
+              type="button"
+              onClick={() => {
+                setCreando(true)
+                setTipoNuevo('hero')
+                setError(null)
+              }}
+              className="bg-[#CC4B37] px-3 py-2 text-[11px] tracking-[0.12em] text-white"
+              style={{ ...jostHeading, borderRadius: 2 }}
+            >
+              + Nuevo bloque
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
-        <p className="text-[12px] text-[#CC4B37]" style={latoBody}>
+        <p className="mb-3 text-[12px] text-[#CC4B37]" style={latoBody}>
           {error}
         </p>
       )}
 
-      {creando && (
-        <div className="border border-solid border-[#EEEEEE] bg-[#FAFAFA] p-4">
-          <p className="mb-3 text-[11px] tracking-[0.12em] text-[#111111]" style={jostHeading}>
-            Nuevo bloque — elige tipo
-          </p>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {(Object.keys(TIPO_META) as HomepageBlockTipo[]).map((tipo) => {
-              const meta = TIPO_META[tipo]
-              const active = tipoNuevo === tipo
-              return (
-                <button
-                  key={tipo}
-                  type="button"
-                  onClick={() => setTipoNuevo(tipo)}
-                  className={`flex flex-col items-start gap-1 border border-solid p-3 text-left transition-colors ${
-                    active
-                      ? 'border-[#CC4B37] bg-white'
-                      : 'border-[#EEEEEE] bg-white hover:border-[#CCCCCC]'
-                  }`}
-                >
-                  <span
-                    className="px-1.5 py-0.5 text-[9px] tracking-[0.12em] text-white"
-                    style={{ ...jostHeading, backgroundColor: meta.color }}
-                  >
-                    {meta.label}
-                  </span>
-                  <span className="text-[11px] text-[#666666]" style={latoBody}>
-                    {meta.descripcion}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-          <div className="mt-4">
-            <BlockForm
-              tipo={tipoNuevo}
-              initial={defaultConfig(tipoNuevo)}
-              products={products}
-              categories={categories}
-              saving={saving}
-              onCancel={() => setCreando(false)}
-              onSubmit={onCreate}
-              submitLabel="Crear bloque"
-            />
-          </div>
-        </div>
-      )}
-
-      {sorted.length === 0 ? (
-        <div className="border border-dashed border-[#DDDDDD] bg-[#FAFAFA] px-4 py-10 text-center">
-          <p className="text-[12px] text-[#666666]" style={latoBody}>
-            Aún no hay bloques configurados. Haz clic en <strong>+ Nuevo bloque</strong> para
-            empezar.
-          </p>
-        </div>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {sorted.map((block, i) => {
-            const meta = TIPO_META[block.tipo]
-            const isFirst = i === 0
-            const isLast = i === sorted.length - 1
-            const isEditing = editingId === block.id
-            return (
-              <li
-                key={block.id}
-                className={`border border-solid ${
-                  block.activo ? 'border-[#EEEEEE] bg-white' : 'border-[#F4F4F4] bg-[#FAFAFA]'
-                }`}
+      {/* Dos columnas: lista + preview */}
+      <div className="flex gap-6">
+        {/* ── COLUMNA IZQUIERDA: lista + form ── */}
+        <div className="min-w-0 flex-1">
+          {creando && (
+            <div className="mb-4 border border-solid border-[#EEEEEE] bg-[#FAFAFA] p-4">
+              <p
+                className="mb-3 text-[11px] tracking-[0.12em] text-[#111111]"
+                style={jostHeading}
               >
-                <div className="flex flex-wrap items-center gap-3 px-3 py-2.5">
-                  <span
-                    className="flex h-6 w-6 shrink-0 items-center justify-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] text-[11px] text-[#666666]"
-                    style={jostHeading}
-                  >
-                    {block.orden}
-                  </span>
-                  <span
-                    className="shrink-0 px-1.5 py-0.5 text-[9px] tracking-[0.12em] text-white"
-                    style={{ ...jostHeading, backgroundColor: meta.color }}
-                  >
-                    {meta.label}
-                  </span>
-                  <span
-                    className={`flex-1 truncate text-[12px] ${
-                      block.activo ? 'text-[#333333]' : 'text-[#999999]'
-                    }`}
-                    style={latoBody}
-                  >
-                    {previewText(block)}
-                  </span>
-                  <div className="flex items-center gap-1">
+                Nuevo bloque — elige tipo
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {(Object.keys(TIPO_META) as HomepageBlockTipo[]).map((tipo) => {
+                  const meta = TIPO_META[tipo]
+                  const active = tipoNuevo === tipo
+                  return (
                     <button
+                      key={tipo}
                       type="button"
-                      onClick={() => onReorder(block.id, 'up')}
-                      disabled={isFirst}
-                      className="flex h-7 w-7 items-center justify-center border border-solid border-[#EEEEEE] bg-white text-[12px] text-[#666666] disabled:opacity-30"
-                      aria-label="Subir"
+                      onClick={() => setTipoNuevo(tipo)}
+                      className={`flex flex-col items-start gap-1 border border-solid p-3 text-left transition-colors ${
+                        active
+                          ? 'border-[#CC4B37] bg-white'
+                          : 'border-[#EEEEEE] bg-white hover:border-[#CCCCCC]'
+                      }`}
                     >
-                      ↑
+                      <span
+                        className="px-1.5 py-0.5 text-[9px] tracking-[0.12em] text-white"
+                        style={{ ...jostHeading, backgroundColor: meta.color }}
+                      >
+                        {meta.label}
+                      </span>
+                      <span
+                        className="text-[11px] text-[#666666]"
+                        style={latoBody}
+                      >
+                        {meta.descripcion}
+                      </span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => onReorder(block.id, 'down')}
-                      disabled={isLast}
-                      className="flex h-7 w-7 items-center justify-center border border-solid border-[#EEEEEE] bg-white text-[12px] text-[#666666] disabled:opacity-30"
-                      aria-label="Bajar"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                  <label
-                    className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] text-[#666666]"
-                    style={latoBody}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={block.activo}
-                      onChange={(e) => onToggle(block.id, e.target.checked)}
-                      className="h-3.5 w-3.5 accent-[#CC4B37]"
-                    />
-                    {block.activo ? 'Activo' : 'Oculto'}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(isEditing ? null : block.id)}
-                    className="border border-solid border-[#EEEEEE] bg-white px-2 py-1 text-[10px] tracking-[0.12em] text-[#111111]"
-                    style={{ ...jostHeading, borderRadius: 2 }}
-                  >
-                    {isEditing ? 'Cerrar' : 'Editar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(block.id)}
-                    className="border border-solid border-[#CC4B37] bg-white px-2 py-1 text-[10px] tracking-[0.12em] text-[#CC4B37]"
-                    style={{ ...jostHeading, borderRadius: 2 }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-                {isEditing && (
-                  <div className="border-t border-solid border-[#EEEEEE] bg-[#FAFAFA] p-4">
-                    <BlockForm
-                      tipo={block.tipo}
-                      initial={block.config}
-                      products={products}
-                      categories={categories}
-                      saving={saving}
-                      onCancel={() => setEditingId(null)}
-                      onSubmit={(cfg) => onUpdate(block.id, cfg)}
-                      submitLabel="Guardar cambios"
-                    />
-                  </div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+                  )
+                })}
+              </div>
+              <div className="mt-4">
+                <BlockForm
+                  tipo={tipoNuevo}
+                  initial={defaultConfig(tipoNuevo)}
+                  products={products}
+                  categories={categories}
+                  saving={saving}
+                  onCancel={() => setCreando(false)}
+                  onSubmit={onCreate}
+                  submitLabel="Crear bloque"
+                />
+              </div>
+            </div>
+          )}
+
+          {sorted.length === 0 ? (
+            <div className="border border-dashed border-[#DDDDDD] bg-[#FAFAFA] px-4 py-10 text-center">
+              <p className="text-[12px] text-[#666666]" style={latoBody}>
+                Aún no hay bloques. Haz clic en <strong>+ Nuevo bloque</strong>{' '}
+                para empezar.
+              </p>
+            </div>
+          ) : (
+            <ul
+              className="flex flex-col gap-1.5"
+              onDragOver={(e) => e.preventDefault()}
+            >
+              {sorted.map((block, i) => (
+                <DraggableBlockRow
+                  key={block.id}
+                  block={block}
+                  index={i}
+                  isFirst={i === 0}
+                  isLast={i === sorted.length - 1}
+                  isEditing={editingId === block.id}
+                  saving={saving}
+                  products={products}
+                  categories={categories}
+                  draggedId={draggedId}
+                  dragOverId={dragOverId}
+                  onDragStart={() => setDraggedId(block.id)}
+                  onDragOver={() => setDragOverId(block.id)}
+                  onDrop={() => handleDrop(block.id)}
+                  onDragEnd={() => {
+                    setDraggedId(null)
+                    setDragOverId(null)
+                  }}
+                  onToggle={onToggle}
+                  onReorder={onReorder}
+                  onDelete={onDelete}
+                  onEdit={(id) => setEditingId(editingId === id ? null : id)}
+                  onUpdate={onUpdate}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* ── COLUMNA DERECHA: preview — solo desktop ── */}
+        <div className="hidden w-[320px] shrink-0 lg:block">
+          <div className="sticky top-[88px]">
+            <p
+              className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+              style={jostHeading}
+            >
+              Preview en vivo
+            </p>
+            <StorePreview blocks={sorted} />
+          </div>
+        </div>
+      </div>
+
+      {/* Modal preview mobile */}
+      {previewOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setPreviewOpen(false)}
+            aria-hidden
+          />
+          <div className="fixed inset-y-0 right-0 z-50 w-[340px] overflow-y-auto bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#EEEEEE] px-4 py-3">
+              <p
+                className="text-[11px] font-extrabold uppercase tracking-[0.12em]"
+                style={jostHeading}
+              >
+                Preview
+              </p>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="text-[#666666] hover:text-[#111111]"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <StorePreview blocks={sorted} />
+            </div>
+          </div>
+        </>
       )}
     </div>
   )
+}
+
+// ────────────────────────────────────────────────────────────────
+// DraggableBlockRow — fila de bloque con drag & drop nativo HTML5
+// ────────────────────────────────────────────────────────────────
+
+type DraggableBlockRowProps = {
+  block: HomepageBlock
+  index: number
+  isFirst: boolean
+  isLast: boolean
+  isEditing: boolean
+  saving: boolean
+  products: { id: string; nombre: string }[]
+  categories: { id: string; nombre: string }[]
+  draggedId: string | null
+  dragOverId: string | null
+  onDragStart: () => void
+  onDragOver: () => void
+  onDrop: () => void
+  onDragEnd: () => void
+  onToggle: (id: string, activo: boolean) => void
+  onReorder: (id: string, dir: 'up' | 'down') => void
+  onDelete: (id: string) => void
+  onEdit: (id: string) => void
+  onUpdate: (id: string, config: Record<string, unknown>) => void
+}
+
+function DraggableBlockRow({
+  block,
+  isFirst,
+  isLast,
+  isEditing,
+  saving,
+  products,
+  categories,
+  draggedId,
+  dragOverId,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  onToggle,
+  onReorder,
+  onDelete,
+  onEdit,
+  onUpdate,
+}: DraggableBlockRowProps) {
+  const meta = TIPO_META[block.tipo]
+  const isDragging = draggedId === block.id
+  const isDropTarget = dragOverId === block.id && draggedId !== null && draggedId !== block.id
+
+  return (
+    <li
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        try {
+          e.dataTransfer.setData('text/plain', block.id)
+        } catch {
+          // noop — algunos navegadores lo bloquean
+        }
+        onDragStart()
+      }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        onDragOver()
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        onDrop()
+      }}
+      onDragEnd={onDragEnd}
+      className={`border border-solid transition-all ${
+        block.activo ? 'border-[#EEEEEE] bg-white' : 'border-[#F4F4F4] bg-[#FAFAFA]'
+      } ${isDragging ? 'opacity-40' : ''} ${
+        isDropTarget ? 'border-t-2 border-t-[#1D4ED8]' : ''
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+        <span
+          className="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-[#CCCCCC] hover:text-[#666666] active:cursor-grabbing"
+          aria-label="Arrastrar para reordenar"
+          title="Arrastrar para reordenar"
+        >
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" aria-hidden>
+            <circle cx="2" cy="3" r="1.2" fill="currentColor" />
+            <circle cx="8" cy="3" r="1.2" fill="currentColor" />
+            <circle cx="2" cy="8" r="1.2" fill="currentColor" />
+            <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+            <circle cx="2" cy="13" r="1.2" fill="currentColor" />
+            <circle cx="8" cy="13" r="1.2" fill="currentColor" />
+          </svg>
+        </span>
+        <span
+          className="flex h-6 w-6 shrink-0 items-center justify-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] text-[11px] text-[#666666]"
+          style={jostHeading}
+        >
+          {block.orden}
+        </span>
+        <span
+          className="shrink-0 px-1.5 py-0.5 text-[9px] tracking-[0.12em] text-white"
+          style={{ ...jostHeading, backgroundColor: meta.color }}
+        >
+          {meta.label}
+        </span>
+        <span
+          className={`flex-1 truncate text-[12px] ${
+            block.activo ? 'text-[#333333]' : 'text-[#999999]'
+          }`}
+          style={latoBody}
+        >
+          {previewText(block)}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onReorder(block.id, 'up')}
+            disabled={isFirst}
+            className="flex h-7 w-7 items-center justify-center border border-solid border-[#EEEEEE] bg-white text-[12px] text-[#666666] disabled:opacity-30"
+            aria-label="Subir"
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            onClick={() => onReorder(block.id, 'down')}
+            disabled={isLast}
+            className="flex h-7 w-7 items-center justify-center border border-solid border-[#EEEEEE] bg-white text-[12px] text-[#666666] disabled:opacity-30"
+            aria-label="Bajar"
+          >
+            ↓
+          </button>
+        </div>
+        <label
+          className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] text-[#666666]"
+          style={latoBody}
+        >
+          <input
+            type="checkbox"
+            checked={block.activo}
+            onChange={(e) => onToggle(block.id, e.target.checked)}
+            className="h-3.5 w-3.5 accent-[#CC4B37]"
+          />
+          {block.activo ? 'Activo' : 'Oculto'}
+        </label>
+        <button
+          type="button"
+          onClick={() => onEdit(block.id)}
+          className="border border-solid border-[#EEEEEE] bg-white px-2 py-1 text-[10px] tracking-[0.12em] text-[#111111]"
+          style={{ ...jostHeading, borderRadius: 2 }}
+        >
+          {isEditing ? 'Cerrar' : 'Editar'}
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(block.id)}
+          className="border border-solid border-[#CC4B37] bg-white px-2 py-1 text-[10px] tracking-[0.12em] text-[#CC4B37]"
+          style={{ ...jostHeading, borderRadius: 2 }}
+        >
+          Eliminar
+        </button>
+      </div>
+      {isEditing && (
+        <div className="border-t border-solid border-[#EEEEEE] bg-[#FAFAFA] p-4">
+          <BlockForm
+            tipo={block.tipo}
+            initial={block.config}
+            products={products}
+            categories={categories}
+            saving={saving}
+            onCancel={() => onEdit(block.id)}
+            onSubmit={(cfg) => onUpdate(block.id, cfg)}
+            submitLabel="Guardar cambios"
+          />
+        </div>
+      )}
+    </li>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────
+// StorePreview — mini preview en vivo de /store
+// ────────────────────────────────────────────────────────────────
+
+function StorePreview({ blocks }: { blocks: HomepageBlock[] }) {
+  const activeBlocks = blocks.filter((b) => b.activo)
+
+  return (
+    <div
+      className="overflow-hidden border border-[#EEEEEE] bg-[#F7F7F7]"
+      style={{ borderRadius: 8 }}
+    >
+      {/* Mini browser chrome */}
+      <div className="flex items-center gap-1.5 border-b border-[#EEEEEE] bg-white px-3 py-2">
+        <div className="h-2 w-2 rounded-full bg-[#FF5F57]" />
+        <div className="h-2 w-2 rounded-full bg-[#FEBC2E]" />
+        <div className="h-2 w-2 rounded-full bg-[#28C840]" />
+        <div
+          className="ml-2 flex-1 rounded bg-[#F4F4F4] px-2 py-0.5 text-[9px] text-[#999999]"
+          style={latoBody}
+        >
+          airnation.online/store
+        </div>
+      </div>
+
+      {/* Mini header de la store */}
+      <div className="border-b border-[#EEEEEE] bg-white px-3 py-2">
+        <div className="flex items-center gap-1.5">
+          <div className="flex h-4 w-4 items-center justify-center bg-[#CC4B37]">
+            <svg width="7" height="7" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff" />
+            </svg>
+          </div>
+          <span
+            className="text-[9px] font-black uppercase tracking-[0.15em] text-[#111111]"
+            style={jostHeading}
+          >
+            AIR<span className="text-[#CC4B37]">NATION</span>
+          </span>
+        </div>
+        <div className="mt-1.5 h-4 rounded bg-[#F4F4F4]" />
+      </div>
+
+      {/* Bloques */}
+      {activeBlocks.length === 0 ? (
+        <div className="flex items-center justify-center py-8">
+          <p className="text-[10px] text-[#CCCCCC]" style={latoBody}>
+            Sin bloques activos
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col">
+          {activeBlocks.map((block) => (
+            <PreviewBlock key={block.id} block={block} />
+          ))}
+          {/* Mini grid placeholder de productos */}
+          <div className="bg-[#F7F7F7] p-2">
+            <div className="grid grid-cols-2 gap-1">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="border border-[#EEEEEE] bg-white">
+                  <div className="bg-[#F4F4F4]" style={{ aspectRatio: '1/1' }} />
+                  <div className="p-1">
+                    <div className="mb-1 h-2 w-8 rounded bg-[#EEEEEE]" />
+                    <div className="h-1.5 w-full rounded bg-[#F4F4F4]" />
+                    <div className="mt-1 h-2.5 w-10 rounded bg-[#EEEEEE]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ────────────────────────────────────────────────────────────────
+// PreviewBlock — mini versión de cada tipo de bloque
+// ────────────────────────────────────────────────────────────────
+
+function PreviewBlock({ block }: { block: HomepageBlock }) {
+  const cfg = block.config as Record<string, unknown>
+  const titulo = typeof cfg.titulo === 'string' ? cfg.titulo : ''
+  const titulo_seccion =
+    typeof cfg.titulo_seccion === 'string' ? cfg.titulo_seccion : ''
+  const imagen_url = typeof cfg.imagen_url === 'string' ? cfg.imagen_url : ''
+  const marca = typeof cfg.marca === 'string' ? cfg.marca : ''
+
+  if (block.tipo === 'hero') {
+    return (
+      <div className="relative overflow-hidden bg-[#222222]" style={{ minHeight: 80 }}>
+        {imagen_url && (
+          <img
+            src={imagen_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-50"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div
+          className="relative z-10 flex flex-col justify-end p-3"
+          style={{ minHeight: 80 }}
+        >
+          <p
+            className="text-[9px] font-extrabold uppercase leading-tight text-white"
+            style={jostHeading}
+          >
+            {titulo || 'Hero — sin título'}
+          </p>
+          <div className="mt-1 h-3 w-10 bg-[#CC4B37]" />
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'banner_producto') {
+    return (
+      <div className="relative overflow-hidden bg-[#1A1A1A]" style={{ minHeight: 56 }}>
+        {imagen_url && (
+          <img
+            src={imagen_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-40"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent" />
+        <div
+          className="relative z-10 flex flex-col justify-center p-2.5"
+          style={{ minHeight: 56 }}
+        >
+          {marca && (
+            <div
+              className="mb-0.5 inline-block w-fit bg-[#CC4B37] px-1 py-0.5 text-[7px] font-extrabold uppercase text-white"
+              style={jostHeading}
+            >
+              {marca}
+            </div>
+          )}
+          <p
+            className="text-[8px] font-extrabold uppercase text-white"
+            style={jostHeading}
+          >
+            {titulo || 'Banner — sin título'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'carrusel_productos') {
+    const ids = Array.isArray(cfg.product_ids) ? (cfg.product_ids as unknown[]) : []
+    return (
+      <div className="bg-white px-2 py-2">
+        <p
+          className="mb-1.5 text-[8px] font-extrabold uppercase text-[#999999]"
+          style={jostHeading}
+        >
+          {titulo_seccion || 'Carrusel'}
+        </p>
+        <div className="flex gap-1 overflow-hidden">
+          {ids.length > 0 ? (
+            ids.slice(0, 4).map((_, i) => (
+              <div key={i} className="w-10 shrink-0 border border-[#EEEEEE]">
+                <div className="bg-[#F4F4F4]" style={{ aspectRatio: '1/1' }} />
+                <div className="p-0.5">
+                  <div className="h-1.5 w-full rounded bg-[#EEEEEE]" />
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-[8px] text-[#CCCCCC]" style={latoBody}>
+              Sin productos
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'categorias_grid') {
+    const items = Array.isArray(cfg.items) ? (cfg.items as unknown[]) : []
+    return (
+      <div className="bg-white px-2 py-2">
+        {titulo_seccion && (
+          <p
+            className="mb-1.5 text-[8px] font-extrabold uppercase text-[#999999]"
+            style={jostHeading}
+          >
+            {titulo_seccion}
+          </p>
+        )}
+        <div className="grid grid-cols-3 gap-1">
+          {items.length > 0
+            ? items.slice(0, 6).map((_, i) => (
+                <div
+                  key={i}
+                  className="border border-[#EEEEEE] bg-[#F4F4F4]"
+                  style={{ aspectRatio: '1/1' }}
+                />
+              ))
+            : [1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="border border-[#EEEEEE] bg-[#F4F4F4]"
+                  style={{ aspectRatio: '1/1' }}
+                />
+              ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'blog_destacado') {
+    return (
+      <div className="relative overflow-hidden bg-[#111111]" style={{ minHeight: 48 }}>
+        {imagen_url && (
+          <img
+            src={imagen_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-30"
+          />
+        )}
+        <div
+          className="relative z-10 flex flex-col justify-center p-2.5"
+          style={{ minHeight: 48 }}
+        >
+          <div
+            className="mb-0.5 inline-block w-fit border border-white/30 px-1 py-0.5 text-[6px] uppercase text-white/60"
+            style={jostHeading}
+          >
+            Blog
+          </div>
+          <p
+            className="text-[8px] font-extrabold uppercase leading-tight text-white"
+            style={jostHeading}
+          >
+            {titulo || 'Blog — sin título'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'texto_libre') {
+    const bg = typeof cfg.bg_color === 'string' ? cfg.bg_color : '#111111'
+    const color = typeof cfg.text_color === 'string' ? cfg.text_color : '#FFFFFF'
+    const cuerpo = typeof cfg.cuerpo === 'string' ? cfg.cuerpo : ''
+    return (
+      <div className="px-3 py-2.5" style={{ backgroundColor: bg }}>
+        {titulo && (
+          <p
+            className="text-[8px] font-extrabold uppercase"
+            style={{ ...jostHeading, color }}
+          >
+            {titulo}
+          </p>
+        )}
+        <p
+          className="text-[7px] leading-relaxed opacity-70"
+          style={{ ...latoBody, color }}
+        >
+          {cuerpo.slice(0, 60)}
+          {cuerpo.length > 60 ? '…' : ''}
+        </p>
+      </div>
+    )
+  }
+
+  return null
 }
 
 // ────────────────────────────────────────────────────────────────
