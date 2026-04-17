@@ -75,6 +75,10 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
   const [catNombre, setCatNombre] = useState('')
   const [catSlug, setCatSlug] = useState('')
   const [catSlugManual, setCatSlugManual] = useState(false)
+  const [catLevel1, setCatLevel1] = useState('')
+  const [catLevel2, setCatLevel2] = useState('')
+  const [catLevel3, setCatLevel3] = useState('')
+  const [catLevel4, setCatLevel4] = useState('')
 
   const [brandNombre, setBrandNombre] = useState('')
   const [brandSlug, setBrandSlug] = useState('')
@@ -94,6 +98,25 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
   )
 
   const selectedCategoriaId = catNivel3 || catNivel2 || catNivel1 || ''
+
+  const parentCats1 = useMemo(
+    () => categories.filter((c) => c.parent_id === null),
+    [categories]
+  )
+  const parentCats2 = useMemo(
+    () => (catLevel1 ? categories.filter((c) => c.parent_id === catLevel1) : []),
+    [categories, catLevel1]
+  )
+  const parentCats3 = useMemo(
+    () => (catLevel2 ? categories.filter((c) => c.parent_id === catLevel2) : []),
+    [categories, catLevel2]
+  )
+  const parentCats4 = useMemo(
+    () => (catLevel3 ? categories.filter((c) => c.parent_id === catLevel3) : []),
+    [categories, catLevel3]
+  )
+
+  const selectedParentId = catLevel4 || catLevel3 || catLevel2 || catLevel1 || ''
 
   const refresh = useCallback(() => {
     router.refresh()
@@ -173,6 +196,10 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
     setCatNombre('')
     setCatSlug('')
     setCatSlugManual(false)
+    setCatLevel1('')
+    setCatLevel2('')
+    setCatLevel3('')
+    setCatLevel4('')
     refresh()
   }
 
@@ -765,55 +792,188 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
             {categoryFormError ? (
               <p className="mb-2 text-sm text-[#CC4B37]">{categoryFormError}</p>
             ) : null}
-            <form onSubmit={onCreateCategory} className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
-              <label className="block min-w-[160px] flex-1 text-[11px] text-[#666666]">
-                Nombre
-                <input
-                  name="nombre"
-                  required
-                  value={catNombre}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setCatNombre(v)
-                    if (!catSlugManual) setCatSlug(slugFromNombre(v))
-                  }}
-                  className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
-                  style={{ borderRadius: 2 }}
-                />
-              </label>
-              <label className="block min-w-[160px] flex-1 text-[11px] text-[#666666]">
-                Slug
-                <input
-                  name="slug"
-                  required
-                  value={catSlug}
-                  onChange={(e) => {
-                    setCatSlugManual(true)
-                    setCatSlug(e.target.value)
-                  }}
-                  className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
-                  style={{ borderRadius: 2 }}
-                />
-              </label>
-              <label className="block min-w-[180px] flex-1 text-[11px] text-[#666666]">
-                Categoría padre
-                <select
-                  name="parent_id"
-                  className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
-                  style={{ borderRadius: 2 }}
-                  defaultValue=""
+            <form onSubmit={onCreateCategory} className="flex flex-col gap-3">
+              <input type="hidden" name="parent_id" value={selectedParentId} />
+
+              <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
+                <label
+                  className="block min-w-[160px] flex-1 text-[11px] text-[#666666]"
+                  style={latoBody}
                 >
-                  <option value="">—</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  Nombre
+                  <input
+                    name="nombre"
+                    required
+                    value={catNombre}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setCatNombre(v)
+                      if (!catSlugManual) {
+                        const base = slugFromNombre(v)
+                        const parent = categories.find((c) => c.id === selectedParentId)
+                        const prefix = parent ? `${parent.slug}-` : ''
+                        setCatSlug(prefix + base)
+                      }
+                    }}
+                    className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
+                    style={{ borderRadius: 2 }}
+                  />
+                </label>
+                <label
+                  className="block min-w-[160px] flex-1 text-[11px] text-[#666666]"
+                  style={latoBody}
+                >
+                  Slug
+                  <input
+                    name="slug"
+                    required
+                    value={catSlug}
+                    onChange={(e) => {
+                      setCatSlugManual(true)
+                      setCatSlug(e.target.value)
+                    }}
+                    className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
+                    style={{ borderRadius: 2 }}
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-[11px] text-[#666666]" style={jostHeading}>
+                  UBICAR DENTRO DE
+                  <span className="ml-1 font-normal normal-case tracking-normal text-[#AAAAAA]">
+                    (opcional — dejar vacío para categoría raíz)
+                  </span>
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <span className="w-3 shrink-0 text-[10px] text-[#AAAAAA]">—</span>
+                  <select
+                    value={catLevel1}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setCatLevel1(v)
+                      setCatLevel2('')
+                      setCatLevel3('')
+                      setCatLevel4('')
+                      if (!catSlugManual && catNombre) {
+                        const parent = categories.find((c) => c.id === v)
+                        const prefix = parent ? `${parent.slug}-` : ''
+                        setCatSlug(prefix + slugFromNombre(catNombre))
+                      }
+                    }}
+                    className="flex-1 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[12px] text-[#111111]"
+                    style={{ borderRadius: 2 }}
+                  >
+                    <option value="">Raíz (sin padre)</option>
+                    {parentCats1.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {catLevel1 && parentCats2.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 shrink-0 text-[10px] text-[#AAAAAA]">└</span>
+                    <select
+                      value={catLevel2}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setCatLevel2(v)
+                        setCatLevel3('')
+                        setCatLevel4('')
+                        if (!catSlugManual && catNombre) {
+                          const parent =
+                            categories.find((c) => c.id === v) ??
+                            categories.find((c) => c.id === catLevel1)
+                          const prefix = parent ? `${parent.slug}-` : ''
+                          setCatSlug(prefix + slugFromNombre(catNombre))
+                        }
+                      }}
+                      className="flex-1 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[12px] text-[#111111]"
+                      style={{ borderRadius: 2 }}
+                    >
+                      <option value="">
+                        Directo bajo {categories.find((c) => c.id === catLevel1)?.nombre}
+                      </option>
+                      {parentCats2.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {catLevel2 && parentCats3.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 shrink-0 text-[10px] text-[#AAAAAA]">└</span>
+                    <select
+                      value={catLevel3}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setCatLevel3(v)
+                        setCatLevel4('')
+                        if (!catSlugManual && catNombre) {
+                          const parent =
+                            categories.find((c) => c.id === v) ??
+                            categories.find((c) => c.id === catLevel2)
+                          const prefix = parent ? `${parent.slug}-` : ''
+                          setCatSlug(prefix + slugFromNombre(catNombre))
+                        }
+                      }}
+                      className="flex-1 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[12px] text-[#111111]"
+                      style={{ borderRadius: 2 }}
+                    >
+                      <option value="">
+                        Directo bajo {categories.find((c) => c.id === catLevel2)?.nombre}
+                      </option>
+                      {parentCats3.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {catLevel3 && parentCats4.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 shrink-0 text-[10px] text-[#AAAAAA]">└</span>
+                    <select
+                      value={catLevel4}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setCatLevel4(v)
+                        if (!catSlugManual && catNombre) {
+                          const parent =
+                            categories.find((c) => c.id === v) ??
+                            categories.find((c) => c.id === catLevel3)
+                          const prefix = parent ? `${parent.slug}-` : ''
+                          setCatSlug(prefix + slugFromNombre(catNombre))
+                        }
+                      }}
+                      className="flex-1 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[12px] text-[#111111]"
+                      style={{ borderRadius: 2 }}
+                    >
+                      <option value="">
+                        Directo bajo {categories.find((c) => c.id === catLevel3)?.nombre}
+                      </option>
+                      {parentCats4.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
-                className="bg-[#111111] px-4 py-2.5 text-[10px] text-[#FFFFFF] hover:bg-[#CC4B37]"
+                className="w-fit bg-[#111111] px-4 py-2.5 text-[10px] text-[#FFFFFF] hover:bg-[#CC4B37]"
                 style={{ ...jostHeading, borderRadius: 2 }}
               >
                 CREAR
