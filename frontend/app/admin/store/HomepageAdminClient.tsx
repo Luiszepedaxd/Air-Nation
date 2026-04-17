@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { uploadFile } from '@/lib/apiFetch'
 import {
   createHomepageBlock,
   deleteHomepageBlock,
@@ -86,6 +87,130 @@ function defaultConfig(tipo: HomepageBlockTipo): Record<string, unknown> {
         text_color: '#FFFFFF',
       }
   }
+}
+
+// ────────────────────────────────────────────────────────────────
+// ImageUploadInput — sube un archivo a /upload y devuelve la URL
+// ────────────────────────────────────────────────────────────────
+
+function ImageUploadInput({
+  value,
+  onChange,
+  label = 'Imagen',
+}: {
+  value: string
+  onChange: (url: string) => void
+  label?: string
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setUploadError('Solo JPG, PNG o WebP')
+      return
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setUploadError('Máximo 8 MB')
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const url = await uploadFile(file)
+      onChange(url)
+    } catch {
+      setUploadError('Error al subir. Intenta de nuevo.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p
+        className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#666666]"
+        style={jostHeading}
+      >
+        {label}
+      </p>
+      {value && (
+        <div
+          className="relative w-full overflow-hidden border border-solid border-[#EEEEEE] bg-[#F4F4F4]"
+          style={{ aspectRatio: '16/6' }}
+        >
+          <img src={value} alt="" className="h-full w-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center bg-black/60 text-xs text-white hover:bg-black/80"
+            aria-label="Quitar imagen"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      <label
+        className={`flex cursor-pointer items-center justify-center gap-2 border border-dashed px-4 py-3 text-[11px] transition-colors ${
+          uploading
+            ? 'border-[#CCCCCC] bg-[#F9F9F9] text-[#AAAAAA]'
+            : 'border-[#CCCCCC] bg-[#F4F4F4] text-[#666666] hover:border-[#CC4B37] hover:text-[#CC4B37]'
+        }`}
+        style={latoBody}
+      >
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFile}
+          disabled={uploading}
+        />
+        {uploading ? (
+          <>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              className="animate-spin"
+              aria-hidden
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeDasharray="28"
+                strokeDashoffset="10"
+              />
+            </svg>
+            Subiendo…
+          </>
+        ) : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            {value ? 'Cambiar imagen' : 'Subir imagen'}
+          </>
+        )}
+      </label>
+      {uploadError && (
+        <p className="text-[11px] text-[#CC4B37]" style={latoBody}>
+          {uploadError}
+        </p>
+      )}
+    </div>
+  )
 }
 
 function previewText(block: HomepageBlock): string {
@@ -452,15 +577,11 @@ function BlockForm({
     <div className="flex flex-col gap-3" style={latoBody}>
       {tipo === 'hero' && (
         <>
-          <Field label="Imagen URL" labelCls={labelCls}>
-            <input
-              type="text"
-              className={inputCls}
-              value={getStr(state.imagen_url)}
-              onChange={(e) => setField('imagen_url', e.target.value)}
-              placeholder="https://..."
-            />
-          </Field>
+          <ImageUploadInput
+            label="Imagen"
+            value={getStr(state.imagen_url)}
+            onChange={(url) => setField('imagen_url', url)}
+          />
           <Field label="Título *" labelCls={labelCls}>
             <input
               type="text"
@@ -502,15 +623,11 @@ function BlockForm({
 
       {tipo === 'banner_producto' && (
         <>
-          <Field label="Imagen URL *" labelCls={labelCls}>
-            <input
-              type="text"
-              className={inputCls}
-              value={getStr(state.imagen_url)}
-              onChange={(e) => setField('imagen_url', e.target.value)}
-              placeholder="https://..."
-            />
-          </Field>
+          <ImageUploadInput
+            label="Imagen *"
+            value={getStr(state.imagen_url)}
+            onChange={(url) => setField('imagen_url', url)}
+          />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Marca" labelCls={labelCls}>
               <input
@@ -598,14 +715,11 @@ function BlockForm({
 
       {tipo === 'blog_destacado' && (
         <>
-          <Field label="Imagen URL *" labelCls={labelCls}>
-            <input
-              type="text"
-              className={inputCls}
-              value={getStr(state.imagen_url)}
-              onChange={(e) => setField('imagen_url', e.target.value)}
-            />
-          </Field>
+          <ImageUploadInput
+            label="Imagen *"
+            value={getStr(state.imagen_url)}
+            onChange={(url) => setField('imagen_url', url)}
+          />
           <Field label="Título *" labelCls={labelCls}>
             <input
               type="text"
@@ -808,12 +922,10 @@ function CategoriasGridForm({
                   onChange={(e) => updateItem(i, { label: e.target.value })}
                   placeholder="Label (ej. Réplicas)"
                 />
-                <input
-                  type="text"
-                  className={inputCls}
+                <ImageUploadInput
+                  label="Imagen"
                   value={it.imagen_url}
-                  onChange={(e) => updateItem(i, { imagen_url: e.target.value })}
-                  placeholder="Imagen URL"
+                  onChange={(url) => updateItem(i, { imagen_url: url })}
                 />
                 <select
                   className={inputCls}
