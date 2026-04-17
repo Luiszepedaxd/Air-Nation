@@ -2,7 +2,13 @@ import type { Metadata } from 'next'
 import { ensureAppAdminOrRedirect } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { StoreExploreClient } from './StoreExploreClient'
-import type { StoreBrand, StoreCategory, StoreProduct } from './types'
+import type {
+  HomepageBlock,
+  HomepageBlockTipo,
+  StoreBrand,
+  StoreCategory,
+  StoreProduct,
+} from './types'
 
 export const revalidate = 0
 
@@ -48,14 +54,42 @@ function mapBrand(row: Record<string, unknown>): StoreBrand {
   }
 }
 
+function mapHomepageBlock(row: Record<string, unknown>): HomepageBlock {
+  const tipoRaw = String(row.tipo ?? 'hero')
+  const validTipos: HomepageBlockTipo[] = [
+    'hero',
+    'banner_producto',
+    'categorias_grid',
+    'carrusel_productos',
+    'blog_destacado',
+    'texto_libre',
+  ]
+  const tipo: HomepageBlockTipo = (validTipos as string[]).includes(tipoRaw)
+    ? (tipoRaw as HomepageBlockTipo)
+    : 'hero'
+  const cfgRaw = row.config
+  const config: Record<string, unknown> =
+    cfgRaw && typeof cfgRaw === 'object' && !Array.isArray(cfgRaw)
+      ? (cfgRaw as Record<string, unknown>)
+      : {}
+  return {
+    id: String(row.id ?? ''),
+    tipo,
+    orden: Number(row.orden ?? 0),
+    activo: Boolean(row.activo),
+    config,
+  }
+}
+
 async function fetchStoreData(): Promise<{
   products: StoreProduct[]
   categories: StoreCategory[]
   brands: StoreBrand[]
+  blocks: HomepageBlock[]
 }> {
   const supabase = createDashboardSupabaseServerClient()
 
-  const [productsRes, categoriesRes, brandsRes] = await Promise.all([
+  const [productsRes, categoriesRes, brandsRes, blocksRes] = await Promise.all([
     supabase
       .from('store_products')
       .select(
@@ -69,6 +103,11 @@ async function fetchStoreData(): Promise<{
       .select('id, nombre, slug, parent_id')
       .eq('activo', true),
     supabase.from('store_brands').select('id, nombre, slug, logo_url').eq('activo', true),
+    supabase
+      .from('store_homepage_blocks')
+      .select('id, tipo, orden, activo, config')
+      .eq('activo', true)
+      .order('orden', { ascending: true }),
   ])
 
   if (productsRes.error) {
@@ -80,6 +119,9 @@ async function fetchStoreData(): Promise<{
   if (brandsRes.error) {
     console.error('[store] brands:', brandsRes.error.message)
   }
+  if (blocksRes.error) {
+    console.error('[store] blocks:', blocksRes.error.message)
+  }
 
   const products = (productsRes.data ?? []).map((row) =>
     mapProduct(row as Record<string, unknown>)
@@ -88,13 +130,16 @@ async function fetchStoreData(): Promise<{
     mapCategory(row as Record<string, unknown>)
   )
   const brands = (brandsRes.data ?? []).map((row) => mapBrand(row as Record<string, unknown>))
+  const blocks = (blocksRes.data ?? []).map((row) =>
+    mapHomepageBlock(row as Record<string, unknown>)
+  )
 
-  return { products, categories, brands }
+  return { products, categories, brands, blocks }
 }
 
 export default async function StorePage() {
   await ensureAppAdminOrRedirect('/store')
-  const { products, categories, brands } = await fetchStoreData()
+  const { products, categories, brands, blocks } = await fetchStoreData()
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F7F7F7] text-[#111111]">
@@ -102,7 +147,7 @@ export default async function StorePage() {
         products={products}
         categories={categories}
         brands={brands}
-        carruselActivo={true}
+        blocks={blocks}
       />
     </div>
   )

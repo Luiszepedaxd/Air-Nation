@@ -2,8 +2,18 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
-import { Carrusel } from '@/app/dashboard/components/Carrusel'
-import type { StoreBrand, StoreCategory, StoreProduct } from './types'
+import type {
+  BannerProductoConfig,
+  BlogDestacadoConfig,
+  CarruselProductosConfig,
+  CategoriasGridConfig,
+  HeroConfig,
+  HomepageBlock,
+  StoreBrand,
+  StoreCategory,
+  StoreProduct,
+  TextoLibreConfig,
+} from './types'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -92,12 +102,12 @@ export function StoreExploreClient({
   products,
   categories,
   brands,
-  carruselActivo = true,
+  blocks = [],
 }: {
   products: StoreProduct[]
   categories: StoreCategory[]
   brands: StoreBrand[]
-  carruselActivo?: boolean
+  blocks?: HomepageBlock[]
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtroCondicion, setFiltroCondicion] = useState<'' | 'nuevo' | 'outlet'>('')
@@ -109,11 +119,6 @@ export function StoreExploreClient({
   const [drawerOpen, setDrawerOpen] = useState(false)
   // Estado acordeón — qué categoría está expandida en el drawer
   const [drawerCatExpandida, setDrawerCatExpandida] = useState<string | null>(null)
-
-  const destacados = useMemo(
-    () => products.filter((p) => p.destacado && p.stock > 0),
-    [products]
-  )
 
   const filtered = useMemo(() => {
     let list = products
@@ -281,97 +286,16 @@ export function StoreExploreClient({
         </div>
       </header>
 
-      {/* ── CARRUSEL DESTACADOS ── */}
-      {carruselActivo && destacados.length > 0 && (
-        <div className="border-b border-[#EEEEEE] bg-white py-4">
-          <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-            <p
-              className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
-              style={jost}
-            >
-              ★ Destacados
-            </p>
-            <Carrusel>
-              {destacados.map((product) => {
-                const foto = product.fotos_urls?.[0] ?? null
-                const brand = brands.find((b) => b.id === product.brand_id)
-                return (
-                  <div key={product.id} className="w-[160px] shrink-0 pr-3 sm:w-[200px]">
-                    <Link
-                      href={`/store/${product.id}`}
-                      className="flex flex-col overflow-hidden border border-[#E8E8E8] bg-white transition-colors hover:border-[#CC4B37]"
-                    >
-                      <div
-                        className="relative w-full bg-[#F4F4F4]"
-                        style={{ aspectRatio: '1/1' }}
-                      >
-                        {foto ? (
-                          <img
-                            src={foto}
-                            alt=""
-                            className="h-full w-full object-contain p-2"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
-                            <svg
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              aria-hidden
-                            >
-                              <path
-                                d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                                stroke="currentColor"
-                                strokeWidth="1.4"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M3 6h18M16 10a4 4 0 01-8 0"
-                                stroke="currentColor"
-                                strokeWidth="1.4"
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                        <span
-                          className="absolute right-1 top-1 bg-[#111111] px-1 py-0.5 text-[7px] font-extrabold uppercase text-white"
-                          style={jost}
-                        >
-                          ★
-                        </span>
-                      </div>
-                      <div className="p-2">
-                        {brand && (
-                          <p
-                            className="text-[9px] font-bold uppercase text-[#CC4B37]"
-                            style={jost}
-                          >
-                            {brand.nombre}
-                          </p>
-                        )}
-                        <p
-                          className="line-clamp-2 text-[10px] leading-snug text-[#333333]"
-                          style={lato}
-                        >
-                          {product.nombre}
-                        </p>
-                        <p
-                          className="mt-1 text-[12px] font-extrabold text-[#111111]"
-                          style={jost}
-                        >
-                          ${product.precio.toLocaleString('es-MX')}
-                        </p>
-                      </div>
-                    </Link>
-                  </div>
-                )
-              })}
-            </Carrusel>
-          </div>
-        </div>
-      )}
+      {/* ── BLOQUES HOMEPAGE ── */}
+      {blocks.map((block) => (
+        <BlockRenderer
+          key={block.id}
+          block={block}
+          products={products}
+          brands={brands}
+          categories={categories}
+        />
+      ))}
 
       {/* ── BODY: sidebar + grid ── */}
       <div className="mx-auto max-w-[1200px] px-4 py-4 md:px-6 md:py-6">
@@ -894,4 +818,348 @@ export function StoreExploreClient({
       </div>
     </div>
   )
+}
+
+// ────────────────────────────────────────────────────────────────
+// BlockRenderer — renderiza cada bloque del homepage según su tipo
+// ────────────────────────────────────────────────────────────────
+
+function BlockRenderer({
+  block,
+  products,
+  brands,
+  categories: _categories,
+}: {
+  block: HomepageBlock
+  products: StoreProduct[]
+  brands: StoreBrand[]
+  categories: StoreCategory[]
+}) {
+  void _categories
+  const cfg = block.config
+
+  if (block.tipo === 'hero') {
+    const c = cfg as HeroConfig
+    return (
+      <div
+        className="relative w-full overflow-hidden bg-[#111111]"
+        style={{ minHeight: 320 }}
+      >
+        {c.imagen_url && (
+          <img
+            src={c.imagen_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-60"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div
+          className="relative z-10 flex flex-col items-start justify-end px-6 py-10 md:px-12 md:py-14"
+          style={{ minHeight: 320 }}
+        >
+          <h2
+            className="text-3xl font-extrabold uppercase leading-tight text-white drop-shadow-lg md:text-5xl"
+            style={jost}
+          >
+            {c.titulo}
+          </h2>
+          {c.subtitulo && (
+            <p
+              className="mt-2 max-w-[480px] text-[14px] text-white/80 md:text-[16px]"
+              style={lato}
+            >
+              {c.subtitulo}
+            </p>
+          )}
+          {c.cta_texto && c.cta_link && (
+            <Link
+              href={c.cta_link}
+              className="mt-5 inline-block bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white transition-opacity hover:opacity-90"
+              style={jost}
+            >
+              {c.cta_texto}
+            </Link>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'banner_producto') {
+    const c = cfg as BannerProductoConfig
+    return (
+      <div
+        className="relative w-full overflow-hidden bg-[#111111]"
+        style={{ minHeight: 220 }}
+      >
+        {c.imagen_url && (
+          <img
+            src={c.imagen_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-50"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
+        <div
+          className="relative z-10 flex flex-col justify-center px-6 py-8 md:px-12"
+          style={{ minHeight: 220 }}
+        >
+          {c.marca && (
+            <span
+              className="mb-2 inline-block w-fit bg-[#CC4B37] px-2 py-0.5 text-[10px] font-extrabold uppercase text-white"
+              style={jost}
+            >
+              {c.marca}
+            </span>
+          )}
+          <h3
+            className="text-2xl font-extrabold uppercase leading-tight text-white md:text-3xl"
+            style={jost}
+          >
+            {c.titulo}
+          </h3>
+          {c.descripcion && (
+            <p className="mt-1 max-w-[400px] text-[13px] text-white/70" style={lato}>
+              {c.descripcion}
+            </p>
+          )}
+          {c.cta_link && (
+            <Link
+              href={c.cta_link}
+              className="mt-4 inline-block w-fit bg-[#CC4B37] px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white hover:opacity-90"
+              style={jost}
+            >
+              Ver producto
+            </Link>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'carrusel_productos') {
+    const c = cfg as CarruselProductosConfig
+    const blockProducts = (c.product_ids ?? [])
+      .map((id) => products.find((p) => p.id === id))
+      .filter((p): p is StoreProduct => Boolean(p))
+    if (blockProducts.length === 0) return null
+    return (
+      <div className="bg-white py-5">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+          <p
+            className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
+            style={jost}
+          >
+            {c.titulo_seccion}
+          </p>
+          <div
+            className="flex gap-3 overflow-x-auto pb-2"
+            style={{ scrollSnapType: 'x mandatory' }}
+          >
+            {blockProducts.map((product) => {
+              const foto = product.fotos_urls?.[0] ?? null
+              const brand = brands.find((b) => b.id === product.brand_id)
+              return (
+                <Link
+                  key={product.id}
+                  href={`/store/${product.id}`}
+                  className="flex w-[150px] shrink-0 flex-col overflow-hidden border border-[#E8E8E8] bg-white transition-colors hover:border-[#CC4B37] sm:w-[180px]"
+                  style={{ scrollSnapAlign: 'start' }}
+                >
+                  <div
+                    className="relative w-full bg-[#F4F4F4]"
+                    style={{ aspectRatio: '1/1' }}
+                  >
+                    {foto ? (
+                      <img
+                        src={foto}
+                        alt=""
+                        className="h-full w-full object-contain p-2"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden
+                        >
+                          <path
+                            d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                            stroke="currentColor"
+                            strokeWidth="1.4"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    {brand && (
+                      <p
+                        className="text-[9px] font-bold uppercase text-[#CC4B37]"
+                        style={jost}
+                      >
+                        {brand.nombre}
+                      </p>
+                    )}
+                    <p
+                      className="line-clamp-2 text-[10px] leading-snug text-[#333333]"
+                      style={lato}
+                    >
+                      {product.nombre}
+                    </p>
+                    <p
+                      className="mt-1 text-[12px] font-extrabold text-[#111111]"
+                      style={jost}
+                    >
+                      ${product.precio.toLocaleString('es-MX')}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'categorias_grid') {
+    const c = cfg as CategoriasGridConfig
+    if (!c.items?.length) return null
+    return (
+      <div className="bg-white py-5">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+          {c.titulo_seccion && (
+            <p
+              className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
+              style={jost}
+            >
+              {c.titulo_seccion}
+            </p>
+          )}
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+            {c.items.map((item, i) => (
+              <button
+                key={i}
+                type="button"
+                className="group flex flex-col overflow-hidden border border-[#EEEEEE] bg-[#F7F7F7] transition-colors hover:border-[#CC4B37]"
+              >
+                <div
+                  className="relative w-full bg-[#EEEEEE]"
+                  style={{ aspectRatio: '1/1' }}
+                >
+                  {item.imagen_url ? (
+                    <img
+                      src={item.imagen_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden
+                      >
+                        <path
+                          d="M3 3h18v18H3z"
+                          stroke="currentColor"
+                          strokeWidth="1.4"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <p
+                  className="px-1.5 py-1.5 text-center text-[10px] font-bold uppercase leading-tight text-[#333333] group-hover:text-[#CC4B37]"
+                  style={jost}
+                >
+                  {item.label}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'blog_destacado') {
+    const c = cfg as BlogDestacadoConfig
+    return (
+      <div
+        className="relative w-full overflow-hidden bg-[#111111]"
+        style={{ minHeight: 180 }}
+      >
+        {c.imagen_url && (
+          <img
+            src={c.imagen_url}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-40"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 to-black/40" />
+        <div
+          className="relative z-10 flex flex-col justify-center px-6 py-8 md:px-12"
+          style={{ minHeight: 180 }}
+        >
+          <span
+            className="mb-2 inline-block w-fit border border-white/40 px-2 py-0.5 text-[9px] font-extrabold uppercase text-white/70"
+            style={jost}
+          >
+            BLOG
+          </span>
+          <h3
+            className="text-xl font-extrabold uppercase text-white md:text-2xl"
+            style={jost}
+          >
+            {c.titulo}
+          </h3>
+          {c.extracto && (
+            <p className="mt-1 max-w-[400px] text-[12px] text-white/60" style={lato}>
+              {c.extracto}
+            </p>
+          )}
+          {c.cta_link && (
+            <Link
+              href={c.cta_link}
+              className="mt-3 inline-block w-fit border border-white px-4 py-2 text-[10px] font-extrabold uppercase text-white transition-colors hover:bg-white hover:text-[#111111]"
+              style={jost}
+            >
+              Leer más
+            </Link>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  if (block.tipo === 'texto_libre') {
+    const c = cfg as TextoLibreConfig
+    return (
+      <div
+        className="w-full px-6 py-8 md:px-12"
+        style={{
+          backgroundColor: c.bg_color ?? '#111111',
+          color: c.text_color ?? '#FFFFFF',
+        }}
+      >
+        {c.titulo && (
+          <h3 className="mb-2 text-xl font-extrabold uppercase" style={jost}>
+            {c.titulo}
+          </h3>
+        )}
+        <p className="max-w-[600px] text-[14px] leading-relaxed opacity-80" style={lato}>
+          {c.cuerpo}
+        </p>
+      </div>
+    )
+  }
+
+  return null
 }

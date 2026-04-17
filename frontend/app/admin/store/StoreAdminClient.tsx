@@ -49,11 +49,12 @@ type Props = {
   products: StoreAdminProductRow[]
   categories: StoreAdminCategoryRow[]
   brands: StoreAdminBrandRow[]
+  initialTab?: TabId
 }
 
-export function StoreAdminClient({ products, categories, brands }: Props) {
+export function StoreAdminClient({ products, categories, brands, initialTab }: Props) {
   const router = useRouter()
-  const [tab, setTab] = useState<TabId>('productos')
+  const [tab, setTab] = useState<TabId>(initialTab ?? 'productos')
   const [productModalOpen, setProductModalOpen] = useState(false)
 
   const [productFormError, setProductFormError] = useState<string | null>(null)
