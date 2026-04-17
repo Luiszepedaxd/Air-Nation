@@ -1,5 +1,6 @@
 'use client'
 
+import { uploadFile } from '@/lib/apiFetch'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import {
@@ -65,6 +66,8 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
   const [productSlugManual, setProductSlugManual] = useState(false)
   const [stockVisible, setStockVisible] = useState(false)
   const [productDestacado, setProductDestacado] = useState(false)
+  const [productFotos, setProductFotos] = useState<string[]>([])
+  const [fotosUploading, setFotosUploading] = useState(false)
   const [catNivel1, setCatNivel1] = useState('')
   const [catNivel2, setCatNivel2] = useState('')
   const [catNivel3, setCatNivel3] = useState('')
@@ -76,12 +79,6 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
   const [brandNombre, setBrandNombre] = useState('')
   const [brandSlug, setBrandSlug] = useState('')
   const [brandSlugManual, setBrandSlugManual] = useState(false)
-
-  const categoryById = useMemo(() => {
-    const m = new Map<string, StoreAdminCategoryRow>()
-    for (const c of categories) m.set(c.id, c)
-    return m
-  }, [categories])
 
   const cats1 = useMemo(
     () => categories.filter((c) => c.parent_id === null),
@@ -113,6 +110,27 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
     { id: 'marcas', label: 'MARCAS' },
   ]
 
+  async function handleProductFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (!files.length || productFotos.length >= 6) return
+    const allowed = files.slice(0, 6 - productFotos.length)
+    setFotosUploading(true)
+    try {
+      const urls: string[] = []
+      for (const file of allowed) {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) continue
+        const url = await uploadFile(file)
+        urls.push(url)
+      }
+      setProductFotos((prev) => [...prev, ...urls])
+    } catch {
+      setProductFormError('Error al subir las fotos.')
+    } finally {
+      setFotosUploading(false)
+    }
+  }
+
   async function onCreateProduct(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setProductFormError(null)
@@ -120,6 +138,7 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
     const fd = new FormData(form)
     fd.set('stock_visible', stockVisible ? 'true' : 'false')
     fd.set('destacado', productDestacado ? 'true' : 'false')
+    fd.set('fotos_urls', JSON.stringify(productFotos))
     const res = await createProduct(fd)
     if ('error' in res) {
       setProductFormError(res.error)
@@ -135,6 +154,8 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
     setCatNivel1('')
     setCatNivel2('')
     setCatNivel3('')
+    setProductFotos([])
+    setFotosUploading(false)
     refresh()
   }
 
@@ -647,6 +668,77 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
                       style={{ borderRadius: 2 }}
                     />
                   </label>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[11px] text-[#666666]" style={jostHeading}>
+                      FOTOS{' '}
+                      <span className="font-normal normal-case tracking-normal text-[#AAAAAA]">
+                        (máx 6)
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {productFotos.map((url, i) => (
+                        <div key={i} className="relative" style={{ aspectRatio: '1/1' }}>
+                          <img
+                            src={url}
+                            alt=""
+                            className="h-full w-full border border-[#EEEEEE] object-cover"
+                          />
+                          {i === 0 && (
+                            <span
+                              className="absolute bottom-1 left-1 bg-[#CC4B37] px-1 py-0.5 text-[8px] font-extrabold uppercase text-white"
+                              style={jostHeading}
+                            >
+                              Portada
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProductFotos((prev) => prev.filter((_, j) => j !== i))
+                            }
+                            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center bg-black/60 text-xs text-white"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      {productFotos.length < 6 && (
+                        <label
+                          className="flex cursor-pointer flex-col items-center justify-center border border-dashed border-[#CCCCCC] bg-[#F4F4F4] transition-colors hover:border-[#CC4B37]"
+                          style={{ aspectRatio: '1/1' }}
+                        >
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            className="hidden"
+                            onChange={handleProductFoto}
+                            disabled={fotosUploading}
+                          />
+                          {fotosUploading ? (
+                            <span className="text-[10px] text-[#999999]" style={latoBody}>
+                              Subiendo…
+                            </span>
+                          ) : (
+                            <svg
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              aria-hidden
+                            >
+                              <path
+                                d="M12 5v14M5 12h14"
+                                stroke="#CCCCCC"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </div>
                   <button
                     type="submit"
                     className="mt-2 bg-[#111111] px-4 py-2.5 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
@@ -730,53 +822,112 @@ export function StoreAdminClient({ products, categories, brands }: Props) {
           </div>
 
           {categories.length === 0 ? (
-            <p className="py-8 text-center text-[#666666]">No hay categorías</p>
+            <p className="py-8 text-center text-[#666666]" style={latoBody}>
+              No hay categorías
+            </p>
           ) : (
-            <ul className="divide-y divide-solid divide-[#EEEEEE] border border-solid border-[#EEEEEE]">
-              {categories.map((c) => {
-                const parentNombre = c.parent_id
-                  ? categoryById.get(c.parent_id)?.nombre ?? '—'
-                  : '—'
-                return (
-                  <li
-                    key={c.id}
-                    className="flex flex-wrap items-center justify-between gap-3 bg-[#FFFFFF] px-4 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-[#111111]">{c.nombre}</div>
-                      <div className="text-[12px] text-[#666666]">{c.slug}</div>
-                      <div className="mt-1 text-[11px] text-[#666666]">
-                        Padre: {parentNombre}
+            <div className="border border-solid border-[#EEEEEE]">
+              {categories
+                .filter((c) => c.parent_id === null)
+                .map((nivel1) => (
+                  <div key={nivel1.id}>
+                    <div className="flex items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="text-[10px] text-[#AAAAAA]" style={jostHeading}>
+                          {'\u25B6'}
+                        </span>
+                        <span className="text-[13px] font-bold text-[#111111]" style={jostHeading}>
+                          {nivel1.nombre}
+                        </span>
+                        <span className="text-[10px] text-[#AAAAAA]" style={latoBody}>
+                          {nivel1.slug}
+                        </span>
+                        {!nivel1.activo && (
+                          <span
+                            className="border border-[#CC4B37] px-1 text-[9px] text-[#CC4B37]"
+                            style={jostHeading}
+                          >
+                            INACTIVO
+                          </span>
+                        )}
                       </div>
-                      <span
-                        className={`mt-2 inline-block text-[10px] ${
-                          c.activo ? 'text-[#111111]' : 'text-[#666666]'
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCategory(nivel1.id)}
+                        className="shrink-0 text-[10px] text-[#CC4B37] hover:underline"
                         style={jostHeading}
                       >
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: 2,
-                            backgroundColor: c.activo ? '#EEEEEE' : '#F4F4F4',
-                          }}
-                        >
-                          {c.activo ? 'ACTIVO' : 'INACTIVO'}
-                        </span>
-                      </span>
+                        Eliminar
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCategory(c.id)}
-                      className="shrink-0 text-[10px] uppercase text-[#CC4B37] underline"
-                      style={jostHeading}
-                    >
-                      Eliminar
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+                    {categories
+                      .filter((c) => c.parent_id === nivel1.id)
+                      .map((nivel2) => (
+                        <div key={nivel2.id}>
+                          <div className="flex items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2 pl-8">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="text-[10px] text-[#CCCCCC]">└</span>
+                              <span className="text-[12px] font-semibold text-[#333333]">
+                                {nivel2.nombre}
+                              </span>
+                              <span className="text-[10px] text-[#AAAAAA]" style={latoBody}>
+                                {nivel2.slug}
+                              </span>
+                              {!nivel2.activo && (
+                                <span
+                                  className="border border-[#CC4B37] px-1 text-[9px] text-[#CC4B37]"
+                                  style={jostHeading}
+                                >
+                                  INACTIVO
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => onDeleteCategory(nivel2.id)}
+                              className="shrink-0 text-[10px] text-[#CC4B37] hover:underline"
+                              style={jostHeading}
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                          {categories
+                            .filter((c) => c.parent_id === nivel2.id)
+                            .map((nivel3) => (
+                              <div
+                                key={nivel3.id}
+                                className="flex items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#FAFAFA] px-4 py-2 pl-14"
+                              >
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span className="text-[10px] text-[#CCCCCC]">└</span>
+                                  <span className="text-[11px] text-[#555555]">{nivel3.nombre}</span>
+                                  <span className="text-[10px] text-[#AAAAAA]" style={latoBody}>
+                                    {nivel3.slug}
+                                  </span>
+                                  {!nivel3.activo && (
+                                    <span
+                                      className="border border-[#CC4B37] px-1 text-[9px] text-[#CC4B37]"
+                                      style={jostHeading}
+                                    >
+                                      INACTIVO
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => onDeleteCategory(nivel3.id)}
+                                  className="shrink-0 text-[10px] text-[#CC4B37] hover:underline"
+                                  style={jostHeading}
+                                >
+                                  Eliminar
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      ))}
+                  </div>
+                ))}
+            </div>
           )}
         </div>
       ) : null}

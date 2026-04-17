@@ -93,6 +93,13 @@ export async function createProduct(formData: FormData): Promise<{ ok: true } | 
   const destacado = formData.get('destacado') === 'true'
   const dias_manejo = Number(formData.get('dias_manejo') ?? 3)
   const deporte = String(formData.get('deporte') ?? 'general')
+  const fotos_urls_raw = String(formData.get('fotos_urls') ?? '[]')
+  let fotos_urls: string[] = []
+  try {
+    fotos_urls = JSON.parse(fotos_urls_raw) as string[]
+  } catch {
+    fotos_urls = []
+  }
 
   if (!nombre || !slug || !precio) return { error: 'Nombre, slug y precio son requeridos.' }
   if (isNaN(precio) || precio <= 0) return { error: 'Precio inválido.' }
@@ -101,7 +108,7 @@ export async function createProduct(formData: FormData): Promise<{ ok: true } | 
   const { error } = await db.from('store_products').insert({
     nombre, slug, precio, precio_costo, stock, stock_visible,
     condicion, descripcion, que_incluye, categoria_id, brand_id,
-    destacado, dias_manejo, deporte,
+    destacado, dias_manejo, deporte, fotos_urls,
     created_by: adminId,
   })
   if (error) return { error: error.message }
