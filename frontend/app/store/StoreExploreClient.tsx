@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { Carrusel } from '@/app/dashboard/components/Carrusel'
 import type { StoreBrand, StoreCategory, StoreProduct } from './types'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
@@ -91,23 +92,28 @@ export function StoreExploreClient({
   products,
   categories,
   brands,
+  carruselActivo = true,
 }: {
   products: StoreProduct[]
   categories: StoreCategory[]
   brands: StoreBrand[]
+  carruselActivo?: boolean
 }) {
   const [busqueda, setBusqueda] = useState('')
   const [filtroCondicion, setFiltroCondicion] = useState<'' | 'nuevo' | 'outlet'>('')
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('')
   const [filtroMarcaId, setFiltroMarcaId] = useState('')
   const [filtroSoloStock, setFiltroSoloStock] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
   const [carritoCount] = useState(0)
 
-  const [localCondicion, setLocalCondicion] = useState<'' | 'nuevo' | 'outlet'>('')
-  const [localCategoriaId, setLocalCategoriaId] = useState('')
-  const [localMarcaId, setLocalMarcaId] = useState('')
-  const [localSoloStock, setLocalSoloStock] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  // Estado acordeón — qué categoría está expandida en el drawer
+  const [drawerCatExpandida, setDrawerCatExpandida] = useState<string | null>(null)
+
+  const destacados = useMemo(
+    () => products.filter((p) => p.destacado && p.stock > 0),
+    [products]
+  )
 
   const filtered = useMemo(() => {
     let list = products
@@ -149,23 +155,42 @@ export function StoreExploreClient({
   return (
     <div className="min-h-screen bg-[#F7F7F7]">
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-30 bg-[#111111] shadow-sm">
+      <header className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-white shadow-sm">
         <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-          <div className="flex h-12 items-center justify-between gap-3">
-            <span
-              className="text-[1.1rem] font-extrabold uppercase tracking-[0.18em] text-white"
-              style={jost}
-            >
-              AN<span className="text-[#CC4B37]">STORE</span>
-            </span>
-            <div className="flex items-center gap-3">
+          <div className="flex h-14 items-center justify-between gap-3">
+            {/* Logo igual que el resto de la app */}
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center bg-[#CC4B37]">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff" />
+                </svg>
+              </span>
+              <span
+                className="text-[1rem] font-black uppercase tracking-[0.18em] text-[#111111]"
+                style={jost}
+              >
+                AIR<span className="text-[#CC4B37]">NATION</span>
+              </span>
               <span
                 className="hidden bg-[#CC4B37] px-1.5 py-0.5 text-[8px] font-extrabold uppercase text-white sm:inline"
                 style={jost}
               >
+                STORE
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Badge admin preview */}
+              <span
+                className="hidden bg-[#F4F4F4] px-2 py-0.5 text-[8px] font-extrabold uppercase text-[#999999] sm:inline"
+                style={jost}
+              >
                 ADMIN PREVIEW
               </span>
-              <button type="button" className="relative p-1 text-white">
+              {/* Carrito placeholder */}
+              <button
+                type="button"
+                className="relative p-1.5 text-[#444444] transition-colors hover:text-[#CC4B37]"
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
                     d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
@@ -182,24 +207,49 @@ export function StoreExploreClient({
                 </svg>
                 {carritoCount > 0 && (
                   <span
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white"
+                    className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white"
                     style={jost}
                   >
                     {carritoCount}
                   </span>
                 )}
               </button>
+              {/* Hamburguesa — solo mobile */}
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="relative flex h-9 w-9 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] md:hidden"
+                aria-label="Filtros"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M4 6h16M4 12h16M4 18h16"
+                    stroke="#444444"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {activeCount > 0 && (
+                  <span
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white"
+                    style={jost}
+                  >
+                    {activeCount}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
+          {/* Buscador */}
           <div className="pb-3">
-            <div className="flex items-center gap-2 border border-[#333333] bg-[#1A1A1A] px-3 py-2">
+            <div className="flex items-center gap-2 border border-[#EEEEEE] bg-[#F7F7F7] px-3 py-2">
               <svg
-                width="14"
-                height="14"
+                width="13"
+                height="13"
                 viewBox="0 0 24 24"
                 fill="none"
                 aria-hidden
-                className="shrink-0 text-[#666666]"
+                className="shrink-0 text-[#AAAAAA]"
               >
                 <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
                 <path
@@ -214,14 +264,14 @@ export function StoreExploreClient({
                 placeholder="Buscar productos, marcas..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                className="flex-1 bg-transparent text-[13px] text-white placeholder-[#666666] outline-none"
+                className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#AAAAAA] outline-none"
                 style={lato}
               />
               {busqueda && (
                 <button
                   type="button"
                   onClick={() => setBusqueda('')}
-                  className="text-xs text-[#666666] hover:text-white"
+                  className="text-xs text-[#AAAAAA] hover:text-[#111111]"
                 >
                   ✕
                 </button>
@@ -231,10 +281,102 @@ export function StoreExploreClient({
         </div>
       </header>
 
+      {/* ── CARRUSEL DESTACADOS ── */}
+      {carruselActivo && destacados.length > 0 && (
+        <div className="border-b border-[#EEEEEE] bg-white py-4">
+          <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+            <p
+              className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
+              style={jost}
+            >
+              ★ Destacados
+            </p>
+            <Carrusel>
+              {destacados.map((product) => {
+                const foto = product.fotos_urls?.[0] ?? null
+                const brand = brands.find((b) => b.id === product.brand_id)
+                return (
+                  <div key={product.id} className="w-[160px] shrink-0 pr-3 sm:w-[200px]">
+                    <Link
+                      href={`/store/${product.id}`}
+                      className="flex flex-col overflow-hidden border border-[#E8E8E8] bg-white transition-colors hover:border-[#CC4B37]"
+                    >
+                      <div
+                        className="relative w-full bg-[#F4F4F4]"
+                        style={{ aspectRatio: '1/1' }}
+                      >
+                        {foto ? (
+                          <img
+                            src={foto}
+                            alt=""
+                            className="h-full w-full object-contain p-2"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              aria-hidden
+                            >
+                              <path
+                                d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                                stroke="currentColor"
+                                strokeWidth="1.4"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M3 6h18M16 10a4 4 0 01-8 0"
+                                stroke="currentColor"
+                                strokeWidth="1.4"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                        <span
+                          className="absolute right-1 top-1 bg-[#111111] px-1 py-0.5 text-[7px] font-extrabold uppercase text-white"
+                          style={jost}
+                        >
+                          ★
+                        </span>
+                      </div>
+                      <div className="p-2">
+                        {brand && (
+                          <p
+                            className="text-[9px] font-bold uppercase text-[#CC4B37]"
+                            style={jost}
+                          >
+                            {brand.nombre}
+                          </p>
+                        )}
+                        <p
+                          className="line-clamp-2 text-[10px] leading-snug text-[#333333]"
+                          style={lato}
+                        >
+                          {product.nombre}
+                        </p>
+                        <p
+                          className="mt-1 text-[12px] font-extrabold text-[#111111]"
+                          style={jost}
+                        >
+                          ${product.precio.toLocaleString('es-MX')}
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                )
+              })}
+            </Carrusel>
+          </div>
+        </div>
+      )}
+
       {/* ── BODY: sidebar + grid ── */}
       <div className="mx-auto max-w-[1200px] px-4 py-4 md:px-6 md:py-6">
         <div className="flex gap-6">
-          {/* SIDEBAR */}
+          {/* SIDEBAR DESKTOP */}
           <aside className="hidden w-[200px] shrink-0 md:block">
             <div className="sticky top-[88px] flex flex-col gap-5">
               <div>
@@ -329,7 +471,9 @@ export function StoreExploreClient({
                       <li key={b.id}>
                         <button
                           type="button"
-                          onClick={() => setFiltroMarcaId(filtroMarcaId === b.id ? '' : b.id)}
+                          onClick={() =>
+                            setFiltroMarcaId(filtroMarcaId === b.id ? '' : b.id)
+                          }
                           className={`w-full px-2 py-1.5 text-left text-[12px] transition-colors ${
                             filtroMarcaId === b.id
                               ? 'font-bold text-[#CC4B37]'
@@ -428,41 +572,26 @@ export function StoreExploreClient({
 
           {/* MAIN */}
           <div className="min-w-0 flex-1">
+            {/* Mobile: solo contador, el filtro está en hamburguesa del header */}
             <div className="mb-3 flex items-center justify-between md:hidden">
               <p className="text-[12px] text-[#999999]" style={lato}>
                 {filtered.length} productos
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setLocalCondicion(filtroCondicion)
-                  setLocalCategoriaId(filtroCategoriaId)
-                  setLocalMarcaId(filtroMarcaId)
-                  setLocalSoloStock(filtroSoloStock)
-                  setSheetOpen(true)
-                }}
-                className={`flex items-center gap-1.5 border px-3 py-2 text-[11px] transition-colors ${
-                  activeCount > 0
-                    ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]'
-                    : 'border-[#EEEEEE] bg-white text-[#666666]'
-                }`}
-                style={lato}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path
-                    d="M4 6h16M7 12h10M10 18h4"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                Filtrar
-                {activeCount > 0 && (
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white">
-                    {activeCount}
-                  </span>
-                )}
-              </button>
+              {activeCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFiltroCondicion('')
+                    setFiltroCategoriaId('')
+                    setFiltroMarcaId('')
+                    setFiltroSoloStock(false)
+                  }}
+                  className="text-[11px] text-[#CC4B37] underline-offset-2 hover:underline"
+                  style={lato}
+                >
+                  Limpiar filtros
+                </button>
+              )}
             </div>
 
             <p className="mb-3 hidden text-[12px] text-[#999999] md:block" style={lato}>
@@ -515,183 +644,252 @@ export function StoreExploreClient({
         </div>
       </div>
 
-      {/* ── BOTTOM SHEET filtros mobile ── */}
-      {sheetOpen && (
+      {/* ── DRAWER LATERAL IZQUIERDO (mobile) ── */}
+      {drawerOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => setSheetOpen(false)}
+          onClick={() => setDrawerOpen(false)}
           aria-hidden
         />
       )}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] overflow-y-auto bg-white transition-transform duration-300 ease-out md:hidden ${
-          sheetOpen ? 'translate-y-0' : 'pointer-events-none translate-y-full'
+        className={`fixed left-0 top-0 z-50 h-full w-[280px] overflow-y-auto bg-white shadow-xl transition-transform duration-300 ease-out md:hidden ${
+          drawerOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
-        style={{
-          borderRadius: '12px 12px 0 0',
-          paddingBottom: 'max(8px,env(safe-area-inset-bottom))',
-        }}
       >
-        <div
-          className="flex w-full cursor-pointer justify-center py-4"
-          onClick={() => setSheetOpen(false)}
-        >
-          <div className="h-1 w-10 rounded-full bg-[#DDDDDD]" />
+        {/* Header del drawer */}
+        <div className="flex items-center justify-between border-b border-[#EEEEEE] px-4 py-4">
+          <span
+            className="text-[13px] font-extrabold uppercase tracking-[0.12em] text-[#111111]"
+            style={jost}
+          >
+            Filtros
+          </span>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(false)}
+            className="flex items-center gap-1.5 text-[12px] text-[#666666]"
+            style={lato}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M18 6L6 18M6 6l12 12"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            Cerrar
+          </button>
         </div>
-        <div className="px-5 pb-6 pt-1">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-[13px] font-extrabold uppercase" style={jost}>
-              Filtrar
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setLocalCondicion('')
-                  setLocalCategoriaId('')
-                  setLocalMarcaId('')
-                  setLocalSoloStock(false)
-                }}
-                className="text-[11px] font-extrabold uppercase text-[#999999]"
-                style={jost}
-              >
-                Limpiar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFiltroCondicion(localCondicion)
-                  setFiltroCategoriaId(localCategoriaId)
-                  setFiltroMarcaId(localMarcaId)
-                  setFiltroSoloStock(localSoloStock)
-                  setSheetOpen(false)
-                }}
-                className="bg-[#CC4B37] px-4 py-2 text-[11px] font-extrabold uppercase text-white"
-                style={jost}
-              >
-                Aplicar
-              </button>
-            </div>
-          </div>
 
-          <p
-            className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
-            style={jost}
-          >
-            Condición
-          </p>
-          <div className="mb-4 flex gap-2">
-            {(
-              [
-                ['', 'Todos'],
-                ['nuevo', 'Nuevo'],
-                ['outlet', 'Outlet'],
-              ] as const
-            ).map(([val, label]) => (
-              <button
-                key={val || 'all'}
-                type="button"
-                onClick={() => setLocalCondicion(val)}
-                className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase ${
-                  localCondicion === val
-                    ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
-                    : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
-                }`}
-                style={jost}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <p
-            className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
-            style={jost}
-          >
-            Categoría
-          </p>
-          <div className="mb-4 flex flex-wrap gap-2">
+        <div className="px-0 py-2">
+          {/* Categorías en acordeón */}
+          <div className="border-b border-[#EEEEEE] pb-2">
+            {/* Todos */}
             <button
               type="button"
-              onClick={() => setLocalCategoriaId('')}
-              className={`border px-3 py-2 text-[10px] font-extrabold uppercase ${
-                !localCategoriaId
-                  ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
-                  : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
+              onClick={() => {
+                setFiltroCategoriaId('')
+                setDrawerCatExpandida(null)
+              }}
+              className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${
+                !filtroCategoriaId
+                  ? 'text-[#CC4B37]'
+                  : 'text-[#111111] hover:bg-[#F7F7F7]'
               }`}
               style={jost}
             >
-              Todos
+              Todos los productos
             </button>
-            {topCategories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setLocalCategoriaId(localCategoriaId === cat.id ? '' : cat.id)}
-                className={`border px-3 py-2 text-[10px] font-extrabold uppercase ${
-                  localCategoriaId === cat.id
-                    ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
-                    : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
-                }`}
-                style={jost}
-              >
-                {cat.nombre}
-              </button>
-            ))}
+            {/* Categorías raíz */}
+            {topCategories.map((cat) => {
+              const subs = categories.filter((c) => c.parent_id === cat.id)
+              const isExpanded = drawerCatExpandida === cat.id
+              const isSelected =
+                filtroCategoriaId === cat.id ||
+                categories.some(
+                  (c) => c.parent_id === cat.id && c.id === filtroCategoriaId
+                )
+              return (
+                <div key={cat.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (subs.length > 0) {
+                        setDrawerCatExpandida(isExpanded ? null : cat.id)
+                        setFiltroCategoriaId(cat.id)
+                      } else {
+                        setFiltroCategoriaId(filtroCategoriaId === cat.id ? '' : cat.id)
+                        setDrawerCatExpandida(null)
+                      }
+                    }}
+                    className={`flex w-full items-center justify-between px-4 py-3 text-[13px] font-bold uppercase tracking-wide transition-colors ${
+                      isSelected
+                        ? 'text-[#CC4B37]'
+                        : 'text-[#111111] hover:bg-[#F7F7F7]'
+                    }`}
+                    style={jost}
+                  >
+                    {cat.nombre}
+                    {subs.length > 0 && (
+                      <span
+                        className={`flex h-6 w-6 items-center justify-center transition-transform ${
+                          isExpanded ? 'rotate-180 bg-[#CC4B37]' : 'bg-[#EEEEEE]'
+                        }`}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path
+                            d="M6 9l6 6 6-6"
+                            stroke={isExpanded ? 'white' : '#666'}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                  {/* Subcategorías */}
+                  {isExpanded && subs.length > 0 && (
+                    <div className="bg-[#F7F7F7]">
+                      {subs.map((sub) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() =>
+                            setFiltroCategoriaId(
+                              filtroCategoriaId === sub.id ? cat.id : sub.id
+                            )
+                          }
+                          className={`flex w-full items-center gap-2 px-8 py-2.5 text-left text-[12px] transition-colors ${
+                            filtroCategoriaId === sub.id
+                              ? 'font-bold text-[#CC4B37]'
+                              : 'text-[#555555] hover:text-[#111111]'
+                          }`}
+                          style={lato}
+                        >
+                          <span className="text-[#CCCCCC]">›</span>
+                          {sub.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
+          {/* Marcas */}
           {brands.length > 0 && (
-            <>
+            <div className="border-b border-[#EEEEEE] px-4 py-3">
               <p
-                className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#999999]"
+                className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#AAAAAA]"
                 style={jost}
               >
                 Marca
               </p>
-              <div className="mb-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLocalMarcaId('')}
-                  className={`border px-3 py-2 text-[10px] font-extrabold uppercase ${
-                    !localMarcaId
-                      ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
-                      : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
-                  }`}
-                  style={jost}
-                >
-                  Todas
-                </button>
+              <div className="flex flex-col gap-0.5">
                 {brands.map((b) => (
                   <button
                     key={b.id}
                     type="button"
-                    onClick={() => setLocalMarcaId(localMarcaId === b.id ? '' : b.id)}
-                    className={`border px-3 py-2 text-[10px] font-extrabold uppercase ${
-                      localMarcaId === b.id
-                        ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
-                        : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
+                    onClick={() => setFiltroMarcaId(filtroMarcaId === b.id ? '' : b.id)}
+                    className={`w-full py-2 text-left text-[13px] transition-colors ${
+                      filtroMarcaId === b.id
+                        ? 'font-bold text-[#CC4B37]'
+                        : 'text-[#444444] hover:text-[#111111]'
                     }`}
-                    style={jost}
+                    style={lato}
                   >
                     {b.nombre}
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setLocalSoloStock((v) => !v)}
-            className={`flex items-center gap-2 border px-4 py-2 text-[10px] font-extrabold uppercase ${
-              localSoloStock
-                ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
-                : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'
-            }`}
-            style={jost}
-          >
-            Solo en stock
-          </button>
+          {/* Condición */}
+          <div className="border-b border-[#EEEEEE] px-4 py-3">
+            <p
+              className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#AAAAAA]"
+              style={jost}
+            >
+              Condición
+            </p>
+            <div className="flex flex-col gap-0.5">
+              {(
+                [
+                  ['', 'Todos'],
+                  ['nuevo', 'Nuevo'],
+                  ['outlet', 'Outlet'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val || 'all'}
+                  type="button"
+                  onClick={() => setFiltroCondicion(val)}
+                  className={`w-full py-2 text-left text-[13px] transition-colors ${
+                    filtroCondicion === val
+                      ? 'font-bold text-[#CC4B37]'
+                      : 'text-[#444444] hover:text-[#111111]'
+                  }`}
+                  style={lato}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Stock */}
+          <div className="px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setFiltroSoloStock((v) => !v)}
+              className={`flex w-full items-center gap-2.5 py-2 text-[13px] transition-colors ${
+                filtroSoloStock ? 'font-bold text-[#CC4B37]' : 'text-[#444444]'
+              }`}
+              style={lato}
+            >
+              <span
+                className={`flex h-4 w-4 shrink-0 items-center justify-center border ${
+                  filtroSoloStock ? 'border-[#CC4B37] bg-[#CC4B37]' : 'border-[#CCCCCC]'
+                }`}
+              >
+                {filtroSoloStock && (
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                    <path
+                      d="M1.5 5l2.5 2.5 4.5-4.5"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+              </span>
+              Solo en stock
+            </button>
+          </div>
+
+          {/* Limpiar + Aplicar */}
+          {activeCount > 0 && (
+            <div className="border-t border-[#EEEEEE] px-4 py-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setFiltroCondicion('')
+                  setFiltroCategoriaId('')
+                  setFiltroMarcaId('')
+                  setFiltroSoloStock(false)
+                  setDrawerOpen(false)
+                }}
+                className="w-full bg-[#CC4B37] py-3 text-[11px] font-extrabold uppercase tracking-wide text-white"
+                style={jost}
+              >
+                Limpiar y cerrar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

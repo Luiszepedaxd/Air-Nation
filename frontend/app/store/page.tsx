@@ -98,7 +98,12 @@ export default async function StorePage() {
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F7F7F7] text-[#111111]">
-      <StoreExploreClient products={products} categories={categories} brands={brands} />
+      <StoreExploreClient
+        products={products}
+        categories={categories}
+        brands={brands}
+        carruselActivo={true}
+      />
     </div>
   )
 }
