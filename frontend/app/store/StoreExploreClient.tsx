@@ -120,6 +120,7 @@ export function StoreExploreClient({
   const [mobileBusquedaOpen, setMobileBusquedaOpen] = useState(false)
   // Estado acordeón — qué categoría está expandida en el drawer
   const [drawerCatExpandida, setDrawerCatExpandida] = useState<string | null>(null)
+  const [drawerMarcasOpen, setDrawerMarcasOpen] = useState(false)
 
   const filtered = useMemo(() => {
     let list = products
@@ -547,32 +548,32 @@ export function StoreExploreClient({
             })}
           </div>
 
-          {/* Marcas */}
           {brands.length > 0 && (
-            <div className="border-b border-[#EEEEEE] px-4 py-3">
-              <p
-                className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#AAAAAA]"
-                style={jost}
-              >
+            <div className="border-b border-[#EEEEEE]">
+              <button type="button"
+                onClick={() => setDrawerMarcasOpen(v => !v)}
+                className="flex w-full items-center justify-between px-4 py-3 text-[13px] font-bold uppercase tracking-wide text-[#111111] hover:bg-[#F7F7F7]"
+                style={jost}>
                 Marca
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {brands.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => setFiltroMarcaId(filtroMarcaId === b.id ? '' : b.id)}
-                    className={`w-full py-2 text-left text-[13px] transition-colors ${
-                      filtroMarcaId === b.id
-                        ? 'font-bold text-[#CC4B37]'
-                        : 'text-[#444444] hover:text-[#111111]'
-                    }`}
-                    style={lato}
-                  >
-                    {b.nombre}
-                  </button>
-                ))}
-              </div>
+                <span className={`flex h-6 w-6 items-center justify-center transition-transform ${drawerMarcasOpen ? 'rotate-180 bg-[#CC4B37]' : 'bg-[#EEEEEE]'}`}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 9l6 6 6-6" stroke={drawerMarcasOpen ? 'white' : '#666'} strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
+                </span>
+              </button>
+              {drawerMarcasOpen && (
+                <div className="bg-[#F7F7F7]">
+                  {brands.map(b => (
+                    <button key={b.id} type="button"
+                      onClick={() => setFiltroMarcaId(filtroMarcaId === b.id ? '' : b.id)}
+                      className={`flex w-full items-center gap-2 px-8 py-2.5 text-left text-[12px] transition-colors ${filtroMarcaId === b.id ? 'font-bold text-[#CC4B37]' : 'text-[#555555] hover:text-[#111111]'}`}
+                      style={lato}>
+                      <span className="text-[#CCCCCC]">›</span>
+                      {b.nombre}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -695,8 +696,6 @@ function BlockRenderer({
           </>
         )}
         {!c.imagen_url && <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A]"/>}
-
-        <div className="absolute left-0 top-0 h-full w-1 bg-[#CC4B37]"/>
 
         <div className="relative z-10 flex h-full flex-col justify-center px-8 py-16 md:px-16 md:py-20" style={{ minHeight: 340 }}>
           <div className="mb-4 flex items-center gap-3">
