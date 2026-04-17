@@ -676,36 +676,71 @@ function BlockForm({
               onChange={(e) => setField('titulo_seccion', e.target.value)}
             />
           </Field>
-          <Field
-            label="IDs de productos (uno por línea)"
-            labelCls={labelCls}
-            helper="Puedes copiar los IDs desde la tab Productos."
-          >
-            <textarea
-              rows={6}
-              className={inputCls}
-              value={
-                Array.isArray(state.product_ids)
-                  ? (state.product_ids as string[]).join('\n')
-                  : ''
-              }
-              onChange={(e) =>
-                setField(
-                  'product_ids',
-                  e.target.value
-                    .split('\n')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                )
-              }
-              placeholder="Pega los IDs de productos separados por nueva línea"
-            />
-          </Field>
-          {products.length > 0 && (
-            <p className="text-[11px] text-[#999999]" style={latoBody}>
-              Hay {products.length} productos disponibles.
-            </p>
-          )}
+          {(() => {
+            const selectedIds: string[] = Array.isArray(state.product_ids)
+              ? ((state.product_ids as unknown[]).filter(
+                  (v) => typeof v === 'string'
+                ) as string[])
+              : []
+            return (
+              <div className="flex flex-col gap-1">
+                <p
+                  className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#666666]"
+                  style={jostHeading}
+                >
+                  Productos ({selectedIds.length} seleccionados)
+                </p>
+                {products.length === 0 ? (
+                  <p className="text-[12px] text-[#999999]" style={latoBody}>
+                    No hay productos disponibles.
+                  </p>
+                ) : (
+                  <div className="max-h-[240px] overflow-y-auto border border-solid border-[#EEEEEE]">
+                    {products.map((p) => {
+                      const checked = selectedIds.includes(p.id)
+                      return (
+                        <label
+                          key={p.id}
+                          className={`flex cursor-pointer items-center gap-2.5 border-b border-solid border-[#F4F4F4] px-3 py-2 hover:bg-[#F9F9F9] ${
+                            checked ? 'bg-[#FFF5F4]' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              const next = checked
+                                ? selectedIds.filter((id) => id !== p.id)
+                                : [...selectedIds, p.id]
+                              setField('product_ids', next)
+                            }}
+                            className="h-3.5 w-3.5 accent-[#CC4B37]"
+                          />
+                          <span
+                            className="text-[12px] text-[#333333]"
+                            style={latoBody}
+                          >
+                            {p.nombre || '(sin nombre)'}
+                          </span>
+                          {checked && (
+                            <span
+                              className="ml-auto text-[10px] font-bold text-[#CC4B37]"
+                              style={jostHeading}
+                            >
+                              ✓
+                            </span>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+                <p className="text-[10px] text-[#AAAAAA]" style={latoBody}>
+                  El orden en el carrusel sigue el orden de selección.
+                </p>
+              </div>
+            )
+          })()}
         </>
       )}
 

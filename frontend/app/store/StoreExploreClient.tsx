@@ -843,7 +843,7 @@ function BlockRenderer({
     return (
       <div
         className="relative w-full overflow-hidden bg-[#111111]"
-        style={{ minHeight: 320 }}
+        style={{ minHeight: 280, maxWidth: '100vw' }}
       >
         {c.imagen_url && (
           <img
@@ -855,7 +855,7 @@ function BlockRenderer({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         <div
           className="relative z-10 flex flex-col items-start justify-end px-6 py-10 md:px-12 md:py-14"
-          style={{ minHeight: 320 }}
+          style={{ minHeight: 280 }}
         >
           <h2
             className="text-3xl font-extrabold uppercase leading-tight text-white drop-shadow-lg md:text-5xl"
@@ -919,7 +919,10 @@ function BlockRenderer({
             {c.titulo}
           </h3>
           {c.descripcion && (
-            <p className="mt-1 max-w-[400px] text-[13px] text-white/70" style={lato}>
+            <p
+              className="mt-1 line-clamp-2 max-w-[400px] text-[13px] text-white/70"
+              style={lato}
+            >
               {c.descripcion}
             </p>
           )}
@@ -1040,7 +1043,7 @@ function BlockRenderer({
               {c.titulo_seccion}
             </p>
           )}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
             {c.items.map((item, i) => (
               <button
                 key={i}

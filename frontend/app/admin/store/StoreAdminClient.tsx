@@ -331,6 +331,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                   <tr className="bg-[#F4F4F4]">
                     {(
                       [
+                        'ID',
                         'NOMBRE',
                         'PRECIO',
                         'STOCK',
@@ -366,6 +367,47 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                         key={id || i}
                         className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
                       >
+                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                          {id ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                  navigator.clipboard.writeText(id).catch(() => {})
+                                }
+                              }}
+                              title="Copiar ID completo"
+                              className="flex items-center gap-1 font-mono text-[10px] text-[#999999] transition-colors hover:text-[#CC4B37]"
+                              style={{ borderRadius: 2 }}
+                            >
+                              {id.slice(0, 8)}…
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden
+                              >
+                                <rect
+                                  x="9"
+                                  y="9"
+                                  width="13"
+                                  height="13"
+                                  rx="1"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                />
+                                <path
+                                  d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                />
+                              </svg>
+                            </button>
+                          ) : (
+                            <span className="font-mono text-[10px] text-[#CCCCCC]">—</span>
+                          )}
+                        </td>
                         <td className="border border-solid border-[#EEEEEE] px-3 py-2 font-semibold">
                           {nombre || '—'}
                         </td>
