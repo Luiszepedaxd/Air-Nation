@@ -5,6 +5,7 @@ import { StoreExploreClient } from './StoreExploreClient'
 import type { EditorialData } from './StoreExploreClient'
 import type { StoreBrand, StoreCategory, StoreProduct } from './types'
 
+export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export const metadata: Metadata = {
