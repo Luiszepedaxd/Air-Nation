@@ -300,7 +300,7 @@ export function StoreExploreClient({
         </div>
       </header>
 
-      {/* ── BLOQUES HOMEPAGE ── */}
+      {/* ── HOMEPAGE ── */}
       {(() => {
         const hero = blocks.find(b => b.tipo === 'hero')
         const carrusel = blocks.find(b => b.tipo === 'carrusel_productos')
@@ -311,39 +311,53 @@ export function StoreExploreClient({
 
         return (
           <>
-            {/* HERO — full width */}
-            {hero && <BlockRenderer block={hero} products={products} brands={brands} categories={categories}/>}
+            {/* 1. HERO */}
+            {hero && <HeroBlock block={hero} />}
 
-            {/* FRANJA EDITORIAL — carrusel + primer banner lado a lado en desktop */}
+            {/* 2. FRANJA EDITORIAL — mobile: banner arriba, carrusel abajo. desktop: lado a lado */}
             {(carrusel || banners[0]) && (
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_380px] border-y border-[#EEEEEE] bg-white">
-                {carrusel && (
-                  <div className="border-b border-[#EEEEEE] md:border-b-0 md:border-r">
-                    <BlockRenderer block={carrusel} products={products} brands={brands} categories={categories}/>
-                  </div>
-                )}
-                {banners[0] && (
-                  <BlockRenderer block={banners[0]} products={products} brands={brands} categories={categories}/>
-                )}
+              <div className="bg-white">
+                {/* Mobile: banner primero */}
+                <div className="md:hidden">
+                  {banners[0] && <BannerProductoBlock block={banners[0]} products={products} brands={brands} isMobile />}
+                  {carrusel && <CarruselBlock block={carrusel} products={products} brands={brands} />}
+                </div>
+                {/* Desktop: lado a lado con misma altura */}
+                <div className="hidden md:grid md:grid-cols-[1fr_420px]" style={{ minHeight: 320 }}>
+                  {carrusel && (
+                    <div className="border-r border-[#EEEEEE]">
+                      <CarruselBlock block={carrusel} products={products} brands={brands} />
+                    </div>
+                  )}
+                  {banners[0] && <BannerProductoBlock block={banners[0]} products={products} brands={brands} />}
+                </div>
               </div>
             )}
 
-            {/* SEGUNDO BANNER — si existe, full width */}
-            {banners[1] && <BlockRenderer block={banners[1]} products={products} brands={brands} categories={categories}/>}
+            {/* 3. CATEGORÍAS */}
+            {cats && <CategoriasBlock block={cats} />}
 
-            {/* CATEGORÍAS — scroll horizontal compacto */}
-            {cats && <BlockRenderer block={cats} products={products} brands={brands} categories={categories}/>}
+            {/* 4. SEGUNDO BANNER full width */}
+            {banners[1] && <BannerProductoBlock block={banners[1]} products={products} brands={brands} fullWidth />}
 
-            {/* BLOG — si existe, antes del grid */}
-            {blog && <BlockRenderer block={blog} products={products} brands={brands} categories={categories}/>}
+            {/* 5. BLOG */}
+            {blog && <BlogBlock block={blog} />}
 
-            {/* TEXTOS LIBRES — antes del grid */}
-            {textos.map(t => (
-              <BlockRenderer key={t.id} block={t} products={products} brands={brands} categories={categories}/>
-            ))}
+            {/* 6. TEXTOS LIBRES */}
+            {textos.map(t => <TextoLibreBlock key={t.id} block={t} />)}
           </>
         )
       })()}
+
+      {/* Separador sección productos */}
+      <div className="border-t border-[#EEEEEE] bg-[#F5F5F5] px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-[1200px] items-center gap-2">
+          <div className="h-4 w-0.5" style={{ backgroundColor: '#CC4B37' }}/>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0A0A0A]" style={jost}>
+            Todos los productos
+          </p>
+        </div>
+      </div>
 
       {/* ── BODY: grid de productos ── */}
       <div className="mx-auto max-w-[1200px] px-4 py-4 md:px-6 md:py-6">
@@ -700,291 +714,281 @@ export function StoreExploreClient({
 }
 
 // ────────────────────────────────────────────────────────────────
-// BlockRenderer — renderiza cada bloque del homepage según su tipo
+// Componentes de bloques del homepage
 // ────────────────────────────────────────────────────────────────
 
-function BlockRenderer({
+function HeroBlock({ block }: { block: HomepageBlock }) {
+  const c = block.config as HeroConfig
+  return (
+    <div className="relative overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 360, maxWidth: '100vw' }}>
+      {c.imagen_url && (
+        <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ opacity: 0.55 }}/>
+      )}
+      {/* Gradiente lateral — texto legible */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0.15) 100%)' }}/>
+      {/* Gradiente bottom */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)' }}/>
+
+      <div className="relative z-10 flex flex-col justify-center px-6 py-14 md:px-16 md:py-20" style={{ minHeight: 360 }}>
+        {/* Eyebrow */}
+        <div className="mb-3 flex items-center gap-2">
+          <div className="h-px w-6" style={{ backgroundColor: '#CC4B37' }}/>
+          <span className="text-[9px] font-extrabold uppercase tracking-[0.3em] text-[#CC4B37]" style={jost}>
+            AirNation Store
+          </span>
+        </div>
+        <h2 className="max-w-[520px] text-[2.2rem] font-extrabold uppercase leading-[1.0] text-white md:text-[3.5rem]" style={jost}>
+          {c.titulo}
+        </h2>
+        {c.subtitulo && (
+          <p className="mt-3 max-w-[380px] text-[13px] leading-relaxed text-white/65 md:text-[15px]" style={lato}>
+            {c.subtitulo}
+          </p>
+        )}
+        {c.cta_texto && c.cta_link && (
+          <Link href={c.cta_link}
+            className="mt-7 inline-flex w-fit items-center gap-2.5 px-6 py-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-white transition-all"
+            style={{ ...jost, backgroundColor: '#CC4B37' }}>
+            {c.cta_texto}
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </Link>
+        )}
+      </div>
+
+      {/* Decoración — línea bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(to right, #CC4B37, transparent)' }}/>
+    </div>
+  )
+}
+
+function BannerProductoBlock({
   block,
-  products,
-  brands,
-  categories: _categories,
+  products: _p,
+  brands: _b,
+  fullWidth = false,
+  isMobile = false,
 }: {
   block: HomepageBlock
   products: StoreProduct[]
   brands: StoreBrand[]
-  categories: StoreCategory[]
+  fullWidth?: boolean
+  isMobile?: boolean
 }) {
-  void _categories
-  const cfg = block.config
+  void _p; void _b
+  const c = block.config as BannerProductoConfig
+  const minH = fullWidth ? 280 : isMobile ? 220 : 320
 
-  // ── HERO ──────────────────────────────────────────────────────────────────
-  if (block.tipo === 'hero') {
-    const c = cfg as HeroConfig
-    return (
-      <div className="relative w-full overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 340, maxWidth: '100vw' }}>
-        {c.imagen_url && (
-          <>
-            <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover"/>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-black/10"/>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"/>
-          </>
+  return (
+    <div className="relative overflow-hidden bg-[#0A0A0A]" style={{ minHeight: minH }}>
+      {c.imagen_url && (
+        <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ opacity: 0.45 }}/>
+      )}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.1) 100%)' }}/>
+      {/* Línea roja top */}
+      <div className="absolute left-0 right-0 top-0 h-0.5" style={{ background: 'linear-gradient(to right, #CC4B37 0%, rgba(204,75,55,0.3) 60%, transparent 100%)' }}/>
+
+      <div className="relative z-10 flex h-full flex-col justify-end px-6 py-7" style={{ minHeight: minH }}>
+        {c.marca && (
+          <span className="mb-2 inline-block w-fit px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.2em] text-white" style={{ ...jost, backgroundColor: '#CC4B37' }}>
+            {c.marca}
+          </span>
         )}
-        {!c.imagen_url && <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A]"/>}
-
-        <div className="relative z-10 flex h-full flex-col justify-center px-8 py-16 md:px-16 md:py-20" style={{ minHeight: 340 }}>
-          <div className="mb-4 flex items-center gap-3">
-            <div className="h-px w-8 bg-[#CC4B37]"/>
-            <span className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-[#CC4B37]" style={jost}>
-              AirNation Store
-            </span>
-          </div>
-          <h2 className="max-w-[600px] text-4xl font-extrabold uppercase leading-[1.05] text-white md:text-6xl" style={jost}>
-            {c.titulo}
-          </h2>
-          {c.subtitulo && (
-            <p className="mt-4 max-w-[440px] text-[15px] leading-relaxed text-white/70 md:text-[17px]" style={lato}>
-              {c.subtitulo}
-            </p>
-          )}
-          {c.cta_texto && c.cta_link && (
-            <div className="mt-8 flex items-center gap-4">
-              <Link href={c.cta_link}
-                className="inline-flex items-center gap-2 bg-[#CC4B37] px-7 py-3.5 text-[12px] font-extrabold uppercase tracking-[0.12em] text-white transition-all hover:bg-[#B03C2C] hover:shadow-lg"
-                style={jost}>
-                {c.cta_texto}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </Link>
-            </div>
-          )}
-        </div>
-
-        <div className="absolute bottom-6 right-8 hidden items-center gap-2 md:flex">
-          <div className="h-1.5 w-6 bg-[#CC4B37]"/>
-          <div className="h-1.5 w-1.5 rounded-full bg-white/30"/>
-          <div className="h-1.5 w-1.5 rounded-full bg-white/30"/>
-        </div>
+        <h3 className={`font-extrabold uppercase leading-tight text-white ${fullWidth ? 'text-[1.8rem] md:text-[2.5rem]' : 'text-[1.5rem]'}`} style={jost}>
+          {c.titulo}
+        </h3>
+        {c.descripcion && (
+          <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-white/55" style={lato}>
+            {c.descripcion}
+          </p>
+        )}
+        {c.cta_link && (
+          <Link href={c.cta_link}
+            className="mt-4 inline-flex w-fit items-center gap-2 border px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition-all hover:bg-white hover:text-[#0A0A0A]"
+            style={{ ...jost, borderColor: 'rgba(255,255,255,0.35)' }}>
+            Ver producto
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </Link>
+        )}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
-  // ── BANNER PRODUCTO ───────────────────────────────────────────────────────
-  if (block.tipo === 'banner_producto') {
-    const c = cfg as BannerProductoConfig
-    return (
-      <div className="relative h-full w-full overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 280 }}>
-        {c.imagen_url && (
-          <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50"/>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/10"/>
-        <div className="absolute left-0 right-0 top-0 h-0.5 bg-gradient-to-r from-[#CC4B37] via-[#CC4B37]/50 to-transparent"/>
-        <div className="relative z-10 flex h-full flex-col justify-end px-6 py-8" style={{ minHeight: 280 }}>
-          {c.marca && (
-            <span className="mb-2 inline-block bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white w-fit" style={jost}>
-              {c.marca}
-            </span>
-          )}
-          <h3 className="text-2xl font-extrabold uppercase leading-tight text-white" style={jost}>
-            {c.titulo}
-          </h3>
-          {c.descripcion && (
-            <p className="mt-1.5 line-clamp-2 text-[12px] leading-relaxed text-white/60" style={lato}>
-              {c.descripcion}
-            </p>
-          )}
-          {c.cta_link && (
-            <Link href={c.cta_link}
-              className="mt-4 inline-flex items-center gap-2 border border-white/40 bg-white/10 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] text-white backdrop-blur-sm transition-all hover:bg-white hover:text-[#111111] w-fit"
-              style={jost}>
-              Ver producto
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+function CarruselBlock({ block, products, brands }: { block: HomepageBlock; products: StoreProduct[]; brands: StoreBrand[] }) {
+  const c = block.config as CarruselProductosConfig
+  const blockProducts = (c.product_ids ?? [])
+    .map(id => products.find(p => p.id === id))
+    .filter((p): p is StoreProduct => Boolean(p))
+  if (blockProducts.length === 0) return null
+
+  return (
+    <div className="bg-white px-4 py-5 md:px-6 md:py-6">
+      {/* Header sección */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-0.5" style={{ backgroundColor: '#CC4B37' }}/>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0A0A0A]" style={jost}>
+            {c.titulo_seccion}
+          </p>
+        </div>
+        <Link href="/store" className="text-[10px] font-bold uppercase tracking-wide hover:underline" style={{ ...jost, color: '#CC4B37' }}>
+          Ver todos →
+        </Link>
+      </div>
+
+      {/* Cards scroll */}
+      <div className="flex gap-2.5 overflow-x-auto" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', paddingBottom: 4 }}>
+        {blockProducts.map(product => {
+          const foto = product.fotos_urls?.[0] ?? null
+          const brand = brands.find(b => b.id === product.brand_id)
+          return (
+            <Link key={product.id} href={`/store/${product.id}`}
+              className="group flex w-[130px] shrink-0 flex-col overflow-hidden border bg-white transition-all hover:shadow-md sm:w-[150px]"
+              style={{ scrollSnapAlign: 'start', borderColor: '#EEEEEE' }}>
+              <div className="relative w-full bg-[#F5F5F5]" style={{ aspectRatio: '1/1' }}>
+                {foto
+                  ? <img src={foto} alt="" className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"/>
+                  : <div className="flex h-full w-full items-center justify-center" style={{ color: '#DDDDDD' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                        <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                }
+                {product.condicion === 'outlet' && (
+                  <span className="absolute left-1.5 top-1.5 px-1 py-0.5 text-[7px] font-extrabold uppercase text-white" style={{ ...jost, backgroundColor: '#CC4B37' }}>OUTLET</span>
+                )}
+              </div>
+              <div className="flex flex-1 flex-col p-2">
+                {brand && <p className="mb-0.5 text-[8px] font-bold uppercase" style={{ ...jost, color: '#CC4B37' }}>{brand.nombre}</p>}
+                <p className="line-clamp-2 flex-1 text-[10px] leading-snug text-[#333333]" style={lato}>{product.nombre}</p>
+                <p className="mt-1.5 text-[12px] font-extrabold text-[#0A0A0A]" style={jost}>${product.precio.toLocaleString('es-MX')}</p>
+              </div>
             </Link>
-          )}
-        </div>
+          )
+        })}
+        {/* Card "Ver todos" */}
+        <Link href="/store"
+          className="flex w-[90px] shrink-0 flex-col items-center justify-center gap-1.5 border border-dashed bg-[#FAFAFA] text-center transition-colors hover:bg-white"
+          style={{ scrollSnapAlign: 'start', borderColor: '#DDDDDD' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden style={{ color: '#CCCCCC' }}>
+            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <p className="text-[9px] font-bold uppercase" style={{ ...jost, color: '#AAAAAA' }}>Ver todos</p>
+        </Link>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
-  // ── CARRUSEL PRODUCTOS ────────────────────────────────────────────────────
-  if (block.tipo === 'carrusel_productos') {
-    const c = cfg as CarruselProductosConfig
-    const blockProducts = (c.product_ids ?? [])
-      .map(id => products.find(p => p.id === id))
-      .filter((p): p is StoreProduct => Boolean(p))
-    if (blockProducts.length === 0) return null
-    return (
-      <div className="h-full bg-white px-4 py-5 md:px-6">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="h-4 w-0.5 bg-[#CC4B37]"/>
-            <p className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#111111]" style={jost}>
+function CategoriasBlock({ block }: { block: HomepageBlock }) {
+  const c = block.config as CategoriasGridConfig
+  if (!c.items?.length) return null
+  return (
+    <div className="border-y border-[#EEEEEE] bg-white py-4">
+      <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+        {c.titulo_seccion && (
+          <div className="mb-3 flex items-center gap-2">
+            <div className="h-3.5 w-0.5" style={{ backgroundColor: '#CC4B37' }}/>
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#0A0A0A]" style={jost}>
               {c.titulo_seccion}
             </p>
           </div>
-          <Link href="/store" className="text-[10px] font-bold text-[#CC4B37] hover:underline" style={jost}>
-            Ver todos →
-          </Link>
-        </div>
-        <div className="flex gap-2.5 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}>
-          {blockProducts.map(product => {
-            const foto = product.fotos_urls?.[0] ?? null
-            const brand = brands.find(b => b.id === product.brand_id)
-            return (
-              <Link key={product.id} href={`/store/${product.id}`}
-                className="group flex w-[140px] shrink-0 flex-col overflow-hidden bg-white border border-[#EEEEEE] transition-all hover:border-[#CC4B37] hover:shadow-sm sm:w-[160px]"
-                style={{ scrollSnapAlign: 'start' }}>
-                <div className="relative w-full bg-[#F7F7F7]" style={{ aspectRatio: '1/1' }}>
-                  {foto
-                    ? <img src={foto} alt="" className="h-full w-full object-contain p-2 transition-transform group-hover:scale-105"/>
-                    : <div className="flex h-full w-full items-center justify-center text-[#DDDDDD]">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-                          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                        </svg>
-                      </div>
-                  }
-                  {product.condicion === 'outlet' && (
-                    <span className="absolute left-1.5 top-1.5 bg-[#CC4B37] px-1 py-0.5 text-[7px] font-extrabold uppercase text-white" style={jost}>OUTLET</span>
-                  )}
-                </div>
-                <div className="flex flex-1 flex-col p-2">
-                  {brand && <p className="mb-0.5 text-[8px] font-bold uppercase text-[#CC4B37]" style={jost}>{brand.nombre}</p>}
-                  <p className="line-clamp-2 flex-1 text-[10px] leading-snug text-[#333333]" style={lato}>{product.nombre}</p>
-                  <p className="mt-1.5 text-[13px] font-extrabold text-[#111111]" style={jost}>${product.precio.toLocaleString('es-MX')}</p>
-                </div>
-              </Link>
-            )
-          })}
-          <Link href="/store"
-            className="flex w-[100px] shrink-0 flex-col items-center justify-center gap-1.5 border border-dashed border-[#DDDDDD] bg-[#FAFAFA] text-center transition-colors hover:border-[#CC4B37] hover:bg-white"
-            style={{ scrollSnapAlign: 'start' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#CCCCCC]" aria-hidden>
-              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <p className="text-[9px] font-bold uppercase text-[#AAAAAA]" style={jost}>Ver todos</p>
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  // ── CATEGORÍAS GRID ───────────────────────────────────────────────────────
-  if (block.tipo === 'categorias_grid') {
-    const c = cfg as CategoriasGridConfig
-    if (!c.items?.length) return null
-    return (
-      <div className="border-b border-[#EEEEEE] bg-white py-5">
-        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-          {c.titulo_seccion && (
-            <div className="mb-4 flex items-center gap-2.5">
-              <div className="h-4 w-0.5 bg-[#CC4B37]"/>
-              <p className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-[#111111]" style={jost}>
-                {c.titulo_seccion}
-              </p>
-            </div>
-          )}
-          {/* Scroll horizontal siempre */}
-          <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-            {c.items.map((item, i) => (
-              <button key={i} type="button"
-                className="group relative shrink-0 overflow-hidden bg-[#111111] transition-all hover:shadow-lg"
-                style={{ width: 100, height: 130 }}>
-                {item.imagen_url
-                  ? <img src={item.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60 transition-opacity group-hover:opacity-75"/>
-                  : <div className="absolute inset-0 bg-gradient-to-br from-[#222222] to-[#111111]"/>
-                }
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"/>
-                <div className="absolute bottom-0 left-0 right-0 p-2">
-                  <p className="text-[10px] font-extrabold uppercase leading-tight text-white" style={jost}>
-                    {item.label}
-                  </p>
-                </div>
-                <div className="absolute left-0 top-0 h-0.5 w-0 bg-[#CC4B37] transition-all duration-300 group-hover:w-full"/>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── BLOG DESTACADO ────────────────────────────────────────────────────────
-  if (block.tipo === 'blog_destacado') {
-    const c = cfg as BlogDestacadoConfig
-    return (
-      <div className="bg-[#F7F7F7] py-8">
-        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-          <div className="relative overflow-hidden bg-[#111111]" style={{ minHeight: 200 }}>
-            {c.imagen_url && (
-              <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35"/>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-black/20"/>
-            <div className="absolute left-0 right-0 top-0 h-0.5 bg-[#CC4B37]"/>
-
-            <div className="relative z-10 flex flex-col justify-center px-8 py-10 md:flex-row md:items-center md:gap-8 md:px-12">
-              <div className="flex-1">
-                <span className="mb-3 inline-flex items-center gap-2" style={jost}>
-                  <div className="h-px w-5 bg-[#CC4B37]"/>
-                  <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-[#CC4B37]">Blog</span>
-                </span>
-                <h3 className="text-xl font-extrabold uppercase leading-tight text-white md:text-2xl" style={jost}>
-                  {c.titulo}
-                </h3>
-                {c.extracto && (
-                  <p className="mt-2 max-w-[480px] text-[12px] leading-relaxed text-white/60" style={lato}>
-                    {c.extracto}
-                  </p>
-                )}
+        )}
+        <div className="flex gap-2.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          {c.items.map((item, i) => (
+            <button key={i} type="button"
+              className="group relative shrink-0 overflow-hidden transition-all hover:shadow-lg"
+              style={{ width: 88, height: 115, backgroundColor: '#0A0A0A' }}>
+              {item.imagen_url && (
+                <img src={item.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300" style={{ opacity: 0.55 }}/>
+              )}
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 60%)' }}/>
+              <div className="absolute bottom-0 left-0 right-0 p-2">
+                <p className="text-[9px] font-extrabold uppercase leading-tight text-white" style={jost}>
+                  {item.label}
+                </p>
               </div>
-              {c.cta_link && (
-                <div className="mt-5 md:mt-0 md:shrink-0">
-                  <Link href={c.cta_link}
-                    className="inline-flex items-center gap-2 border border-white/30 px-6 py-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white transition-all hover:bg-white hover:text-[#111111]"
-                    style={jost}>
-                    Leer artículo
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </Link>
-                </div>
+              {/* Hover accent */}
+              <div className="absolute left-0 top-0 h-0.5 w-0 transition-all duration-300 group-hover:w-full" style={{ backgroundColor: '#CC4B37' }}/>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BlogBlock({ block }: { block: HomepageBlock }) {
+  const c = block.config as BlogDestacadoConfig
+  return (
+    <div className="bg-[#F5F5F5] px-4 py-5 md:px-6 md:py-6">
+      <div className="mx-auto max-w-[1200px]">
+        <div className="relative overflow-hidden bg-[#0A0A0A]">
+          {c.imagen_url && (
+            <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover" style={{ opacity: 0.3 }}/>
+          )}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(105deg, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.3) 100%)' }}/>
+          <div className="absolute left-0 right-0 top-0 h-0.5" style={{ backgroundColor: '#CC4B37' }}/>
+
+          <div className="relative z-10 flex flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between md:px-10 md:py-10">
+            <div className="flex-1">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="h-px w-4" style={{ backgroundColor: '#CC4B37' }}/>
+                <span className="text-[9px] font-extrabold uppercase tracking-[0.25em]" style={{ ...jost, color: '#CC4B37' }}>Blog</span>
+              </div>
+              <h3 className="max-w-[500px] text-[1.15rem] font-extrabold uppercase leading-snug text-white md:text-[1.4rem]" style={jost}>
+                {c.titulo}
+              </h3>
+              {c.extracto && (
+                <p className="mt-2 max-w-[440px] text-[12px] leading-relaxed text-white/55" style={lato}>
+                  {c.extracto}
+                </p>
               )}
             </div>
+            {c.cta_link && (
+              <Link href={c.cta_link}
+                className="inline-flex shrink-0 items-center gap-2 border px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition-all hover:bg-white hover:text-[#0A0A0A]"
+                style={{ ...jost, borderColor: 'rgba(255,255,255,0.3)' }}>
+                Leer artículo
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+            )}
           </div>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
-  // ── TEXTO LIBRE ───────────────────────────────────────────────────────────
-  if (block.tipo === 'texto_libre') {
-    const c = cfg as TextoLibreConfig
-    const bg = c.bg_color ?? '#111111'
-    const color = c.text_color ?? '#FFFFFF'
-    return (
-      <div className="relative overflow-hidden" style={{ backgroundColor: bg }}>
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)',
-          backgroundSize: '24px 24px'
-        }}/>
-        <div className="relative z-10 mx-auto max-w-[1200px] px-8 py-10 md:px-12 md:py-12">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              {c.titulo && (
-                <h3 className="text-2xl font-extrabold uppercase md:text-3xl" style={{ ...jost, color }}>
-                  {c.titulo}
-                </h3>
-              )}
-              <p className="mt-1 max-w-[600px] text-[14px] leading-relaxed" style={{ ...lato, color, opacity: 0.75 }}>
-                {c.cuerpo}
-              </p>
-            </div>
+function TextoLibreBlock({ block }: { block: HomepageBlock }) {
+  const c = block.config as TextoLibreConfig
+  const bg = c.bg_color ?? '#0A0A0A'
+  const color = c.text_color ?? '#FFFFFF'
+  return (
+    <div className="relative overflow-hidden" style={{ backgroundColor: bg }}>
+      {/* Pattern de puntos sutil */}
+      <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)', backgroundSize: '20px 20px' }}/>
+      <div className="relative z-10 mx-auto max-w-[1200px] px-6 py-7 md:px-10 md:py-9">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            {c.titulo && (
+              <h3 className="text-[1.2rem] font-extrabold uppercase md:text-[1.5rem]" style={{ ...jost, color }}>
+                {c.titulo}
+              </h3>
+            )}
+            <p className="mt-1 max-w-[560px] text-[13px] leading-relaxed" style={{ ...lato, color, opacity: 0.72 }}>
+              {c.cuerpo}
+            </p>
           </div>
         </div>
       </div>
-    )
-  }
-
-  return null
+    </div>
+  )
 }
