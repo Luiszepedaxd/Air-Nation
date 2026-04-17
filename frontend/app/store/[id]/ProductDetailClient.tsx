@@ -22,6 +22,7 @@ type Props = {
 
 export function ProductDetailClient({ product, brand, category, related }: Props) {
   const [fotoIdx, setFotoIdx] = useState(0)
+  const [descExpanded, setDescExpanded] = useState(false)
   const [cantidad, setCantidad] = useState(1)
   const [tab, setTab] = useState<'descripcion' | 'specs' | 'incluye'>('descripcion')
 
@@ -183,14 +184,27 @@ export function ProductDetailClient({ product, brand, category, related }: Props
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="border border-[#EEEEEE] bg-white px-2.5 py-1.5 text-[10px] font-bold text-[#666666]" style={jost}>
-                svg icono tarjeta Tarjeta
+              <span className="flex items-center gap-1.5 border border-[#EEEEEE] bg-white px-2.5 py-1.5" style={jost}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <rect x="2" y="5" width="20" height="14" rx="2" stroke="#666666" strokeWidth="1.6"/>
+                  <path d="M2 10h20" stroke="#666666" strokeWidth="1.6"/>
+                </svg>
+                <span className="text-[10px] font-bold uppercase text-[#666666]">Tarjeta</span>
               </span>
-              <span className="border border-[#EEEEEE] bg-white px-2.5 py-1.5 text-[10px] font-bold text-[#666666]" style={jost}>
-                svg decide icono de transferencia a lo mejor un $ y correo no lo se Transferencia
+              <span className="flex items-center gap-1.5 border border-[#EEEEEE] bg-white px-2.5 py-1.5" style={jost}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="#666666" strokeWidth="1.6" strokeLinejoin="round"/>
+                  <path d="M9 22V12h6v10" stroke="#666666" strokeWidth="1.6" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-[10px] font-bold uppercase text-[#666666]">Transferencia</span>
               </span>
-              <span className="border border-[#EEEEEE] bg-white px-2.5 py-1.5 text-[10px] font-bold text-[#666666]" style={jost}>
-                define icono de deposito, $ y flecha abajo, no lo se Depósito
+              <span className="flex items-center gap-1.5 border border-[#EEEEEE] bg-white px-2.5 py-1.5" style={jost}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 2L2 7h20L12 2z" stroke="#666666" strokeWidth="1.6" strokeLinejoin="round"/>
+                  <path d="M6 10v8M10 10v8M14 10v8M18 10v8" stroke="#666666" strokeWidth="1.6" strokeLinecap="round"/>
+                  <path d="M2 19h20" stroke="#666666" strokeWidth="1.6" strokeLinecap="round"/>
+                </svg>
+                <span className="text-[10px] font-bold uppercase text-[#666666]">Depósito OXXO/banco</span>
               </span>
             </div>
           </div>
@@ -213,9 +227,19 @@ export function ProductDetailClient({ product, brand, category, related }: Props
           </div>
           <div className="p-5">
             {tab === 'descripcion' && (
-              <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-[#444444]" style={lato}>
-                {product.descripcion || 'Sin descripción disponible.'}
-              </p>
+              <div>
+                <p className={`whitespace-pre-wrap text-[13px] leading-relaxed text-[#444444] ${!descExpanded ? 'line-clamp-4' : ''}`} style={lato}>
+                  {product.descripcion || 'Sin descripción disponible.'}
+                </p>
+                {product.descripcion && product.descripcion.length > 200 && (
+                  <button type="button"
+                    onClick={() => setDescExpanded(v => !v)}
+                    className="mt-2 text-[12px] font-bold text-[#CC4B37] hover:underline"
+                    style={jost}>
+                    {descExpanded ? 'Ver menos ↑' : 'Ver más ↓'}
+                  </button>
+                )}
+              </div>
             )}
             {tab === 'specs' && hasSpecs && (
               <table className="w-full border-collapse text-[12px]">
@@ -242,28 +266,29 @@ export function ProductDetailClient({ product, brand, category, related }: Props
             <p className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#999999]" style={jost}>
               También te puede interesar
             </p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollSnapType: 'x mandatory' }}>
               {related.map(rel => {
                 const foto = rel.fotos_urls?.[0] ?? null
                 return (
                   <Link key={rel.id} href={`/store/${rel.id}`}
-                    className="flex flex-col overflow-hidden border border-[#E8E8E8] bg-white transition-all hover:border-[#CC4B37] hover:shadow-sm">
+                    className="flex w-[140px] shrink-0 flex-col overflow-hidden border border-[#E8E8E8] bg-white transition-all hover:border-[#CC4B37] sm:w-[160px]"
+                    style={{ scrollSnapAlign: 'start' }}>
                     <div className="relative w-full bg-[#F4F4F4]" style={{ aspectRatio: '1/1' }}>
                       {foto
                         ? <img src={foto} alt="" className="h-full w-full object-contain p-2"/>
                         : <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
                               <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
                             </svg>
                           </div>
                       }
                     </div>
                     <div className="p-2">
-                      <p className="line-clamp-2 text-[11px] leading-snug text-[#333333]" style={lato}>{rel.nombre}</p>
-                      <p className="mt-1 text-[13px] font-extrabold text-[#111111]" style={jost}>${rel.precio.toLocaleString('es-MX')}</p>
+                      <p className="line-clamp-2 text-[10px] leading-snug text-[#333333]" style={lato}>{rel.nombre}</p>
+                      <p className="mt-1 text-[12px] font-extrabold text-[#111111]" style={jost}>${rel.precio.toLocaleString('es-MX')}</p>
                       {rel.stock === 0
-                        ? <p className="text-[10px] text-[#CC4B37]" style={lato}>Agotado</p>
-                        : <p className="text-[10px] text-[#22C55E]" style={lato}>✓ En stock</p>
+                        ? <p className="text-[9px] text-[#CC4B37]" style={lato}>Agotado</p>
+                        : <p className="text-[9px] text-[#22C55E]" style={lato}>✓ En stock</p>
                       }
                     </div>
                   </Link>
