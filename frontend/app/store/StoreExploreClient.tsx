@@ -851,252 +851,208 @@ function BlockRenderer({
   void _categories
   const cfg = block.config
 
+  // ── HERO ──────────────────────────────────────────────────────────────────
   if (block.tipo === 'hero') {
     const c = cfg as HeroConfig
     return (
-      <div
-        className="relative w-full overflow-hidden bg-[#111111]"
-        style={{ minHeight: 280, maxWidth: '100vw' }}
-      >
+      <div className="relative w-full overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 420, maxWidth: '100vw' }}>
         {c.imagen_url && (
-          <img
-            src={c.imagen_url}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-60"
-          />
+          <>
+            <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover"/>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-black/10"/>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"/>
+          </>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div
-          className="relative z-10 flex flex-col items-start justify-end px-6 py-10 md:px-12 md:py-14"
-          style={{ minHeight: 280 }}
-        >
-          <h2
-            className="text-3xl font-extrabold uppercase leading-tight text-white drop-shadow-lg md:text-5xl"
-            style={jost}
-          >
+        {!c.imagen_url && <div className="absolute inset-0 bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A]"/>}
+
+        <div className="absolute left-0 top-0 h-full w-1 bg-[#CC4B37]"/>
+
+        <div className="relative z-10 flex h-full flex-col justify-center px-8 py-16 md:px-16 md:py-20" style={{ minHeight: 420 }}>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="h-px w-8 bg-[#CC4B37]"/>
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.25em] text-[#CC4B37]" style={jost}>
+              AirNation Store
+            </span>
+          </div>
+          <h2 className="max-w-[600px] text-4xl font-extrabold uppercase leading-[1.05] text-white md:text-6xl" style={jost}>
             {c.titulo}
           </h2>
           {c.subtitulo && (
-            <p
-              className="mt-2 max-w-[480px] text-[14px] text-white/80 md:text-[16px]"
-              style={lato}
-            >
+            <p className="mt-4 max-w-[440px] text-[15px] leading-relaxed text-white/70 md:text-[17px]" style={lato}>
               {c.subtitulo}
             </p>
           )}
           {c.cta_texto && c.cta_link && (
-            <Link
-              href={c.cta_link}
-              className="mt-5 inline-block bg-[#CC4B37] px-6 py-3 text-[12px] font-extrabold uppercase tracking-wide text-white transition-opacity hover:opacity-90"
-              style={jost}
-            >
-              {c.cta_texto}
-            </Link>
+            <div className="mt-8 flex items-center gap-4">
+              <Link href={c.cta_link}
+                className="inline-flex items-center gap-2 bg-[#CC4B37] px-7 py-3.5 text-[12px] font-extrabold uppercase tracking-[0.12em] text-white transition-all hover:bg-[#B03C2C] hover:shadow-lg"
+                style={jost}>
+                {c.cta_texto}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Link>
+            </div>
           )}
+        </div>
+
+        <div className="absolute bottom-6 right-8 hidden items-center gap-2 md:flex">
+          <div className="h-1.5 w-6 bg-[#CC4B37]"/>
+          <div className="h-1.5 w-1.5 rounded-full bg-white/30"/>
+          <div className="h-1.5 w-1.5 rounded-full bg-white/30"/>
         </div>
       </div>
     )
   }
 
+  // ── BANNER PRODUCTO ───────────────────────────────────────────────────────
   if (block.tipo === 'banner_producto') {
     const c = cfg as BannerProductoConfig
     return (
-      <div
-        className="relative w-full overflow-hidden bg-[#111111]"
-        style={{ minHeight: 220 }}
-      >
+      <div className="relative w-full overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 260 }}>
         {c.imagen_url && (
-          <img
-            src={c.imagen_url}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-50"
-          />
+          <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-45"/>
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent" />
-        <div
-          className="relative z-10 flex flex-col justify-center px-6 py-8 md:px-12"
-          style={{ minHeight: 220 }}
-        >
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent"/>
+        <div className="absolute left-0 right-0 top-0 h-0.5 bg-gradient-to-r from-[#CC4B37] via-[#CC4B37]/50 to-transparent"/>
+
+        <div className="relative z-10 flex h-full flex-col justify-center px-8 py-10 md:px-16 md:py-14" style={{ minHeight: 260 }}>
           {c.marca && (
-            <span
-              className="mb-2 inline-block w-fit bg-[#CC4B37] px-2 py-0.5 text-[10px] font-extrabold uppercase text-white"
-              style={jost}
-            >
+            <span className="mb-3 inline-block bg-[#CC4B37] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.18em] text-white w-fit" style={jost}>
               {c.marca}
             </span>
           )}
-          <h3
-            className="text-2xl font-extrabold uppercase leading-tight text-white md:text-3xl"
-            style={jost}
-          >
+          <h3 className="max-w-[480px] text-3xl font-extrabold uppercase leading-tight text-white md:text-4xl" style={jost}>
             {c.titulo}
           </h3>
           {c.descripcion && (
-            <p
-              className="mt-1 line-clamp-2 max-w-[400px] text-[13px] text-white/70"
-              style={lato}
-            >
+            <p className="mt-2 max-w-[380px] line-clamp-2 text-[13px] leading-relaxed text-white/60" style={lato}>
               {c.descripcion}
             </p>
           )}
           {c.cta_link && (
-            <Link
-              href={c.cta_link}
-              className="mt-4 inline-block w-fit bg-[#CC4B37] px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white hover:opacity-90"
-              style={jost}
-            >
+            <Link href={c.cta_link}
+              className="mt-5 inline-flex items-center gap-2 border border-white/40 bg-white/10 px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white backdrop-blur-sm transition-all hover:bg-white hover:text-[#111111] w-fit"
+              style={jost}>
               Ver producto
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </Link>
           )}
+        </div>
+
+        <div className="absolute right-12 top-1/2 hidden -translate-y-1/2 select-none text-[120px] font-extrabold leading-none text-white/5 md:block" style={jost}>
+          01
         </div>
       </div>
     )
   }
 
+  // ── CARRUSEL PRODUCTOS ────────────────────────────────────────────────────
   if (block.tipo === 'carrusel_productos') {
     const c = cfg as CarruselProductosConfig
     const blockProducts = (c.product_ids ?? [])
-      .map((id) => products.find((p) => p.id === id))
+      .map(id => products.find(p => p.id === id))
       .filter((p): p is StoreProduct => Boolean(p))
     if (blockProducts.length === 0) return null
+
     return (
-      <div className="bg-white py-5">
+      <div className="bg-white py-8 border-y border-[#F0F0F0]">
         <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-          <p
-            className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
-            style={jost}
-          >
-            {c.titulo_seccion}
-          </p>
-          <div
-            className="flex gap-3 overflow-x-auto pb-2"
-            style={{ scrollSnapType: 'x mandatory' }}
-          >
-            {blockProducts.map((product) => {
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-1 bg-[#CC4B37]"/>
+              <p className="text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#111111]" style={jost}>
+                {c.titulo_seccion}
+              </p>
+            </div>
+            <Link href="/store" className="text-[11px] font-bold text-[#CC4B37] hover:underline" style={jost}>
+              Ver todos →
+            </Link>
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto pb-3" style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}>
+            {blockProducts.map(product => {
               const foto = product.fotos_urls?.[0] ?? null
-              const brand = brands.find((b) => b.id === product.brand_id)
+              const brand = brands.find(b => b.id === product.brand_id)
               return (
-                <Link
-                  key={product.id}
-                  href={`/store/${product.id}`}
-                  className="flex w-[150px] shrink-0 flex-col overflow-hidden border border-[#E8E8E8] bg-white transition-colors hover:border-[#CC4B37] sm:w-[180px]"
-                  style={{ scrollSnapAlign: 'start' }}
-                >
-                  <div
-                    className="relative w-full bg-[#F4F4F4]"
-                    style={{ aspectRatio: '1/1' }}
-                  >
-                    {foto ? (
-                      <img
-                        src={foto}
-                        alt=""
-                        className="h-full w-full object-contain p-2"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
-                        <svg
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden
-                        >
-                          <path
-                            d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </div>
+                <Link key={product.id} href={`/store/${product.id}`}
+                  className="group flex w-[160px] shrink-0 flex-col overflow-hidden bg-white border border-[#EEEEEE] transition-all hover:border-[#CC4B37] hover:shadow-md sm:w-[200px]"
+                  style={{ scrollSnapAlign: 'start' }}>
+                  <div className="relative w-full bg-[#F7F7F7]" style={{ aspectRatio: '1/1' }}>
+                    {foto
+                      ? <img src={foto} alt="" className="h-full w-full object-contain p-3 transition-transform group-hover:scale-105"/>
+                      : <div className="flex h-full w-full items-center justify-center text-[#DDDDDD]">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+                            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                    }
+                    {product.condicion === 'outlet' && (
+                      <span className="absolute left-2 top-2 bg-[#CC4B37] px-1.5 py-0.5 text-[8px] font-extrabold uppercase text-white" style={jost}>OUTLET</span>
                     )}
                   </div>
-                  <div className="p-2">
-                    {brand && (
-                      <p
-                        className="text-[9px] font-bold uppercase text-[#CC4B37]"
-                        style={jost}
-                      >
-                        {brand.nombre}
-                      </p>
-                    )}
-                    <p
-                      className="line-clamp-2 text-[10px] leading-snug text-[#333333]"
-                      style={lato}
-                    >
-                      {product.nombre}
-                    </p>
-                    <p
-                      className="mt-1 text-[12px] font-extrabold text-[#111111]"
-                      style={jost}
-                    >
-                      ${product.precio.toLocaleString('es-MX')}
-                    </p>
+                  <div className="flex flex-1 flex-col p-3">
+                    {brand && <p className="mb-0.5 text-[9px] font-bold uppercase text-[#CC4B37]" style={jost}>{brand.nombre}</p>}
+                    <p className="line-clamp-2 flex-1 text-[11px] leading-snug text-[#333333]" style={lato}>{product.nombre}</p>
+                    <div className="mt-2">
+                      <p className="text-[14px] font-extrabold text-[#111111]" style={jost}>${product.precio.toLocaleString('es-MX')}</p>
+                      {product.stock === 0
+                        ? <p className="text-[10px] text-[#CC4B37]" style={lato}>Agotado</p>
+                        : <p className="text-[10px] text-[#22C55E]" style={lato}>✓ En stock</p>
+                      }
+                    </div>
                   </div>
                 </Link>
               )
             })}
+            <Link href="/store"
+              className="flex w-[120px] shrink-0 flex-col items-center justify-center gap-2 border border-dashed border-[#DDDDDD] bg-[#FAFAFA] text-center transition-colors hover:border-[#CC4B37] hover:bg-white sm:w-[140px]"
+              style={{ scrollSnapAlign: 'start' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#CCCCCC]" aria-hidden>
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <p className="text-[10px] font-bold uppercase text-[#AAAAAA]" style={jost}>Ver todos</p>
+            </Link>
           </div>
         </div>
       </div>
     )
   }
 
+  // ── CATEGORÍAS GRID ───────────────────────────────────────────────────────
   if (block.tipo === 'categorias_grid') {
     const c = cfg as CategoriasGridConfig
     if (!c.items?.length) return null
     return (
-      <div className="bg-white py-5">
+      <div className="bg-[#F7F7F7] py-8">
         <div className="mx-auto max-w-[1200px] px-4 md:px-6">
           {c.titulo_seccion && (
-            <p
-              className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#999999]"
-              style={jost}
-            >
-              {c.titulo_seccion}
-            </p>
+            <div className="mb-5 flex items-center gap-3">
+              <div className="h-5 w-1 bg-[#CC4B37]"/>
+              <p className="text-[13px] font-extrabold uppercase tracking-[0.14em] text-[#111111]" style={jost}>
+                {c.titulo_seccion}
+              </p>
+            </div>
           )}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {c.items.map((item, i) => (
-              <button
-                key={i}
-                type="button"
-                className="group flex flex-col overflow-hidden border border-[#EEEEEE] bg-[#F7F7F7] transition-colors hover:border-[#CC4B37]"
-              >
-                <div
-                  className="relative w-full bg-[#EEEEEE]"
-                  style={{ aspectRatio: '1/1' }}
-                >
-                  {item.imagen_url ? (
-                    <img
-                      src={item.imagen_url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[#CCCCCC]">
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        aria-hidden
-                      >
-                        <path
-                          d="M3 3h18v18H3z"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                        />
-                      </svg>
-                    </div>
-                  )}
+              <button key={i} type="button"
+                className="group relative overflow-hidden bg-[#111111] transition-transform hover:scale-[1.02] hover:shadow-lg"
+                style={{ aspectRatio: '3/4' }}>
+                {item.imagen_url
+                  ? <img src={item.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60 transition-opacity group-hover:opacity-75"/>
+                  : <div className="absolute inset-0 bg-gradient-to-br from-[#222222] to-[#111111]"/>
+                }
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"/>
+                <div className="absolute bottom-0 left-0 right-0 p-3">
+                  <p className="text-[11px] font-extrabold uppercase leading-tight text-white" style={jost}>
+                    {item.label}
+                  </p>
                 </div>
-                <p
-                  className="px-1.5 py-1.5 text-center text-[10px] font-bold uppercase leading-tight text-[#333333] group-hover:text-[#CC4B37]"
-                  style={jost}
-                >
-                  {item.label}
-                </p>
+                <div className="absolute left-0 top-0 h-0.5 w-0 bg-[#CC4B37] transition-all duration-300 group-hover:w-full"/>
               </button>
             ))}
           </div>
@@ -1105,74 +1061,78 @@ function BlockRenderer({
     )
   }
 
+  // ── BLOG DESTACADO ────────────────────────────────────────────────────────
   if (block.tipo === 'blog_destacado') {
     const c = cfg as BlogDestacadoConfig
     return (
-      <div
-        className="relative w-full overflow-hidden bg-[#111111]"
-        style={{ minHeight: 180 }}
-      >
-        {c.imagen_url && (
-          <img
-            src={c.imagen_url}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover opacity-40"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/90 to-black/40" />
-        <div
-          className="relative z-10 flex flex-col justify-center px-6 py-8 md:px-12"
-          style={{ minHeight: 180 }}
-        >
-          <span
-            className="mb-2 inline-block w-fit border border-white/40 px-2 py-0.5 text-[9px] font-extrabold uppercase text-white/70"
-            style={jost}
-          >
-            BLOG
-          </span>
-          <h3
-            className="text-xl font-extrabold uppercase text-white md:text-2xl"
-            style={jost}
-          >
-            {c.titulo}
-          </h3>
-          {c.extracto && (
-            <p className="mt-1 max-w-[400px] text-[12px] text-white/60" style={lato}>
-              {c.extracto}
-            </p>
-          )}
-          {c.cta_link && (
-            <Link
-              href={c.cta_link}
-              className="mt-3 inline-block w-fit border border-white px-4 py-2 text-[10px] font-extrabold uppercase text-white transition-colors hover:bg-white hover:text-[#111111]"
-              style={jost}
-            >
-              Leer más
-            </Link>
-          )}
+      <div className="bg-[#F7F7F7] py-8">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+          <div className="relative overflow-hidden bg-[#111111]" style={{ minHeight: 200 }}>
+            {c.imagen_url && (
+              <img src={c.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35"/>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-black/20"/>
+            <div className="absolute left-0 right-0 top-0 h-0.5 bg-[#CC4B37]"/>
+
+            <div className="relative z-10 flex flex-col justify-center px-8 py-10 md:flex-row md:items-center md:gap-8 md:px-12">
+              <div className="flex-1">
+                <span className="mb-3 inline-flex items-center gap-2" style={jost}>
+                  <div className="h-px w-5 bg-[#CC4B37]"/>
+                  <span className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-[#CC4B37]">Blog</span>
+                </span>
+                <h3 className="text-xl font-extrabold uppercase leading-tight text-white md:text-2xl" style={jost}>
+                  {c.titulo}
+                </h3>
+                {c.extracto && (
+                  <p className="mt-2 max-w-[480px] text-[12px] leading-relaxed text-white/60" style={lato}>
+                    {c.extracto}
+                  </p>
+                )}
+              </div>
+              {c.cta_link && (
+                <div className="mt-5 md:mt-0 md:shrink-0">
+                  <Link href={c.cta_link}
+                    className="inline-flex items-center gap-2 border border-white/30 px-6 py-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white transition-all hover:bg-white hover:text-[#111111]"
+                    style={jost}>
+                    Leer artículo
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     )
   }
 
+  // ── TEXTO LIBRE ───────────────────────────────────────────────────────────
   if (block.tipo === 'texto_libre') {
     const c = cfg as TextoLibreConfig
+    const bg = c.bg_color ?? '#111111'
+    const color = c.text_color ?? '#FFFFFF'
     return (
-      <div
-        className="w-full px-6 py-8 md:px-12"
-        style={{
-          backgroundColor: c.bg_color ?? '#111111',
-          color: c.text_color ?? '#FFFFFF',
-        }}
-      >
-        {c.titulo && (
-          <h3 className="mb-2 text-xl font-extrabold uppercase" style={jost}>
-            {c.titulo}
-          </h3>
-        )}
-        <p className="max-w-[600px] text-[14px] leading-relaxed opacity-80" style={lato}>
-          {c.cuerpo}
-        </p>
+      <div className="relative overflow-hidden" style={{ backgroundColor: bg }}>
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }}/>
+        <div className="relative z-10 mx-auto max-w-[1200px] px-8 py-10 md:px-12 md:py-12">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              {c.titulo && (
+                <h3 className="text-2xl font-extrabold uppercase md:text-3xl" style={{ ...jost, color }}>
+                  {c.titulo}
+                </h3>
+              )}
+              <p className="mt-1 max-w-[600px] text-[14px] leading-relaxed" style={{ ...lato, color, opacity: 0.75 }}>
+                {c.cuerpo}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
