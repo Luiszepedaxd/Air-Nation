@@ -7,7 +7,8 @@ import { requireAppAdminUserId } from '../require-app-admin'
 import type { StoreAdminBrandRow, StoreAdminCategoryRow, StoreAdminProductRow } from './data-types'
 import { StoreAdminClient } from './StoreAdminClient'
 import { HomepageAdminClient } from './HomepageAdminClient'
-import type { BloqueRecord, BloqueSlug } from './HomepageAdminClient'
+import type { BloqueRecord } from './HomepageAdminClient'
+import type { BloqueSlug } from './homepage-actions'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
