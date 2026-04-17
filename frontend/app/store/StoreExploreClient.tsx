@@ -343,6 +343,17 @@ export function StoreExploreClient({
     },
   }
 
+  const BA = {
+    header: editorial?.bloques_activos?.header ?? true,
+    hero: editorial?.bloques_activos?.hero ?? true,
+    ticker: editorial?.bloques_activos?.ticker ?? true,
+    banner1: editorial?.bloques_activos?.banner1 ?? true,
+    banner2: editorial?.bloques_activos?.banner2 ?? true,
+    categorias_carousel: editorial?.bloques_activos?.categorias_carousel ?? true,
+    promoBanner: editorial?.bloques_activos?.promoBanner ?? true,
+    footer: editorial?.bloques_activos?.footer ?? true,
+  }
+
   const [busqueda, setBusqueda] = useState('')
   const [filtroCondicion, setFiltroCondicion] = useState<'' | 'nuevo' | 'outlet'>('')
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('')
@@ -418,7 +429,7 @@ export function StoreExploreClient({
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-30 bg-white shadow-sm">
         {/* Promo bar */}
-        {EDITORIAL.bloques_activos.header && (
+        {BA.header && (
           <div className="bg-[#111111] px-4 py-2">
             <p
               className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white"
@@ -641,7 +652,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           HERO — Imagen full-width + claim
       ══════════════════════════════════════ */}
-      {EDITORIAL.bloques_activos.hero && (
+      {BA.hero && (
       <section id="hero" className="relative overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 480 }}>
         {EDITORIAL.hero.imagen_url ? (
           <img
@@ -729,7 +740,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           TICKER TAPE — Franja animada
       ══════════════════════════════════════ */}
-      {EDITORIAL.bloques_activos.ticker && (
+      {BA.ticker && (
       <div className="overflow-hidden bg-[#CC4B37] py-2.5">
         <div
           className="flex animate-[ticker_18s_linear_infinite] whitespace-nowrap"
@@ -856,143 +867,149 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           BANNERS DOBLES — 2 columnas editoriales
       ══════════════════════════════════════ */}
-      {(EDITORIAL.bloques_activos.banner1 || EDITORIAL.bloques_activos.banner2) && (
-      <section
-        className={`grid grid-cols-1 ${EDITORIAL.bloques_activos.banner1 && EDITORIAL.bloques_activos.banner2 ? 'md:grid-cols-2' : ''}`}
-      >
-        {EDITORIAL.bloques_activos.banner1 && (
-        /* Banner 1 */
-        <div className="relative overflow-hidden bg-[#0A0A0A]" style={{ minHeight: 300 }}>
-          {EDITORIAL.banner1.imagen_url ? (
-            <img
-              src={EDITORIAL.banner1.imagen_url}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ opacity: 0.45 }}
-            />
-          ) : (
-            <div
-              className="absolute inset-0"
-              style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)' }}
-            />
-          )}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
-            }}
-          />
-          <div
-            className="relative z-10 flex h-full flex-col justify-end p-7 md:p-8"
-            style={{ minHeight: 300 }}
-          >
-            <span
-              className="mb-2 inline-block w-fit bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.2em] text-white"
-              style={jost}
-            >
-              {EDITORIAL.banner1.eyebrow}
-            </span>
-            <h3
-              className="max-w-[320px] text-[1.35rem] font-extrabold uppercase leading-tight text-white"
-              style={jost}
-            >
-              {EDITORIAL.banner1.titulo}
-            </h3>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-white/50" style={lato}>
-              {EDITORIAL.banner1.descripcion}
-            </p>
-            <Link
-              href={EDITORIAL.banner1.cta_link}
-              className="mt-5 inline-flex w-fit items-center gap-2 border border-white/30 px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition-all hover:bg-white hover:text-[#0A0A0A]"
-              style={jost}
-            >
-              {EDITORIAL.banner1.cta_texto}
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M5 12h14M12 5l7 7-7 7"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </div>
-        </div>
-        )}
-
-        {EDITORIAL.bloques_activos.banner2 && (
-        /* Banner 2 */
-        <div
-          className="relative overflow-hidden"
-          style={{ minHeight: 300, backgroundColor: '#CC4B37' }}
+      {(BA.banner1 || BA.banner2) && (
+        <section
+          className={`grid grid-cols-1 ${BA.banner1 && BA.banner2 ? 'md:grid-cols-2' : ''}`}
         >
-          {EDITORIAL.banner2.imagen_url ? (
-            <img
-              src={EDITORIAL.banner2.imagen_url}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ opacity: 0.25 }}
-            />
-          ) : (
+          {BA.banner1 && (
             <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage:
-                  'repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 8px)',
-              }}
-            />
-          )}
-          <div
-            className="absolute inset-0"
-            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)' }}
-          />
-          <div
-            className="relative z-10 flex h-full flex-col justify-end p-7 md:p-8"
-            style={{ minHeight: 300 }}
-          >
-            <span
-              className="mb-2 inline-block w-fit bg-[#111111] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.2em] text-white"
-              style={jost}
+              className="relative overflow-hidden bg-[#0A0A0A]"
+              style={{ minHeight: BA.banner1 && !BA.banner2 ? 400 : 300 }}
             >
-              {EDITORIAL.banner2.eyebrow}
-            </span>
-            <h3
-              className="max-w-[320px] text-[1.35rem] font-extrabold uppercase leading-tight text-white"
-              style={jost}
-            >
-              {EDITORIAL.banner2.titulo}
-            </h3>
-            <p className="mt-1.5 text-[12px] leading-relaxed text-white/70" style={lato}>
-              {EDITORIAL.banner2.descripcion}
-            </p>
-            <Link
-              href={EDITORIAL.banner2.cta_link}
-              className="mt-5 inline-flex w-fit items-center gap-2 bg-white px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#CC4B37] transition-all hover:bg-[#111111] hover:text-white"
-              style={jost}
-            >
-              {EDITORIAL.banner2.cta_texto}
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M5 12h14M12 5l7 7-7 7"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              {EDITORIAL.banner1.imagen_url ? (
+                <img
+                  src={EDITORIAL.banner1.imagen_url}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ opacity: 0.45 }}
                 />
-              </svg>
-            </Link>
-          </div>
-        </div>
-        )}
-      </section>
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)' }}
+                />
+              )}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
+                }}
+              />
+              <div
+                className="relative z-10 flex h-full flex-col justify-end p-7 md:p-10"
+                style={{ minHeight: BA.banner1 && !BA.banner2 ? 400 : 300 }}
+              >
+                <span
+                  className="mb-2 inline-block w-fit bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.2em] text-white"
+                  style={jost}
+                >
+                  {EDITORIAL.banner1.eyebrow}
+                </span>
+                <h3
+                  className={`font-extrabold uppercase leading-tight text-white ${BA.banner1 && !BA.banner2 ? 'max-w-[600px] text-[1.8rem] md:text-[2.4rem]' : 'max-w-[320px] text-[1.35rem]'}`}
+                  style={jost}
+                >
+                  {EDITORIAL.banner1.titulo}
+                </h3>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-white/50" style={lato}>
+                  {EDITORIAL.banner1.descripcion}
+                </p>
+                <Link
+                  href={EDITORIAL.banner1.cta_link}
+                  className="mt-5 inline-flex w-fit items-center gap-2 border border-white/30 px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition-all hover:bg-white hover:text-[#0A0A0A]"
+                  style={jost}
+                >
+                  {EDITORIAL.banner1.cta_texto}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M5 12h14M12 5l7 7-7 7"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {BA.banner2 && (
+            <div
+              className="relative overflow-hidden"
+              style={{
+                minHeight: BA.banner2 && !BA.banner1 ? 400 : 300,
+                backgroundColor: '#CC4B37',
+              }}
+            >
+              {EDITORIAL.banner2.imagen_url ? (
+                <img
+                  src={EDITORIAL.banner2.imagen_url}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                  style={{ opacity: 0.25 }}
+                />
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    backgroundImage:
+                      'repeating-linear-gradient(-45deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 8px)',
+                  }}
+                />
+              )}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)',
+                }}
+              />
+              <div
+                className="relative z-10 flex h-full flex-col justify-end p-7 md:p-10"
+                style={{ minHeight: BA.banner2 && !BA.banner1 ? 400 : 300 }}
+              >
+                <span
+                  className="mb-2 inline-block w-fit bg-[#111111] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-[0.2em] text-white"
+                  style={jost}
+                >
+                  {EDITORIAL.banner2.eyebrow}
+                </span>
+                <h3
+                  className={`font-extrabold uppercase leading-tight text-white ${BA.banner2 && !BA.banner1 ? 'max-w-[600px] text-[1.8rem] md:text-[2.4rem]' : 'max-w-[320px] text-[1.35rem]'}`}
+                  style={jost}
+                >
+                  {EDITORIAL.banner2.titulo}
+                </h3>
+                <p className="mt-1.5 text-[12px] leading-relaxed text-white/70" style={lato}>
+                  {EDITORIAL.banner2.descripcion}
+                </p>
+                <Link
+                  href={EDITORIAL.banner2.cta_link}
+                  className="mt-5 inline-flex w-fit items-center gap-2 bg-white px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#CC4B37] transition-all hover:bg-[#111111] hover:text-white"
+                  style={jost}
+                >
+                  {EDITORIAL.banner2.cta_texto}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M5 12h14M12 5l7 7-7 7"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {/* ══════════════════════════════════════
           CATEGORÍAS — Carrusel con loop infinito
       ══════════════════════════════════════ */}
-      {EDITORIAL.bloques_activos.categorias_carousel &&
+      {BA.categorias_carousel &&
         (() => {
         const carouselItems: {
           imagen_url: string
@@ -1042,7 +1059,11 @@ export function StoreExploreClient({
                       <div
                         key={idx}
                         className="shrink-0"
-                        style={{ scrollSnapAlign: 'start', width: 140, height: 90 }}
+                        style={{
+                          scrollSnapAlign: 'start',
+                          width: 'clamp(130px, 18vw, 220px)',
+                          height: 'clamp(85px, 12vw, 145px)',
+                        }}
                       >
                         {isDbCat ? (
                           <button
@@ -1149,7 +1170,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           PROMO BANNER — Full width oscuro
       ══════════════════════════════════════ */}
-      {EDITORIAL.bloques_activos.promoBanner && (
+      {BA.promoBanner && (
       <section className="relative overflow-hidden border-y border-[#EEEEEE] bg-[#F5F5F5]">
         <div className="mx-auto max-w-[1200px] px-4 py-8 md:px-6 md:py-10">
           <div className="relative overflow-hidden bg-[#0A0A0A]">
@@ -1349,7 +1370,7 @@ export function StoreExploreClient({
       {/* ══════════════════════════════════════
           FOOTER STORE — Confianza + info
       ══════════════════════════════════════ */}
-      {EDITORIAL.bloques_activos.footer && (
+      {BA.footer && (
       <footer className="border-t border-[#EEEEEE] bg-[#111111] px-4 py-10 md:px-6">
         <div className="mx-auto max-w-[1200px]">
           <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
