@@ -326,6 +326,18 @@ export function StoreExploreClient({
   brands: StoreBrand[]
   editorial?: Partial<EditorialData>
 }) {
+  const BA = {
+    header: (editorial?.bloques_activos?.header as boolean | undefined) ?? true,
+    hero: (editorial?.bloques_activos?.hero as boolean | undefined) ?? true,
+    ticker: (editorial?.bloques_activos?.ticker as boolean | undefined) ?? true,
+    banner1: (editorial?.bloques_activos?.banner1 as boolean | undefined) ?? true,
+    banner2: (editorial?.bloques_activos?.banner2 as boolean | undefined) ?? true,
+    categorias_carousel:
+      (editorial?.bloques_activos?.categorias_carousel as boolean | undefined) ?? true,
+    promoBanner: (editorial?.bloques_activos?.promoBanner as boolean | undefined) ?? true,
+    footer: (editorial?.bloques_activos?.footer as boolean | undefined) ?? true,
+  }
+
   const EDITORIAL: EditorialData = {
     header: { ...DEFAULTS.header, ...(editorial?.header ?? {}) },
     hero: { ...DEFAULTS.hero, ...(editorial?.hero ?? {}) },
@@ -341,17 +353,6 @@ export function StoreExploreClient({
       ...DEFAULTS.bloques_activos,
       ...(editorial?.bloques_activos ?? {}),
     },
-  }
-
-  const BA = {
-    header: editorial?.bloques_activos?.header ?? true,
-    hero: editorial?.bloques_activos?.hero ?? true,
-    ticker: editorial?.bloques_activos?.ticker ?? true,
-    banner1: editorial?.bloques_activos?.banner1 ?? true,
-    banner2: editorial?.bloques_activos?.banner2 ?? true,
-    categorias_carousel: editorial?.bloques_activos?.categorias_carousel ?? true,
-    promoBanner: editorial?.bloques_activos?.promoBanner ?? true,
-    footer: editorial?.bloques_activos?.footer ?? true,
   }
 
   const [busqueda, setBusqueda] = useState('')
@@ -1045,7 +1046,7 @@ export function StoreExploreClient({
                 <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-[#111111] to-transparent" />
                 <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-[#111111] to-transparent" />
                 <div
-                  className="flex gap-3 overflow-x-auto pb-1"
+                  className="flex gap-3 overflow-x-auto px-4 pb-2 md:px-0"
                   style={{
                     scrollSnapType: 'x mandatory',
                     scrollbarWidth: 'none',
@@ -1061,8 +1062,8 @@ export function StoreExploreClient({
                         className="shrink-0"
                         style={{
                           scrollSnapAlign: 'start',
-                          width: 'clamp(130px, 18vw, 220px)',
-                          height: 'clamp(85px, 12vw, 145px)',
+                          width: 'clamp(140px, 20vw, 260px)',
+                          height: 'clamp(100px, 14vw, 175px)',
                         }}
                       >
                         {isDbCat ? (
