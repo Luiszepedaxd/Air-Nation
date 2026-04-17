@@ -29,6 +29,9 @@ export type StoreBrand = {
 
 export type HomepageBlockTipo =
   | 'hero'
+  | 'banner1'
+  | 'banner2'
+  | 'promoBanner'
   | 'banner_producto'
   | 'categorias_grid'
   | 'carrusel_productos'

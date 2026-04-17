@@ -7,7 +7,7 @@ import { requireAppAdminUserId } from '../require-app-admin'
 import type { StoreAdminBrandRow, StoreAdminCategoryRow, StoreAdminProductRow } from './data-types'
 import { StoreAdminClient } from './StoreAdminClient'
 import { HomepageAdminClient } from './HomepageAdminClient'
-import type { HomepageBlock, HomepageBlockTipo } from '@/app/store/types'
+import type { BloqueRecord, BloqueSlug } from './HomepageAdminClient'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -24,44 +24,11 @@ const OUTER_TABS: { id: OuterTab; label: string }[] = [
   { id: 'homepage', label: 'Homepage' },
 ]
 
+const BLOQUES_SLUGS: readonly BloqueSlug[] = ['hero', 'banner1', 'banner2', 'promoBanner'] as const
+
 function normalizeTab(raw: string | undefined): OuterTab {
   if (raw === 'categorias' || raw === 'marcas' || raw === 'homepage') return raw
   return 'productos'
-}
-
-function rowStrFromUnknown(row: unknown, key: string): string {
-  if (row && typeof row === 'object' && key in (row as Record<string, unknown>)) {
-    const v = (row as Record<string, unknown>)[key]
-    return v != null ? String(v) : ''
-  }
-  return ''
-}
-
-function mapHomepageBlock(row: Record<string, unknown>): HomepageBlock {
-  const tipoRaw = String(row.tipo ?? 'hero')
-  const validTipos: HomepageBlockTipo[] = [
-    'hero',
-    'banner_producto',
-    'categorias_grid',
-    'carrusel_productos',
-    'blog_destacado',
-    'texto_libre',
-  ]
-  const tipo: HomepageBlockTipo = (validTipos as string[]).includes(tipoRaw)
-    ? (tipoRaw as HomepageBlockTipo)
-    : 'hero'
-  const cfgRaw = row.config
-  const config: Record<string, unknown> =
-    cfgRaw && typeof cfgRaw === 'object' && !Array.isArray(cfgRaw)
-      ? (cfgRaw as Record<string, unknown>)
-      : {}
-  return {
-    id: String(row.id ?? ''),
-    tipo,
-    orden: Number(row.orden ?? 0),
-    activo: Boolean(row.activo),
-    config,
-  }
 }
 
 export default async function AdminStorePage({
@@ -86,8 +53,8 @@ export default async function AdminStorePage({
       .order('nombre', { ascending: true }),
     db
       .from('store_homepage_blocks')
-      .select('id, tipo, orden, activo, config')
-      .order('orden', { ascending: true }),
+      .select('id, tipo, config')
+      .in('tipo', BLOQUES_SLUGS as unknown as string[]),
   ])
 
   if (productsRes.error) console.error('[admin/store] products:', productsRes.error.message)
@@ -98,15 +65,26 @@ export default async function AdminStorePage({
   const products = (productsRes.data ?? []) as StoreAdminProductRow[]
   const categories = (categoriesRes.data ?? []) as StoreAdminCategoryRow[]
   const brands = (brandsRes.data ?? []) as StoreAdminBrandRow[]
-  const blocks = ((blocksRes.data ?? []) as Record<string, unknown>[]).map(mapHomepageBlock)
+
+  const blockRows = (blocksRes.data ?? []) as { id: string; tipo: string; config: unknown }[]
+  const bloqueRecords: BloqueRecord[] = BLOQUES_SLUGS.map((slug) => {
+    const found = blockRows.find((b) => b.tipo === slug)
+    const cfg =
+      found?.config && typeof found.config === 'object' && !Array.isArray(found.config)
+        ? (found.config as Record<string, unknown>)
+        : {}
+    const config: Record<string, string> = {}
+    for (const [k, v] of Object.entries(cfg)) {
+      config[k] = v == null ? '' : String(v)
+    }
+    return {
+      id: found?.id ? String(found.id) : null,
+      slug,
+      config,
+    }
+  })
 
   const tab = normalizeTab(searchParams?.tab)
-
-  const productsLite = products.map((p) => ({
-    id: rowStrFromUnknown(p, 'id'),
-    nombre: rowStrFromUnknown(p, 'nombre'),
-  }))
-  const categoriesLite = categories.map((c) => ({ id: c.id, nombre: c.nombre }))
 
   return (
     <div className="p-6">
@@ -138,11 +116,7 @@ export default async function AdminStorePage({
       </div>
 
       {tab === 'homepage' ? (
-        <HomepageAdminClient
-          initialBlocks={blocks}
-          products={productsLite}
-          categories={categoriesLite}
-        />
+        <HomepageAdminClient initialBlocks={bloqueRecords} />
       ) : (
         <StoreAdminClient
           key={tab}

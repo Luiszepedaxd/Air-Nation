@@ -6,9 +6,39 @@ import type { ReactNode } from 'react'
 import type { StoreBrand, StoreCategory, StoreProduct } from './types'
 
 // ─────────────────────────────────────────────────────────────
-// CONTENIDO EDITORIAL — Editar aquí para cambiar textos/fotos
+// CONTENIDO EDITORIAL — Defaults, sobrescribibles desde DB (admin)
 // ─────────────────────────────────────────────────────────────
-const EDITORIAL = {
+export type EditorialData = {
+  hero: {
+    imagen_url: string
+    titulo: string
+    subtitulo: string
+    cta_texto: string
+    cta_link: string
+  }
+  banner1: {
+    imagen_url: string
+    eyebrow: string
+    titulo: string
+    descripcion: string
+    cta_link: string
+  }
+  banner2: {
+    imagen_url: string
+    eyebrow: string
+    titulo: string
+    descripcion: string
+    cta_link: string
+  }
+  promoBanner: {
+    imagen_url: string
+    titulo: string
+    descripcion: string
+    cta_link: string
+  }
+}
+
+const DEFAULTS: EditorialData = {
   hero: {
     imagen_url: '',
     titulo: 'Equipo táctico. Sin pretextos.',
@@ -205,11 +235,20 @@ export function StoreExploreClient({
   products,
   categories,
   brands,
+  editorial,
 }: {
   products: StoreProduct[]
   categories: StoreCategory[]
   brands: StoreBrand[]
+  editorial?: Partial<EditorialData>
 }) {
+  const EDITORIAL: EditorialData = {
+    hero: { ...DEFAULTS.hero, ...(editorial?.hero ?? {}) },
+    banner1: { ...DEFAULTS.banner1, ...(editorial?.banner1 ?? {}) },
+    banner2: { ...DEFAULTS.banner2, ...(editorial?.banner2 ?? {}) },
+    promoBanner: { ...DEFAULTS.promoBanner, ...(editorial?.promoBanner ?? {}) },
+  }
+
   const [busqueda, setBusqueda] = useState('')
   const [filtroCondicion, setFiltroCondicion] = useState<'' | 'nuevo' | 'outlet'>('')
   const [filtroCategoriaId, setFiltroCategoriaId] = useState('')

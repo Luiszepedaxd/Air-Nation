@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { ensureAppAdminOrRedirect } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { StoreExploreClient } from './StoreExploreClient'
+import type { EditorialData } from './StoreExploreClient'
 import type { StoreBrand, StoreCategory, StoreProduct } from './types'
 
 export const revalidate = 0
@@ -10,6 +11,9 @@ export const metadata: Metadata = {
   title: 'Store — AirNation',
   description: 'Vista previa admin de la tienda oficial AirNation.',
 }
+
+const EDITORIAL_SLUGS = ['hero', 'banner1', 'banner2', 'promoBanner'] as const
+type EditorialSlug = (typeof EDITORIAL_SLUGS)[number]
 
 function mapProduct(row: Record<string, unknown>): StoreProduct {
   const condRaw = String(row.condicion ?? 'nuevo').toLowerCase()
@@ -52,10 +56,11 @@ async function fetchStoreData(): Promise<{
   products: StoreProduct[]
   categories: StoreCategory[]
   brands: StoreBrand[]
+  editorial: Partial<EditorialData>
 }> {
   const supabase = createDashboardSupabaseServerClient()
 
-  const [productsRes, categoriesRes, brandsRes] = await Promise.all([
+  const [productsRes, categoriesRes, brandsRes, blocksRes] = await Promise.all([
     supabase
       .from('store_products')
       .select(
@@ -69,6 +74,10 @@ async function fetchStoreData(): Promise<{
       .select('id, nombre, slug, parent_id')
       .eq('activo', true),
     supabase.from('store_brands').select('id, nombre, slug, logo_url').eq('activo', true),
+    supabase
+      .from('store_homepage_blocks')
+      .select('tipo, config')
+      .in('tipo', EDITORIAL_SLUGS as unknown as string[]),
   ])
 
   if (productsRes.error) {
@@ -80,6 +89,9 @@ async function fetchStoreData(): Promise<{
   if (brandsRes.error) {
     console.error('[store] brands:', brandsRes.error.message)
   }
+  if (blocksRes.error) {
+    console.error('[store] blocks:', blocksRes.error.message)
+  }
 
   const products = (productsRes.data ?? []).map((row) =>
     mapProduct(row as Record<string, unknown>)
@@ -89,16 +101,34 @@ async function fetchStoreData(): Promise<{
   )
   const brands = (brandsRes.data ?? []).map((row) => mapBrand(row as Record<string, unknown>))
 
-  return { products, categories, brands }
+  const editorial: Partial<EditorialData> = {}
+  const rows = (blocksRes.data ?? []) as { tipo: string; config: unknown }[]
+  for (const row of rows) {
+    const slug = row.tipo
+    if ((EDITORIAL_SLUGS as readonly string[]).includes(slug)) {
+      const cfg =
+        row.config && typeof row.config === 'object' && !Array.isArray(row.config)
+          ? (row.config as Record<string, unknown>)
+          : {}
+      ;(editorial as Record<EditorialSlug, unknown>)[slug as EditorialSlug] = cfg
+    }
+  }
+
+  return { products, categories, brands, editorial }
 }
 
 export default async function StorePage() {
   await ensureAppAdminOrRedirect('/store')
-  const { products, categories, brands } = await fetchStoreData()
+  const { products, categories, brands, editorial } = await fetchStoreData()
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F7F7F7] text-[#111111]">
-      <StoreExploreClient products={products} categories={categories} brands={brands} />
+      <StoreExploreClient
+        products={products}
+        categories={categories}
+        brands={brands}
+        editorial={editorial}
+      />
     </div>
   )
 }
