@@ -117,6 +117,7 @@ export function StoreExploreClient({
   const [carritoCount] = useState(0)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [mobileBusquedaOpen, setMobileBusquedaOpen] = useState(false)
   // Estado acordeón — qué categoría está expandida en el drawer
   const [drawerCatExpandida, setDrawerCatExpandida] = useState<string | null>(null)
 
@@ -160,127 +161,139 @@ export function StoreExploreClient({
   return (
     <div className="min-h-screen bg-[#F7F7F7]">
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-white shadow-sm">
-        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
-          <div className="flex h-14 items-center justify-between gap-3">
-            {/* Logo igual que el resto de la app */}
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center bg-[#CC4B37]">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff" />
-                </svg>
-              </span>
-              <span
-                className="text-[1rem] font-black uppercase tracking-[0.18em] text-[#111111]"
-                style={jost}
-              >
-                AIR<span className="text-[#CC4B37]">NATION</span>
-              </span>
-              <span
-                className="hidden bg-[#CC4B37] px-1.5 py-0.5 text-[8px] font-extrabold uppercase text-white sm:inline"
-                style={jost}
-              >
-                STORE
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Badge admin preview */}
-              <span
-                className="hidden bg-[#F4F4F4] px-2 py-0.5 text-[8px] font-extrabold uppercase text-[#999999] sm:inline"
-                style={jost}
-              >
-                ADMIN PREVIEW
-              </span>
-              {/* Carrito placeholder */}
-              <button
-                type="button"
-                className="relative p-1.5 text-[#444444] transition-colors hover:text-[#CC4B37]"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path
-                    d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M3 6h18M16 10a4 4 0 01-8 0"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                {carritoCount > 0 && (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white"
-                    style={jost}
-                  >
-                    {carritoCount}
-                  </span>
-                )}
-              </button>
-              {/* Hamburguesa — solo mobile */}
-              <button
-                type="button"
-                onClick={() => setDrawerOpen(true)}
-                className="relative flex h-9 w-9 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] md:hidden"
-                aria-label="Filtros"
-              >
+      <header className="sticky top-0 z-30 bg-white shadow-sm">
+        {/* ── BARRA PROMO ── */}
+        <div className="bg-[#111111] px-4 py-2">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white" style={jost}>
+            <span className="text-[#CC4B37]">4% DE DESCUENTO</span> AL PAGAR CON TRANSFERENCIA
+            <span className="mx-3 text-white/30">·</span>
+            ENVIAMOS A <span className="text-[#CC4B37]">TODO MÉXICO</span>
+            <span className="mx-3 text-white/30">·</span>
+            <span className="hidden sm:inline">PEDIDO PROTEGIDO EN CADA COMPRA</span>
+          </p>
+        </div>
+
+        {/* ── HEADER PRINCIPAL ── */}
+        <div className="border-b border-[#EEEEEE]">
+          <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+            <div className="flex h-14 items-center gap-3 md:h-16">
+              {/* Hamburguesa mobile */}
+              <button type="button" onClick={() => setDrawerOpen(true)}
+                className="relative flex h-9 w-9 shrink-0 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] md:hidden"
+                aria-label="Filtros">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path
-                    d="M4 6h16M4 12h16M4 18h16"
-                    stroke="#444444"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
+                  <path d="M4 6h16M4 12h16M4 18h16" stroke="#444444" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
                 {activeCount > 0 && (
-                  <span
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white"
-                    style={jost}
-                  >
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white" style={jost}>
                     {activeCount}
                   </span>
                 )}
               </button>
-            </div>
-          </div>
-          {/* Buscador */}
-          <div className="pb-3">
-            <div className="flex items-center gap-2 border border-[#EEEEEE] bg-[#F7F7F7] px-3 py-2">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-                className="shrink-0 text-[#AAAAAA]"
-              >
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-                <path
-                  d="M21 21l-4.35-4.35"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <input
-                type="search"
-                placeholder="Buscar productos, marcas..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#AAAAAA] outline-none"
-                style={lato}
-              />
-              {busqueda && (
-                <button
-                  type="button"
-                  onClick={() => setBusqueda('')}
-                  className="text-xs text-[#AAAAAA] hover:text-[#111111]"
-                >
-                  ✕
+
+              {/* Logo */}
+              <Link href="/store" className="flex shrink-0 items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center bg-[#CC4B37]">
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff"/>
+                  </svg>
+                </span>
+                <span className="text-[1rem] font-black uppercase tracking-[0.18em] text-[#111111]" style={jost}>
+                  AIR<span className="text-[#CC4B37]">NATION</span>
+                </span>
+                <span className="hidden bg-[#CC4B37] px-1.5 py-0.5 text-[8px] font-extrabold uppercase text-white sm:inline" style={jost}>
+                  STORE
+                </span>
+              </Link>
+
+              {/* Buscador — crece en desktop */}
+              <div className="hidden flex-1 md:block">
+                <div className="flex items-center gap-2 border border-[#EEEEEE] bg-[#F7F7F7] px-3 py-2.5 hover:border-[#CCCCCC] transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0 text-[#AAAAAA]">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <input type="search" placeholder="Buscar productos, marcas, categorías..."
+                    value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                    className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#AAAAAA] outline-none"
+                    style={lato}/>
+                  {busqueda && (
+                    <button type="button" onClick={() => setBusqueda('')} className="text-xs text-[#AAAAAA] hover:text-[#111111]">✕</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Íconos derecha */}
+              <div className="ml-auto flex items-center gap-1 md:ml-0">
+                {/* Búsqueda mobile */}
+                <button type="button"
+                  onClick={() => setMobileBusquedaOpen(v => !v)}
+                  className="flex h-9 w-9 items-center justify-center text-[#444444] hover:text-[#CC4B37] transition-colors md:hidden">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
                 </button>
-              )}
+                {/* Admin preview badge */}
+                <span className="hidden bg-[#F4F4F4] px-2 py-0.5 text-[8px] font-extrabold uppercase text-[#999999] md:inline" style={jost}>
+                  ADMIN PREVIEW
+                </span>
+                {/* Carrito */}
+                <button type="button"
+                  className="relative flex h-9 w-9 items-center justify-center text-[#444444] transition-colors hover:text-[#CC4B37]">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                    <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                  {carritoCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white" style={jost}>
+                      {carritoCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Buscador mobile — se despliega */}
+            {mobileBusquedaOpen && (
+              <div className="pb-3 md:hidden">
+                <div className="flex items-center gap-2 border border-[#EEEEEE] bg-[#F7F7F7] px-3 py-2">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0 text-[#AAAAAA]">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <input type="search" placeholder="Buscar productos..."
+                    value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                    autoFocus
+                    className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder-[#AAAAAA] outline-none"
+                    style={lato}/>
+                  {busqueda && (
+                    <button type="button" onClick={() => setBusqueda('')} className="text-xs text-[#AAAAAA] hover:text-[#111111]">✕</button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── NAVBAR DE CATEGORÍAS — solo desktop ── */}
+        <div className="hidden border-b border-[#EEEEEE] md:block">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="flex items-center gap-0 overflow-x-auto">
+              <button type="button"
+                onClick={() => setFiltroCategoriaId('')}
+                className={`shrink-0 px-4 py-3 text-[11px] font-bold uppercase tracking-wide transition-colors border-b-2 ${!filtroCategoriaId ? 'border-[#CC4B37] text-[#CC4B37]' : 'border-transparent text-[#555555] hover:text-[#111111]'}`}
+                style={jost}>
+                Todo
+              </button>
+              {topCategories.map(cat => (
+                <button key={cat.id} type="button"
+                  onClick={() => setFiltroCategoriaId(filtroCategoriaId === cat.id ? '' : cat.id)}
+                  className={`shrink-0 px-4 py-3 text-[11px] font-bold uppercase tracking-wide transition-colors border-b-2 ${filtroCategoriaId === cat.id ? 'border-[#CC4B37] text-[#CC4B37]' : 'border-transparent text-[#555555] hover:text-[#111111]'}`}
+                  style={jost}>
+                  {cat.nombre}
+                </button>
+              ))}
             </div>
           </div>
         </div>

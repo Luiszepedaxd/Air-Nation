@@ -42,22 +42,55 @@ export function ProductDetailClient({ product, brand, category, related }: Props
 
   return (
     <div className="min-h-screen bg-[#F7F7F7]">
-      <header className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-white">
-        <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-3 px-4 md:px-6">
-          <Link href="/store"
-            className="flex items-center gap-1.5 text-[12px] text-[#666666] hover:text-[#111111] transition-colors"
-            style={lato}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Volver a la tienda
-          </Link>
-          {category && (
-            <>
-              <span className="text-[#EEEEEE]">/</span>
-              <span className="text-[12px] text-[#999999]" style={lato}>{category.nombre}</span>
-            </>
-          )}
+      <header className="sticky top-0 z-30 bg-white shadow-sm">
+        {/* Barra promo */}
+        <div className="bg-[#111111] px-4 py-2">
+          <p className="text-center text-[10px] font-bold uppercase tracking-[0.12em] text-white" style={jost}>
+            <span className="text-[#CC4B37]">4% DE DESCUENTO</span> AL PAGAR CON TRANSFERENCIA
+            <span className="mx-3 text-white/30">·</span>
+            ENVIAMOS A <span className="text-[#CC4B37]">TODO MÉXICO</span>
+          </p>
+        </div>
+        {/* Header principal */}
+        <div className="border-b border-[#EEEEEE]">
+          <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-3 px-4 md:px-6">
+            {/* Back */}
+            <Link href="/store"
+              className="flex items-center gap-1.5 text-[12px] text-[#666666] hover:text-[#111111] transition-colors shrink-0"
+              style={lato}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="hidden sm:inline">Volver a la tienda</span>
+            </Link>
+            {/* Breadcrumb */}
+            {category && (
+              <span className="hidden items-center gap-1.5 text-[12px] text-[#999999] sm:flex" style={lato}>
+                <span className="text-[#EEEEEE]">/</span>
+                {category.nombre}
+              </span>
+            )}
+            {/* Logo centrado en mobile */}
+            <div className="flex flex-1 justify-center md:justify-start">
+              <Link href="/store" className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center bg-[#CC4B37]">
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff"/>
+                  </svg>
+                </span>
+                <span className="text-[0.9rem] font-black uppercase tracking-[0.18em] text-[#111111]" style={jost}>
+                  AIR<span className="text-[#CC4B37]">NATION</span>
+                </span>
+              </Link>
+            </div>
+            {/* Carrito */}
+            <button type="button" className="relative flex h-9 w-9 shrink-0 items-center justify-center text-[#444444] hover:text-[#CC4B37] transition-colors">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
+                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
