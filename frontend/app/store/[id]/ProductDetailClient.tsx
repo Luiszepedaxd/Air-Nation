@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import type { StoreBrand, StoreCategory, StoreProduct } from '@/app/store/types'
+import { useCart } from '@/app/store/CartContext'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -25,6 +26,8 @@ export function ProductDetailClient({ product, brand, category, related }: Props
   const [descExpanded, setDescExpanded] = useState(false)
   const [cantidad, setCantidad] = useState(1)
   const [tab, setTab] = useState<'descripcion' | 'specs' | 'incluye'>('descripcion')
+
+  const { addItem, count: cartCount, openDrawer } = useCart()
 
   const fotos = product.fotos_urls.length > 0 ? product.fotos_urls : []
   const fotoActual = fotos[fotoIdx] ?? null
@@ -84,11 +87,17 @@ export function ProductDetailClient({ product, brand, category, related }: Props
               </Link>
             </div>
             {/* Carrito */}
-            <button type="button" className="relative flex h-9 w-9 shrink-0 items-center justify-center text-[#444444] hover:text-[#CC4B37] transition-colors">
+            <button type="button" onClick={openDrawer}
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center text-[#444444] hover:text-[#CC4B37] transition-colors">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/>
                 <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
+              {cartCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white" style={jost}>
+                  {cartCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -187,12 +196,27 @@ export function ProductDetailClient({ product, brand, category, related }: Props
                 </div>
 
                 <button type="button"
+                  onClick={() => addItem({
+                    product_id: product.id,
+                    nombre: product.nombre,
+                    foto_url: product.fotos_urls?.[0] ?? null,
+                    precio: product.precio,
+                  }, cantidad)}
                   className="w-full bg-[#CC4B37] py-4 text-[13px] font-extrabold uppercase tracking-wide text-white transition-opacity hover:opacity-90"
                   style={jost}>
                   Agregar al carrito
                 </button>
 
                 <button type="button"
+                  onClick={() => {
+                    addItem({
+                      product_id: product.id,
+                      nombre: product.nombre,
+                      foto_url: product.fotos_urls?.[0] ?? null,
+                      precio: product.precio,
+                    }, cantidad)
+                    window.location.href = '/store/checkout'
+                  }}
                   className="w-full border border-[#111111] py-3.5 text-[13px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:bg-[#111111] hover:text-white"
                   style={jost}>
                   Comprar ahora
