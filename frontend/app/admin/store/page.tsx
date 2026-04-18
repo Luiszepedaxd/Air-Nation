@@ -17,9 +17,16 @@ const jostHeading = {
   textTransform: 'uppercase' as const,
 }
 
-type OuterTab = 'productos' | 'categorias' | 'marcas' | 'homepage' | 'banco'
+type OuterTab =
+  | 'ordenes'
+  | 'productos'
+  | 'categorias'
+  | 'marcas'
+  | 'homepage'
+  | 'banco'
 
 const OUTER_TABS: { id: OuterTab; label: string }[] = [
+  { id: 'ordenes', label: 'Órdenes' },
   { id: 'productos', label: 'Productos' },
   { id: 'categorias', label: 'Categorías' },
   { id: 'marcas', label: 'Marcas' },
@@ -40,13 +47,15 @@ const BLOQUES_SLUGS: readonly BloqueSlug[] = [
 
 function normalizeTab(raw: string | undefined): OuterTab {
   if (
+    raw === 'productos' ||
     raw === 'categorias' ||
     raw === 'marcas' ||
     raw === 'homepage' ||
-    raw === 'banco'
+    raw === 'banco' ||
+    raw === 'ordenes'
   )
     return raw
-  return 'productos'
+  return 'ordenes'
 }
 
 export default async function AdminStorePage({
@@ -144,7 +153,23 @@ export default async function AdminStorePage({
         })}
       </div>
 
-      {tab === 'banco' ? (
+      {tab === 'ordenes' ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-16">
+          <p
+            className="text-[12px] text-[#666666]"
+            style={{ fontFamily: "'Lato', sans-serif" }}
+          >
+            Las órdenes tienen su propia vista completa.
+          </p>
+          <Link
+            href="/admin/store/orders"
+            className="bg-[#CC4B37] px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white hover:opacity-90"
+            style={jostHeading}
+          >
+            Ver órdenes →
+          </Link>
+        </div>
+      ) : tab === 'banco' ? (
         <DatosBancariosAdmin
           initialDatos={{
             banco: datosBancarios.banco ?? '',
