@@ -36,23 +36,14 @@ export default async function OrdersPage() {
         .in('order_id', orderIds)
     : { data: [] as unknown[] }
 
-  const userIds = orderRows
-    .filter((o) => o.user_id)
-    .map((o) => o.user_id as string)
-
-  const profilesRes = userIds.length
-    ? await db
-        .from('profiles')
-        .select('id, nombre, alias, avatar_url')
-        .in('id', userIds)
-    : { data: [] as unknown[] }
+  const profiles: Record<string, unknown>[] = []
 
   return (
     <div className="p-6">
       <OrdersClient
         orders={(orders ?? []) as Record<string, unknown>[]}
         items={(itemsRes.data ?? []) as Record<string, unknown>[]}
-        profiles={(profilesRes.data ?? []) as Record<string, unknown>[]}
+        profiles={profiles}
       />
     </div>
   )

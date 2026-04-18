@@ -218,14 +218,9 @@ export function OrdersClient({ orders, items, profiles }: Props) {
             const total = num(order.total)
             const transferencia_confirmada = bool(order.transferencia_confirmada)
 
-            const profile = profiles.find(
-              (p) => str(p.id) === str(order.user_id)
-            )
-            const nombreComprador = profile
-              ? str(profile.nombre) || str(profile.alias)
-              : str(order.guest_nombre) || str(order.guest_email)
-
             const dir = (order.direccion_envio ?? {}) as Record<string, string>
+            const nombreComprador =
+              dir.nombre || str(order.guest_nombre) || str(order.guest_email) || '—'
 
             const orderItems = items.filter(
               (i) => str(i.order_id) === id
