@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { StoreBrand, StoreCategory, StoreProduct } from './types'
+import { useCart } from './CartContext'
 
 // ─────────────────────────────────────────────────────────────
 // CONTENIDO EDITORIAL — Defaults, sobrescribibles desde DB (admin)
@@ -224,6 +225,18 @@ function IconBox() {
 function ProductCard({ product, brands }: { product: StoreProduct; brands: StoreBrand[] }) {
   const foto = product.fotos_urls?.[0] ?? null
   const brand = brands.find((b) => b.id === product.brand_id)
+  const { addItem } = useCart()
+
+  function handleAdd(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    addItem({
+      product_id: product.id,
+      nombre: product.nombre,
+      foto_url: foto,
+      precio: product.precio,
+    })
+  }
 
   return (
     <Link
@@ -273,6 +286,24 @@ function ProductCard({ product, brands }: { product: StoreProduct; brands: Store
             </svg>
             TOP
           </span>
+        )}
+        {product.stock > 0 && (
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-1.5 bg-[#CC4B37] py-2 text-[9px] font-extrabold uppercase tracking-wide text-white opacity-0 transition-all duration-200 group-hover:opacity-100"
+            style={jost}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            Agregar
+          </button>
         )}
       </div>
       <div className="flex flex-1 flex-col p-2.5">
@@ -364,6 +395,8 @@ export function StoreExploreClient({
   const [mobileBusquedaOpen, setMobileBusquedaOpen] = useState(false)
   const [drawerCatExpandida, setDrawerCatExpandida] = useState<string | null>(null)
   const [drawerMarcasOpen, setDrawerMarcasOpen] = useState(false)
+
+  const { count: cartCount, openDrawer } = useCart()
 
   const filtered = useMemo(() => {
     let list = products
@@ -558,6 +591,7 @@ export function StoreExploreClient({
                 </span>
                 <button
                   type="button"
+                  onClick={openDrawer}
                   className="relative flex h-9 w-9 items-center justify-center text-[#444444] transition-colors hover:text-[#CC4B37]"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -574,6 +608,14 @@ export function StoreExploreClient({
                       strokeLinecap="round"
                     />
                   </svg>
+                  {cartCount > 0 && (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#CC4B37] text-[9px] font-extrabold text-white"
+                      style={jost}
+                    >
+                      {cartCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
