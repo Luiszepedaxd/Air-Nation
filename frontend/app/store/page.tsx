@@ -112,22 +112,30 @@ async function fetchStoreData(): Promise<{
   const brands = (brandsRes.data ?? []).map((row) => mapBrand(row as Record<string, unknown>))
 
   const editorial: Partial<EditorialData> = {}
-  const bloques_activos: Record<string, boolean> = {}
-  const rows = (blocksRes.data ?? []) as { tipo: string; config: unknown; activo: unknown }[]
-  for (const row of rows) {
-    const slug = row.tipo
-    if ((EDITORIAL_SLUGS as readonly string[]).includes(slug)) {
-      const cfg =
-        row.config && typeof row.config === 'object' && !Array.isArray(row.config)
-          ? (row.config as Record<string, unknown>)
-          : {}
-      ;(editorial as Record<EditorialSlug, unknown>)[slug as EditorialSlug] = cfg
-      bloques_activos[slug] = Boolean(row.activo)
-    }
-  }
 
-  for (const slug of EDITORIAL_SLUGS) {
-    if (!(slug in bloques_activos)) bloques_activos[slug] = true
+  const bloques_activos = {
+    header: true,
+    hero: true,
+    ticker: true,
+    banner1: true,
+    banner2: true,
+    categorias_carousel: true,
+    promoBanner: true,
+    footer: true,
+  } as Record<string, boolean>
+
+  const rows = blocksRes.data ?? []
+  for (const row of rows as Array<{ tipo: string; config: unknown; activo: boolean | null }>) {
+    const slug = row.tipo
+    if (!(EDITORIAL_SLUGS as readonly string[]).includes(slug)) continue
+
+    const cfg =
+      row.config && typeof row.config === 'object' && !Array.isArray(row.config)
+        ? (row.config as Record<string, unknown>)
+        : {}
+    ;(editorial as Record<EditorialSlug, unknown>)[slug as EditorialSlug] = cfg
+
+    bloques_activos[slug] = row.activo === null ? true : row.activo === true
   }
 
   editorial.bloques_activos = bloques_activos as EditorialData['bloques_activos']
