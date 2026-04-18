@@ -1053,7 +1053,7 @@ export function StoreExploreClient({
                     WebkitOverflowScrolling: 'touch',
                   }}
                 >
-                  {[...carouselItems, ...carouselItems].map((cat, idx) => {
+                  {carouselItems.map((cat, idx) => {
                     const isDbCat = !!cat.id
                     const isSelected = isDbCat && filtroCategoriaId === cat.id
                     return (
@@ -1062,8 +1062,8 @@ export function StoreExploreClient({
                         className="shrink-0"
                         style={{
                           scrollSnapAlign: 'start',
-                          width: 'clamp(140px, 20vw, 260px)',
-                          height: 'clamp(100px, 14vw, 175px)',
+                          width: 'clamp(140px, 42vw, 260px)',
+                          height: 'clamp(100px, 28vw, 175px)',
                         }}
                       >
                         {isDbCat ? (
