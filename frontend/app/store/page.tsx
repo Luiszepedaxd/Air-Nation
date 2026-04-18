@@ -142,6 +142,9 @@ async function fetchStoreData(): Promise<{
 
   editorial.bloques_activos = bloques_activos as EditorialData['bloques_activos']
 
+  console.log('[STORE BLOCKS RAW]', JSON.stringify(blocksRes.data))
+  console.log('[STORE BLOQUES_ACTIVOS]', JSON.stringify(bloques_activos))
+
   return { products, categories, brands, editorial }
 }
 
