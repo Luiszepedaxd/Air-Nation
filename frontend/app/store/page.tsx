@@ -6,6 +6,7 @@ import type { EditorialData } from './StoreExploreClient'
 import type { StoreBrand, StoreCategory, StoreProduct } from './types'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
 export const revalidate = 0
 
 export const metadata: Metadata = {
@@ -87,7 +88,8 @@ async function fetchStoreData(): Promise<{
     supabase
       .from('store_homepage_blocks')
       .select('tipo, config, activo')
-      .in('tipo', EDITORIAL_SLUGS as unknown as string[]),
+      .in('tipo', EDITORIAL_SLUGS as unknown as string[])
+      .order('tipo'),
   ])
 
   if (productsRes.error) {
