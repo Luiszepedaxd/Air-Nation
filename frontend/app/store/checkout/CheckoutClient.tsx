@@ -743,6 +743,18 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
             )}
 
             <Link
+              href="/store/pedidos"
+              className="flex w-full items-center justify-center gap-2 bg-[#111111] py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-white transition-colors hover:bg-[#CC4B37]"
+              style={jost}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Ver mis pedidos
+            </Link>
+
+            <Link
               href="/store"
               className="flex w-full items-center justify-center border border-[#EEEEEE] bg-white py-3.5 text-[12px] font-extrabold uppercase tracking-wide text-[#111111] transition-colors hover:border-[#111111]"
               style={jost}

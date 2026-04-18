@@ -225,6 +225,19 @@ export function CartDrawer() {
               </svg>
             </Link>
 
+            <Link
+              href="/store/pedidos"
+              onClick={closeDrawer}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 border border-[#EEEEEE] py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#666666] transition-colors hover:border-[#111111] hover:text-[#111111]"
+              style={jost}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Ver mis pedidos
+            </Link>
+
             <p className="mt-3 text-center text-[11px] text-[#999999]" style={lato}>
               ¿Tienes cuenta?{' '}
               <Link href="/login" className="font-bold text-[#CC4B37] hover:underline">
