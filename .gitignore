@@ -4,9 +4,6 @@ frontend/out/
 backend/node_modules/
 frontend/node_modules/
 
-# Telegram monitor (Telethon)
-telegram-monitor/session.session
-
 # Env files
 .env
 .env.*
