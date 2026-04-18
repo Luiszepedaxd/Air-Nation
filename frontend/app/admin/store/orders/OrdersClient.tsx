@@ -78,14 +78,15 @@ export function OrdersClient({ orders, items, profiles }: Props) {
   const [envioEdit, setEnvioEdit] = useState<Record<string, EnvioEditState>>({})
 
   function getEnvioEdit(id: string, order: OrderRow): EnvioEditState {
-    return (
-      envioEdit[id] ?? {
-        costo_envio: str(order.costo_envio),
-        guia_numero: str(order.guia_numero),
-        guia_paqueteria: str(order.guia_paqueteria),
-        notas_internas: str(order.notas_internas),
-      }
-    )
+    if (envioEdit[id]) return envioEdit[id]
+    return {
+      costo_envio: order.costo_envio != null ? String(order.costo_envio) : '',
+      guia_numero: order.guia_numero != null ? String(order.guia_numero) : '',
+      guia_paqueteria:
+        order.guia_paqueteria != null ? String(order.guia_paqueteria) : '',
+      notas_internas:
+        order.notas_internas != null ? String(order.notas_internas) : '',
+    }
   }
 
   function setEnvioField(
@@ -539,6 +540,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
                                 type="number"
                                 min={0}
                                 className={inputCls}
+                                suppressHydrationWarning
                                 value={edit.costo_envio}
                                 onChange={(e) =>
                                   setEnvioField(
@@ -561,6 +563,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
                               <input
                                 type="text"
                                 className={inputCls}
+                                suppressHydrationWarning
                                 value={edit.guia_paqueteria}
                                 onChange={(e) =>
                                   setEnvioField(
@@ -583,6 +586,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
                               <input
                                 type="text"
                                 className={inputCls}
+                                suppressHydrationWarning
                                 value={edit.guia_numero}
                                 onChange={(e) =>
                                   setEnvioField(
@@ -605,6 +609,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
                               <textarea
                                 rows={2}
                                 className={inputCls}
+                                suppressHydrationWarning
                                 value={edit.notas_internas}
                                 onChange={(e) =>
                                   setEnvioField(
