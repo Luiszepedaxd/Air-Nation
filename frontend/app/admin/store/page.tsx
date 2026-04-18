@@ -9,6 +9,7 @@ import { StoreAdminClient } from './StoreAdminClient'
 import { HomepageAdminClient } from './HomepageAdminClient'
 import type { BloqueRecord } from './HomepageAdminClient'
 import type { BloqueSlug } from './homepage-actions'
+import { DatosBancariosAdmin } from './DatosBancariosAdmin'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -16,13 +17,14 @@ const jostHeading = {
   textTransform: 'uppercase' as const,
 }
 
-type OuterTab = 'productos' | 'categorias' | 'marcas' | 'homepage'
+type OuterTab = 'productos' | 'categorias' | 'marcas' | 'homepage' | 'banco'
 
 const OUTER_TABS: { id: OuterTab; label: string }[] = [
   { id: 'productos', label: 'Productos' },
   { id: 'categorias', label: 'Categorías' },
   { id: 'marcas', label: 'Marcas' },
   { id: 'homepage', label: 'Homepage' },
+  { id: 'banco', label: 'Datos Bancarios' },
 ]
 
 const BLOQUES_SLUGS: readonly BloqueSlug[] = [
@@ -37,7 +39,13 @@ const BLOQUES_SLUGS: readonly BloqueSlug[] = [
 ] as const
 
 function normalizeTab(raw: string | undefined): OuterTab {
-  if (raw === 'categorias' || raw === 'marcas' || raw === 'homepage') return raw
+  if (
+    raw === 'categorias' ||
+    raw === 'marcas' ||
+    raw === 'homepage' ||
+    raw === 'banco'
+  )
+    return raw
   return 'productos'
 }
 
@@ -51,7 +59,7 @@ export default async function AdminStorePage({
 
   const db = createAdminClient()
 
-  const [productsRes, categoriesRes, brandsRes, blocksRes] = await Promise.all([
+  const [productsRes, categoriesRes, brandsRes, blocksRes, bancoRes] = await Promise.all([
     db.from('store_products').select('*').order('created_at', { ascending: false }),
     db
       .from('store_categories')
@@ -65,12 +73,21 @@ export default async function AdminStorePage({
       .from('store_homepage_blocks')
       .select('id, tipo, config, activo')
       .in('tipo', BLOQUES_SLUGS as unknown as string[]),
+    db
+      .from('store_config')
+      .select('value')
+      .eq('key', 'datos_bancarios')
+      .maybeSingle(),
   ])
 
   if (productsRes.error) console.error('[admin/store] products:', productsRes.error.message)
   if (categoriesRes.error) console.error('[admin/store] categories:', categoriesRes.error.message)
   if (brandsRes.error) console.error('[admin/store] brands:', brandsRes.error.message)
   if (blocksRes.error) console.error('[admin/store] blocks:', blocksRes.error.message)
+  if (bancoRes.error) console.error('[admin/store] banco:', bancoRes.error.message)
+
+  const bancoRow = bancoRes.data as { value?: Record<string, string> } | null
+  const datosBancarios = (bancoRow?.value ?? {}) as Record<string, string>
 
   const products = (productsRes.data ?? []) as StoreAdminProductRow[]
   const categories = (categoriesRes.data ?? []) as StoreAdminCategoryRow[]
@@ -127,7 +144,16 @@ export default async function AdminStorePage({
         })}
       </div>
 
-      {tab === 'homepage' ? (
+      {tab === 'banco' ? (
+        <DatosBancariosAdmin
+          initialDatos={{
+            banco: datosBancarios.banco ?? '',
+            clabe: datosBancarios.clabe ?? '',
+            titular: datosBancarios.titular ?? '',
+            concepto: datosBancarios.concepto ?? 'Pedido AirNation #[ORDER_NUMBER]',
+          }}
+        />
+      ) : tab === 'homepage' ? (
         <HomepageAdminClient initialBlocks={bloqueRecords} />
       ) : (
         <StoreAdminClient
