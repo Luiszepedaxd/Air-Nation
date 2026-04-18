@@ -338,6 +338,12 @@ export function StoreExploreClient({
     footer: (editorial?.bloques_activos?.footer as boolean | undefined) ?? true,
   }
 
+  // DEBUG TEMPORAL — borrar después
+  console.log('[STORE DEBUG]', JSON.stringify({
+    editorial_bloques_activos: editorial?.bloques_activos,
+    BA,
+  }))
+
   const EDITORIAL: EditorialData = {
     header: { ...DEFAULTS.header, ...(editorial?.header ?? {}) },
     hero: { ...DEFAULTS.hero, ...(editorial?.hero ?? {}) },
@@ -427,6 +433,23 @@ export function StoreExploreClient({
 
   return (
     <div className="min-h-screen bg-[#F7F7F7]">
+      {/* DEBUG TEMPORAL — borrar después */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          right: 0,
+          background: '#000',
+          color: '#0f0',
+          fontSize: 9,
+          zIndex: 9999,
+          padding: 6,
+          maxWidth: 280,
+          wordBreak: 'break-all',
+        }}
+      >
+        {JSON.stringify({ ba: BA, raw: editorial?.bloques_activos })}
+      </div>
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-30 bg-white shadow-sm">
         {/* Promo bar */}
