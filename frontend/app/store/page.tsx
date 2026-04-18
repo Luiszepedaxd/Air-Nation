@@ -126,8 +126,12 @@ async function fetchStoreData(): Promise<{
     footer: true,
   } as Record<string, boolean>
 
-  const rows = blocksRes.data ?? []
-  for (const row of rows as Array<{ tipo: string; config: unknown; activo: boolean | null }>) {
+  const rows = (blocksRes.data ?? []) as Array<{
+    tipo: string
+    config: unknown
+    activo: boolean | null
+  }>
+  for (const row of rows) {
     const slug = row.tipo
     if (!(EDITORIAL_SLUGS as readonly string[]).includes(slug)) continue
 
