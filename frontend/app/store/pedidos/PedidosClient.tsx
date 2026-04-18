@@ -6,13 +6,13 @@ import { useState } from 'react'
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  nueva:           { label: 'Recibido',         color: '#666666', bg: '#F4F4F4',  icon: '📋' },
-  pago_confirmado: { label: 'Pago confirmado',   color: '#1D4ED8', bg: '#EFF6FF',  icon: '✅' },
-  en_preparacion:  { label: 'En preparación',    color: '#D97706', bg: '#FFFBEB',  icon: '📦' },
-  enviado:         { label: 'En camino',          color: '#059669', bg: '#F0FDF4',  icon: '🚚' },
-  entregado:       { label: 'Entregado',          color: '#111111', bg: '#F4F4F4',  icon: '🎉' },
-  cancelado:       { label: 'Cancelado',          color: '#CC4B37', bg: '#FFF5F4',  icon: '✕' },
+const STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
+  nueva:           { label: 'Pedido recibido',                     color: '#666666', bg: '#F4F4F4' },
+  pago_confirmado: { label: 'Pago confirmado',                     color: '#1D4ED8', bg: '#EFF6FF' },
+  en_preparacion:  { label: 'Preparando tu arsenal',               color: '#D97706', bg: '#FFFBEB' },
+  enviado:         { label: 'Tu pedido salio del Cuartel General', color: '#059669', bg: '#F0FDF4' },
+  entregado:       { label: 'Mision cumplida',                     color: '#111111', bg: '#F4F4F4' },
+  cancelado:       { label: 'Pedido cancelado',                    color: '#CC4B37', bg: '#FFF5F4' },
 }
 
 function str(v: unknown): string { return v != null ? String(v) : '' }
@@ -104,7 +104,7 @@ export function PedidosClient({ orders, items }: Props) {
                       </span>
                       <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase"
                         style={{ ...jost, backgroundColor: meta.bg, color: meta.color }}>
-                        {meta.icon} {meta.label}
+                        {meta.label}
                       </span>
                     </div>
                     <p className="text-[11px] text-[#999999]" style={lato}>
@@ -129,22 +129,35 @@ export function PedidosClient({ orders, items }: Props) {
                     <div className="mb-6">
                       <div className="flex items-center justify-between">
                         {['nueva', 'pago_confirmado', 'en_preparacion', 'enviado', 'entregado'].map((s, i) => {
-                          const m = STATUS_META[s]
                           const steps = ['nueva', 'pago_confirmado', 'en_preparacion', 'enviado', 'entregado']
+                          const labels: Record<string, string> = {
+                            nueva: 'Recibido',
+                            pago_confirmado: 'Pago confirmado',
+                            en_preparacion: 'En preparacion',
+                            enviado: 'Enviado',
+                            entregado: 'Entregado',
+                          }
                           const currentIdx = steps.indexOf(status)
                           const isDone = i <= currentIdx && status !== 'cancelado'
                           const isCurrent = s === status && status !== 'cancelado'
                           return (
                             <div key={s} className="flex flex-1 flex-col items-center gap-1">
-                              {i > 0 && (
-                                <div className="absolute" style={{ display: 'none' }} />
-                              )}
-                              <div className={`flex h-8 w-8 items-center justify-center text-[14px] transition-all ${isCurrent ? 'scale-110' : ''} ${isDone ? 'opacity-100' : 'opacity-30'}`}>
-                                {m.icon}
+                              <div className={`flex h-6 w-6 items-center justify-center border-2 transition-all ${
+                                isCurrent
+                                  ? 'border-[#CC4B37] bg-[#CC4B37]'
+                                  : isDone
+                                  ? 'border-[#111111] bg-[#111111]'
+                                  : 'border-[#EEEEEE] bg-white'
+                              }`}>
+                                {isDone && (
+                                  <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                                    <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                                  </svg>
+                                )}
                               </div>
                               <p className={`text-center text-[8px] font-extrabold uppercase leading-tight ${isDone ? 'text-[#111111]' : 'text-[#CCCCCC]'}`}
                                 style={jost}>
-                                {m.label}
+                                {labels[s]}
                               </p>
                             </div>
                           )
@@ -219,11 +232,11 @@ export function PedidosClient({ orders, items }: Props) {
 
                     {metodo === 'transferencia' && !transferencia_confirmada && status === 'nueva' && (
                       <div className="mb-4 border border-[#D97706] bg-[#FFFBEB] p-3">
-                        <p className="text-[11px] font-bold text-[#D97706]" style={jost}>
-                          ⏳ Transferencia pendiente de confirmación
+                        <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#D97706]" style={jost}>
+                          Transferencia pendiente de confirmacion
                         </p>
                         <p className="mt-1 text-[11px] text-[#666666]" style={lato}>
-                          Una vez que realices el pago y lo confirmemos, tu pedido avanzará automáticamente.
+                          Una vez que realices el pago y lo confirmemos, tu pedido avanzara automaticamente.
                         </p>
                       </div>
                     )}
@@ -231,7 +244,7 @@ export function PedidosClient({ orders, items }: Props) {
                     {guia_numero && (
                       <div className="mb-4 border border-[#059669] bg-[#F0FDF4] p-3">
                         <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#059669]" style={jost}>
-                          🚚 Tu pedido va en camino
+                          Tu pedido salio del Cuartel General
                         </p>
                         <p className="mt-1 text-[12px] text-[#333333]" style={lato}>
                           {guia_paqueteria && <strong>{guia_paqueteria}: </strong>}

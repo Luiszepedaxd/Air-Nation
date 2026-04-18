@@ -18,14 +18,14 @@ const lato = { fontFamily: "'Lato', sans-serif" }
 
 const STATUS_META: Record<
   OrderStatus,
-  { label: string; color: string; bg: string }
+  { label: string; labelAdmin: string; color: string; bg: string }
 > = {
-  nueva: { label: 'Nueva', color: '#111111', bg: '#F4F4F4' },
-  pago_confirmado: { label: 'Pago confirmado', color: '#FFFFFF', bg: '#1D4ED8' },
-  en_preparacion: { label: 'En preparación', color: '#FFFFFF', bg: '#D97706' },
-  enviado: { label: 'Enviado', color: '#FFFFFF', bg: '#059669' },
-  entregado: { label: 'Entregado', color: '#FFFFFF', bg: '#111111' },
-  cancelado: { label: 'Cancelado', color: '#FFFFFF', bg: '#CC4B37' },
+  nueva:           { label: 'Pedido recibido',                     labelAdmin: 'Nueva orden',     color: '#111111', bg: '#F4F4F4' },
+  pago_confirmado: { label: 'Pago confirmado',                     labelAdmin: 'Pago confirmado', color: '#FFFFFF', bg: '#1D4ED8' },
+  en_preparacion:  { label: 'Preparando tu arsenal',               labelAdmin: 'En preparacion',  color: '#FFFFFF', bg: '#D97706' },
+  enviado:         { label: 'Tu pedido salio del Cuartel General', labelAdmin: 'Enviado',         color: '#FFFFFF', bg: '#059669' },
+  entregado:       { label: 'Mision cumplida',                     labelAdmin: 'Entregado',       color: '#FFFFFF', bg: '#111111' },
+  cancelado:       { label: 'Pedido cancelado',                    labelAdmin: 'Cancelado',       color: '#FFFFFF', bg: '#CC4B37' },
 }
 
 const STATUS_FLOW: OrderStatus[] = [
@@ -172,7 +172,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
             <option value="">Todos los estados</option>
             {STATUS_FLOW.map((s) => (
               <option key={s} value={s}>
-                {STATUS_META[s].label}
+                {STATUS_META[s].labelAdmin}
               </option>
             ))}
           </select>
@@ -464,7 +464,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
                                     outlineOffset: 1,
                                   }}
                                 >
-                                  {m.label}
+                                  {m.labelAdmin}
                                 </button>
                               )
                             })}

@@ -589,6 +589,17 @@ export function StoreExploreClient({
                 >
                   ADMIN PREVIEW
                 </span>
+                <Link
+                  href="/store/pedidos"
+                  className="hidden items-center gap-1.5 border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#666666] transition-colors hover:border-[#111111] hover:text-[#111111] md:flex"
+                  style={jost}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Mis pedidos
+                </Link>
                 <button
                   type="button"
                   onClick={openDrawer}
@@ -1667,6 +1678,21 @@ export function StoreExploreClient({
               </span>
               Solo en stock
             </button>
+          </div>
+
+          <div className="border-t border-[#EEEEEE] px-4 py-3">
+            <Link
+              href="/store/pedidos"
+              onClick={() => setDrawerOpen(false)}
+              className="flex w-full items-center justify-center gap-2 border border-[#EEEEEE] py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#666666]"
+              style={jost}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Mis pedidos
+            </Link>
           </div>
 
           {/* Limpiar */}
