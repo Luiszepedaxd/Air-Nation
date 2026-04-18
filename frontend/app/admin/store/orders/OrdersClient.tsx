@@ -76,6 +76,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
   >('')
 
   const [envioEdit, setEnvioEdit] = useState<Record<string, EnvioEditState>>({})
+  const [localStatus, setLocalStatus] = useState<Record<string, OrderStatus>>({})
 
   function getEnvioEdit(id: string, order: OrderRow): EnvioEditState {
     if (envioEdit[id]) return envioEdit[id]
@@ -116,6 +117,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
       setError(res.error)
       return
     }
+    setLocalStatus((prev) => ({ ...prev, [id]: status }))
     router.refresh()
   }
 
@@ -213,7 +215,7 @@ export function OrdersClient({ orders, items, profiles }: Props) {
             const id = str(order.id)
             const isExpanded = expandedId === id
             const isLoading = loadingId === id
-            const statusRaw = str(order.status_interno) as OrderStatus
+            const statusRaw = (localStatus[id] ?? str(order.status_interno)) as OrderStatus
             const meta = STATUS_META[statusRaw] ?? STATUS_META.nueva
             const metodo = str(order.metodo_pago)
             const total = num(order.total)
