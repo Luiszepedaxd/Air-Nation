@@ -388,6 +388,10 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                       setField('cp', val)
                       cotizarConCP(val)
                     }}
+                    onBlur={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 5)
+                      if (val.length === 5) cotizarConCP(val)
+                    }}
                     required
                     placeholder="00000"
                     maxLength={5}
