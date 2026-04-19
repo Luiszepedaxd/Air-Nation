@@ -43,7 +43,26 @@ function rowBool(row: StoreAdminProductRow, key: string): boolean {
   return Boolean(row[key])
 }
 
+function buildCatPath(catId: string | null, cats: StoreAdminCategoryRow[]): { path: string; l1: string } {
+  if (!catId) return { path: 'Sin categoría', l1: '' }
+  const chain: string[] = []
+  let current = cats.find((c) => c.id === catId)
+  while (current) {
+    chain.unshift(current.nombre)
+    current = current.parent_id ? cats.find((c) => c.id === current!.parent_id) : undefined
+  }
+  return {
+    path: chain.join(' › '),
+    l1: chain.length > 0 ? (cats.find((c) => c.nombre === chain[0] && c.parent_id === null)?.id ?? '') : '',
+  }
+}
+
 type TabId = 'productos' | 'categorias' | 'marcas'
+
+type ProductWithCatPath = StoreAdminProductRow & {
+  _catPath: string
+  _catL1: string
+}
 
 type Props = {
   products: StoreAdminProductRow[]
@@ -84,6 +103,17 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
   const [brandNombre, setBrandNombre] = useState('')
   const [brandSlug, setBrandSlug] = useState('')
   const [brandSlugManual, setBrandSlugManual] = useState(false)
+
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
+  function toggleGroup(key: string) {
+    setOpenGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
 
   const cats1 = useMemo(
     () => categories.filter((c) => c.parent_id === null),
@@ -324,171 +354,214 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
 
           {products.length === 0 ? (
             <p className="py-12 text-center text-[#666666]">No hay productos</p>
-          ) : (
-            <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
-              <table className="w-full border-collapse text-left text-sm text-[#111111]">
-                <thead>
-                  <tr className="bg-[#F4F4F4]">
-                    {(
-                      [
-                        'ID',
-                        'NOMBRE',
-                        'PRECIO',
-                        'STOCK',
-                        'CONDICIÓN',
-                        'DESTACADO',
-                        'ACTIVO',
-                        'ACCIONES',
-                      ] as const
-                    ).map((col) => (
-                      <th
-                        key={col}
-                        className="border border-solid border-[#EEEEEE] px-3 py-3 text-[12px] text-[#111111]"
-                        style={jostHeading}
+          ) : (() => {
+            const enriched = products.map((p) => {
+              const catId = (p['categoria_id'] as string | null) ?? null
+              const { path, l1 } = buildCatPath(catId, categories)
+              return { ...p, _catPath: path, _catL1: l1 } as ProductWithCatPath
+            })
+
+            const groups = new Map<string, ProductWithCatPath[]>()
+            for (const p of enriched) {
+              const key = p._catPath
+              if (!groups.has(key)) groups.set(key, [])
+              groups.get(key)!.push(p)
+            }
+
+            const sorted = Array.from(groups.entries()).sort(([a], [b]) => {
+              if (a === 'Sin categoría') return 1
+              if (b === 'Sin categoría') return -1
+              return a.localeCompare(b, 'es')
+            })
+
+            return (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                  <span className="text-[11px] text-[#666666]" style={latoBody}>
+                    {products.length} producto{products.length !== 1 ? 's' : ''} en {groups.size} grupo{groups.size !== 1 ? 's' : ''}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOpenGroups(new Set(Array.from(groups.keys())))}
+                      className="text-[10px] text-[#666666] underline hover:text-[#111111]"
+                      style={jostHeading}
+                    >
+                      EXPANDIR TODO
+                    </button>
+                    <span className="text-[10px] text-[#CCCCCC]">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setOpenGroups(new Set())}
+                      className="text-[10px] text-[#666666] underline hover:text-[#111111]"
+                      style={jostHeading}
+                    >
+                      COLAPSAR TODO
+                    </button>
+                  </div>
+                </div>
+
+                {sorted.map(([groupKey, groupProducts]) => {
+                  const isOpen = openGroups.has(groupKey)
+                  const parts = groupKey.split(' › ')
+                  return (
+                    <div key={groupKey} className="border border-solid border-[#EEEEEE]">
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(groupKey)}
+                        className="flex w-full items-center justify-between gap-3 bg-[#F4F4F4] px-4 py-3 text-left transition-colors hover:bg-[#EBEBEB]"
                       >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((p, i) => {
-                    const id = rowStr(p, 'id')
-                    const nombre = rowStr(p, 'nombre')
-                    const precio = rowNum(p, 'precio')
-                    const stock = rowNum(p, 'stock')
-                    const stock_visible = rowBool(p, 'stock_visible')
-                    const condRaw = rowStr(p, 'condicion').toLowerCase()
-                    const condicion = condRaw === 'outlet' ? 'outlet' : 'nuevo'
-                    const destacado = rowBool(p, 'destacado')
-                    const activo = rowBool(p, 'activo')
-                    return (
-                      <tr
-                        key={id || i}
-                        className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
-                      >
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                          {id ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                                  navigator.clipboard.writeText(id).catch(() => {})
-                                }
-                              }}
-                              title="Copiar ID completo"
-                              className="flex items-center gap-1 font-mono text-[10px] text-[#999999] transition-colors hover:text-[#CC4B37]"
-                              style={{ borderRadius: 2 }}
-                            >
-                              {id.slice(0, 8)}…
-                              <svg
-                                width="10"
-                                height="10"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                aria-hidden
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                          {parts.map((part, i) => (
+                            <span key={i} className="flex items-center gap-1">
+                              {i > 0 && <span className="text-[10px] text-[#CCCCCC]">›</span>}
+                              <span
+                                className={`text-[11px] ${
+                                  i === 0
+                                    ? 'font-extrabold text-[#111111]'
+                                    : i === parts.length - 1
+                                      ? 'text-[#444444]'
+                                      : 'text-[#666666]'
+                                }`}
+                                style={i === 0 ? jostHeading : latoBody}
                               >
-                                <rect
-                                  x="9"
-                                  y="9"
-                                  width="13"
-                                  height="13"
-                                  rx="1"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                />
-                                <path
-                                  d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                />
-                              </svg>
-                            </button>
-                          ) : (
-                            <span className="font-mono text-[10px] text-[#CCCCCC]">—</span>
-                          )}
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2 font-semibold">
-                          {nombre || '—'}
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
-                          ${precio.toLocaleString('es-MX')}
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                          {stockLabel(stock, stock_visible)}
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                          {condicion === 'outlet' ? (
-                            <span
-                              className="inline-block text-[10px] font-semibold tracking-wide text-[#FFFFFF]"
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: 2,
-                                backgroundColor: '#CC4B37',
-                                ...jostHeading,
-                              }}
-                            >
-                              OUTLET
+                                {part}
+                              </span>
                             </span>
-                          ) : (
-                            <span
-                              className="inline-block text-[10px] font-semibold tracking-wide text-[#666666]"
-                              style={{
-                                padding: '4px 8px',
-                                borderRadius: 2,
-                                backgroundColor: '#EEEEEE',
-                                ...jostHeading,
-                              }}
-                            >
-                              NUEVO
-                            </span>
-                          )}
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => onToggleDestacado(id, destacado)}
-                            className={`border px-2 py-1 text-[10px] uppercase transition-colors ${
-                              destacado
-                                ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                                : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
-                            }`}
-                            style={{ ...jostHeading, borderRadius: 2 }}
+                          ))}
+                          <span
+                            className="ml-2 inline-block border border-[#DDDDDD] bg-[#FFFFFF] px-2 py-0.5 text-[10px] text-[#666666]"
+                            style={{ borderRadius: 2, ...latoBody }}
                           >
-                            {destacado ? 'Destacado' : 'Normal'}
-                          </button>
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => onToggleActivo(id, activo)}
-                            className={`border px-2 py-1 text-[10px] uppercase transition-colors ${
-                              activo
-                                ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
-                                : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
-                            }`}
-                            style={{ ...jostHeading, borderRadius: 2 }}
-                          >
-                            {activo ? 'Activo' : 'Inactivo'}
-                          </button>
-                        </td>
-                        <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                          <button
-                            type="button"
-                            onClick={() => onDeleteProduct(id)}
-                            className="border border-[#CC4B37] bg-[#CC4B37] px-3 py-1.5 text-[10px] uppercase text-[#FFFFFF] transition-opacity hover:opacity-90"
-                            style={{ ...jostHeading, borderRadius: 2 }}
-                          >
-                            Eliminar
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                            {groupProducts.length}
+                          </span>
+                        </div>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden
+                          className={`shrink-0 text-[#999999] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        >
+                          <path
+                            d="M6 9l6 6 6-6"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+
+                      {isOpen && (
+                        <div className="w-full overflow-x-auto">
+                          <table className="w-full border-collapse text-left text-sm text-[#111111]">
+                            <thead>
+                              <tr className="bg-[#FAFAFA]">
+                                {(
+                                  ['NOMBRE', 'PRECIO', 'STOCK', 'CONDICIÓN', 'DESTACADO', 'ACTIVO', 'ACCIONES'] as const
+                                ).map((col) => (
+                                  <th
+                                    key={col}
+                                    className="border-b border-t border-solid border-[#EEEEEE] px-3 py-2 text-[10px] text-[#111111]"
+                                    style={jostHeading}
+                                  >
+                                    {col}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {groupProducts.map((p, i) => {
+                                const id = rowStr(p, 'id')
+                                const nombre = rowStr(p, 'nombre')
+                                const precio = rowNum(p, 'precio')
+                                const stock = rowNum(p, 'stock')
+                                const stock_visible = rowBool(p, 'stock_visible')
+                                const condRaw = rowStr(p, 'condicion').toLowerCase()
+                                const condicion = condRaw === 'outlet' ? 'outlet' : 'nuevo'
+                                const destacado = rowBool(p, 'destacado')
+                                const activo = rowBool(p, 'activo')
+                                return (
+                                  <tr key={id || i} className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F9F9F9]'}>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 font-semibold text-[#111111]">
+                                      {nombre || '—'}
+                                    </td>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
+                                      ${precio.toLocaleString('es-MX')}
+                                    </td>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                      {stockLabel(stock, stock_visible)}
+                                    </td>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                      {condicion === 'outlet' ? (
+                                        <span
+                                          className="inline-block px-2 py-0.5 text-[9px] font-extrabold text-[#FFFFFF]"
+                                          style={{ borderRadius: 2, backgroundColor: '#CC4B37', ...jostHeading }}
+                                        >
+                                          OUTLET
+                                        </span>
+                                      ) : (
+                                        <span
+                                          className="inline-block px-2 py-0.5 text-[9px] text-[#666666]"
+                                          style={{ borderRadius: 2, backgroundColor: '#EEEEEE', ...jostHeading }}
+                                        >
+                                          NUEVO
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => onToggleDestacado(id, destacado)}
+                                        className={`border px-2 py-1 text-[9px] uppercase transition-colors ${
+                                          destacado
+                                            ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
+                                            : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
+                                        }`}
+                                        style={{ ...jostHeading, borderRadius: 2 }}
+                                      >
+                                        {destacado ? '★ Sí' : '☆ No'}
+                                      </button>
+                                    </td>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => onToggleActivo(id, activo)}
+                                        className={`border px-2 py-1 text-[9px] uppercase transition-colors ${
+                                          activo
+                                            ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                                            : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
+                                        }`}
+                                        style={{ ...jostHeading, borderRadius: 2 }}
+                                      >
+                                        {activo ? 'Activo' : 'Inactivo'}
+                                      </button>
+                                    </td>
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => onDeleteProduct(id)}
+                                        className="border border-[#CC4B37] bg-[#CC4B37] px-2 py-1 text-[9px] uppercase text-[#FFFFFF] transition-opacity hover:opacity-90"
+                                        style={{ ...jostHeading, borderRadius: 2 }}
+                                      >
+                                        Eliminar
+                                      </button>
+                                    </td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
 
           {productModalOpen ? (
             <div
