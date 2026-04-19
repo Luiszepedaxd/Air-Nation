@@ -303,7 +303,7 @@ export function OrdersClient({ orders, items }: Props) {
                             )}
                             {order.costo_envio != null && num(order.costo_envio) > 0 && (
                               <div className="flex justify-between">
-                                <span className="text-[#666666]" style={lato}>Envio</span>
+                                <span className="text-[#666666]" style={lato}>Envío FedEx</span>
                                 <span style={jost}>${num(order.costo_envio).toLocaleString('es-MX')}</span>
                               </div>
                             )}
@@ -311,6 +311,12 @@ export function OrdersClient({ orders, items }: Props) {
                               <span className="font-extrabold text-[#111111]" style={jost}>Total</span>
                               <span className="font-extrabold text-[#111111]" style={jost}>${num(order.total).toLocaleString('es-MX')}</span>
                             </div>
+                            {(str(order.cp_destino) || dir.cp) && (
+                              <div className="mt-1 flex justify-between border-t border-[#EEEEEE] pt-1.5">
+                                <span className="text-[10px] uppercase tracking-wide text-[#999999]" style={jost}>CP destino</span>
+                                <span className="text-[11px] font-bold text-[#666666]" style={jost}>{str(order.cp_destino) || dir.cp}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
