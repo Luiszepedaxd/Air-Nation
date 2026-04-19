@@ -30,6 +30,7 @@ export type CreateOrderInput = {
   direccion: DireccionEnvio
   metodo_pago: 'transferencia' | 'tarjeta'
   user_id?: string | null
+  costo_envio: number
 }
 
 function generateOrderNumber(): string {
@@ -73,15 +74,18 @@ export async function createOrder(
     }
   }
 
-  const subtotal = input.items.reduce((acc, i) => acc + i.precio * i.cantidad, 0)
-  const descuento_pct = input.metodo_pago === 'transferencia' ? 4 : 0
-  const descuento_monto = Math.round(subtotal * (descuento_pct / 100))
   const order_number = generateOrderNumber()
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
   const user_id = user?.id ?? input.user_id ?? null
+  const costo_envio = input.costo_envio ?? 0
+
+  const subtotal = input.items.reduce((acc, i) => acc + i.precio * i.cantidad, 0)
+  const descuento_pct = input.metodo_pago === 'transferencia' ? 4 : 0
+  const descuento_monto = Math.round(subtotal * (descuento_pct / 100))
+  const total_con_envio = subtotal - descuento_monto + costo_envio
 
   const { data: order, error: orderError } = await supabase
     .from('store_orders')
@@ -95,7 +99,9 @@ export async function createOrder(
       descuento_pct,
       subtotal,
       descuento_monto,
-      total: subtotal - descuento_monto,
+      costo_envio,
+      cp_destino: input.direccion.cp,
+      total: total_con_envio,
       status_interno: 'nueva',
     })
     .select('id')
@@ -157,7 +163,8 @@ export async function createOrder(
     items: input.items,
     subtotal,
     descuento_monto,
-    total: subtotal - descuento_monto,
+    costo_envio,
+    total: total_con_envio,
     metodo_pago: input.metodo_pago,
     direccion: input.direccion,
     datosBancarios,
@@ -173,6 +180,7 @@ async function sendOrderConfirmationEmail(params: {
   items: CheckoutItem[]
   subtotal: number
   descuento_monto: number
+  costo_envio: number
   total: number
   metodo_pago: 'transferencia' | 'tarjeta'
   direccion: DireccionEnvio
@@ -185,7 +193,7 @@ async function sendOrderConfirmationEmail(params: {
 
   const {
     email, nombre, order_number, items, subtotal,
-    descuento_monto, total, metodo_pago, direccion, datosBancarios,
+    descuento_monto, costo_envio, total, metodo_pago, direccion, datosBancarios,
   } = params
 
   const concepto = datosBancarios?.concepto?.replace('[ORDER_NUMBER]', order_number) ?? `Pedido AirNation #${order_number}`
@@ -290,8 +298,8 @@ async function sendOrderConfirmationEmail(params: {
           <td style="font-size:12px;color:#22C55E;text-align:right;padding:4px 0">−$${descuento_monto.toLocaleString('es-MX')}</td>
         </tr>` : ''}
         <tr>
-          <td style="font-size:12px;color:#999;padding:4px 0">Envío</td>
-          <td style="font-size:12px;color:#999;text-align:right;padding:4px 0">Se cotiza después</td>
+          <td style="font-size:12px;color:#555;padding:4px 0">Envío FedEx Nacional</td>
+          <td style="font-size:12px;color:#111;font-weight:bold;text-align:right;padding:4px 0">$${costo_envio.toLocaleString('es-MX')}</td>
         </tr>
         <tr style="border-top:2px solid #111">
           <td style="font-size:15px;font-weight:800;color:#111;padding:10px 0 4px;text-transform:uppercase;letter-spacing:0.05em">Total</td>
