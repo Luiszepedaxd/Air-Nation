@@ -12,6 +12,7 @@ import {
   deleteProduct,
   toggleProductActivo,
   toggleProductDestacado,
+  updateBrand,
   updateProduct,
 } from './actions'
 import type { StoreAdminBrandRow, StoreAdminCategoryRow, StoreAdminProductRow } from './data-types'
@@ -113,6 +114,8 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
   const [brandNombre, setBrandNombre] = useState('')
   const [brandSlug, setBrandSlug] = useState('')
   const [brandSlugManual, setBrandSlugManual] = useState(false)
+  const [editBrand, setEditBrand] = useState<StoreAdminBrandRow | null>(null)
+  const [editBrandError, setEditBrandError] = useState<string | null>(null)
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 
@@ -327,6 +330,21 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
     setBrandNombre('')
     setBrandSlug('')
     setBrandSlugManual(false)
+    refresh()
+  }
+
+  async function onUpdateBrand(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!editBrand) return
+    setEditBrandError(null)
+    const form = e.currentTarget
+    const fd = new FormData(form)
+    const res = await updateBrand(editBrand.id, fd)
+    if ('error' in res) {
+      setEditBrandError(res.error)
+      return
+    }
+    setEditBrand(null)
     refresh()
   }
 
@@ -1609,18 +1627,80 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                       </span>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onDeleteBrand(b.id)}
-                    className="shrink-0 text-[10px] uppercase text-[#CC4B37] underline"
-                    style={jostHeading}
-                  >
-                    Eliminar
-                  </button>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => { setEditBrandError(null); setEditBrand(b) }}
+                      className="text-[10px] uppercase text-[#111111] underline hover:text-[#CC4B37]"
+                      style={jostHeading}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteBrand(b.id)}
+                      className="text-[10px] uppercase text-[#CC4B37] underline"
+                      style={jostHeading}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           )}
+
+          {editBrand ? (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111111]/50 p-4"
+              role="presentation"
+              onClick={() => setEditBrand(null)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="w-full max-w-md border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-5 shadow-lg"
+                style={{ borderRadius: 2 }}
+                onClick={(ev) => ev.stopPropagation()}
+              >
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <h2 className="text-lg tracking-[0.1em] text-[#111111]" style={jostHeading}>
+                    EDITAR MARCA
+                  </h2>
+                  <button type="button" onClick={() => setEditBrand(null)}
+                    className="text-[11px] text-[#666666] underline" style={jostHeading}>
+                    Cerrar
+                  </button>
+                </div>
+                {editBrandError ? <p className="mb-3 text-sm text-[#CC4B37]">{editBrandError}</p> : null}
+                <form onSubmit={onUpdateBrand} className="flex flex-col gap-3">
+                  <label className="block text-[11px] text-[#666666]">
+                    Nombre
+                    <input name="nombre" required defaultValue={editBrand.nombre}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Slug
+                    <input name="slug" required defaultValue={editBrand.slug}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Logo URL
+                    <input name="logo_url" type="url" defaultValue={editBrand.logo_url ?? ''}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <button type="submit"
+                    className="mt-2 bg-[#CC4B37] px-4 py-2.5 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#111111]"
+                    style={{ ...jostHeading, borderRadius: 2 }}>
+                    GUARDAR CAMBIOS
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

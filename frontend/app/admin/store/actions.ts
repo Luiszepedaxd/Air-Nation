@@ -194,3 +194,23 @@ export async function updateProduct(id: string, formData: FormData): Promise<{ o
   revalidatePath('/store')
   return { ok: true }
 }
+
+export async function updateBrand(id: string, formData: FormData): Promise<{ ok: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return { error: 'No autorizado.' }
+
+  const nombre = String(formData.get('nombre') ?? '').trim()
+  const slug = String(formData.get('slug') ?? '').trim()
+  const logo_url = String(formData.get('logo_url') ?? '').trim() || null
+  const descripcion = String(formData.get('descripcion') ?? '').trim() || null
+
+  if (!nombre || !slug) return { error: 'Nombre y slug son requeridos.' }
+
+  const db = createAdminClient()
+  const { error } = await db.from('store_brands').update({ nombre, slug, logo_url, descripcion }).eq('id', id.trim())
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/store')
+  revalidatePath('/store')
+  return { ok: true }
+}
