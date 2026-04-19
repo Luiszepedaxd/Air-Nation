@@ -1,3 +1,6 @@
+# Datos locales (p. ej. imágenes para snapshot_drive)
+resources/
+
 node_modules/
 frontend/.next/
 frontend/out/

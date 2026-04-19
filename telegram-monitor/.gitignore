@@ -1,5 +1,12 @@
 # Sesión Telethon versionada en el repo para el worker (ver política del proyecto).
 # session.session
 
+# Python local
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Salidas / datos locales (no versionar)
 snapshot_images/
 catalogo_snapshot.csv
+replicas_snapshot.csv
