@@ -8,6 +8,8 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import type { DireccionCompleta } from '@/components/AddressAutocomplete'
 import { createOrder } from './actions'
 import type { DireccionEnvio } from './actions'
+import { cotizarEnvio } from '@/lib/fedex-tarifas'
+import type { CotizacionEnvio } from '@/lib/fedex-tarifas'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -26,6 +28,8 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
   const [metodoPago, setMetodoPago] = useState<'transferencia' | 'tarjeta'>('transferencia')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [cotizacion, setCotizacion] = useState<CotizacionEnvio | null>(null)
+  const [cotizandoEnvio, setCotizandoEnvio] = useState(false)
   const [orderResult, setOrderResult] = useState<{ order_id: string; order_number: string } | null>(
     null
   )
@@ -47,6 +51,28 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
+  function cotizarConCP(cp: string) {
+    if (cp.length !== 5) {
+      setCotizacion(null)
+      return
+    }
+    setCotizandoEnvio(true)
+    // Calcular peso y dimensiones totales del carrito
+    // Normalizar campos por si vienen de localStorage sin los nuevos campos
+    const pesoTotal = items.reduce((acc, item) => {
+      const p = item.peso_kg ?? null
+      return acc + (p ?? 1.5) * item.cantidad
+    }, 0)
+    // Dimensiones: usar el producto más grande del carrito
+    const largoMax = items.reduce((acc, item) => Math.max(acc, item.largo_cm ?? 30), 0)
+    const anchoMax = items.reduce((acc, item) => Math.max(acc, item.ancho_cm ?? 20), 0)
+    const altoMax = items.reduce((acc, item) => Math.max(acc, item.alto_cm ?? 15), 0)
+
+    const result = cotizarEnvio(cp, pesoTotal, largoMax, anchoMax, altoMax)
+    setCotizacion(result)
+    setCotizandoEnvio(false)
+  }
+
   function handleAddressSelect(dir: DireccionCompleta) {
     setForm((prev) => ({
       ...prev,
@@ -60,8 +86,9 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
   }
 
   const subtotal = total
+  const costoEnvio = cotizacion?.ok ? cotizacion.costo : 0
   const descuento = metodoPago === 'transferencia' ? Math.round(total * 0.04) : 0
-  const totalFinal = subtotal - descuento
+  const totalFinal = subtotal - descuento + costoEnvio
   const concepto = datosBancarios.concepto.replace(
     '[ORDER_NUMBER]',
     orderResult?.order_number ?? '...'
@@ -83,6 +110,10 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
       router.push('/store')
       return
     }
+    if (!cotizacion || !cotizacion.ok) {
+      setError('Ingresa tu código postal para cotizar el envío antes de continuar.')
+      return
+    }
     setSubmitting(true)
     setError(null)
 
@@ -91,6 +122,7 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
       direccion: form,
       metodo_pago: metodoPago,
       user_id: user?.id ?? null,
+      costo_envio: costoEnvio,
     })
 
     setSubmitting(false)
@@ -346,11 +378,40 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     type="text"
                     className={inputCls}
                     value={form.cp}
-                    onChange={(e) => setField('cp', e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 5)
+                      setField('cp', val)
+                      cotizarConCP(val)
+                    }}
                     required
                     placeholder="00000"
                     maxLength={5}
                   />
+                  {cotizandoEnvio && (
+                    <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
+                      Calculando envío...
+                    </p>
+                  )}
+                  {cotizacion && cotizacion.ok && (
+                    <div className="mt-2 flex items-center justify-between border border-[#22C55E]/30 bg-[#F0FDF4] px-3 py-2">
+                      <div>
+                        <p className="text-[11px] font-bold text-[#22C55E]" style={jost}>
+                          Envío cotizado ✓
+                        </p>
+                        <p className="text-[10px] text-[#666666]" style={lato}>
+                          FedEx Nacional Económico · Zona {cotizacion.zona} · {cotizacion.peso_cobrable} kg
+                        </p>
+                      </div>
+                      <p className="text-[14px] font-extrabold text-[#111111]" style={jost}>
+                        ${cotizacion.costo.toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                  )}
+                  {cotizacion && !cotizacion.ok && form.cp.length === 5 && (
+                    <p className="mt-1 text-[11px] text-[#CC4B37]" style={lato}>
+                      {cotizacion.error} — verifica tu CP
+                    </p>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelCls}>Referencias (opcional)</label>
@@ -543,12 +604,18 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-[12px]">
-                    <span className="text-[#999999]" style={lato}>
-                      Envío
+                    <span className="text-[#555555]" style={lato}>
+                      Envío FedEx
                     </span>
-                    <span className="text-[#999999]" style={lato}>
-                      Se cotiza después
-                    </span>
+                    {costoEnvio > 0 ? (
+                      <span className="font-bold text-[#111111]" style={jost}>
+                        ${costoEnvio.toLocaleString('es-MX')}
+                      </span>
+                    ) : (
+                      <span className="text-[#CC4B37] text-[11px]" style={lato}>
+                        Ingresa tu CP para cotizar
+                      </span>
+                    )}
                   </div>
                   <div className="mt-1 flex items-center justify-between border-t border-[#EEEEEE] pt-2">
                     <span
@@ -661,7 +728,7 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     )}
                     <div className="flex items-center justify-between border-t border-white/10 pt-2">
                       <span className="text-[11px] text-white/50" style={lato}>
-                        Monto
+                        Monto (incluye envío)
                       </span>
                       <span className="text-[16px] font-extrabold text-[#22C55E]" style={jost}>
                         ${totalFinal.toLocaleString('es-MX')}
