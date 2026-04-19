@@ -12,6 +12,7 @@ import {
   deleteProduct,
   toggleProductActivo,
   toggleProductDestacado,
+  updateProduct,
 } from './actions'
 import type { StoreAdminBrandRow, StoreAdminCategoryRow, StoreAdminProductRow } from './data-types'
 
@@ -75,6 +76,15 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
   const router = useRouter()
   const [tab, setTab] = useState<TabId>(initialTab ?? 'productos')
   const [productModalOpen, setProductModalOpen] = useState(false)
+  const [editProduct, setEditProduct] = useState<StoreAdminProductRow | null>(null)
+  const [editFormError, setEditFormError] = useState<string | null>(null)
+  const [editStockVisible, setEditStockVisible] = useState(false)
+  const [editDestacado, setEditDestacado] = useState(false)
+  const [editFotos, setEditFotos] = useState<string[]>([])
+  const [editFotosUploading, setEditFotosUploading] = useState(false)
+  const [editCatNivel1, setEditCatNivel1] = useState('')
+  const [editCatNivel2, setEditCatNivel2] = useState('')
+  const [editCatNivel3, setEditCatNivel3] = useState('')
 
   const [productFormError, setProductFormError] = useState<string | null>(null)
   const [categoryFormError, setCategoryFormError] = useState<string | null>(null)
@@ -115,6 +125,24 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
     })
   }
 
+  function openEditModal(p: StoreAdminProductRow) {
+    const catId = (p['categoria_id'] as string | null) ?? ''
+    const chain: string[] = []
+    let current = categories.find((c) => c.id === catId)
+    while (current) {
+      chain.unshift(current.id)
+      current = current.parent_id ? categories.find((c) => c.id === current!.parent_id) : undefined
+    }
+    setEditCatNivel1(chain[0] ?? '')
+    setEditCatNivel2(chain[1] ?? '')
+    setEditCatNivel3(chain[2] ?? '')
+    setEditStockVisible(Boolean(p['stock_visible']))
+    setEditDestacado(Boolean(p['destacado']))
+    setEditFotos((p['fotos_urls'] as string[] | null) ?? [])
+    setEditFormError(null)
+    setEditProduct(p)
+  }
+
   const cats1 = useMemo(
     () => categories.filter((c) => c.parent_id === null),
     [categories]
@@ -126,6 +154,15 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
   const cats3 = useMemo(
     () => categories.filter((c) => c.parent_id === catNivel2),
     [categories, catNivel2]
+  )
+
+  const editCats2 = useMemo(
+    () => categories.filter((c) => c.parent_id === editCatNivel1),
+    [categories, editCatNivel1]
+  )
+  const editCats3 = useMemo(
+    () => categories.filter((c) => c.parent_id === editCatNivel2),
+    [categories, editCatNivel2]
   )
 
   const selectedCategoriaId = catNivel3 || catNivel2 || catNivel1 || ''
@@ -185,6 +222,27 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
     }
   }
 
+  async function handleEditFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    if (!files.length || editFotos.length >= 6) return
+    const allowed = files.slice(0, 6 - editFotos.length)
+    setEditFotosUploading(true)
+    try {
+      const urls: string[] = []
+      for (const file of allowed) {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) continue
+        const url = await uploadFile(file)
+        urls.push(url)
+      }
+      setEditFotos((prev) => [...prev, ...urls])
+    } catch {
+      setEditFormError('Error al subir las fotos.')
+    } finally {
+      setEditFotosUploading(false)
+    }
+  }
+
   async function onCreateProduct(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setProductFormError(null)
@@ -210,6 +268,27 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
     setCatNivel3('')
     setProductFotos([])
     setFotosUploading(false)
+    refresh()
+  }
+
+  async function onUpdateProduct(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!editProduct) return
+    setEditFormError(null)
+    const form = e.currentTarget
+    const fd = new FormData(form)
+    fd.set('stock_visible', editStockVisible ? 'true' : 'false')
+    fd.set('destacado', editDestacado ? 'true' : 'false')
+    fd.set('fotos_urls', JSON.stringify(editFotos))
+    const selectedEditCatId = editCatNivel3 || editCatNivel2 || editCatNivel1 || ''
+    fd.set('categoria_id', selectedEditCatId)
+    const id = rowStr(editProduct, 'id')
+    const res = await updateProduct(id, fd)
+    if ('error' in res) {
+      setEditFormError(res.error)
+      return
+    }
+    setEditProduct(null)
     refresh()
   }
 
@@ -485,8 +564,15 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                 const activo = rowBool(p, 'activo')
                                 return (
                                   <tr key={id || i} className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F9F9F9]'}>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 font-semibold text-[#111111]">
-                                      {nombre || '—'}
+                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => openEditModal(p)}
+                                        className="text-left text-[13px] font-semibold text-[#111111] underline-offset-2 hover:text-[#CC4B37] hover:underline"
+                                        style={latoBody}
+                                      >
+                                        {nombre || '—'}
+                                      </button>
                                     </td>
                                     <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
                                       ${precio.toLocaleString('es-MX')}
@@ -888,6 +974,206 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                     style={{ ...jostHeading, borderRadius: 2 }}
                   >
                     CREAR PRODUCTO
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : null}
+
+          {editProduct ? (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-[#111111]/50 p-4"
+              role="presentation"
+              onClick={() => setEditProduct(null)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                className="max-h-[90vh] w-full max-w-lg overflow-y-auto border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-5 shadow-lg"
+                style={{ borderRadius: 2 }}
+                onClick={(ev) => ev.stopPropagation()}
+              >
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <h2 className="text-lg tracking-[0.1em] text-[#111111]" style={jostHeading}>
+                    EDITAR PRODUCTO
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setEditProduct(null)}
+                    className="text-[11px] text-[#666666] underline"
+                    style={jostHeading}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                {editFormError ? (
+                  <p className="mb-3 text-sm text-[#CC4B37]">{editFormError}</p>
+                ) : null}
+                <form onSubmit={onUpdateProduct} className="flex flex-col gap-3">
+                  <label className="block text-[11px] text-[#666666]">
+                    Nombre
+                    <input name="nombre" required defaultValue={rowStr(editProduct, 'nombre')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Slug
+                    <input name="slug" required defaultValue={rowStr(editProduct, 'slug')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Precio
+                    <input name="precio" type="number" min={0.01} step="0.01" required
+                      defaultValue={rowNum(editProduct, 'precio')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Precio costo (opcional)
+                    <input name="precio_costo" type="number" min={0} step="0.01"
+                      defaultValue={rowNum(editProduct, 'precio_costo', 0) || ''}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Stock
+                    <input name="stock" type="number" min={0} step={1}
+                      defaultValue={rowNum(editProduct, 'stock')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#111111]">
+                    <input type="checkbox" checked={editStockVisible}
+                      onChange={(e) => setEditStockVisible(e.target.checked)} />
+                    Stock visible (muestra cantidad exacta)
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Condición
+                    <select name="condicion" defaultValue={rowStr(editProduct, 'condicion') || 'nuevo'}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }}>
+                      <option value="nuevo">Nuevo</option>
+                      <option value="outlet">Outlet</option>
+                    </select>
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Categoría
+                    <select className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} value={editCatNivel1}
+                      onChange={(e) => { setEditCatNivel1(e.target.value); setEditCatNivel2(''); setEditCatNivel3('') }}>
+                      <option value="">—</option>
+                      {cats1.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                  </label>
+                  {editCats2.length > 0 && (
+                    <label className="block text-[11px] text-[#666666]">
+                      Subcategoría
+                      <select className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                        style={{ borderRadius: 2 }} value={editCatNivel2}
+                        onChange={(e) => { setEditCatNivel2(e.target.value); setEditCatNivel3('') }}>
+                        <option value="">—</option>
+                        {editCats2.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  {editCats3.length > 0 && (
+                    <label className="block text-[11px] text-[#666666]">
+                      Sub-subcategoría
+                      <select className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                        style={{ borderRadius: 2 }} value={editCatNivel3}
+                        onChange={(e) => setEditCatNivel3(e.target.value)}>
+                        <option value="">—</option>
+                        {editCats3.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                      </select>
+                    </label>
+                  )}
+                  <label className="block text-[11px] text-[#666666]">
+                    Marca
+                    <select name="brand_id" defaultValue={rowStr(editProduct, 'brand_id')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }}>
+                      <option value="">—</option>
+                      {brands.map((b) => <option key={b.id} value={b.id}>{b.nombre}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-[12px] text-[#111111]">
+                    <input type="checkbox" checked={editDestacado}
+                      onChange={(e) => setEditDestacado(e.target.checked)} />
+                    Destacado
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Días de manejo
+                    <input name="dias_manejo" type="number" min={0} step={1}
+                      defaultValue={rowNum(editProduct, 'dias_manejo', 3)}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Deporte
+                    <select name="deporte" defaultValue={rowStr(editProduct, 'deporte') || 'general'}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }}>
+                      <option value="airsoft">Airsoft</option>
+                      <option value="gotcha">Gotcha</option>
+                      <option value="gelsoft">Gelsoft</option>
+                      <option value="general">General</option>
+                    </select>
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Descripción (opcional)
+                    <textarea name="descripcion" rows={2}
+                      defaultValue={rowStr(editProduct, 'descripcion')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <label className="block text-[11px] text-[#666666]">
+                    Qué incluye (opcional)
+                    <textarea name="que_incluye" rows={2}
+                      defaultValue={rowStr(editProduct, 'que_incluye')}
+                      className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                      style={{ borderRadius: 2 }} />
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-[11px] text-[#666666]" style={jostHeading}>
+                      FOTOS <span className="font-normal normal-case tracking-normal text-[#AAAAAA]">(máx 6)</span>
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {editFotos.map((url, i) => (
+                        <div key={i} className="relative" style={{ aspectRatio: '1/1' }}>
+                          <img src={url} alt="" className="h-full w-full border border-[#EEEEEE] object-cover" />
+                          {i === 0 && (
+                            <span className="absolute bottom-1 left-1 bg-[#CC4B37] px-1 py-0.5 text-[8px] font-extrabold uppercase text-white" style={jostHeading}>
+                              Portada
+                            </span>
+                          )}
+                          <button type="button"
+                            onClick={() => setEditFotos((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center bg-black/60 text-xs text-white">
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      {editFotos.length < 6 && (
+                        <label className="flex cursor-pointer flex-col items-center justify-center border border-dashed border-[#CCCCCC] bg-[#F4F4F4] transition-colors hover:border-[#CC4B37]"
+                          style={{ aspectRatio: '1/1' }}>
+                          <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden"
+                            onChange={handleEditFoto} disabled={editFotosUploading} />
+                          {editFotosUploading ? (
+                            <span className="text-[10px] text-[#999999]" style={latoBody}>Subiendo…</span>
+                          ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <path d="M12 5v14M5 12h14" stroke="#CCCCCC" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                          )}
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                  <button type="submit"
+                    className="mt-2 bg-[#CC4B37] px-4 py-2.5 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#111111]"
+                    style={{ ...jostHeading, borderRadius: 2 }}>
+                    GUARDAR CAMBIOS
                   </button>
                 </form>
               </div>
