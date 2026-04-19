@@ -474,7 +474,7 @@ export function HomepageAdminClient({ initialBlocks }: { initialBlocks: BloqueRe
   })
 
   const [toggling, setToggling] = useState<BloqueSlug | null>(null)
-  const [expandido, setExpandido] = useState<BloqueSlug | null>('hero')
+  const [expandido, setExpandido] = useState<BloqueSlug | null>(null)
   const [saving, setSaving] = useState<BloqueSlug | null>(null)
   const [saved, setSaved] = useState<BloqueSlug | null>(null)
   const [error, setError] = useState<string | null>(null)
