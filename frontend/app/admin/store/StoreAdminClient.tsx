@@ -2,7 +2,7 @@
 
 import { uploadFile } from '@/lib/apiFetch'
 import { useRouter } from 'next/navigation'
-import { useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useState } from 'react'
 import {
   createBrand,
   createCategory,
@@ -458,29 +458,33 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
               return { ...p, _catPath: path, _catL1: l1 } as ProductWithCatPath
             })
 
-            const groups = new Map<string, ProductWithCatPath[]>()
+            const rootGroups = new Map<string, ProductWithCatPath[]>()
             for (const p of enriched) {
-              const key = p._catPath
-              if (!groups.has(key)) groups.set(key, [])
-              groups.get(key)!.push(p)
+              const key = p._catL1 || '__sin_categoria__'
+              if (!rootGroups.has(key)) rootGroups.set(key, [])
+              rootGroups.get(key)!.push(p)
             }
 
-            const sorted = Array.from(groups.entries()).sort(([a], [b]) => {
-              if (a === 'Sin categoría') return 1
-              if (b === 'Sin categoría') return -1
-              return a.localeCompare(b, 'es')
+            const sortedRootGroups = Array.from(rootGroups.entries()).sort(([a], [b]) => {
+              if (a === '__sin_categoria__') return 1
+              if (b === '__sin_categoria__') return -1
+              const nameA = categories.find((c) => c.id === a)?.nombre ?? a
+              const nameB = categories.find((c) => c.id === b)?.nombre ?? b
+              return nameA.localeCompare(nameB, 'es')
             })
+
+            const totalGrupos = rootGroups.size
 
             return (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
                   <span className="text-[11px] text-[#666666]" style={latoBody}>
-                    {products.length} producto{products.length !== 1 ? 's' : ''} en {groups.size} grupo{groups.size !== 1 ? 's' : ''}
+                    {products.length} producto{products.length !== 1 ? 's' : ''} en {totalGrupos} categoría{totalGrupos !== 1 ? 's' : ''}
                   </span>
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setOpenGroups(new Set(Array.from(groups.keys())))}
+                      onClick={() => setOpenGroups(new Set(Array.from(rootGroups.keys())))}
                       className="text-[10px] text-[#666666] underline hover:text-[#111111]"
                       style={jostHeading}
                     >
@@ -498,39 +502,46 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                   </div>
                 </div>
 
-                {sorted.map(([groupKey, groupProducts]) => {
-                  const isOpen = openGroups.has(groupKey)
-                  const parts = groupKey.split(' › ')
+                {sortedRootGroups.map(([rootKey, rootProducts]) => {
+                  const isOpen = openGroups.has(rootKey)
+                  const rootCat = categories.find((c) => c.id === rootKey)
+                  const rootNombre = rootCat?.nombre ?? 'Sin categoría'
+                  const rootTotal = rootProducts.length
+
+                  const subGroups = new Map<string, ProductWithCatPath[]>()
+                  for (const p of rootProducts) {
+                    const subKey = p._catPath
+                    if (!subGroups.has(subKey)) subGroups.set(subKey, [])
+                    subGroups.get(subKey)!.push(p)
+                  }
+                  const sortedSubGroups = Array.from(subGroups.entries()).sort(([a], [b]) => {
+                    if (a === 'Sin categoría') return 1
+                    if (b === 'Sin categoría') return -1
+                    return a.localeCompare(b, 'es')
+                  })
+
                   return (
-                    <div key={groupKey} className="border border-solid border-[#EEEEEE]">
+                    <div key={rootKey} className="border border-solid border-[#EEEEEE]">
                       <button
                         type="button"
-                        onClick={() => toggleGroup(groupKey)}
+                        onClick={() => toggleGroup(rootKey)}
                         className="flex w-full items-center justify-between gap-3 bg-[#F4F4F4] px-4 py-3 text-left transition-colors hover:bg-[#EBEBEB]"
                       >
-                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                          {parts.map((part, i) => (
-                            <span key={i} className="flex items-center gap-1">
-                              {i > 0 && <span className="text-[10px] text-[#CCCCCC]">›</span>}
-                              <span
-                                className={`text-[11px] ${
-                                  i === 0
-                                    ? 'font-extrabold text-[#111111]'
-                                    : i === parts.length - 1
-                                      ? 'text-[#444444]'
-                                      : 'text-[#666666]'
-                                }`}
-                                style={i === 0 ? jostHeading : latoBody}
-                              >
-                                {part}
-                              </span>
-                            </span>
-                          ))}
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
                           <span
-                            className="ml-2 inline-block border border-[#DDDDDD] bg-[#FFFFFF] px-2 py-0.5 text-[10px] text-[#666666]"
+                            className={`text-[10px] text-[#999999] transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                            aria-hidden
+                          >
+                            ▶
+                          </span>
+                          <span className="text-[12px] font-extrabold text-[#111111]" style={jostHeading}>
+                            {rootNombre}
+                          </span>
+                          <span
+                            className="ml-1 inline-block border border-[#DDDDDD] bg-[#FFFFFF] px-2 py-0.5 text-[10px] text-[#666666]"
                             style={{ borderRadius: 2, ...latoBody }}
                           >
-                            {groupProducts.length}
+                            {rootTotal}
                           </span>
                         </div>
                         <svg
@@ -556,9 +567,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                           <table className="w-full border-collapse text-left text-sm text-[#111111]">
                             <thead>
                               <tr className="bg-[#FAFAFA]">
-                                {(
-                                  ['NOMBRE', 'PRECIO', 'STOCK', 'CONDICIÓN', 'DESTACADO', 'ACTIVO', 'ACCIONES'] as const
-                                ).map((col) => (
+                                {(['NOMBRE', 'PRECIO', 'STOCK', 'CONDICIÓN', 'DESTACADO', 'ACTIVO', 'ACCIONES'] as const).map((col) => (
                                   <th
                                     key={col}
                                     className="border-b border-t border-solid border-[#EEEEEE] px-3 py-2 text-[10px] text-[#111111]"
@@ -570,90 +579,119 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                               </tr>
                             </thead>
                             <tbody>
-                              {groupProducts.map((p, i) => {
-                                const id = rowStr(p, 'id')
-                                const nombre = rowStr(p, 'nombre')
-                                const precio = rowNum(p, 'precio')
-                                const stock = rowNum(p, 'stock')
-                                const stock_visible = rowBool(p, 'stock_visible')
-                                const condRaw = rowStr(p, 'condicion').toLowerCase()
-                                const condicion = condRaw === 'outlet' ? 'outlet' : 'nuevo'
-                                const destacado = rowBool(p, 'destacado')
-                                const activo = rowBool(p, 'activo')
+                              {sortedSubGroups.map(([subPath, subProducts]) => {
+                                const showSubheader = sortedSubGroups.length > 1 || subPath !== rootNombre
+                                const subLabel = subPath === 'Sin categoría'
+                                  ? 'Sin categoría'
+                                  : subPath.split(' › ').slice(1).join(' › ') || subPath
+
                                 return (
-                                  <tr key={id || i} className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F9F9F9]'}>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => openEditModal(p)}
-                                        className="text-left text-[13px] font-semibold text-[#111111] underline-offset-2 hover:text-[#CC4B37] hover:underline"
-                                        style={latoBody}
-                                      >
-                                        {nombre || '—'}
-                                      </button>
-                                    </td>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
-                                      ${precio.toLocaleString('es-MX')}
-                                    </td>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
-                                      {stockLabel(stock, stock_visible)}
-                                    </td>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
-                                      {condicion === 'outlet' ? (
-                                        <span
-                                          className="inline-block px-2 py-0.5 text-[9px] font-extrabold text-[#FFFFFF]"
-                                          style={{ borderRadius: 2, backgroundColor: '#CC4B37', ...jostHeading }}
+                                  <Fragment key={subPath}>
+                                    {showSubheader && (
+                                      <tr>
+                                        <td
+                                          colSpan={7}
+                                          className="border-b border-t border-[#EEEEEE] bg-[#F7F7F7] px-4 py-1.5"
                                         >
-                                          OUTLET
-                                        </span>
-                                      ) : (
-                                        <span
-                                          className="inline-block px-2 py-0.5 text-[9px] text-[#666666]"
-                                          style={{ borderRadius: 2, backgroundColor: '#EEEEEE', ...jostHeading }}
-                                        >
-                                          NUEVO
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => onToggleDestacado(id, destacado)}
-                                        className={`border px-2 py-1 text-[9px] uppercase transition-colors ${
-                                          destacado
-                                            ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                                            : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
-                                        }`}
-                                        style={{ ...jostHeading, borderRadius: 2 }}
-                                      >
-                                        {destacado ? '★ Sí' : '☆ No'}
-                                      </button>
-                                    </td>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => onToggleActivo(id, activo)}
-                                        className={`border px-2 py-1 text-[9px] uppercase transition-colors ${
-                                          activo
-                                            ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
-                                            : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
-                                        }`}
-                                        style={{ ...jostHeading, borderRadius: 2 }}
-                                      >
-                                        {activo ? 'Activo' : 'Inactivo'}
-                                      </button>
-                                    </td>
-                                    <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => onDeleteProduct(id)}
-                                        className="border border-[#CC4B37] bg-[#CC4B37] px-2 py-1 text-[9px] uppercase text-[#FFFFFF] transition-opacity hover:opacity-90"
-                                        style={{ ...jostHeading, borderRadius: 2 }}
-                                      >
-                                        Eliminar
-                                      </button>
-                                    </td>
-                                  </tr>
+                                          <span className="text-[10px] text-[#888888]" style={latoBody}>
+                                            {subLabel}
+                                          </span>
+                                          <span
+                                            className="ml-2 inline-block border border-[#E8E8E8] px-1.5 py-0.5 text-[9px] text-[#AAAAAA]"
+                                            style={{ borderRadius: 2 }}
+                                          >
+                                            {subProducts.length}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    )}
+                                    {subProducts.map((p, i) => {
+                                      const id = rowStr(p, 'id')
+                                      const nombre = rowStr(p, 'nombre')
+                                      const precio = rowNum(p, 'precio')
+                                      const stock = rowNum(p, 'stock')
+                                      const stock_visible = rowBool(p, 'stock_visible')
+                                      const condRaw = rowStr(p, 'condicion').toLowerCase()
+                                      const condicion = condRaw === 'outlet' ? 'outlet' : 'nuevo'
+                                      const destacado = rowBool(p, 'destacado')
+                                      const activo = rowBool(p, 'activo')
+                                      return (
+                                        <tr key={id || `${subPath}-${i}`} className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F9F9F9]'}>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => openEditModal(p)}
+                                              className="text-left text-[13px] font-semibold text-[#111111] underline-offset-2 hover:text-[#CC4B37] hover:underline"
+                                              style={latoBody}
+                                            >
+                                              {nombre || '—'}
+                                            </button>
+                                          </td>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
+                                            ${precio.toLocaleString('es-MX')}
+                                          </td>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                            {stockLabel(stock, stock_visible)}
+                                          </td>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                            {condicion === 'outlet' ? (
+                                              <span
+                                                className="inline-block px-2 py-0.5 text-[9px] font-extrabold text-[#FFFFFF]"
+                                                style={{ borderRadius: 2, backgroundColor: '#CC4B37', ...jostHeading }}
+                                              >
+                                                OUTLET
+                                              </span>
+                                            ) : (
+                                              <span
+                                                className="inline-block px-2 py-0.5 text-[9px] text-[#666666]"
+                                                style={{ borderRadius: 2, backgroundColor: '#EEEEEE', ...jostHeading }}
+                                              >
+                                                NUEVO
+                                              </span>
+                                            )}
+                                          </td>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => onToggleDestacado(id, destacado)}
+                                              className={`border px-2 py-1 text-[9px] uppercase transition-colors ${
+                                                destacado
+                                                  ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
+                                                  : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
+                                              }`}
+                                              style={{ ...jostHeading, borderRadius: 2 }}
+                                            >
+                                              {destacado ? '★ Sí' : '☆ No'}
+                                            </button>
+                                          </td>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => onToggleActivo(id, activo)}
+                                              className={`border px-2 py-1 text-[9px] uppercase transition-colors ${
+                                                activo
+                                                  ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                                                  : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:border-[#111111] hover:text-[#111111]'
+                                              }`}
+                                              style={{ ...jostHeading, borderRadius: 2 }}
+                                            >
+                                              {activo ? 'Activo' : 'Inactivo'}
+                                            </button>
+                                          </td>
+                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => onDeleteProduct(id)}
+                                              className="border border-[#CC4B37] bg-[#CC4B37] px-2 py-1 text-[9px] uppercase text-[#FFFFFF] transition-opacity hover:opacity-90"
+                                              style={{ ...jostHeading, borderRadius: 2 }}
+                                            >
+                                              Eliminar
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </Fragment>
                                 )
                               })}
                             </tbody>
