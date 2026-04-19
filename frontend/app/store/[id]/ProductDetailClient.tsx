@@ -201,6 +201,10 @@ export function ProductDetailClient({ product, brand, category, related }: Props
                     nombre: product.nombre,
                     foto_url: product.fotos_urls?.[0] ?? null,
                     precio: product.precio,
+                    peso_kg: product.peso_kg ?? null,
+                    largo_cm: product.largo_cm ?? null,
+                    ancho_cm: product.ancho_cm ?? null,
+                    alto_cm: product.alto_cm ?? null,
                   }, cantidad)}
                   className="w-full bg-[#CC4B37] py-4 text-[13px] font-extrabold uppercase tracking-wide text-white transition-opacity hover:opacity-90"
                   style={jost}>
@@ -214,6 +218,10 @@ export function ProductDetailClient({ product, brand, category, related }: Props
                       nombre: product.nombre,
                       foto_url: product.fotos_urls?.[0] ?? null,
                       precio: product.precio,
+                      peso_kg: product.peso_kg ?? null,
+                      largo_cm: product.largo_cm ?? null,
+                      ancho_cm: product.ancho_cm ?? null,
+                      alto_cm: product.alto_cm ?? null,
                     }, cantidad)
                     window.location.href = '/store/checkout'
                   }}

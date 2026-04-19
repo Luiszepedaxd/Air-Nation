@@ -235,6 +235,10 @@ function ProductCard({ product, brands }: { product: StoreProduct; brands: Store
       nombre: product.nombre,
       foto_url: foto,
       precio: product.precio,
+      peso_kg: product.peso_kg ?? null,
+      largo_cm: product.largo_cm ?? null,
+      ancho_cm: product.ancho_cm ?? null,
+      alto_cm: product.alto_cm ?? null,
     })
   }
 

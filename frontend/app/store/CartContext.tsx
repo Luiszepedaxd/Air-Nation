@@ -8,6 +8,10 @@ export type CartItem = {
   foto_url: string | null
   precio: number
   cantidad: number
+  peso_kg: number | null
+  largo_cm: number | null
+  ancho_cm: number | null
+  alto_cm: number | null
 }
 
 type CartContextType = {
