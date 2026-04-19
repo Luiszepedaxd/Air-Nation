@@ -100,7 +100,12 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
       setError('Completa todos los campos requeridos.')
       return
     }
+    if (form.cp.length !== 5) {
+      setError('El código postal debe tener 5 dígitos.')
+      return
+    }
     setError(null)
+    cotizarConCP(form.cp)
     setStep('pago')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
