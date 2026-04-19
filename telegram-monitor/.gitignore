@@ -1,5 +1,5 @@
 # Sesión Telethon (local; en despliegue usar TELEGRAM_SESSION_B64 o similar)
-session.session
+# session.session — versionada para Railway
 session.session-journal
 
 # Python local
