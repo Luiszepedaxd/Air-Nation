@@ -93,6 +93,10 @@ export async function createProduct(formData: FormData): Promise<{ ok: true } | 
   const destacado = formData.get('destacado') === 'true'
   const dias_manejo = Number(formData.get('dias_manejo') ?? 3)
   const deporte = String(formData.get('deporte') ?? 'general')
+  const peso_kg = formData.get('peso_kg') ? Number(formData.get('peso_kg')) : null
+  const largo_cm = formData.get('largo_cm') ? Number(formData.get('largo_cm')) : null
+  const ancho_cm = formData.get('ancho_cm') ? Number(formData.get('ancho_cm')) : null
+  const alto_cm = formData.get('alto_cm') ? Number(formData.get('alto_cm')) : null
   const fotos_urls_raw = String(formData.get('fotos_urls') ?? '[]')
   let fotos_urls: string[] = []
   try {
@@ -109,6 +113,7 @@ export async function createProduct(formData: FormData): Promise<{ ok: true } | 
     nombre, slug, precio, precio_costo, stock, stock_visible,
     condicion, descripcion, que_incluye, categoria_id, brand_id,
     destacado, dias_manejo, deporte, fotos_urls,
+    peso_kg, largo_cm, ancho_cm, alto_cm,
     created_by: adminId,
   })
   if (error) return { error: error.message }
@@ -175,6 +180,10 @@ export async function updateProduct(id: string, formData: FormData): Promise<{ o
   const destacado = formData.get('destacado') === 'true'
   const dias_manejo = Number(formData.get('dias_manejo') ?? 3)
   const deporte = String(formData.get('deporte') ?? 'general')
+  const peso_kg = formData.get('peso_kg') ? Number(formData.get('peso_kg')) : null
+  const largo_cm = formData.get('largo_cm') ? Number(formData.get('largo_cm')) : null
+  const ancho_cm = formData.get('ancho_cm') ? Number(formData.get('ancho_cm')) : null
+  const alto_cm = formData.get('alto_cm') ? Number(formData.get('alto_cm')) : null
   const fotos_urls_raw = String(formData.get('fotos_urls') ?? '[]')
   let fotos_urls: string[] = []
   try { fotos_urls = JSON.parse(fotos_urls_raw) as string[] } catch { fotos_urls = [] }
@@ -187,6 +196,7 @@ export async function updateProduct(id: string, formData: FormData): Promise<{ o
     nombre, slug, precio, precio_costo, stock, stock_visible,
     condicion, descripcion, que_incluye, categoria_id, brand_id,
     destacado, dias_manejo, deporte, fotos_urls,
+    peso_kg, largo_cm, ancho_cm, alto_cm,
   }).eq('id', id.trim())
   if (error) return { error: error.message }
 

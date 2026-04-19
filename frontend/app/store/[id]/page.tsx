@@ -22,7 +22,7 @@ async function fetchProduct(id: string): Promise<{
 
   const { data: row, error } = await supabase
     .from('store_products')
-    .select('id, nombre, slug, fotos_urls, precio, condicion, stock, stock_visible, destacado, activo, brand_id, categoria_id, descripcion, specs, que_incluye, dias_manejo, deporte')
+    .select('id, nombre, slug, fotos_urls, precio, condicion, stock, stock_visible, destacado, activo, peso_kg, largo_cm, ancho_cm, alto_cm, brand_id, categoria_id, descripcion, specs, que_incluye, dias_manejo, deporte')
     .eq('id', id)
     .eq('activo', true)
     .maybeSingle()
@@ -30,6 +30,11 @@ async function fetchProduct(id: string): Promise<{
   if (error || !row) return null
 
   const r = row as Record<string, unknown>
+  const optNum = (v: unknown): number | null => {
+    if (v == null || v === '') return null
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
 
   const product = {
     id: String(r.id ?? ''),
@@ -42,6 +47,10 @@ async function fetchProduct(id: string): Promise<{
     stock_visible: Boolean(r.stock_visible),
     destacado: Boolean(r.destacado),
     activo: Boolean(r.activo),
+    peso_kg: optNum(r.peso_kg),
+    largo_cm: optNum(r.largo_cm),
+    ancho_cm: optNum(r.ancho_cm),
+    alto_cm: optNum(r.alto_cm),
     brand_id: r.brand_id != null ? String(r.brand_id) : null,
     categoria_id: r.categoria_id != null ? String(r.categoria_id) : null,
     descripcion: r.descripcion != null ? String(r.descripcion) : null,
@@ -91,7 +100,7 @@ async function fetchProduct(id: string): Promise<{
   if (product.categoria_id) {
     const { data: relRows } = await supabase
       .from('store_products')
-      .select('id, nombre, slug, fotos_urls, precio, condicion, stock, stock_visible, destacado, activo, brand_id, categoria_id')
+      .select('id, nombre, slug, fotos_urls, precio, condicion, stock, stock_visible, destacado, activo, peso_kg, largo_cm, ancho_cm, alto_cm, brand_id, categoria_id')
       .eq('activo', true)
       .eq('categoria_id', product.categoria_id)
       .neq('id', product.id)
@@ -109,6 +118,10 @@ async function fetchProduct(id: string): Promise<{
         stock_visible: Boolean(rr.stock_visible),
         destacado: Boolean(rr.destacado),
         activo: Boolean(rr.activo),
+        peso_kg: optNum(rr.peso_kg),
+        largo_cm: optNum(rr.largo_cm),
+        ancho_cm: optNum(rr.ancho_cm),
+        alto_cm: optNum(rr.alto_cm),
         brand_id: rr.brand_id != null ? String(rr.brand_id) : null,
         categoria_id: rr.categoria_id != null ? String(rr.categoria_id) : null,
       }

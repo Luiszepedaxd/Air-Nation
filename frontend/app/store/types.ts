@@ -9,6 +9,10 @@ export type StoreProduct = {
   stock_visible: boolean
   destacado: boolean
   activo: boolean
+  peso_kg: number | null
+  largo_cm: number | null
+  ancho_cm: number | null
+  alto_cm: number | null
   brand_id: string | null
   categoria_id: string | null
 }

@@ -944,6 +944,64 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                     />
                     Destacado
                   </label>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[11px] text-[#666666]" style={jostHeading}>
+                      ENVÍO — PESO Y DIMENSIONES
+                      <span className="ml-1 font-normal normal-case tracking-normal text-[#AAAAAA]">
+                        (solo réplica, sin caja — para cotizar envío)
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block text-[11px] text-[#666666]">
+                        Peso (kg)
+                        <input
+                          name="peso_kg"
+                          type="number"
+                          min={0}
+                          step="0.001"
+                          placeholder="ej. 3.755"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                      <label className="block text-[11px] text-[#666666]">
+                        Largo (cm)
+                        <input
+                          name="largo_cm"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          placeholder="ej. 113.5"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                      <label className="block text-[11px] text-[#666666]">
+                        Ancho (cm)
+                        <input
+                          name="ancho_cm"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          placeholder="ej. 25.0"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                      <label className="block text-[11px] text-[#666666]">
+                        Alto (cm)
+                        <input
+                          name="alto_cm"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          placeholder="ej. 10.0"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                    </div>
+                  </div>
                   <label className="block text-[11px] text-[#666666]">
                     Días de manejo
                     <input
@@ -1193,6 +1251,68 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                       onChange={(e) => setEditDestacado(e.target.checked)} />
                     Destacado
                   </label>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[11px] text-[#666666]" style={jostHeading}>
+                      ENVÍO — PESO Y DIMENSIONES
+                      <span className="ml-1 font-normal normal-case tracking-normal text-[#AAAAAA]">
+                        (solo réplica, sin caja — para cotizar envío)
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="block text-[11px] text-[#666666]">
+                        Peso (kg)
+                        <input
+                          name="peso_kg"
+                          type="number"
+                          min={0}
+                          step="0.001"
+                          defaultValue={rowNum(editProduct, 'peso_kg', 0) || ''}
+                          placeholder="ej. 3.755"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                      <label className="block text-[11px] text-[#666666]">
+                        Largo (cm)
+                        <input
+                          name="largo_cm"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          defaultValue={rowNum(editProduct, 'largo_cm', 0) || ''}
+                          placeholder="ej. 113.5"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                      <label className="block text-[11px] text-[#666666]">
+                        Ancho (cm)
+                        <input
+                          name="ancho_cm"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          defaultValue={rowNum(editProduct, 'ancho_cm', 0) || ''}
+                          placeholder="ej. 25.0"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                      <label className="block text-[11px] text-[#666666]">
+                        Alto (cm)
+                        <input
+                          name="alto_cm"
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          defaultValue={rowNum(editProduct, 'alto_cm', 0) || ''}
+                          placeholder="ej. 10.0"
+                          className="mt-1 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-2 py-1.5 text-[13px] text-[#111111]"
+                          style={{ borderRadius: 2 }}
+                        />
+                      </label>
+                    </div>
+                  </div>
                   <label className="block text-[11px] text-[#666666]">
                     Días de manejo
                     <input name="dias_manejo" type="number" min={0} step={1}

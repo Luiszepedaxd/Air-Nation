@@ -29,6 +29,11 @@ type EditorialSlug = (typeof EDITORIAL_SLUGS)[number]
 function mapProduct(row: Record<string, unknown>): StoreProduct {
   const condRaw = String(row.condicion ?? 'nuevo').toLowerCase()
   const condicion: 'nuevo' | 'outlet' = condRaw === 'outlet' ? 'outlet' : 'nuevo'
+  const optNum = (v: unknown): number | null => {
+    if (v == null || v === '') return null
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
   return {
     id: String(row.id ?? ''),
     nombre: String(row.nombre ?? ''),
@@ -40,6 +45,10 @@ function mapProduct(row: Record<string, unknown>): StoreProduct {
     stock_visible: Boolean(row.stock_visible),
     destacado: Boolean(row.destacado),
     activo: Boolean(row.activo),
+    peso_kg: optNum(row.peso_kg),
+    largo_cm: optNum(row.largo_cm),
+    ancho_cm: optNum(row.ancho_cm),
+    alto_cm: optNum(row.alto_cm),
     brand_id: row.brand_id != null ? String(row.brand_id) : null,
     categoria_id: row.categoria_id != null ? String(row.categoria_id) : null,
   }
