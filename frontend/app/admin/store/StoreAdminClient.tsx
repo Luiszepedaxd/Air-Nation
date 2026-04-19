@@ -118,9 +118,19 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
   const [editBrandError, setEditBrandError] = useState<string | null>(null)
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [openSubGroups, setOpenSubGroups] = useState<Set<string>>(new Set())
 
   function toggleGroup(key: string) {
     setOpenGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function toggleSubGroup(key: string) {
+    setOpenSubGroups((prev) => {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key)
       else next.add(key)
@@ -484,7 +494,19 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setOpenGroups(new Set(Array.from(rootGroups.keys())))}
+                      onClick={() => {
+                        setOpenGroups(new Set(Array.from(rootGroups.keys())))
+                        const allSubKeys: string[] = []
+                        rootGroups.forEach((prods, rk) => {
+                          const subMap = new Map<string, ProductWithCatPath[]>()
+                          for (const p of prods) {
+                            if (!subMap.has(p._catPath)) subMap.set(p._catPath, [])
+                            subMap.get(p._catPath)!.push(p)
+                          }
+                          subMap.forEach((_, sp) => allSubKeys.push(rk + '|' + sp))
+                        })
+                        setOpenSubGroups(new Set(allSubKeys))
+                      }}
                       className="text-[10px] text-[#666666] underline hover:text-[#111111]"
                       style={jostHeading}
                     >
@@ -493,7 +515,10 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                     <span className="text-[10px] text-[#CCCCCC]">·</span>
                     <button
                       type="button"
-                      onClick={() => setOpenGroups(new Set())}
+                      onClick={() => {
+                        setOpenGroups(new Set())
+                        setOpenSubGroups(new Set())
+                      }}
                       className="text-[10px] text-[#666666] underline hover:text-[#111111]"
                       style={jostHeading}
                     >
@@ -589,19 +614,28 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                   <Fragment key={subPath}>
                                     {showSubheader && (
                                       <tr>
-                                        <td
-                                          colSpan={7}
-                                          className="border-b border-t border-[#EEEEEE] bg-[#F7F7F7] px-4 py-1.5"
-                                        >
-                                          <span className="text-[10px] text-[#888888]" style={latoBody}>
-                                            {subLabel}
-                                          </span>
-                                          <span
-                                            className="ml-2 inline-block border border-[#E8E8E8] px-1.5 py-0.5 text-[9px] text-[#AAAAAA]"
-                                            style={{ borderRadius: 2 }}
+                                        <td colSpan={7} className="border-b border-t border-[#EEEEEE] p-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleSubGroup(rootKey + '|' + subPath)}
+                                            className="flex w-full items-center gap-2 bg-[#F7F7F7] px-4 py-2 text-left transition-colors hover:bg-[#F0F0F0]"
                                           >
-                                            {subProducts.length}
-                                          </span>
+                                            <svg
+                                              width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden
+                                              className={`shrink-0 text-[#AAAAAA] transition-transform duration-150 ${openSubGroups.has(rootKey + '|' + subPath) ? 'rotate-180' : ''}`}
+                                            >
+                                              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                            <span className="text-[10px] text-[#666666]" style={latoBody}>
+                                              {subLabel}
+                                            </span>
+                                            <span
+                                              className="ml-1 inline-block border border-[#E8E8E8] bg-[#FFFFFF] px-1.5 py-0.5 text-[9px] text-[#AAAAAA]"
+                                              style={{ borderRadius: 2 }}
+                                            >
+                                              {subProducts.length}
+                                            </span>
+                                          </button>
                                         </td>
                                       </tr>
                                     )}
@@ -615,6 +649,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                       const condicion = condRaw === 'outlet' ? 'outlet' : 'nuevo'
                                       const destacado = rowBool(p, 'destacado')
                                       const activo = rowBool(p, 'activo')
+                                      if (showSubheader && !openSubGroups.has(rootKey + '|' + subPath)) return null
                                       return (
                                         <tr key={id || `${subPath}-${i}`} className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F9F9F9]'}>
                                           <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
