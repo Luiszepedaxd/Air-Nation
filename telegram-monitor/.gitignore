@@ -1,2 +1,5 @@
 # Sesión Telethon versionada en el repo para el worker (ver política del proyecto).
 # session.session
+
+snapshot_images/
+catalogo_snapshot.csv
