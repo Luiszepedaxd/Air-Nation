@@ -797,7 +797,7 @@ export function StoreExploreClient({
       {BA.ticker && (
       <div className="overflow-hidden bg-[#CC4B37] py-2.5">
         <div
-          className="flex animate-[ticker_18s_linear_infinite] whitespace-nowrap"
+          className="flex animate-[ticker_45s_linear_infinite] whitespace-nowrap"
           style={{ width: 'max-content' }}
         >
           {Array.from({ length: 4 }).map((_, i) => (
