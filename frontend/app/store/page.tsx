@@ -123,14 +123,14 @@ async function fetchStoreData(): Promise<{
   const editorial: Partial<EditorialData> = {}
 
   const bloques_activos = {
-    header: true,
-    hero: true,
-    ticker: true,
-    banner1: true,
-    banner2: true,
-    categorias_carousel: true,
-    promoBanner: true,
-    footer: true,
+    header: false,
+    hero: false,
+    ticker: false,
+    banner1: false,
+    banner2: false,
+    categorias_carousel: false,
+    promoBanner: false,
+    footer: false,
   } as Record<string, boolean>
 
   const rows = (blocksRes.data ?? []) as Array<{
