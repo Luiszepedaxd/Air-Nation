@@ -86,9 +86,16 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
   }
 
   const subtotal = total
-  const costoEnvio = cotizacion?.ok ? cotizacion.costo : 0
   const descuento = metodoPago === 'transferencia' ? Math.round(total * 0.04) : 0
-  const totalFinal = subtotal - descuento + costoEnvio
+  const totalFinal = subtotal - descuento
+
+  // Ahorro simulado de envío: cotización FedEx base × 2.2 para reflejar precio real con IVA y recargos
+  const pesoTotal = items.reduce((acc, item) => acc + (item.peso_kg ?? 1.5) * item.cantidad, 0)
+  const largoMax = items.reduce((acc, item) => Math.max(acc, item.largo_cm ?? 30), 0)
+  const anchoMax = items.reduce((acc, item) => Math.max(acc, item.ancho_cm ?? 20), 0)
+  const altoMax = items.reduce((acc, item) => Math.max(acc, item.alto_cm ?? 15), 0)
+  const cotizacionBase = cotizarEnvio(form.cp.length === 5 ? form.cp : '44600', pesoTotal, largoMax, anchoMax, altoMax)
+  const ahorroEnvio = cotizacionBase.ok ? Math.round(cotizacionBase.costo * 2.2 / 100) * 100 : 0
   const concepto = datosBancarios.concepto.replace(
     '[ORDER_NUMBER]',
     orderResult?.order_number ?? '...'
@@ -115,10 +122,6 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
       router.push('/store')
       return
     }
-    if (!cotizacion || !cotizacion.ok) {
-      setError('Ingresa tu código postal para cotizar el envío antes de continuar.')
-      return
-    }
     setSubmitting(true)
     setError(null)
 
@@ -127,7 +130,7 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
       direccion: form,
       metodo_pago: metodoPago,
       user_id: user?.id ?? null,
-      costo_envio: costoEnvio,
+      costo_envio: 0,
     })
 
     setSubmitting(false)
@@ -396,31 +399,6 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     placeholder="00000"
                     maxLength={5}
                   />
-                  {cotizandoEnvio && (
-                    <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
-                      Calculando envío...
-                    </p>
-                  )}
-                  {cotizacion && cotizacion.ok && (
-                    <div className="mt-2 flex items-center justify-between border border-[#22C55E]/30 bg-[#F0FDF4] px-3 py-2">
-                      <div>
-                        <p className="text-[11px] font-bold text-[#22C55E]" style={jost}>
-                          Envío cotizado ✓
-                        </p>
-                        <p className="text-[10px] text-[#666666]" style={lato}>
-                          FedEx Nacional Económico · Zona {cotizacion.zona} · {cotizacion.peso_cobrable} kg
-                        </p>
-                      </div>
-                      <p className="text-[14px] font-extrabold text-[#111111]" style={jost}>
-                        ${cotizacion.costo.toLocaleString('es-MX')}
-                      </p>
-                    </div>
-                  )}
-                  {cotizacion && !cotizacion.ok && form.cp.length === 5 && (
-                    <p className="mt-1 text-[11px] text-[#CC4B37]" style={lato}>
-                      {cotizacion.error} — verifica tu CP
-                    </p>
-                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelCls}>Referencias (opcional)</label>
@@ -614,18 +592,29 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                   )}
                   <div className="flex items-center justify-between text-[12px]">
                     <span className="text-[#555555]" style={lato}>
-                      Envío FedEx
+                      Envío a todo México
                     </span>
-                    {costoEnvio > 0 ? (
-                      <span className="font-bold text-[#111111]" style={jost}>
-                        ${costoEnvio.toLocaleString('es-MX')}
+                    <div className="flex items-center gap-2">
+                      {ahorroEnvio > 0 && (
+                        <span className="text-[11px] text-[#999999] line-through" style={lato}>
+                          ${ahorroEnvio.toLocaleString('es-MX')}
+                        </span>
+                      )}
+                      <span className="text-[12px] font-bold text-[#22C55E]" style={jost}>
+                        Gratis
                       </span>
-                    ) : (
-                      <span className="text-[#CC4B37] text-[11px]" style={lato}>
-                        Ingresa tu CP para cotizar
-                      </span>
-                    )}
+                    </div>
                   </div>
+                  {ahorroEnvio > 0 && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#22C55E]" style={lato}>
+                        Ahorro en envío
+                      </span>
+                      <span className="font-bold text-[#22C55E]" style={jost}>
+                        −${ahorroEnvio.toLocaleString('es-MX')}
+                      </span>
+                    </div>
+                  )}
                   <div className="mt-1 flex items-center justify-between border-t border-[#EEEEEE] pt-2">
                     <span
                       className="text-[14px] font-extrabold uppercase text-[#111111]"
@@ -737,7 +726,7 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     )}
                     <div className="flex items-center justify-between border-t border-white/10 pt-2">
                       <span className="text-[11px] text-white/50" style={lato}>
-                        Monto (incluye envío)
+                        Monto
                       </span>
                       <span className="text-[16px] font-extrabold text-[#22C55E]" style={jost}>
                         ${totalFinal.toLocaleString('es-MX')}
@@ -782,7 +771,7 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     ? 'Realiza la transferencia con los datos de arriba'
                     : 'Tu pago está siendo procesado',
                   'Confirmaremos tu pedido por email',
-                  'Cotizamos el envío y te avisamos antes de proceder',
+                  'Tu pedido es preparado y enviado al día hábil siguiente',
                   'Enviamos tu pedido con número de guía',
                 ].map((paso, i) => (
                   <li key={i} className="flex items-start gap-2.5">
