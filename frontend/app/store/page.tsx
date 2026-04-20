@@ -87,7 +87,7 @@ async function fetchStoreData(): Promise<{
         'id, nombre, slug, fotos_urls, precio, condicion, stock, stock_visible, destacado, brand_id, categoria_id, activo'
       )
       .eq('activo', true)
-      .order('random()'),
+      .order('created_at', { ascending: true }),
     supabase
       .from('store_categories')
       .select('id, nombre, slug, parent_id')
@@ -163,11 +163,12 @@ async function fetchStoreData(): Promise<{
 export default async function StorePage() {
   await ensureAppAdminOrRedirect('/store')
   const { products, categories, brands, editorial } = await fetchStoreData()
+  const shuffled = [...(products ?? [])].sort(() => Math.random() - 0.5)
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F7F7F7] text-[#111111]">
       <StoreExploreClient
-        products={products}
+        products={shuffled}
         categories={categories}
         brands={brands}
         editorial={editorial}
