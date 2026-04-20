@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { ensureAppAdminOrRedirect } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { StoreExploreClient } from './StoreExploreClient'
 import type { EditorialData } from './StoreExploreClient'
@@ -11,7 +10,7 @@ export const revalidate = 0
 
 export const metadata: Metadata = {
   title: 'Store — AirNation',
-  description: 'Vista previa admin de la tienda oficial AirNation.',
+  description: 'Réplicas, accesorios y equipo de protección para airsoft, gotcha y gelsoft. Envío gratis a todo México.',
 }
 
 const EDITORIAL_SLUGS = [
@@ -161,7 +160,6 @@ async function fetchStoreData(): Promise<{
 }
 
 export default async function StorePage() {
-  await ensureAppAdminOrRedirect('/store')
   const { products, categories, brands, editorial } = await fetchStoreData()
   const shuffled = [...(products ?? [])].sort(() => Math.random() - 0.5)
 

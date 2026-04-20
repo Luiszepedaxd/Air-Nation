@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { ensureAppAdminOrRedirect } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import type { StoreBrand, StoreCategory, StoreProduct } from '@/app/store/types'
 import { ProductDetailClient } from './ProductDetailClient'
@@ -136,7 +135,6 @@ export default async function ProductDetailPage({
 }: {
   params: { id: string }
 }) {
-  await ensureAppAdminOrRedirect(`/store/${params.id}`)
   const data = await fetchProduct(params.id)
   if (!data) notFound()
   return <ProductDetailClient {...data} />
