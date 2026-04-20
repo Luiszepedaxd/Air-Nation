@@ -196,7 +196,7 @@ async function sendOrderConfirmationEmail(params: {
     descuento_monto, costo_envio, total, metodo_pago, direccion, datosBancarios,
   } = params
 
-  const concepto = datosBancarios?.concepto?.replace('[ORDER_NUMBER]', order_number) ?? `Pedido AirNation #${order_number}`
+  const concepto = datosBancarios?.concepto?.replace('[ORDER_NUMBER]', order_number.replace('-', ' ')) ?? `Pedido ${order_number.replace('-', ' ')}`
 
   const itemsHtml = items
     .map(i => `
@@ -378,6 +378,6 @@ export async function getDatosBancarios(): Promise<{
     banco: v.banco ?? '',
     clabe: v.clabe ?? '',
     titular: v.titular ?? '',
-    concepto: v.concepto ?? 'Pedido AirNation #[ORDER_NUMBER]',
+    concepto: v.concepto ?? 'Pedido [ORDER_NUMBER]',
   }
 }
