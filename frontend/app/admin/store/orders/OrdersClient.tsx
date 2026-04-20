@@ -203,6 +203,7 @@ export function OrdersClient({ orders, items }: Props) {
             const status = (localStatus[id] ?? str(order.status_interno)) as OrderStatus
             const meta = STATUS_META[status] ?? STATUS_META.nueva
             const metodo = str(order.metodo_pago)
+            const comprobante_url = str(order.comprobante_url)
             const total = num(order.total)
             const transferencia_confirmada = bool(order.transferencia_confirmada)
             const dir = (order.direccion_envio ?? {}) as Record<string, string>
@@ -226,6 +227,12 @@ export function OrdersClient({ orders, items }: Props) {
                   <span className="shrink-0 text-[12px] font-extrabold text-[#CC4B37]" style={jost}>
                     #{str(order.order_number)}
                   </span>
+                  {comprobante_url && !bool(order.transferencia_confirmada) && (
+                    <span className="shrink-0 bg-[#D97706] px-2 py-0.5 text-[8px] font-extrabold uppercase text-white"
+                      style={jost}>
+                      Comprobante
+                    </span>
+                  )}
                   <span className="shrink-0 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide"
                     style={{ ...jost, backgroundColor: meta.bg, color: meta.color }}>
                     {meta.labelAdmin}
@@ -332,10 +339,43 @@ export function OrdersClient({ orders, items }: Props) {
                         </div>
 
                         {metodo === 'transferencia' && !transferencia_confirmada && status === 'nueva' && (
-                          <div className="border border-[#1D4ED8] bg-[#EFF6FF] p-3">
-                            <p className="mb-2 text-[11px] font-bold text-[#1D4ED8]" style={jost}>
+                          <div className="border border-[#1D4ED8] bg-[#EFF6FF] p-3 flex flex-col gap-3">
+                            <p className="text-[11px] font-bold text-[#1D4ED8]" style={jost}>
                               Transferencia pendiente
                             </p>
+                            {comprobante_url ? (
+                              <div className="flex flex-col gap-2">
+                                <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#999999]" style={jost}>
+                                  Comprobante del cliente
+                                </p>
+                                {comprobante_url.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                                  <a href={comprobante_url} target="_blank" rel="noopener noreferrer">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={comprobante_url}
+                                      alt="Comprobante"
+                                      className="w-full max-h-[300px] object-contain border border-[#EEEEEE] bg-white cursor-pointer hover:opacity-90 transition-opacity"
+                                    />
+                                  </a>
+                                ) : (
+                                  <a href={comprobante_url} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-2 border border-[#1D4ED8] bg-white px-3 py-2 text-[11px] font-bold text-[#1D4ED8] hover:bg-[#EFF6FF] transition-colors"
+                                    style={jost}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"
+                                        stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                                      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"
+                                        stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                    </svg>
+                                    Ver comprobante (PDF)
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-[11px] text-[#666666]" style={lato}>
+                                El cliente aun no ha subido su comprobante.
+                              </p>
+                            )}
                             <button type="button"
                               onClick={() => handleConfirmarTransferencia(id)}
                               disabled={isLoading}

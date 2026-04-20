@@ -1,5 +1,7 @@
 'use client'
 
+import { uploadFile } from '@/lib/apiFetch'
+import { subirComprobante } from '@/app/admin/store/orders/order-actions'
 import Link from 'next/link'
 import { useState } from 'react'
 
@@ -27,6 +29,28 @@ export function PedidosClient({ orders, items }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(
     orders.length === 1 ? str(orders[0].id) : null
   )
+  const [uploadingId, setUploadingId] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null)
+
+  async function handleSubirComprobante(orderId: string, file: File) {
+    setUploadingId(orderId)
+    setUploadError(null)
+    setUploadSuccess(null)
+    try {
+      const url = await uploadFile(file)
+      const res = await subirComprobante(orderId, url)
+      if ('error' in res) {
+        setUploadError(res.error)
+      } else {
+        setUploadSuccess(orderId)
+      }
+    } catch {
+      setUploadError('Error al subir el comprobante. Intenta de nuevo.')
+    } finally {
+      setUploadingId(null)
+    }
+  }
 
   if (orders.length === 0) {
     return (
@@ -71,6 +95,7 @@ export function PedidosClient({ orders, items }: Props) {
             const guia_numero = str(order.guia_numero)
             const guia_paqueteria = str(order.guia_paqueteria)
             const transferencia_confirmada = Boolean(order.transferencia_confirmada)
+            const comprobante_url = str(order.comprobante_url)
             const fecha = order.created_at
               ? new Date(str(order.created_at)).toLocaleDateString('es-MX', {
                   day: 'numeric', month: 'long', year: 'numeric'
@@ -235,9 +260,56 @@ export function PedidosClient({ orders, items }: Props) {
                         <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#D97706]" style={jost}>
                           Transferencia pendiente de confirmacion
                         </p>
-                        <p className="mt-1 text-[11px] text-[#666666]" style={lato}>
-                          Una vez que realices el pago y lo confirmemos, tu pedido avanzara automaticamente.
+                        <p className="mt-1 mb-3 text-[11px] text-[#666666]" style={lato}>
+                          Una vez que realices el pago, sube tu comprobante para que lo confirmemos mas rapido.
                         </p>
+                        {uploadSuccess === id ? (
+                          <div className="flex items-center gap-2 border border-[#22C55E] bg-[#F0FDF4] px-3 py-2">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="text-[#22C55E] shrink-0">
+                              <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span className="text-[11px] font-bold text-[#22C55E]" style={jost}>
+                              Comprobante enviado — lo revisaremos pronto
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            {comprobante_url && uploadSuccess !== id ? (
+                              <div className="flex items-center gap-2 border border-[#22C55E] bg-[#F0FDF4] px-3 py-2 mb-2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className="text-[#22C55E] shrink-0">
+                                  <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                                <span className="text-[11px] font-bold text-[#22C55E]" style={jost}>
+                                  Comprobante recibido — pendiente de confirmacion
+                                </span>
+                              </div>
+                            ) : null}
+                            <label className="flex cursor-pointer items-center justify-center gap-2 border border-[#D97706] bg-white px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-[#D97706] transition-colors hover:bg-[#D97706] hover:text-white">
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,application/pdf"
+                                className="hidden"
+                                disabled={uploadingId === id}
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0]
+                                  if (!file) return
+                                  await handleSubirComprobante(id, file)
+                                  e.target.value = ''
+                                }}
+                              />
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"
+                                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              <span style={jost}>
+                                {uploadingId === id ? 'Subiendo...' : 'Subir comprobante'}
+                              </span>
+                            </label>
+                          </>
+                        )}
+                        {uploadError && uploadingId !== id && (
+                          <p className="mt-2 text-[11px] text-[#CC4B37]" style={lato}>{uploadError}</p>
+                        )}
                       </div>
                     )}
 

@@ -18,7 +18,7 @@ export default async function OrdersPage() {
       id, order_number, user_id, guest_email, guest_nombre,
       direccion_envio, metodo_pago, descuento_pct, subtotal,
       descuento_monto, costo_envio, total, transferencia_confirmada,
-      transferencia_fecha, status_interno, guia_numero, guia_paqueteria,
+      transferencia_fecha, comprobante_url, status_interno, guia_numero, guia_paqueteria,
       notas_internas, envio_protegido, created_at, updated_at
     `
     )

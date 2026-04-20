@@ -46,7 +46,7 @@ export default async function MisPedidosPage() {
     .select(`
       id, order_number, metodo_pago, subtotal, descuento_monto,
       costo_envio, total, status_interno, transferencia_confirmada,
-      guia_numero, guia_paqueteria, direccion_envio, created_at
+      comprobante_url, guia_numero, guia_paqueteria, direccion_envio, created_at
     `)
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })

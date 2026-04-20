@@ -290,3 +290,24 @@ export async function confirmarTransferencia(
   revalidatePath('/admin/store/orders')
   return { ok: true }
 }
+
+export async function subirComprobante(
+  order_id: string,
+  comprobante_url: string
+): Promise<{ ok: true } | { error: string }> {
+  const db = createAdminClient()
+
+  const { error } = await db
+    .from('store_orders')
+    .update({
+      comprobante_url,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', order_id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/store/orders')
+  revalidatePath('/store/pedidos')
+  return { ok: true }
+}
