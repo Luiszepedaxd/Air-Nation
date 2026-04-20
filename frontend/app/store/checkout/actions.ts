@@ -298,8 +298,8 @@ async function sendOrderConfirmationEmail(params: {
           <td style="font-size:12px;color:#22C55E;text-align:right;padding:4px 0">−$${descuento_monto.toLocaleString('es-MX')}</td>
         </tr>` : ''}
         <tr>
-          <td style="font-size:12px;color:#555;padding:4px 0">Envío FedEx Nacional</td>
-          <td style="font-size:12px;color:#111;font-weight:bold;text-align:right;padding:4px 0">$${costo_envio.toLocaleString('es-MX')}</td>
+          <td style="font-size:12px;color:#555;padding:4px 0">Envío a todo México</td>
+          <td style="font-size:12px;color:#22C55E;font-weight:bold;text-align:right;padding:4px 0">Gratis</td>
         </tr>
         <tr style="border-top:2px solid #111">
           <td style="font-size:15px;font-weight:800;color:#111;padding:10px 0 4px;text-transform:uppercase;letter-spacing:0.05em">Total</td>
@@ -326,7 +326,7 @@ async function sendOrderConfirmationEmail(params: {
         <ol style="padding-left:20px;margin:0;color:#333;font-size:13px;line-height:2">
           <li>${metodo_pago === 'transferencia' ? 'Realiza la transferencia con los datos de arriba' : 'Tu pago está siendo procesado'}</li>
           <li>Confirmaremos tu pedido por email</li>
-          <li>Cotizamos el envío y te avisamos antes de proceder</li>
+          <li>Tu pedido es preparado y enviado al día hábil siguiente</li>
           <li>Enviamos tu pedido con número de guía</li>
         </ol>
       </div>
