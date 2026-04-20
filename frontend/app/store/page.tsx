@@ -87,8 +87,7 @@ async function fetchStoreData(): Promise<{
         'id, nombre, slug, fotos_urls, precio, condicion, stock, stock_visible, destacado, brand_id, categoria_id, activo'
       )
       .eq('activo', true)
-      .order('destacado', { ascending: false })
-      .order('created_at', { ascending: false }),
+      .order('random()'),
     supabase
       .from('store_categories')
       .select('id, nombre, slug, parent_id')
