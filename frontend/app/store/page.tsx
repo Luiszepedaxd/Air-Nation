@@ -11,6 +11,28 @@ export const revalidate = 0
 export const metadata: Metadata = {
   title: 'Store — AirNation',
   description: 'Réplicas, accesorios y equipo de protección para airsoft, gotcha y gelsoft. Envío gratis a todo México.',
+  openGraph: {
+    title: 'AirNation Store — Réplicas y equipo de airsoft',
+    description: 'Envío gratis a todo México. Réplicas AEG, GBB, CO2, gear y accesorios para airsoft, gotcha y gelsoft.',
+    url: 'https://airnation.online/store',
+    siteName: 'AirNation',
+    images: [
+      {
+        url: 'https://airnation.online/og-default.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'AirNation Store',
+      },
+    ],
+    locale: 'es_MX',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AirNation Store — Réplicas y equipo de airsoft',
+    description: 'Envío gratis a todo México. Réplicas AEG, GBB, CO2, gear y accesorios.',
+    images: ['https://airnation.online/og-default.jpg'],
+  },
 }
 
 const EDITORIAL_SLUGS = [
