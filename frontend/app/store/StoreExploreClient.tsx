@@ -229,7 +229,13 @@ function PrecioFormateado({ precio, className }: { precio: number; className?: s
     <span className={`inline-flex items-start leading-none ${className ?? ''}`}>
       <span>${Number(entero).toLocaleString('es-MX')}</span>
       <sup
-        style={{ fontSize: '0.55em', lineHeight: 1, marginTop: '0.1em', fontWeight: 800 }}
+        style={{
+          fontSize: '0.42em',
+          lineHeight: 1,
+          marginTop: '0.15em',
+          fontWeight: 700,
+          letterSpacing: '0.01em',
+        }}
       >
         {centavos}
       </sup>
