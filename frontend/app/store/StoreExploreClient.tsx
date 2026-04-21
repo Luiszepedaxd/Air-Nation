@@ -222,6 +222,21 @@ function IconBox() {
   )
 }
 
+function PrecioFormateado({ precio, className }: { precio: number; className?: string }) {
+  const fixed = precio.toFixed(2)
+  const [entero, centavos] = fixed.split('.')
+  return (
+    <span className={`inline-flex items-start leading-none ${className ?? ''}`}>
+      <span>${Number(entero).toLocaleString('es-MX')}</span>
+      <sup
+        style={{ fontSize: '0.55em', lineHeight: 1, marginTop: '0.1em', fontWeight: 800 }}
+      >
+        {centavos}
+      </sup>
+    </span>
+  )
+}
+
 function ProductCard({ product, brands }: { product: StoreProduct; brands: StoreBrand[] }) {
   const foto = product.fotos_urls?.[0] ?? null
   const brand = brands.find((b) => b.id === product.brand_id)
@@ -324,7 +339,7 @@ function ProductCard({ product, brands }: { product: StoreProduct; brands: Store
         </p>
         <div className="mt-2 flex items-end justify-between gap-1">
           <p className="text-[15px] font-extrabold leading-none text-[#111111]" style={jost}>
-            ${product.precio.toLocaleString('es-MX')}
+            <PrecioFormateado precio={product.precio} />
           </p>
           {product.stock === 0 ? (
             <p className="text-[9px] text-[#CC4B37]" style={lato}>
@@ -910,7 +925,7 @@ export function StoreExploreClient({
                         {product.nombre}
                       </p>
                       <p className="mt-1.5 text-[13px] font-extrabold text-[#111111]" style={jost}>
-                        ${product.precio.toLocaleString('es-MX')}
+                        <PrecioFormateado precio={product.precio} />
                       </p>
                     </div>
                     <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#CC4B37] transition-all duration-300 group-hover:w-full" />
