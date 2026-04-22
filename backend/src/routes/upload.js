@@ -133,7 +133,9 @@ router.post("/video", requireAuth, (req, res) => {
 
       console.log("[upload/video] CF response status:", cfRes.status);
 
-      const data = await cfRes.json().catch(() => ({}));
+      const cfRawText = await cfRes.text();
+      console.log("[upload/video] CF raw response:", cfRawText);
+      const data = JSON.parse(cfRawText);
       if (!cfRes.ok || !data.success) {
         const msg =
           data?.errors?.[0]?.message ||
