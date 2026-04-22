@@ -2,7 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
@@ -16,19 +25,40 @@ const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-/** Video embebido en cards del feed (HLS CF Stream); autoplay silenciado y placeholder si aún no está listo. */
+/** Video estilo reel (9:16 por defecto; 16:9 si el archivo es horizontal). Tap: play/pause. */
 export function FeedInlineVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
   const [videoError, setVideoError] = useState(false)
+  const [isMuted, setIsMuted] = useState(true)
+  const [isLandscape, setIsLandscape] = useState<boolean | null>(null)
+
+  const aspectClass =
+    isLandscape === true ? 'aspect-video' : 'aspect-[9/16]'
+
+  const togglePlayPause = () => {
+    const el = videoRef.current
+    if (!el) return
+    if (el.paused) void el.play()
+    else el.pause()
+  }
+
+  const toggleMute = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    setIsMuted((m) => !m)
+  }
+
   if (videoError) {
     return (
-      <div className="mt-2 flex min-h-[200px] w-full flex-col items-center justify-center rounded-none bg-black px-4 text-center">
+      <div
+        className={`flex w-full flex-col items-center justify-center bg-black ${aspectClass}`}
+      >
         <svg
           width="40"
           height="40"
           viewBox="0 0 24 24"
           fill="none"
           aria-hidden
-          className="text-white/85"
+          className="text-white"
         >
           <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
           <path
@@ -39,23 +69,73 @@ export function FeedInlineVideo({ src }: { src: string }) {
             strokeLinejoin="round"
           />
         </svg>
-        <p className="mt-3 text-sm text-white/90" style={lato}>
-          Video procesando, disponible en unos segundos...
+        <p className="mt-3 text-center text-sm text-white" style={lato}>
+          Procesando video...
         </p>
       </div>
     )
   }
+
   return (
-    <video
-      src={src}
-      autoPlay
-      muted
-      playsInline
-      loop
-      controls
-      className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
-      onError={() => setVideoError(true)}
-    />
+    <div
+      className={`relative block w-full overflow-hidden bg-black ${aspectClass}`}
+    >
+      <video
+        ref={videoRef}
+        src={src}
+        width="100%"
+        height="100%"
+        className="absolute inset-0 h-full w-full cursor-pointer object-cover"
+        autoPlay
+        muted={isMuted}
+        playsInline
+        loop
+        onClick={togglePlayPause}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget
+          setIsLandscape(v.videoWidth > v.videoHeight)
+        }}
+        onError={() => setVideoError(true)}
+      />
+      <button
+        type="button"
+        onClick={toggleMute}
+        className="absolute bottom-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+        aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
+      >
+        {isMuted ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M11 5L6 9H4v6h2l5 4V5z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M15 9l6 6M21 9l-6 6"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M11 5L6 9H4v6h2l5 4V5z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M15.5 9.5a4 4 0 010 5M17 7a7 7 0 010 10"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+      </button>
+    </div>
   )
 }
 
