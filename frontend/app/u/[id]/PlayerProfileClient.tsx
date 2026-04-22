@@ -244,11 +244,22 @@ function PostsPanel({
               >
                 {parseContentWithMentions(
                   post.content,
-                  post.mentioned_user_ids ?? null
+                  post.mentioned_user_ids ?? null,
+                  post.mentionAliasById ?? null
                 )}
               </p>
             ) : null}
             {urls.length > 0 && <PhotoGrid urls={urls} />}
+            {post.video_url ? (
+              <video
+                src={post.video_url}
+                controls
+                muted
+                playsInline
+                loop
+                className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
+              />
+            ) : null}
             <PostActions
               postType="player"
               postId={post.id}

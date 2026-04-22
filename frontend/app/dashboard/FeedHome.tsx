@@ -19,41 +19,133 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 
 /**
- * Muestra @palabra en acento. `mentions` (ids) reservado para enlazar a /u/[id] en una iteración futura
- * con datos guardados en el post; por ahora solo estilos.
+ * Renderiza texto con @alias (incluye espacios en el alias). Si hay `mentionAliasById`,
+ * enlaza a `/u/[id]`; si no hay id para ese @, sólo estilo acento.
  */
 export function parseContentWithMentions(
   content: string | null | undefined,
-  _mentions: string[] | null | undefined
+  mentionIds: string[] | null | undefined,
+  mentionAliasById?: Record<string, string> | null
 ): ReactNode {
   if (content == null) return null
   const t = String(content)
   if (!t.trim()) return null
-  const parts = t.split(/(@\w+)/g)
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (/^@\w+$/.test(part)) {
-          return (
-            <span
-              key={i}
-              className="cursor-pointer text-[#CC4B37]"
-            >
-              {part}
-            </span>
-          )
+
+  type Pair = { alias: string; id: string }
+  const pairs: Pair[] = []
+  const seenAlias = new Set<string>()
+  if (mentionAliasById && mentionIds?.length) {
+    for (const id of mentionIds) {
+      const sid = String(id)
+      const al = mentionAliasById[sid]?.trim()
+      if (!al || seenAlias.has(al.toLowerCase())) continue
+      seenAlias.add(al.toLowerCase())
+      pairs.push({ alias: al, id: sid })
+    }
+    pairs.sort((a, b) => b.alias.length - a.alias.length)
+  }
+
+  const nodes: ReactNode[] = []
+  let i = 0
+  let key = 0
+
+  while (i < t.length) {
+    const at = t.indexOf('@', i)
+    if (at === -1) {
+      nodes.push(<span key={key++}>{t.slice(i)}</span>)
+      break
+    }
+    nodes.push(<span key={key++}>{t.slice(i, at)}</span>)
+    const afterAt = t.slice(at + 1)
+    const lowerAfter = afterAt.toLowerCase()
+
+    let matched: { id: string; len: number } | null = null
+    if (pairs.length > 0) {
+      for (const { alias, id } of pairs) {
+        const low = alias.toLowerCase()
+        if (lowerAfter.startsWith(low)) {
+          const boundary = afterAt[alias.length]
+          if (
+            boundary === undefined ||
+            /\s/.test(boundary) ||
+            boundary === '@' ||
+            /^[.,!?;:)\]}¡¿]$/.test(boundary)
+          ) {
+            matched = { id, len: alias.length }
+            break
+          }
         }
-        return <span key={i}>{part}</span>
-      })}
-    </>
-  )
+      }
+    }
+
+    if (matched) {
+      const mentionText = `@${afterAt.slice(0, matched.len)}`
+      nodes.push(
+        <Link
+          key={key++}
+          href={`/u/${matched.id}`}
+          className="font-medium text-[#CC4B37] hover:underline"
+        >
+          {mentionText}
+        </Link>
+      )
+      i = at + 1 + matched.len
+      continue
+    }
+
+    const loose = /^([\w]+(?:\s+[\w]+)*)/.exec(afterAt)
+    if (loose?.[1]) {
+      const raw = `@${loose[1]}`
+      nodes.push(
+        <span key={key++} className="font-medium text-[#CC4B37]">
+          {raw}
+        </span>
+      )
+      i = at + 1 + loose[1].length
+      continue
+    }
+
+    nodes.push(<span key={key++}>@</span>)
+    i = at + 1
+  }
+
+  return <>{nodes}</>
 }
 
 // Tipos de items del feed
 type FeedItem =
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; mentioned_user_ids?: string[] | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-  | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
-  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; mentioned_user_ids?: string[] | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
+  | {
+      kind: 'pinned_post'
+      id: string
+      post_owner_id: string | null
+      user_id: string
+      content: string | null
+      fotos_urls: string[] | null
+      video_url?: string | null
+      video_duration_s?: number | null
+      mentions?: string[]
+      mentionAliasById?: Record<string, string>
+      replica_id: string | null
+      created_at: string
+      user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean }
+    }
+  | {
+      kind: 'player_post'
+      id: string
+      post_owner_id: string | null
+      user_id: string
+      content: string | null
+      mentioned_user_ids?: string[] | null
+      fotos_urls: string[] | null
+      video_url?: string | null
+      video_duration_s?: number | null
+      mentions?: string[]
+      mentionAliasById?: Record<string, string>
+      replica_id: string | null
+      created_at: string
+      user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean }
+    }
   | {
       kind: 'field_post'
       id: string
@@ -185,6 +277,27 @@ type TeamDirItem = {
 }
 
 /** Aproximación en feed (solo campos del select): avatar + portada. */
+function mentionIdsFromRow(row: Record<string, unknown>): string[] | undefined {
+  const ids = row.mentioned_user_ids
+  if (!Array.isArray(ids) || ids.length === 0) return undefined
+  return ids.map(String)
+}
+
+function rowMentionAliasesFromMap(
+  row: Record<string, unknown>,
+  aliasByUserId: Map<string, string>
+): Record<string, string> | undefined {
+  const ids = row.mentioned_user_ids
+  if (!Array.isArray(ids) || ids.length === 0) return undefined
+  const o: Record<string, string> = {}
+  for (const id of ids) {
+    const sid = String(id)
+    const al = aliasByUserId.get(sid)
+    if (al) o[sid] = al
+  }
+  return Object.keys(o).length > 0 ? o : undefined
+}
+
 function mapJoinedUserForPlayerPost(u: Record<string, unknown> | null | undefined): {
   alias: string | null
   nombre: string | null
@@ -397,6 +510,7 @@ export function PostBox({
           content,
           fotos_urls: urls,
           ...videoFieldsPlayer,
+          ...(_mentions.length > 0 ? { mentioned_user_ids: _mentions } : {}),
           published: true,
         })
         if (error) {
@@ -830,7 +944,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
       </div>
       {item.content?.trim() && (
         <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-          {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null)}
+          {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null, null)}
         </p>
       )}
       {fotos.length > 0 && <PhotoGrid urls={fotos} />}
@@ -932,11 +1046,25 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
           {item.content?.trim() && (
             <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
               <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-                {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null)}
+                {parseContentWithMentions(
+                  item.content,
+                  item.mentions ?? item.mentioned_user_ids ?? null,
+                  item.mentionAliasById ?? null
+                )}
               </p>
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+          {item.video_url ? (
+            <video
+              src={item.video_url}
+              controls
+              muted
+              playsInline
+              loop
+              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
+            />
+          ) : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -948,10 +1076,24 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <>
           {item.content?.trim() && (
             <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-              {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null)}
+              {parseContentWithMentions(
+                item.content,
+                item.mentions ?? item.mentioned_user_ids ?? null,
+                item.mentionAliasById ?? null
+              )}
             </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+          {item.video_url ? (
+            <video
+              src={item.video_url}
+              controls
+              muted
+              playsInline
+              loop
+              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
+            />
+          ) : null}
         </>
       )}
       <PostActions
@@ -1046,10 +1188,26 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <>
           {item.content?.trim() && (
             <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
-              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
+                {parseContentWithMentions(
+                  item.content,
+                  item.mentions ?? null,
+                  item.mentionAliasById ?? null
+                )}
+              </p>
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+          {item.video_url ? (
+            <video
+              src={item.video_url}
+              controls
+              muted
+              playsInline
+              loop
+              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
+            />
+          ) : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1060,9 +1218,25 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       ) : (
         <>
           {item.content?.trim() && (
-            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
+              {parseContentWithMentions(
+                item.content,
+                item.mentions ?? null,
+                item.mentionAliasById ?? null
+              )}
+            </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+          {item.video_url ? (
+            <video
+              src={item.video_url}
+              controls
+              muted
+              playsInline
+              loop
+              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
+            />
+          ) : null}
         </>
       )}
       <PostActions
@@ -1554,12 +1728,16 @@ function FeedTab({
           .order('created_at', { ascending: false })
           .limit(20),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, replica_id, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
+          .select(
+            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentioned_user_ids, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+          )
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
-          .select('id, user_id, content, fotos_urls, replica_id, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
+          .select(
+            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentioned_user_ids, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+          )
           .eq('published', true)
           .eq('pinned', false)
           .order('created_at', { ascending: false })
@@ -1604,6 +1782,29 @@ function FeedTab({
           .limit(6),
       ])
 
+      const collectRows = [
+        ...(pinnedPlayerPostRes.data ?? []),
+        ...(playerPostsRes.data ?? []),
+      ] as Record<string, unknown>[]
+      const mentionIdSet = new Set<string>()
+      for (const r of collectRows) {
+        const m = r.mentioned_user_ids
+        if (Array.isArray(m)) {
+          for (const id of m) mentionIdSet.add(String(id))
+        }
+      }
+      let mentionAliasByUserId = new Map<string, string>()
+      if (mentionIdSet.size > 0) {
+        const { data: mu } = await supabase
+          .from('users')
+          .select('id, alias')
+          .in('id', Array.from(mentionIdSet))
+        for (const u of mu ?? []) {
+          const ur = u as { id: string; alias: string | null }
+          if (ur.alias?.trim()) mentionAliasByUserId.set(ur.id, ur.alias.trim())
+        }
+      }
+
       const feedItems: FeedItem[] = []
 
       for (const row of teamPostsRes.data ?? []) {
@@ -1632,6 +1833,13 @@ function FeedTab({
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
+          video_url: (r.video_url as string | null) ?? null,
+          video_duration_s:
+            r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
+              ? Number(r.video_duration_s)
+              : undefined,
+          mentions: mentionIdsFromRow(r),
+          mentionAliasById: rowMentionAliasesFromMap(r, mentionAliasByUserId),
           replica_id: r.replica_id ? String(r.replica_id) : null,
           created_at: String(r.created_at),
           user: mapJoinedUserForPlayerPost(
@@ -1650,6 +1858,13 @@ function FeedTab({
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
+          video_url: (r.video_url as string | null) ?? null,
+          video_duration_s:
+            r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
+              ? Number(r.video_duration_s)
+              : undefined,
+          mentions: mentionIdsFromRow(r),
+          mentionAliasById: rowMentionAliasesFromMap(r, mentionAliasByUserId),
           replica_id: r.replica_id ? String(r.replica_id) : null,
           created_at: String(r.created_at),
           user: mapJoinedUserForPlayerPost(
@@ -1811,7 +2026,9 @@ function FeedTab({
         cursorPlayerPosts
           ? supabase
               .from('player_posts')
-              .select('id, user_id, content, fotos_urls, replica_id, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)')
+              .select(
+                'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentioned_user_ids, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+              )
               .eq('published', true)
               .eq('pinned', false)
               .lt('created_at', cursorPlayerPosts)
@@ -1822,6 +2039,25 @@ function FeedTab({
 
       const teamRows = teamRes.data ?? []
       const playerRows = playerRes.data ?? []
+
+      const loadMoreMentionIds = new Set<string>()
+      for (const r of playerRows) {
+        const m = (r as Record<string, unknown>).mentioned_user_ids
+        if (Array.isArray(m)) {
+          for (const id of m) loadMoreMentionIds.add(String(id))
+        }
+      }
+      let loadMoreAliasByUserId = new Map<string, string>()
+      if (loadMoreMentionIds.size > 0) {
+        const { data: mu } = await supabase
+          .from('users')
+          .select('id, alias')
+          .in('id', Array.from(loadMoreMentionIds))
+        for (const u of mu ?? []) {
+          const ur = u as { id: string; alias: string | null }
+          if (ur.alias?.trim()) loadMoreAliasByUserId.set(ur.id, ur.alias.trim())
+        }
+      }
 
       if (teamRows.length === 0 && playerRows.length === 0) {
         setHasMore(false)
@@ -1861,6 +2097,13 @@ function FeedTab({
           user_id: String(r.user_id ?? ''),
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+          video_url: (r.video_url as string | null) ?? null,
+          video_duration_s:
+            r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
+              ? Number(r.video_duration_s)
+              : undefined,
+          mentions: mentionIdsFromRow(r),
+          mentionAliasById: rowMentionAliasesFromMap(r, loadMoreAliasByUserId),
           replica_id: r.replica_id ? String(r.replica_id) : null,
           created_at: String(r.created_at),
           user: mapJoinedUserForPlayerPost(

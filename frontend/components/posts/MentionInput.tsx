@@ -33,34 +33,78 @@ function getActiveMention(
   return { start: at, query: after }
 }
 
+function mentionBoundaryOk(ch: string | undefined): boolean {
+  if (ch === undefined) return true
+  if (/\s/.test(ch)) return true
+  return /^[@.,!?;:)\]}¡¿]$/.test(ch)
+}
+
+/** Recorre el texto y enlaza cada @con los alias conocidos del map (claves lower-case), priorizando el alias más largo — soporta espacios en el alias ("Cero Uno"). */
 function collectMentionIds(
   text: string,
   aliasToId: Map<string, string>
 ): string[] {
-  const re = /@([\w]+)/g
   const ordered: string[] = []
   const seen = new Set<string>()
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text)) !== null) {
-    const key = m[1].toLowerCase()
-    const id = aliasToId.get(key)
-    if (id && !seen.has(id)) {
-      seen.add(id)
-      ordered.push(id)
+  const entries = Array.from(aliasToId.entries()).sort(
+    (a, b) => b[0].length - a[0].length
+  )
+  let i = 0
+  while (i < text.length) {
+    const at = text.indexOf('@', i)
+    if (at === -1) break
+    const afterAt = text.slice(at + 1)
+    let matchedId: string | null = null
+    let consumed = 0
+    for (const [aliasKey, id] of entries) {
+      const lowAfter = afterAt.toLowerCase()
+      if (lowAfter.startsWith(aliasKey.toLowerCase())) {
+        const boundary = afterAt[aliasKey.length]
+        if (mentionBoundaryOk(boundary)) {
+          matchedId = id
+          consumed = aliasKey.length
+          break
+        }
+      }
+    }
+    if (matchedId != null && !seen.has(matchedId)) {
+      seen.add(matchedId)
+      ordered.push(matchedId)
+      i = at + 1 + consumed
+    } else {
+      const loose = /^([\w]+(?:\s+[\w]+)*)/.exec(afterAt)
+      i = loose ? at + 1 + loose[1].length : at + 1
     }
   }
   return ordered
 }
 
 function syncAliasMapFromText(text: string, map: Map<string, string>) {
-  const tokens = new Set<string>()
-  const re = /@([\w]+)/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text)) !== null) {
-    tokens.add(m[1].toLowerCase())
+  const entries = Array.from(map.entries()).sort(
+    (a, b) => b[0].length - a[0].length
+  )
+  const keptLower = new Set<string>()
+  let i = 0
+  while (i < text.length) {
+    const at = text.indexOf('@', i)
+    if (at === -1) break
+    const afterAt = text.slice(at + 1)
+    let hitLen = 0
+    for (const [aliasKey] of entries) {
+      const lowAfter = afterAt.toLowerCase()
+      if (lowAfter.startsWith(aliasKey.toLowerCase())) {
+        const boundary = afterAt[aliasKey.length]
+        if (mentionBoundaryOk(boundary)) {
+          keptLower.add(aliasKey.toLowerCase())
+          hitLen = aliasKey.length
+          break
+        }
+      }
+    }
+    i = hitLen ? at + 1 + hitLen : at + 1
   }
   Array.from(map.keys()).forEach((k) => {
-    if (!tokens.has(k)) map.delete(k)
+    if (!keptLower.has(k.toLowerCase())) map.delete(k)
   })
 }
 

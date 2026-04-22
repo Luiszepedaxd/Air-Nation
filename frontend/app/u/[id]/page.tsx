@@ -114,13 +114,51 @@ async function fetchPublicProfile(id: string) {
   let posts: PlayerPostRow[] = []
   const { data: postsData } = await supabase
     .from('player_posts')
-    .select('id, content, fotos_urls, created_at')
+    .select(
+      'id, content, fotos_urls, video_url, video_duration_s, mentioned_user_ids, created_at'
+    )
     .eq('user_id', id)
     .eq('published', true)
     .order('created_at', { ascending: false })
     .limit(20)
 
-  if (postsData) posts = postsData as PlayerPostRow[]
+  if (postsData) {
+    const mentionIds = new Set<string>()
+    for (const p of postsData as { mentioned_user_ids?: unknown }[]) {
+      const m = p.mentioned_user_ids
+      if (Array.isArray(m)) {
+        for (const uid of m) mentionIds.add(String(uid))
+      }
+    }
+    let aliasById = new Map<string, string>()
+    if (mentionIds.size > 0) {
+      const { data: mu } = await supabase
+        .from('users')
+        .select('id, alias')
+        .in('id', Array.from(mentionIds))
+      for (const u of mu ?? []) {
+        const row = u as { id: string; alias: string | null }
+        if (row.alias?.trim()) aliasById.set(row.id, row.alias.trim())
+      }
+    }
+    posts = (postsData as PlayerPostRow[]).map((row) => {
+      const mids = row.mentioned_user_ids
+      const mentionAliasById: Record<string, string> = {}
+      if (Array.isArray(mids)) {
+        for (const uid of mids) {
+          const sid = String(uid)
+          const al = aliasById.get(sid)
+          if (al) mentionAliasById[sid] = al
+        }
+      }
+      return {
+        ...row,
+        ...(Object.keys(mentionAliasById).length > 0
+          ? { mentionAliasById }
+          : {}),
+      }
+    })
+  }
 
   let events: PlayerEventRow[] = []
   try {
