@@ -1711,6 +1711,7 @@ function FeedTab({
       loadingMoreRef.current = false
       setLoadingMore(false)
       setLoading(true)
+      try {
       const [
         teamPostsRes,
         pinnedPlayerPostRes,
@@ -1782,6 +1783,21 @@ function FeedTab({
           .limit(6),
       ])
 
+      if (pinnedPlayerPostRes.error) {
+        console.error(
+          '[FeedTab] pinned player_posts:',
+          pinnedPlayerPostRes.error.message,
+          pinnedPlayerPostRes.error
+        )
+      }
+      if (playerPostsRes.error) {
+        console.error(
+          '[FeedTab] player_posts:',
+          playerPostsRes.error.message,
+          playerPostsRes.error
+        )
+      }
+
       const collectRows = [
         ...(pinnedPlayerPostRes.data ?? []),
         ...(playerPostsRes.data ?? []),
@@ -1795,13 +1811,20 @@ function FeedTab({
       }
       let mentionAliasByUserId = new Map<string, string>()
       if (mentionIdSet.size > 0) {
-        const { data: mu } = await supabase
-          .from('users')
-          .select('id, alias')
-          .in('id', Array.from(mentionIdSet))
-        for (const u of mu ?? []) {
-          const ur = u as { id: string; alias: string | null }
-          if (ur.alias?.trim()) mentionAliasByUserId.set(ur.id, ur.alias.trim())
+        try {
+          const { data: mu, error: muErr } = await supabase
+            .from('users')
+            .select('id, alias')
+            .in('id', Array.from(mentionIdSet))
+          if (muErr) {
+            console.error('[FeedTab] users (mention aliases):', muErr.message, muErr)
+          }
+          for (const u of mu ?? []) {
+            const ur = u as { id: string; alias: string | null }
+            if (ur.alias?.trim()) mentionAliasByUserId.set(ur.id, ur.alias.trim())
+          }
+        } catch (e) {
+          console.error('[FeedTab] mention alias fetch failed', e)
         }
       }
 
@@ -1998,8 +2021,12 @@ function FeedTab({
         setCursorPlayerPosts(null)
       }
 
-      setLoading(false)
       touchFeedItemsTimestamp()
+      } catch (e) {
+        console.error('[FeedTab] load failed', e)
+      } finally {
+        setLoading(false)
+      }
   }, [])
 
   const loadMore = useCallback(async () => {
@@ -2049,13 +2076,20 @@ function FeedTab({
       }
       let loadMoreAliasByUserId = new Map<string, string>()
       if (loadMoreMentionIds.size > 0) {
-        const { data: mu } = await supabase
-          .from('users')
-          .select('id, alias')
-          .in('id', Array.from(loadMoreMentionIds))
-        for (const u of mu ?? []) {
-          const ur = u as { id: string; alias: string | null }
-          if (ur.alias?.trim()) loadMoreAliasByUserId.set(ur.id, ur.alias.trim())
+        try {
+          const { data: mu, error: muErr } = await supabase
+            .from('users')
+            .select('id, alias')
+            .in('id', Array.from(loadMoreMentionIds))
+          if (muErr) {
+            console.error('[FeedTab loadMore] users (mention aliases):', muErr.message, muErr)
+          }
+          for (const u of mu ?? []) {
+            const ur = u as { id: string; alias: string | null }
+            if (ur.alias?.trim()) loadMoreAliasByUserId.set(ur.id, ur.alias.trim())
+          }
+        } catch (e) {
+          console.error('[FeedTab loadMore] mention alias fetch failed', e)
         }
       }
 
