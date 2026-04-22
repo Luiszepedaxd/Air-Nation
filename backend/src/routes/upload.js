@@ -14,6 +14,8 @@ const { requireAuth } = require("../middleware/requireAuth");
 fluentFfmpeg.setFfmpegPath(ffmpegPath);
 fluentFfmpeg.setFfprobePath(ffprobePath);
 
+console.log("[upload/video] ffmpeg configurado globalmente");
+
 console.log("[upload/video] ffmpeg path:", ffmpegPath);
 console.log("[upload/video] ffprobe path:", ffprobePath);
 
