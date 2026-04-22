@@ -189,7 +189,7 @@ export function MentionInput({
     if (!m) return
     const before = value.slice(0, m.start)
     const after = value.slice(pos)
-    const insert = `@${al} `
+    const insert = `@${al}  `
     const newText = `${before}${insert}${after}`.slice(0, maxLength)
     const nextCursor = (before + insert).length
     aliasToIdRef.current.set(al.toLowerCase(), u.id)
@@ -230,14 +230,14 @@ export function MentionInput({
         <ul
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 min-w-0 overflow-y-auto border border-[#EEEEEE] bg-white py-1 shadow-md"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-56 min-w-0 overflow-y-auto border border-[#EEEEEE] bg-white py-1 shadow-lg"
           style={lato}
         >
           {loading && q.length >= 2 && users.length === 0 && (
-            <li className="px-3 py-2 text-[13px] text-[#888888]">Buscando…</li>
+            <li className="px-4 py-3 text-[13px] text-[#888888]">Buscando…</li>
           )}
           {!loading && q.length >= 2 && users.length === 0 && (
-            <li className="px-3 py-2 text-[13px] text-[#888888]">
+            <li className="px-4 py-3 text-[13px] text-[#888888]">
               Sin resultados
             </li>
           )}
@@ -252,7 +252,7 @@ export function MentionInput({
                     e.preventDefault()
                     pick(u)
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] text-[#111111] hover:bg-[#F4F4F4]"
+                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-[14px] text-[#111111] hover:bg-[#F4F4F4]"
                 >
                   <span className="h-6 w-6 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
                     {u.avatar_url ? (

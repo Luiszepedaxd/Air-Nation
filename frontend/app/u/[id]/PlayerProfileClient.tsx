@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { PostBox } from '@/app/dashboard/FeedHome'
+import { parseContentWithMentions, PostBox } from '@/app/dashboard/FeedHome'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
@@ -242,7 +242,10 @@ function PostsPanel({
                 className="mb-3 text-[14px] leading-relaxed text-[#111111]"
                 style={{ fontFamily: "'Lato', sans-serif" }}
               >
-                {post.content.trim()}
+                {parseContentWithMentions(
+                  post.content,
+                  post.mentioned_user_ids ?? null
+                )}
               </p>
             ) : null}
             {urls.length > 0 && <PhotoGrid urls={urls} />}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
@@ -18,11 +18,42 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 
+/**
+ * Muestra @palabra en acento. `mentions` (ids) reservado para enlazar a /u/[id] en una iteración futura
+ * con datos guardados en el post; por ahora solo estilos.
+ */
+export function parseContentWithMentions(
+  content: string | null | undefined,
+  _mentions: string[] | null | undefined
+): ReactNode {
+  if (content == null) return null
+  const t = String(content)
+  if (!t.trim()) return null
+  const parts = t.split(/(@\w+)/g)
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^@\w+$/.test(part)) {
+          return (
+            <span
+              key={i}
+              className="cursor-pointer text-[#CC4B37]"
+            >
+              {part}
+            </span>
+          )
+        }
+        return <span key={i}>{part}</span>
+      })}
+    </>
+  )
+}
+
 // Tipos de items del feed
 type FeedItem =
-  | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
+  | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; mentioned_user_ids?: string[] | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
   | { kind: 'pinned_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
-  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
+  | { kind: 'player_post'; id: string; post_owner_id: string | null; user_id: string; content: string | null; mentioned_user_ids?: string[] | null; fotos_urls: string[] | null; replica_id: string | null; created_at: string; user: { alias: string | null; nombre: string | null; avatar_url: string | null; is_verified: boolean } }
   | {
       kind: 'field_post'
       id: string
@@ -793,7 +824,9 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         </div>
       </div>
       {item.content?.trim() && (
-        <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+        <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
+          {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null)}
+        </p>
       )}
       {fotos.length > 0 && <PhotoGrid urls={fotos} />}
       <PostActions
@@ -893,7 +926,9 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <>
           {item.content?.trim() && (
             <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
-              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
+                {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null)}
+              </p>
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
@@ -907,7 +942,9 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       ) : (
         <>
           {item.content?.trim() && (
-            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">{item.content}</p>
+            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
+              {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null)}
+            </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
         </>

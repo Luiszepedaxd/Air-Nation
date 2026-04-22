@@ -5,14 +5,18 @@ const crypto = require("crypto");
 const fs = require("fs/promises");
 const multer = require("multer");
 const FormData = require("form-data");
-const ffmpeg = require("fluent-ffmpeg");
-const { path: ffmpegBin } = require("@ffmpeg-installer/ffmpeg");
-const { path: ffprobeBin } = require("@ffprobe-installer/ffprobe");
+const fluentFfmpeg = require("fluent-ffmpeg");
+const { path: ffmpegPath } = require("@ffmpeg-installer/ffmpeg");
+const { path: ffprobePath } = require("@ffprobe-installer/ffprobe");
 const { uploadToCloudflare } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
 
-process.env.FFMPEG_PATH = ffmpegBin;
-process.env.FFPROBE_PATH = ffprobeBin;
+fluentFfmpeg()
+  .setFfmpegPath(ffmpegPath)
+  .setFfprobePath(ffprobePath);
+
+console.log("[upload/video] ffmpeg path:", ffmpegPath);
+console.log("[upload/video] ffprobe path:", ffprobePath);
 
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -54,6 +58,18 @@ const upload = multer({
 
 const router = express.Router();
 
+router.get("/video/health", (req, res) => {
+  try {
+    return res.status(200).json({
+      ffmpeg: ffmpegPath,
+      ffprobe: ffprobePath,
+    });
+  } catch (e) {
+    console.error("[upload/video/health]", e);
+    return res.status(500).json({ error: String(e && e.message ? e.message : e) });
+  }
+});
+
 router.post("/", requireAuth, (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
@@ -77,7 +93,7 @@ router.post("/", requireAuth, (req, res) => {
 
 function getVideoDurationSeconds(filePath) {
   return new Promise((resolve, reject) => {
-    ffmpeg.ffprobe(filePath, (err, metadata) => {
+    fluentFfmpeg.ffprobe(filePath, (err, metadata) => {
       if (err) {
         return reject(err);
       }
@@ -92,37 +108,51 @@ function getVideoDurationSeconds(filePath) {
 
 router.post("/video", requireAuth, (req, res) => {
   uploadVideo.single("file")(req, res, async (err) => {
-    if (err) {
-      if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+    const extForMime = (mime) => extForVideoMime(mime);
+    let tmpPath = null;
+    try {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res
+            .status(400)
+            .json({ error: "El archivo excede el tamaño máximo (50MB)" });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      if (!req.file) {
         return res
           .status(400)
-          .json({ error: "El archivo excede el tamaño máximo (50MB)" });
+          .json({ error: "No se recibió ningún archivo" });
       }
-      return res.status(400).json({ error: err.message });
-    }
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ error: "No se recibió ningún archivo" });
-    }
 
-    const accountId = process.env.CF_ACCOUNT_ID;
-    const streamToken = process.env.CF_STREAM_API_TOKEN;
-    if (!accountId || !streamToken) {
-      return res.status(500).json({
-        error: "Falta configuración de Cloudflare Stream (CF_ACCOUNT_ID / CF_STREAM_API_TOKEN)",
-      });
-    }
+      const accountId = process.env.CF_ACCOUNT_ID;
+      const streamToken = process.env.CF_STREAM_API_TOKEN;
+      if (!accountId || !streamToken) {
+        return res.status(500).json({
+          error: "Falta configuración de Cloudflare Stream (CF_ACCOUNT_ID / CF_STREAM_API_TOKEN)",
+        });
+      }
 
-    const ext = extForVideoMime(req.file.mimetype);
-    const tmpPath = path.join(
-      os.tmpdir(),
-      `an-vid-${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`
-    );
+      const ext = extForMime(req.file.mimetype);
+      tmpPath = path.join(
+        os.tmpdir(),
+        `an-vid-${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`
+      );
 
-    try {
       await fs.writeFile(tmpPath, req.file.buffer);
-      const durationSec = await getVideoDurationSeconds(tmpPath);
+      let durationSec;
+      try {
+        durationSec = await getVideoDurationSeconds(tmpPath);
+      } catch (probeErr) {
+        console.error(
+          "[upload/video] ffprobe / duración:",
+          probeErr && probeErr.message ? probeErr.message : probeErr,
+          probeErr && probeErr.stack
+        );
+        return res.status(500).json({
+          error: probeErr.message || "No se pudo leer la duración del video",
+        });
+      }
       if (durationSec > VIDEO_MAX_DURATION_SEC) {
         return res.status(400).json({
           error: "El video no puede durar más de 30 segundos",
@@ -169,12 +199,19 @@ router.post("/video", requireAuth, (req, res) => {
         duration_s: Math.round(durationSec),
       });
     } catch (e) {
-      return res.status(500).json({ error: e.message });
+      console.error(
+        "[upload/video] error inesperado:",
+        e && e.message,
+        e && e.stack
+      );
+      return res.status(500).json({ error: e.message || "Error al procesar el video" });
     } finally {
-      try {
-        await fs.unlink(tmpPath);
-      } catch {
-        // archivo ya eliminado o inexistente
+      if (tmpPath) {
+        try {
+          await fs.unlink(tmpPath);
+        } catch {
+          // archivo ya eliminado o inexistente
+        }
       }
     }
   });

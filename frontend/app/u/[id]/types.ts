@@ -30,6 +30,8 @@ export type PlayerPostRow = {
   content: string | null
   fotos_urls: string[] | null
   created_at: string
+  /** Reservado: ids de usuarios @mencionados cuando exista en BD */
+  mentioned_user_ids?: string[] | null
 }
 
 export type PlayerEventRow = {
