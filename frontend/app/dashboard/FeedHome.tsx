@@ -7,8 +7,10 @@ import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
-import { uploadFile } from '@/lib/apiFetch'
+import { uploadFile, uploadVideo } from '@/lib/apiFetch'
 import { CropModal } from '@/components/posts/CropModal'
+import { MentionInput } from '@/components/posts/MentionInput'
+import { VideoTrimmer } from '@/components/posts/VideoTrimmer'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -225,9 +227,16 @@ export function PostBox({
     avatar: userAvatar,
   })
   const [text, setText] = useState('')
+  const [_mentions, setMentions] = useState<string[]>([])
   const [pendingPhotos, setPendingPhotos] = useState<
     { id: string; file: File; preview: string }[]
   >([])
+  const [pendingVideo, setPendingVideo] = useState<{
+    file: File
+    duration: number
+    previewUrl: string
+  } | null>(null)
+  const [showVideoTrimmer, setShowVideoTrimmer] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
   const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
@@ -298,8 +307,32 @@ export function PostBox({
     setPendingPhotos([])
   }
 
+  const clearPendingVideo = () => {
+    setPendingVideo((prev) => {
+      if (prev?.previewUrl) {
+        try {
+          URL.revokeObjectURL(prev.previewUrl)
+        } catch {
+          /* noop */
+        }
+      }
+      return null
+    })
+  }
+
   const handlePublish = async () => {
-    if ((!text.trim() && pendingPhotos.length === 0) || publishing) return
+    if (
+      (!text.trim() && pendingPhotos.length === 0 && !pendingVideo) ||
+      publishing
+    ) {
+      return
+    }
+    if (pendingVideo && postAs.type !== 'player') {
+      window.alert(
+        'El video solo se puede adjuntar cuando publicas como jugador (Tú). Cambia "Publicar como" o quita el video.'
+      )
+      return
+    }
     setPublishing(true)
     try {
       const urls: string[] = []
@@ -307,13 +340,26 @@ export function PostBox({
         urls.push(await uploadFile(p.file))
       }
 
+      let videoUrl: string | null = null
+      let videoDurationS: number | null = null
+      if (pendingVideo) {
+        const v = await uploadVideo(pendingVideo.file)
+        videoUrl = v.video_url
+        videoDurationS = Math.round(v.duration_s)
+      }
+
       const content = text.trim() || null
+      const videoFieldsPlayer =
+        videoUrl != null && videoDurationS != null
+          ? { video_url: videoUrl, video_duration_s: videoDurationS }
+          : {}
 
       if (postAs.type === 'player') {
         const { error } = await supabase.from('player_posts').insert({
           user_id: userId,
           content,
           fotos_urls: urls,
+          ...videoFieldsPlayer,
           published: true,
         })
         if (error) throw error
@@ -337,8 +383,17 @@ export function PostBox({
       }
 
       setText('')
+      setMentions([])
       for (const p of pendingPhotos) URL.revokeObjectURL(p.preview)
       setPendingPhotos([])
+      if (pendingVideo?.previewUrl) {
+        try {
+          URL.revokeObjectURL(pendingVideo.previewUrl)
+        } catch {
+          /* noop */
+        }
+      }
+      setPendingVideo(null)
       setExpanded(false)
       onPublished()
     } catch {
@@ -472,17 +527,18 @@ export function PostBox({
         </div>
       )}
 
-      <textarea
+      <MentionInput
         value={text}
-        onChange={(e) => setText(e.target.value.slice(0, 500))}
-        placeholder="¿Qué quieres compartir?"
-        rows={3}
-        className="w-full resize-none border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[14px] text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
-        style={lato}
+        onChange={(t, m) => {
+          setText(t)
+          setMentions(m)
+        }}
+        placeholder="¿Qué quieres compartir con la comunidad?"
+        maxLength={500}
         autoFocus
       />
 
-      {pendingPhotos.length > 0 && (
+      {(pendingPhotos.length > 0 || pendingVideo) && (
         <div className="mt-2 flex flex-wrap gap-2">
           {pendingPhotos.map((p) => (
             <div
@@ -502,6 +558,36 @@ export function PostBox({
               </button>
             </div>
           ))}
+          {pendingVideo && (
+            <div className="relative h-16 w-16 overflow-hidden bg-[#F4F4F4]">
+              <video
+                src={pendingVideo.previewUrl}
+                muted
+                playsInline
+                className="h-full w-full object-cover"
+                preload="metadata"
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="text-white drop-shadow"
+                  aria-hidden
+                >
+                  <path d="M8 5v14l11-7L8 5z" />
+                </svg>
+              </div>
+              <button
+                type="button"
+                onClick={clearPendingVideo}
+                className="absolute right-0 top-0 z-10 flex h-5 w-5 items-center justify-center bg-black/50 text-xs text-white"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -520,6 +606,7 @@ export function PostBox({
             onClick={() => fileInputRef.current?.click()}
             disabled={pendingPhotos.length >= 4}
             className="p-2 text-[#666666] hover:text-[#111111] disabled:opacity-40"
+            aria-label="Añadir fotos"
           >
             <svg
               width="18"
@@ -543,6 +630,37 @@ export function PostBox({
               />
             </svg>
           </button>
+          <button
+            type="button"
+            onClick={() => setShowVideoTrimmer(true)}
+            className="p-2 text-[#666666] hover:text-[#111111]"
+            aria-label="Añadir video"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <rect
+                x="2"
+                y="5"
+                width="15"
+                height="14"
+                rx="1.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M17.5 8.5L22 5.8v12.4l-4.5-2.7V8.5z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
         <div className="flex gap-2">
           <button
@@ -550,7 +668,9 @@ export function PostBox({
             onClick={() => {
               setExpanded(false)
               setText('')
+              setMentions([])
               clearPendingPhotos()
+              clearPendingVideo()
             }}
             style={jost}
             className="border border-[#EEEEEE] px-3 py-2 text-[11px] text-[#666666]"
@@ -561,7 +681,8 @@ export function PostBox({
             type="button"
             onClick={() => void handlePublish()}
             disabled={
-              (!text.trim() && pendingPhotos.length === 0) || publishing
+              (!text.trim() && pendingPhotos.length === 0 && !pendingVideo) ||
+              publishing
             }
             style={jost}
             className="bg-[#CC4B37] px-4 py-2 text-[11px] text-white disabled:opacity-50"
@@ -578,6 +699,41 @@ export function PostBox({
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />
+      )}
+
+      {showVideoTrimmer && (
+        <div
+          className="fixed inset-0 z-[350] flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowVideoTrimmer(false)
+          }}
+        >
+          <div
+            className="max-h-[90dvh] w-full max-w-md overflow-y-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <VideoTrimmer
+              onVideoReady={(file, durationSeconds) => {
+                setPendingVideo((prev) => {
+                  if (prev?.previewUrl) {
+                    try {
+                      URL.revokeObjectURL(prev.previewUrl)
+                    } catch {
+                      /* noop */
+                    }
+                  }
+                  return {
+                    file,
+                    duration: durationSeconds,
+                    previewUrl: URL.createObjectURL(file),
+                  }
+                })
+                setShowVideoTrimmer(false)
+              }}
+              onCancel={() => setShowVideoTrimmer(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   )

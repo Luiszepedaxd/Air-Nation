@@ -138,6 +138,7 @@ type Props = {
   onChange: (text: string, mentions: string[]) => void
   placeholder?: string
   maxLength?: number
+  autoFocus?: boolean
 }
 
 export function MentionInput({
@@ -145,6 +146,7 @@ export function MentionInput({
   onChange,
   placeholder = 'Escribe…',
   maxLength = 500,
+  autoFocus,
 }: Props) {
   const taRef = useRef<HTMLTextAreaElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
@@ -316,6 +318,7 @@ export function MentionInput({
         maxLength={maxLength}
         className={TEXTAREA}
         style={lato}
+        autoFocus={autoFocus}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}

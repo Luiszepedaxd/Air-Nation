@@ -42,3 +42,33 @@ export async function uploadFile(file: File): Promise<string> {
   if (!json.url) throw new Error('Respuesta inválida del servidor')
   return json.url
 }
+
+export type VideoUploadResult = {
+  video_url: string
+  thumbnail_url: string | null
+  duration_s: number
+}
+
+/** Sube un video a Cloudflare Stream (POST /upload/video). */
+export async function uploadVideo(file: File): Promise<VideoUploadResult> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await apiFetch('/upload/video', { method: 'POST', body: fd })
+  const json = (await res.json()) as {
+    video_url?: string
+    thumbnail_url?: string | null
+    duration_s?: number
+    error?: string
+  }
+  if (!res.ok) {
+    throw new Error(json.error || 'Error al subir el video')
+  }
+  if (!json.video_url) {
+    throw new Error('Respuesta inválida del servidor (video)')
+  }
+  return {
+    video_url: json.video_url,
+    thumbnail_url: json.thumbnail_url ?? null,
+    duration_s: typeof json.duration_s === 'number' ? json.duration_s : 0,
+  }
+}
