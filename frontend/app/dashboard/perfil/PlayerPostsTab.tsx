@@ -97,7 +97,10 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
         userAvatar={null}
         userTeams={[]}
         userFields={[]}
-        onPublished={() => void fetchPosts()}
+        onPublished={async () => {
+          await new Promise((resolve) => setTimeout(resolve, 500))
+          await fetchPosts()
+        }}
       />
 
       <hr className="my-8 border-0 border-t border-solid border-[#EEEEEE]" />

@@ -7,6 +7,7 @@ import { PlayerHero } from './PlayerHero'
 import type { PlayerEventRow, PlayerPostRow, PublicReplicaRow, PublicUserProfile } from './types'
 
 export const revalidate = 0
+export const dynamic = 'force-dynamic'
 
 export type { PlayerEventRow, PlayerPostRow, PublicReplicaRow, PublicUserProfile }
 
@@ -343,6 +344,7 @@ export default async function PublicProfilePage({
         replicas={replicas}
         rolLabels={ROL_LABELS}
         currentUserId={currentUser?.id ?? null}
+        showPostBox={currentUser?.id === user.id}
         currentUserAlias={currentUser?.user_metadata?.alias ?? null}
         currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}
       />
