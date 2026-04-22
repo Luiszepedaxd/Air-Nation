@@ -321,10 +321,11 @@ export function PostBox({
   }
 
   const handlePublish = async () => {
-    if (
-      (!text.trim() && pendingPhotos.length === 0 && !pendingVideo) ||
-      publishing
-    ) {
+    const canPublish =
+      text.trim().length > 0 ||
+      pendingPhotos.length > 0 ||
+      pendingVideo != null
+    if (!canPublish || publishing) {
       return
     }
     if (pendingVideo && postAs.type !== 'player') {
@@ -362,7 +363,10 @@ export function PostBox({
           ...videoFieldsPlayer,
           published: true,
         })
-        if (error) throw error
+        if (error) {
+          console.error('[PostBox] player_posts insert', error)
+          throw error
+        }
       } else if (postAs.type === 'team') {
         const { error } = await supabase.from('team_posts').insert({
           team_id: postAs.id,
@@ -371,7 +375,10 @@ export function PostBox({
           published: true,
           created_by: userId,
         })
-        if (error) throw error
+        if (error) {
+          console.error('[PostBox] team_posts insert', error)
+          throw error
+        }
       } else if (postAs.type === 'field') {
         const { error } = await supabase.from('field_posts').insert({
           field_id: postAs.id,
@@ -379,7 +386,10 @@ export function PostBox({
           fotos_urls: urls,
           created_by: userId,
         })
-        if (error) throw error
+        if (error) {
+          console.error('[PostBox] field_posts insert', error)
+          throw error
+        }
       }
 
       setText('')
@@ -396,8 +406,8 @@ export function PostBox({
       setPendingVideo(null)
       setExpanded(false)
       onPublished()
-    } catch {
-      /* noop */
+    } catch (e) {
+      console.error('[PostBox] handlePublish', e)
     } finally {
       setPublishing(false)
     }
@@ -485,7 +495,7 @@ export function PostBox({
   }
 
   return (
-    <div className="mb-4 border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+    <div className="mb-4 overflow-visible border border-[#EEEEEE] bg-[#FFFFFF] p-4">
       {postAsOptions.length > 1 && (
         <div className="mb-3">
           <p
@@ -681,7 +691,9 @@ export function PostBox({
             type="button"
             onClick={() => void handlePublish()}
             disabled={
-              (!text.trim() && pendingPhotos.length === 0 && !pendingVideo) ||
+              (text.trim().length === 0 &&
+                pendingPhotos.length === 0 &&
+                pendingVideo == null) ||
               publishing
             }
             style={jost}

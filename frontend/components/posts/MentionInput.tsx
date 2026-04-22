@@ -1,13 +1,6 @@
 'use client'
 
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -38,68 +31,6 @@ function getActiveMention(
   if (after.length < 2) return null
   if (!/^\w*$/i.test(after)) return null
   return { start: at, query: after }
-}
-
-/** Posición aprox. del cursor en el viewport (textarea multilínea). */
-function getCaretClientRect(
-  el: HTMLTextAreaElement,
-  position: number
-): DOMRect {
-  const p = Math.min(position, el.value.length)
-  const d = document.createElement('div')
-  const s = getComputedStyle(el)
-  const props: string[] = [
-    'direction',
-    'boxSizing',
-    'width',
-    'height',
-    'overflowX',
-    'overflowY',
-    'borderTopWidth',
-    'borderRightWidth',
-    'borderBottomWidth',
-    'borderLeftWidth',
-    'borderStyle',
-    'paddingTop',
-    'paddingRight',
-    'paddingBottom',
-    'paddingLeft',
-    'fontStyle',
-    'fontVariant',
-    'fontWeight',
-    'fontSize',
-    'lineHeight',
-    'fontFamily',
-    'textAlign',
-    'textTransform',
-    'textIndent',
-    'textDecoration',
-    'letterSpacing',
-    'wordSpacing',
-    'tabSize',
-    'MozTabSize',
-    'whiteSpace',
-    'wordBreak',
-    'wordWrap',
-  ]
-  for (const k of props) d.style.setProperty(k, s.getPropertyValue(k))
-  d.style.position = 'absolute'
-  d.style.visibility = 'hidden'
-  d.style.whiteSpace = 'pre-wrap'
-  d.style.wordWrap = 'break-word'
-  d.style.width = `${el.clientWidth}px`
-  d.style.zIndex = '0'
-  d.style.top = '0px'
-  d.style.left = '-10000px'
-  d.textContent = el.value.substring(0, p)
-  const span = document.createElement('span')
-  span.textContent = el.value.substring(p) || '\u00a0'
-  d.appendChild(span)
-  document.body.appendChild(d)
-  d.scrollTop = el.scrollTop
-  const r = span.getBoundingClientRect()
-  document.body.removeChild(d)
-  return r
 }
 
 function collectMentionIds(
@@ -158,10 +89,6 @@ export function MentionInput({
   const [q, setQ] = useState('')
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(false)
-  const [caret, setCaret] = useState<{
-    top: number
-    left: number
-  } | null>(null)
   const runSearch = useCallback(async (query: string) => {
     const t = query.trim()
     if (t.length < 2) {
@@ -202,27 +129,6 @@ export function MentionInput({
     []
   )
 
-  const updateCaretPosition = useCallback(() => {
-    const ta = taRef.current
-    if (!ta) {
-      setCaret(null)
-      return
-    }
-    const pos = ta.selectionStart ?? 0
-    const m = getActiveMention(ta.value, pos)
-    if (m) {
-      try {
-        const r = getCaretClientRect(ta, pos)
-        setCaret({ top: r.bottom + 4, left: r.left })
-      } catch {
-        const br = ta.getBoundingClientRect()
-        setCaret({ top: br.bottom + 4, left: br.left + 8 })
-      }
-    } else {
-      setCaret(null)
-    }
-  }, [])
-
   const emit = useCallback(
     (text: string) => {
       syncAliasMapFromText(text, aliasToIdRef.current)
@@ -246,7 +152,6 @@ export function MentionInput({
       setUsers([])
     }
     emit(next)
-    requestAnimationFrame(() => updateCaretPosition())
   }
 
   const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
@@ -259,13 +164,7 @@ export function MentionInput({
     } else {
       setOpen(false)
     }
-    requestAnimationFrame(() => updateCaretPosition())
   }
-
-  useLayoutEffect(() => {
-    if (!open) return
-    updateCaretPosition()
-  }, [open, value, updateCaretPosition])
 
   useEffect(() => {
     if (!open) return
@@ -305,14 +204,15 @@ export function MentionInput({
   }
 
   return (
-    <div ref={wrapRef} className="relative w-full">
+    <div
+      ref={wrapRef}
+      className="relative z-10 w-full overflow-visible"
+    >
       <textarea
         ref={taRef}
         value={value}
         onChange={handleChange}
         onSelect={handleSelect}
-        onKeyUp={updateCaretPosition}
-        onClick={updateCaretPosition}
         placeholder={placeholder}
         rows={3}
         maxLength={maxLength}
@@ -326,12 +226,12 @@ export function MentionInput({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
       />
-      {open && caret && (
+      {open && (
         <ul
           id={listId}
           role="listbox"
-          className="fixed z-[200] max-h-56 min-w-[220px] max-w-sm overflow-y-auto border border-[#EEEEEE] bg-white py-1 shadow-md"
-          style={{ top: caret.top, left: caret.left, ...lato }}
+          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 min-w-0 overflow-y-auto border border-[#EEEEEE] bg-white py-1 shadow-md"
+          style={lato}
         >
           {loading && q.length >= 2 && users.length === 0 && (
             <li className="px-3 py-2 text-[13px] text-[#888888]">Buscando…</li>
