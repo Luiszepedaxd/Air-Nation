@@ -21,7 +21,7 @@ console.log("[upload/video] ffprobe path:", ffprobePath);
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const videoMimes = new Set(["video/mp4", "video/quicktime", "video/webm"]);
-const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
+const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
 const VIDEO_MAX_DURATION_SEC = 30;
 
 const extForVideoMime = (mime) => {
@@ -107,19 +107,31 @@ function getVideoDurationSeconds(filePath) {
 }
 
 router.post("/video", requireAuth, (req, res) => {
+  console.log(
+    "[upload/video] request recibido, content-length:",
+    req.headers["content-length"]
+  );
   uploadVideo.single("file")(req, res, async (err) => {
     const extForMime = (mime) => extForVideoMime(mime);
     let tmpPath = null;
     try {
+      if (!err && req.file) {
+        console.log(
+          "[upload/video] multer ok, file size:",
+          req.file.size
+        );
+      }
       if (err) {
+        console.error("[upload/video] multer error:", err.message, err);
         if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
           return res
             .status(400)
-            .json({ error: "El archivo excede el tamaño máximo (50MB)" });
+            .json({ error: "El archivo excede el tamaño máximo (100MB)" });
         }
         return res.status(400).json({ error: err.message });
       }
       if (!req.file) {
+        console.log("[upload/video] multer sin archivo (req.file ausente)");
         return res
           .status(400)
           .json({ error: "No se recibió ningún archivo" });

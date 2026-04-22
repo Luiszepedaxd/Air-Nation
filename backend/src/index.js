@@ -23,7 +23,15 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-app.use(express.json());
+
+// Subidas multipart: montar ANTES de express.json (límite por defecto ~100kb) para no
+// interferir con cuerpos grandes en /upload/video. Ver también BODY_PARSER_LIMIT.
+app.use("/api/v1/upload", uploadRouter);
+
+// Por defecto 100mb (Railway: puedes fijar BODY_PARSER_LIMIT=100mb en variables)
+const bodyParserLimit = process.env.BODY_PARSER_LIMIT || "100mb";
+app.use(express.json({ limit: bodyParserLimit }));
+app.use(express.urlencoded({ extended: true, limit: bodyParserLimit }));
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
@@ -36,7 +44,6 @@ app.use("/api/v1/teams", teamsRouter);
 app.use("/api/v1/users", usersRouter);
 app.use("/api/v1/replicas", replicasRouter);
 app.use("/api/v1/docs", docsRouter);
-app.use("/api/v1/upload", uploadRouter);
 app.use("/api/v1/assets", assetsRouter);
 app.use("/api/v1/feedback", feedbackRouter);
 app.use("/api/v1/admin", adminMailRouter);

@@ -375,6 +375,11 @@ export function PostBox({
       let videoUrl: string | null = null
       let videoDurationS: number | null = null
       if (pendingVideo) {
+        console.log(
+          '[PostBox] enviando video, tamaño:',
+          pendingVideo.file.size,
+          'bytes'
+        )
         const v = await uploadVideo(pendingVideo.file)
         videoUrl = v.video_url
         videoDurationS = Math.round(v.duration_s)
