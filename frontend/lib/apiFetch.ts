@@ -22,6 +22,9 @@ export async function apiFetch(
 
   const headers = new Headers(options.headers)
   if (token) headers.set('Authorization', `Bearer ${token}`)
+  if (options.body instanceof FormData) {
+    headers.delete('Content-Type')
+  }
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
@@ -52,7 +55,7 @@ export type VideoUploadResult = {
 /** Sube un video a Cloudflare Stream (POST /upload/video). */
 export async function uploadVideo(file: File): Promise<VideoUploadResult> {
   const fd = new FormData()
-  fd.append('file', file)
+  fd.append('file', file, file.name)
   const res = await apiFetch('/upload/video', { method: 'POST', body: fd })
   const json = (await res.json()) as {
     video_url?: string

@@ -108,7 +108,9 @@ function getVideoDurationSeconds(filePath) {
 
 router.post("/video", requireAuth, (req, res) => {
   console.log(
-    "[upload/video] request recibido, content-length:",
+    "[upload/video] headers:",
+    req.headers["content-type"]?.substring(0, 100),
+    "content-length:",
     req.headers["content-length"]
   );
   uploadVideo.single("file")(req, res, async (err) => {

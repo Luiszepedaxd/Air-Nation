@@ -292,24 +292,10 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
         }
       }
       const data = await ffmpeg.readFile(outName)
-      const raw =
-        data instanceof Uint8Array
-          ? data
-          : new Uint8Array(data as unknown as ArrayBuffer)
-      const ab = new ArrayBuffer(raw.byteLength)
-      new Uint8Array(ab).set(
-        new Uint8Array(
-          raw.buffer,
-          raw.byteOffset,
-          raw.byteLength
-        )
-      )
-      const outBlob = new Blob([ab], { type: mime })
-      const outFile = new File([outBlob], `clip_${Date.now()}.${ext}`, {
-        type: mime,
-      })
-      const durationSeconds = Math.round(clipLen * 1000) / 1000
-      onVideoReady(outFile, durationSeconds)
+      const blob = new Blob([data], { type: mime })
+      const outFile = new File([blob], `clip.${ext}`, { type: mime })
+      const clipDuration = Math.round(clipLen * 1000) / 1000
+      onVideoReady(outFile, clipDuration)
       try {
         await ffmpeg.deleteFile(inName)
         await ffmpeg.deleteFile(outName)
