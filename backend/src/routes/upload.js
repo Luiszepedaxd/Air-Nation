@@ -1,6 +1,5 @@
 const express = require("express");
 const multer = require("multer");
-const FormData = require("form-data");
 const { uploadToCloudflare } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
 
@@ -113,23 +112,16 @@ router.post("/video", requireAuth, (req, res) => {
 
       console.log("[upload/video] subiendo a CF Stream, size:", req.file.size);
 
-      const form = new FormData();
-      form.append("file", req.file.buffer, {
-        filename: req.file.originalname || "video.mp4",
-        contentType: req.file.mimetype,
-      });
+      const streamUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`;
 
-      const cfRes = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${streamToken}`,
-            ...form.getHeaders(),
-          },
-          body: form,
-        }
-      );
+      const cfRes = await fetch(streamUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${streamToken}`,
+          "Content-Type": req.file.mimetype,
+        },
+        body: req.file.buffer,
+      });
 
       console.log("[upload/video] CF response status:", cfRes.status);
 
