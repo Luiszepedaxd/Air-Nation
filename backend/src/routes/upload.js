@@ -11,9 +11,8 @@ const { path: ffprobePath } = require("@ffprobe-installer/ffprobe");
 const { uploadToCloudflare } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
 
-fluentFfmpeg()
-  .setFfmpegPath(ffmpegPath)
-  .setFfprobePath(ffprobePath);
+fluentFfmpeg.setFfmpegPath(ffmpegPath);
+fluentFfmpeg.setFfprobePath(ffprobePath);
 
 console.log("[upload/video] ffmpeg path:", ffmpegPath);
 console.log("[upload/video] ffprobe path:", ffprobePath);
