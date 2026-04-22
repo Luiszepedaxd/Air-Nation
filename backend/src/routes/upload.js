@@ -1,35 +1,14 @@
 const express = require("express");
-const path = require("path");
-const os = require("os");
-const crypto = require("crypto");
-const fs = require("fs/promises");
 const multer = require("multer");
 const FormData = require("form-data");
-const fluentFfmpeg = require("fluent-ffmpeg");
-const { path: ffmpegPath } = require("@ffmpeg-installer/ffmpeg");
-const { path: ffprobePath } = require("@ffprobe-installer/ffprobe");
 const { uploadToCloudflare } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
-
-fluentFfmpeg.setFfmpegPath(ffmpegPath);
-fluentFfmpeg.setFfprobePath(ffprobePath);
-
-console.log("[upload/video] ffmpeg configurado globalmente");
-
-console.log("[upload/video] ffmpeg path:", ffmpegPath);
-console.log("[upload/video] ffprobe path:", ffprobePath);
 
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const videoMimes = new Set(["video/mp4", "video/quicktime", "video/webm"]);
 const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
 const VIDEO_MAX_DURATION_SEC = 30;
-
-const extForVideoMime = (mime) => {
-  if (mime === "video/webm") return ".webm";
-  if (mime === "video/quicktime") return ".mov";
-  return ".mp4";
-};
 
 const uploadVideo = multer({
   storage: multer.memoryStorage(),
@@ -62,8 +41,9 @@ const router = express.Router();
 router.get("/video/health", (req, res) => {
   try {
     return res.status(200).json({
-      ffmpeg: ffmpegPath,
-      ffprobe: ffprobePath,
+      ok: true,
+      cf_account_id: Boolean(process.env.CF_ACCOUNT_ID),
+      cf_stream_token: Boolean(process.env.CF_STREAM_API_TOKEN),
     });
   } catch (e) {
     console.error("[upload/video/health]", e);
@@ -92,21 +72,6 @@ router.post("/", requireAuth, (req, res) => {
   });
 });
 
-function getVideoDurationSeconds(filePath) {
-  return new Promise((resolve, reject) => {
-    fluentFfmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) {
-        return reject(err);
-      }
-      const d = metadata?.format?.duration;
-      if (d == null || Number.isNaN(Number(d))) {
-        return reject(new Error("No se pudo determinar la duración del video"));
-      }
-      resolve(Number(d));
-    });
-  });
-}
-
 router.post("/video", requireAuth, (req, res) => {
   console.log(
     "[upload/video] headers:",
@@ -115,8 +80,6 @@ router.post("/video", requireAuth, (req, res) => {
     req.headers["content-length"]
   );
   uploadVideo.single("file")(req, res, async (err) => {
-    const extForMime = (mime) => extForVideoMime(mime);
-    let tmpPath = null;
     try {
       if (!err && req.file) {
         console.log(
@@ -148,47 +111,27 @@ router.post("/video", requireAuth, (req, res) => {
         });
       }
 
-      const ext = extForMime(req.file.mimetype);
-      tmpPath = path.join(
-        os.tmpdir(),
-        `an-vid-${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`
-      );
-
-      await fs.writeFile(tmpPath, req.file.buffer);
-      let durationSec;
-      try {
-        durationSec = await getVideoDurationSeconds(tmpPath);
-      } catch (probeErr) {
-        console.error(
-          "[upload/video] ffprobe / duración:",
-          probeErr && probeErr.message ? probeErr.message : probeErr,
-          probeErr && probeErr.stack
-        );
-        return res.status(500).json({
-          error: probeErr.message || "No se pudo leer la duración del video",
-        });
-      }
-      if (durationSec > VIDEO_MAX_DURATION_SEC) {
-        return res.status(400).json({
-          error: "El video no puede durar más de 30 segundos",
-        });
-      }
+      console.log("[upload/video] subiendo a CF Stream, size:", req.file.size);
 
       const form = new FormData();
       form.append("file", req.file.buffer, {
-        filename: req.file.originalname || `video${ext}`,
+        filename: req.file.originalname || "video.mp4",
         contentType: req.file.mimetype,
       });
 
-      const streamUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`;
-      const cfRes = await fetch(streamUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${streamToken}`,
-          ...form.getHeaders(),
-        },
-        body: form,
-      });
+      const cfRes = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${streamToken}`,
+            ...form.getHeaders(),
+          },
+          body: form,
+        }
+      );
+
+      console.log("[upload/video] CF response status:", cfRes.status);
 
       const data = await cfRes.json().catch(() => ({}));
       if (!cfRes.ok || !data.success) {
@@ -200,6 +143,26 @@ router.post("/video", requireAuth, (req, res) => {
       }
 
       const result = data.result;
+      console.log(
+        "[upload/video] CF result uid:",
+        result?.uid,
+        "duration:",
+        result?.duration
+      );
+
+      const duration = result?.duration;
+      if (duration == null || !Number.isFinite(Number(duration))) {
+        return res.status(502).json({
+          error: "Respuesta inesperada de Cloudflare Stream (sin duración)",
+        });
+      }
+      const durationNum = Number(duration);
+      if (durationNum > VIDEO_MAX_DURATION_SEC) {
+        return res.status(400).json({
+          error: "El video no puede durar más de 30 segundos",
+        });
+      }
+
       const video_url = result?.playback?.hls;
       const thumbnail_url = result?.thumbnail;
       if (!video_url) {
@@ -211,7 +174,7 @@ router.post("/video", requireAuth, (req, res) => {
       return res.status(200).json({
         video_url,
         thumbnail_url: thumbnail_url ?? null,
-        duration_s: Math.round(durationSec),
+        duration_s: Math.round(durationNum),
       });
     } catch (e) {
       console.error(
@@ -220,14 +183,6 @@ router.post("/video", requireAuth, (req, res) => {
         e && e.stack
       );
       return res.status(500).json({ error: e.message || "Error al procesar el video" });
-    } finally {
-      if (tmpPath) {
-        try {
-          await fs.unlink(tmpPath);
-        } catch {
-          // archivo ya eliminado o inexistente
-        }
-      }
     }
   });
 });
