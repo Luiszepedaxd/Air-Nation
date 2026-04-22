@@ -35,7 +35,7 @@ export type PlayerPostRow = {
   /** Ids (uuid) de usuarios @mencionados; columna en DB: `mentions` */
   mentions?: string[] | null
   /** Para enlaces @alias → /u/[id] en el cliente */
-  mentionAliasById?: Record<string, string>
+  mentionAliasById?: Record<string, string> | null
 }
 
 export type PlayerEventRow = {

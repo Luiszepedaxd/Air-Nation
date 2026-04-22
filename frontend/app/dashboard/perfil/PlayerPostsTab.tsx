@@ -1,24 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
 import { supabase } from '@/lib/supabase'
-import { uploadFile } from '@/lib/apiFetch'
-import { CropModal } from '@/components/posts/CropModal'
-
-const jost = {
-  fontFamily: "'Jost', sans-serif",
-  fontWeight: 800,
-  textTransform: 'uppercase' as const,
-} as const
+import { PostBox, FeedInlineVideo } from '@/app/dashboard/FeedHome'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
-
-const ALLOWED_IMG = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const MAX_POST_PHOTOS = 4
-const MAX_MB = 5
-const MAX_BYTES = MAX_MB * 1024 * 1024
 
 type PlayerPost = {
   id: string
@@ -27,18 +15,7 @@ type PlayerPost = {
   fotos_urls: string[] | null
   published: boolean
   created_at: string
-}
-
-type PendingPhoto = { id: string; file: File; preview: string }
-
-function validateImageFile(file: File): string | null {
-  if (!ALLOWED_IMG.has(file.type)) return 'Solo se permiten JPG, PNG o WebP'
-  if (file.size > MAX_BYTES) return `Cada foto puede pesar máximo ${MAX_MB} MB`
-  return null
-}
-
-async function uploadOneFile(file: File): Promise<string> {
-  return uploadFile(file)
+  video_url?: string | null
 }
 
 function normalizeFotoUrls(raw: unknown): string[] {
@@ -93,27 +70,12 @@ function IconCamera() {
 export function PlayerPostsTab({ userId }: { userId: string }) {
   const [posts, setPosts] = useState<PlayerPost[]>([])
   const [loading, setLoading] = useState(true)
-  const [postText, setPostText] = useState('')
-  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([])
-  const [publishing, setPublishing] = useState(false)
-  const [pickErr, setPickErr] = useState('')
-  const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
-  const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
-  const postInputRef = useRef<HTMLInputElement>(null)
-  const pendingRef = useRef(pendingPhotos)
-  pendingRef.current = pendingPhotos
-
-  useEffect(() => {
-    return () => {
-      pendingRef.current.forEach((p) => URL.revokeObjectURL(p.preview))
-    }
-  }, [])
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('player_posts')
-      .select('id, user_id, content, fotos_urls, published, created_at')
+      .select('id, user_id, content, fotos_urls, video_url, published, created_at')
       .eq('user_id', userId)
       .eq('published', true)
       .order('created_at', { ascending: false })
@@ -127,182 +89,16 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
     void fetchPosts()
   }, [fetchPosts])
 
-  const removePending = (id: string) => {
-    setPendingPhotos((prev) => {
-      const found = prev.find((x) => x.id === id)
-      if (found) URL.revokeObjectURL(found.preview)
-      return prev.filter((x) => x.id !== id)
-    })
-  }
-
-  const addPostFiles = (files: FileList | null) => {
-    if (!files?.length) return
-    setPickErr('')
-    const queue: { file: File; src: string }[] = []
-    let firstErr: string | null = null
-    for (const file of Array.from(files)) {
-      if (pendingPhotos.length + queue.length >= MAX_POST_PHOTOS) break
-      const err = validateImageFile(file)
-      if (err) {
-        if (!firstErr) firstErr = err
-        continue
-      }
-      queue.push({ file, src: URL.createObjectURL(file) })
-    }
-    if (firstErr) setPickErr(firstErr)
-    if (!queue.length) return
-    setCropQueue(queue.slice(1))
-    setCurrentCrop(queue[0])
-    if (postInputRef.current) postInputRef.current.value = ''
-  }
-
-  const handleCropConfirm = (croppedFile: File, preview: string) => {
-    const id =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`
-    setPendingPhotos((p) => [...p, { id, file: croppedFile, preview }])
-    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
-
-    if (cropQueue.length > 0) {
-      setCurrentCrop(cropQueue[0])
-      setCropQueue((q) => q.slice(1))
-    } else {
-      setCurrentCrop(null)
-    }
-  }
-
-  const handleCropCancel = () => {
-    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
-    for (const q of cropQueue) URL.revokeObjectURL(q.src)
-    setCropQueue([])
-    setCurrentCrop(null)
-  }
-
-  const canPublish = postText.trim().length > 0 || pendingPhotos.length > 0
-
-  const handlePublish = async () => {
-    if (!canPublish || publishing) return
-    setPublishing(true)
-    try {
-      const urls: string[] = []
-      for (const p of pendingPhotos) {
-        urls.push(await uploadOneFile(p.file))
-      }
-      const text = postText.trim()
-      const { data, error } = await supabase
-        .from('player_posts')
-        .insert({
-          user_id: userId,
-          content: text.length ? text : null,
-          fotos_urls: urls,
-          published: true,
-        })
-        .select('id, user_id, content, fotos_urls, published, created_at')
-        .single()
-
-      if (error) throw error
-
-      if (data) setPosts((prev) => [data as PlayerPost, ...prev])
-
-      setPostText('')
-      for (const p of pendingPhotos) URL.revokeObjectURL(p.preview)
-      setPendingPhotos([])
-    } catch {
-      /* noop */
-    } finally {
-      setPublishing(false)
-    }
-  }
-
   return (
     <div className="mx-auto max-w-[640px] pb-10">
-      <div>
-        <div className="relative">
-          <textarea
-            value={postText}
-            onChange={(e) => setPostText(e.target.value.slice(0, 500))}
-            placeholder="¿Qué quieres compartir con la comunidad?"
-            rows={4}
-            className="min-h-[100px] w-full resize-y border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 pb-8 pt-3 text-[14px] text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
-            style={lato}
-            maxLength={500}
-          />
-          <span
-            className="pointer-events-none absolute bottom-2 right-2 text-[11px] text-[#999999]"
-            style={lato}
-          >
-            {postText.length}/500
-          </span>
-        </div>
-
-        <div className="mt-4">
-          <input
-            ref={postInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            className="hidden"
-            onChange={(e) => addPostFiles(e.target.files)}
-          />
-          <button
-            type="button"
-            onClick={() => postInputRef.current?.click()}
-            disabled={pendingPhotos.length >= MAX_POST_PHOTOS}
-            style={jost}
-            className="inline-flex items-center gap-2 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <IconCamera />
-            AGREGAR FOTOS
-          </button>
-        </div>
-
-        {pickErr ? (
-          <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato} role="alert">
-            {pickErr}
-          </p>
-        ) : null}
-
-        {pendingPhotos.length > 0 ? (
-          <div className="mt-4 grid w-fit grid-cols-2 gap-2">
-            {pendingPhotos.map((p) => (
-              <div
-                key={p.id}
-                className="relative h-20 w-20 shrink-0 overflow-hidden bg-[#F4F4F4]"
-              >
-                <img src={p.preview} alt="" width={80} height={80} className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removePending(p.id)}
-                  className="absolute right-0 top-0 flex h-6 w-6 items-center justify-center bg-[rgba(0,0,0,0.5)] text-[12px] font-bold text-white"
-                  aria-label="Quitar foto"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="mt-6">
-          <button
-            type="button"
-            onClick={() => void handlePublish()}
-            disabled={!canPublish || publishing}
-            style={jost}
-            className="inline-flex min-h-[44px] min-w-[140px] items-center justify-center gap-2 bg-[#CC4B37] px-6 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {publishing ? (
-              <>
-                <SpinnerInline />
-                <span>Subiendo…</span>
-              </>
-            ) : (
-              'PUBLICAR'
-            )}
-          </button>
-        </div>
-      </div>
+      <PostBox
+        userId={userId}
+        userAlias={null}
+        userAvatar={null}
+        userTeams={[]}
+        userFields={[]}
+        onPublished={() => void fetchPosts()}
+      />
 
       <hr className="my-8 border-0 border-t border-solid border-[#EEEEEE]" />
 
@@ -361,6 +157,11 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                     </p>
                   ) : null}
                   {urls.length > 0 && <PhotoGrid urls={urls} />}
+                  {(post as PlayerPost & { video_url?: string | null }).video_url ? (
+                    <FeedInlineVideo
+                      src={(post as PlayerPost & { video_url?: string | null }).video_url!}
+                    />
+                  ) : null}
                   <PostActions
                     postType="player"
                     postId={post.id}
@@ -377,15 +178,6 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
             )
           })}
         </ul>
-      )}
-
-      {currentCrop && (
-        <CropModal
-          imageSrc={currentCrop.src}
-          originalFile={currentCrop.file}
-          onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
-        />
       )}
     </div>
   )
