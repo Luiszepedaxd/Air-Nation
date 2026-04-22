@@ -32,8 +32,8 @@ export type PlayerPostRow = {
   created_at: string
   video_url?: string | null
   video_duration_s?: number | null
-  /** Reservado: ids de usuarios @mencionados cuando exista en BD */
-  mentioned_user_ids?: string[] | null
+  /** Ids (uuid) de usuarios @mencionados; columna en DB: `mentions` */
+  mentions?: string[] | null
   /** Para enlaces @alias → /u/[id] en el cliente */
   mentionAliasById?: Record<string, string>
 }

@@ -244,7 +244,7 @@ function PostsPanel({
               >
                 {parseContentWithMentions(
                   post.content,
-                  post.mentioned_user_ids ?? null,
+                  post.mentions ?? null,
                   post.mentionAliasById ?? null
                 )}
               </p>

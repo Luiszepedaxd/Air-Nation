@@ -115,7 +115,7 @@ async function fetchPublicProfile(id: string) {
   const { data: postsData } = await supabase
     .from('player_posts')
     .select(
-      'id, content, fotos_urls, video_url, video_duration_s, mentioned_user_ids, created_at'
+      'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
     )
     .eq('user_id', id)
     .eq('published', true)
@@ -124,8 +124,8 @@ async function fetchPublicProfile(id: string) {
 
   if (postsData) {
     const mentionIds = new Set<string>()
-    for (const p of postsData as { mentioned_user_ids?: unknown }[]) {
-      const m = p.mentioned_user_ids
+    for (const p of postsData as { mentions?: unknown }[]) {
+      const m = p.mentions
       if (Array.isArray(m)) {
         for (const uid of m) mentionIds.add(String(uid))
       }
@@ -142,7 +142,7 @@ async function fetchPublicProfile(id: string) {
       }
     }
     posts = (postsData as PlayerPostRow[]).map((row) => {
-      const mids = row.mentioned_user_ids
+      const mids = row.mentions
       const mentionAliasById: Record<string, string> = {}
       if (Array.isArray(mids)) {
         for (const uid of mids) {

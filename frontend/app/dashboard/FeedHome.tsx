@@ -136,7 +136,6 @@ type FeedItem =
       post_owner_id: string | null
       user_id: string
       content: string | null
-      mentioned_user_ids?: string[] | null
       fotos_urls: string[] | null
       video_url?: string | null
       video_duration_s?: number | null
@@ -278,7 +277,7 @@ type TeamDirItem = {
 
 /** Aproximación en feed (solo campos del select): avatar + portada. */
 function mentionIdsFromRow(row: Record<string, unknown>): string[] | undefined {
-  const ids = row.mentioned_user_ids
+  const ids = row.mentions
   if (!Array.isArray(ids) || ids.length === 0) return undefined
   return ids.map(String)
 }
@@ -287,7 +286,7 @@ function rowMentionAliasesFromMap(
   row: Record<string, unknown>,
   aliasByUserId: Map<string, string>
 ): Record<string, string> | undefined {
-  const ids = row.mentioned_user_ids
+  const ids = row.mentions
   if (!Array.isArray(ids) || ids.length === 0) return undefined
   const o: Record<string, string> = {}
   for (const id of ids) {
@@ -510,7 +509,7 @@ export function PostBox({
           content,
           fotos_urls: urls,
           ...videoFieldsPlayer,
-          ...(_mentions.length > 0 ? { mentioned_user_ids: _mentions } : {}),
+          ...(_mentions.length > 0 ? { mentions: _mentions } : {}),
           published: true,
         })
         if (error) {
@@ -1048,7 +1047,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
                 {parseContentWithMentions(
                   item.content,
-                  item.mentions ?? item.mentioned_user_ids ?? null,
+                  item.mentions ?? null,
                   item.mentionAliasById ?? null
                 )}
               </p>
@@ -1078,7 +1077,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
               {parseContentWithMentions(
                 item.content,
-                item.mentions ?? item.mentioned_user_ids ?? null,
+                item.mentions ?? null,
                 item.mentionAliasById ?? null
               )}
             </p>
@@ -1730,14 +1729,14 @@ function FeedTab({
           .limit(20),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentioned_user_ids, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentioned_user_ids, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', false)
@@ -1804,7 +1803,7 @@ function FeedTab({
       ] as Record<string, unknown>[]
       const mentionIdSet = new Set<string>()
       for (const r of collectRows) {
-        const m = r.mentioned_user_ids
+        const m = r.mentions
         if (Array.isArray(m)) {
           for (const id of m) mentionIdSet.add(String(id))
         }
@@ -2054,7 +2053,7 @@ function FeedTab({
           ? supabase
               .from('player_posts')
               .select(
-                'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentioned_user_ids, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+                'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
               )
               .eq('published', true)
               .eq('pinned', false)
@@ -2069,7 +2068,7 @@ function FeedTab({
 
       const loadMoreMentionIds = new Set<string>()
       for (const r of playerRows) {
-        const m = (r as Record<string, unknown>).mentioned_user_ids
+        const m = (r as Record<string, unknown>).mentions
         if (Array.isArray(m)) {
           for (const id of m) loadMoreMentionIds.add(String(id))
         }
