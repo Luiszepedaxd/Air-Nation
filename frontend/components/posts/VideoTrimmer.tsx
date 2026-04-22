@@ -292,7 +292,11 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
         }
       }
       const data = await ffmpeg.readFile(outName)
-      const blob = new Blob([data], { type: mime })
+      const raw =
+        data instanceof Uint8Array
+          ? data
+          : new Uint8Array(data as unknown as ArrayBuffer)
+      const blob = new Blob([new Uint8Array(raw)], { type: mime })
       const outFile = new File([blob], `clip.${ext}`, { type: mime })
       const clipDuration = Math.round(clipLen * 1000) / 1000
       onVideoReady(outFile, clipDuration)
