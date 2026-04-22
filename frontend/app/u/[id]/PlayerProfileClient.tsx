@@ -3,7 +3,11 @@
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { parseContentWithMentions, PostBox } from '@/app/dashboard/FeedHome'
+import {
+  FeedInlineVideo,
+  parseContentWithMentions,
+  PostBox,
+} from '@/app/dashboard/FeedHome'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
@@ -151,7 +155,9 @@ export function PlayerProfileClient({
                   userAvatar={user.avatar_url}
                   userTeams={[]}
                   userFields={[]}
-                  onPublished={() => window.location.reload()}
+                  onPublished={() => {
+                    void router.refresh()
+                  }}
                 />
               </div>
             ) : null}
@@ -251,14 +257,7 @@ function PostsPanel({
             ) : null}
             {urls.length > 0 && <PhotoGrid urls={urls} />}
             {post.video_url ? (
-              <video
-                src={post.video_url}
-                controls
-                muted
-                playsInline
-                loop
-                className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
-              />
+              <FeedInlineVideo src={post.video_url} />
             ) : null}
             <PostActions
               postType="player"

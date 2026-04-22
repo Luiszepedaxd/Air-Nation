@@ -16,6 +16,49 @@ const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
+/** Video embebido en cards del feed (HLS CF Stream); autoplay silenciado y placeholder si aún no está listo. */
+export function FeedInlineVideo({ src }: { src: string }) {
+  const [videoError, setVideoError] = useState(false)
+  if (videoError) {
+    return (
+      <div className="mt-2 flex min-h-[200px] w-full flex-col items-center justify-center rounded-none bg-black px-4 text-center">
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden
+          className="text-white/85"
+        >
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+          <path
+            d="M12 7v5l4 2"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <p className="mt-3 text-sm text-white/90" style={lato}>
+          Video procesando, disponible en unos segundos...
+        </p>
+      </div>
+    )
+  }
+  return (
+    <video
+      src={src}
+      autoPlay
+      muted
+      playsInline
+      loop
+      controls
+      className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
+      onError={() => setVideoError(true)}
+    />
+  )
+}
+
 type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
 
 /**
@@ -1054,16 +1097,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <video
-              src={item.video_url}
-              controls
-              muted
-              playsInline
-              loop
-              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
-            />
-          ) : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1083,16 +1117,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <video
-              src={item.video_url}
-              controls
-              muted
-              playsInline
-              loop
-              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
-            />
-          ) : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
         </>
       )}
       <PostActions
@@ -1197,16 +1222,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <video
-              src={item.video_url}
-              controls
-              muted
-              playsInline
-              loop
-              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
-            />
-          ) : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1226,16 +1242,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <video
-              src={item.video_url}
-              controls
-              muted
-              playsInline
-              loop
-              className="mt-2 max-h-[400px] w-full rounded-none bg-black object-cover"
-            />
-          ) : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
         </>
       )}
       <PostActions
