@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
+  clearFeedSessionCache,
   FeedInlineVideo,
   parseContentWithMentions,
   PostBox,
@@ -86,9 +87,14 @@ export function PlayerProfileClient({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [postsState, setPostsState] = useState<PlayerPostRow[]>(posts)
   const [tab, setTabState] = useState<TabId>(() =>
     profileTabFromSearchParams(new URLSearchParams(searchParams.toString()))
   )
+
+  useEffect(() => {
+    setPostsState(posts)
+  }, [posts])
 
   useEffect(() => {
     setTabState(profileTabFromSearchParams(new URLSearchParams(searchParams.toString())))
@@ -155,18 +161,33 @@ export function PlayerProfileClient({
                   userAvatar={user.avatar_url}
                   userTeams={[]}
                   userFields={[]}
-                  onPublished={() => {
+                  onPublished={async () => {
+                    clearFeedSessionCache()
+                    await new Promise((resolve) => setTimeout(resolve, 800))
+                    const { data } = await supabase
+                      .from('player_posts')
+                      .select(
+                        'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
+                      )
+                      .eq('user_id', user.id)
+                      .eq('published', true)
+                      .order('created_at', { ascending: false })
+                      .limit(20)
+                    if (data) setPostsState(data as PlayerPostRow[])
                     void router.refresh()
                   }}
                 />
               </div>
             ) : null}
             <PostsPanel
-              posts={posts}
+              posts={postsState}
               profileUserId={user.id}
               currentUserId={currentUserId}
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}
+              onPostRemoved={(postId) =>
+                setPostsState((prev) => prev.filter((p) => p.id !== postId))
+              }
             />
           </>
         ) : null}
@@ -189,12 +210,14 @@ function PostsPanel({
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
+  onPostRemoved,
 }: {
   posts: PlayerPostRow[]
   profileUserId: string
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  onPostRemoved?: (postId: string) => void
 }) {
   const router = useRouter()
 
@@ -238,7 +261,8 @@ function PostsPanel({
                     .eq('id', post.id)
                     .eq('user_id', profileUserId)
                   if (!error) {
-                    router.refresh()
+                    onPostRemoved?.(post.id)
+                    void router.refresh()
                   }
                 }}
               />

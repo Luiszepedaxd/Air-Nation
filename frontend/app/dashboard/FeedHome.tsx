@@ -310,7 +310,7 @@ type FeedTabSessionPayload = {
   hasMore: boolean
 }
 
-function clearFeedSessionCache() {
+export function clearFeedSessionCache() {
   if (typeof window === 'undefined') return
   try {
     sessionStorage.removeItem(FEED_SCROLL_Y_KEY)
