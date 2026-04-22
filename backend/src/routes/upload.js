@@ -112,15 +112,17 @@ router.post("/video", requireAuth, (req, res) => {
 
       console.log("[upload/video] subiendo a CF Stream, size:", req.file.size);
 
-      const streamUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`;
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      const form = new FormData();
+      form.append("file", blob, req.file.originalname || "video.mp4");
 
+      const streamUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`;
       const cfRes = await fetch(streamUrl, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${streamToken}`,
-          "Content-Type": req.file.mimetype,
         },
-        body: req.file.buffer,
+        body: form,
       });
 
       console.log("[upload/video] CF response status:", cfRes.status);
