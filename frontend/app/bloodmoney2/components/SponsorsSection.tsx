@@ -4,6 +4,9 @@ export function SponsorsSection({ config }: { config: Record<string, unknown> })
   const titulo = getStr(config, 'titulo', 'PATROCINADORES OFICIALES')
   const logos = getList(config, 'logos')
 
+  // Duplicar el array para el loop continuo.
+  const doubled = logos.length > 0 ? [...logos, ...logos] : []
+
   return (
     <section className="w-full bg-[#F7F5F3] py-16 md:py-24">
       <div className="mx-auto max-w-[1200px] px-5 md:px-10">
@@ -24,32 +27,59 @@ export function SponsorsSection({ config }: { config: Record<string, unknown> })
             Organizado por Airsoft Experience México (AEM)
           </p>
         </div>
+      </div>
 
-        {logos.length > 0 ? (
-          <div className="mt-10 grid grid-cols-2 items-center gap-6 sm:grid-cols-3 md:mt-14 md:grid-cols-4 md:gap-10 lg:grid-cols-6">
-            {logos.map((url, i) => (
+      {logos.length > 0 ? (
+        <div
+          className="mt-10 w-full overflow-hidden md:mt-14"
+          style={{
+            maskImage:
+              'linear-gradient(to right, transparent 0, black 40px, black calc(100% - 40px), transparent 100%)',
+            WebkitMaskImage:
+              'linear-gradient(to right, transparent 0, black 40px, black calc(100% - 40px), transparent 100%)',
+          }}
+        >
+          <div
+            className="flex w-max items-center gap-10 md:gap-16"
+            style={{
+              animation: 'bm2-sponsors-scroll 30s linear infinite',
+            }}
+          >
+            {doubled.map((url, i) => (
               <div
                 key={i}
-                className="flex aspect-[3/2] items-center justify-center p-4 transition-all"
+                className="flex h-16 w-28 shrink-0 items-center justify-center md:h-20 md:w-36"
               >
                 <img
                   src={url}
                   alt=""
                   loading="lazy"
-                  className="max-h-full max-w-full object-contain grayscale opacity-60 transition-all duration-300 hover:grayscale-0 hover:opacity-100"
+                  className="max-h-full max-w-full object-contain opacity-60 grayscale transition-opacity duration-300 hover:opacity-100 hover:grayscale-0"
                 />
               </div>
             ))}
           </div>
-        ) : (
-          <p
-            className="mt-10 text-center text-[13px] text-[#AAAAAA]"
-            style={lato}
-          >
-            Patrocinadores por anunciar.
-          </p>
-        )}
-      </div>
+        </div>
+      ) : (
+        <p
+          className="mt-10 text-center text-[13px] text-[#AAAAAA]"
+          style={lato}
+        >
+          Patrocinadores por anunciar.
+        </p>
+      )}
+
+      <style>{`
+        @keyframes bm2-sponsors-scroll {
+          from { transform: translateX(0); }
+          to { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [style*="bm2-sponsors-scroll"] {
+            animation: none !important;
+          }
+        }
+      `}</style>
     </section>
   )
 }

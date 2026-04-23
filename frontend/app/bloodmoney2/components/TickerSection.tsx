@@ -17,7 +17,7 @@ export function TickerSection({ config }: { config: Record<string, unknown> }) {
 
   return (
     <section className="w-full overflow-hidden bg-[#CC4B37] py-3 text-white">
-      <div className="flex whitespace-nowrap" style={{ animation: 'bm2-ticker 45s linear infinite' }}>
+      <div className="flex whitespace-nowrap" style={{ animation: 'bm2-ticker 18s linear infinite' }}>
         {doubled.map((item, i) => (
           <span
             key={i}
