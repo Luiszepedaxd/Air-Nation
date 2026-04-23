@@ -4,6 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '../supabase-server'
 import { getSupabaseForEventosModule } from './eventos-supabase'
 
+function normalizeUrlExterna(v: string | null | undefined): string | null {
+  const raw = (v ?? '').trim()
+  if (!raw) return null
+  if (!/^https?:\/\//i.test(raw)) return null
+  return raw
+}
+
 export async function toggleEventPublished(
   id: string,
   published: boolean
@@ -64,6 +71,7 @@ export type EventoUpsertPayload = {
   disciplina: string
   tipo: 'publico' | 'privado'
   imagen_url: string | null
+  url_externa: string | null
   published: boolean
   /** Al crear, opcional (por defecto publicado si published). */
   status?: 'publicado' | 'borrador' | 'cancelado'
@@ -98,6 +106,7 @@ export async function upsertEvento(
     disciplina: payload.disciplina || 'airsoft',
     tipo: payload.tipo,
     imagen_url: payload.imagen_url?.trim() || null,
+    url_externa: normalizeUrlExterna(payload.url_externa),
     published: payload.published,
     status,
   }

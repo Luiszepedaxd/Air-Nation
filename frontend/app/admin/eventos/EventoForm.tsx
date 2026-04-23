@@ -53,6 +53,7 @@ export function EventoForm({
     disciplina: string | null
     tipo: string | null
     imagen_url: string | null
+    url_externa: string | null
     published: boolean
     status: string
     organizador_id?: string | null
@@ -78,6 +79,8 @@ export function EventoForm({
       : 'publico'
   )
   const [imagenUrl, setImagenUrl] = useState(initial?.imagen_url ?? '')
+  const [urlExterna, setUrlExterna] = useState(initial?.url_externa ?? '')
+  const [urlExternaError, setUrlExternaError] = useState('')
   const [published, setPublished] = useState(initial?.published ?? false)
   const [clientError, setClientError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -170,6 +173,13 @@ export function EventoForm({
       }
       const fechaIso = new Date(fechaLocal).toISOString()
 
+      const urlExt = urlExterna.trim()
+      if (urlExt && !/^https?:\/\//i.test(urlExt)) {
+        setUrlExternaError('Debe iniciar con http:// o https://')
+        return
+      }
+      setUrlExternaError('')
+
       setSaving(true)
       const res = await upsertEvento({
         id: initial?.id,
@@ -181,6 +191,7 @@ export function EventoForm({
         disciplina,
         tipo,
         imagen_url: imagenUrl.trim() || null,
+        url_externa: urlExterna.trim() || null,
         published,
         status:
           initial?.status?.toLowerCase() === 'cancelado'
@@ -207,6 +218,7 @@ export function EventoForm({
       disciplina,
       tipo,
       imagenUrl,
+      urlExterna,
       published,
       initial?.id,
       initial?.status,
@@ -479,6 +491,35 @@ export function EventoForm({
           onUploadStart={() => setActiveUploads((n) => n + 1)}
           onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
         />
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+          style={jostHeading}
+        >
+          Link externo (opcional)
+        </label>
+        <input
+          type="url"
+          value={urlExterna}
+          onChange={(e) => {
+            setUrlExterna(e.target.value)
+            if (urlExternaError) setUrlExternaError('')
+          }}
+          placeholder="https://ejemplo.com/mi-evento"
+          maxLength={500}
+          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          style={{ borderRadius: 2 }}
+        />
+        <p className="mt-1 text-[11px] text-[#999999]" style={latoBody}>
+          Página oficial del productor, reglamento, inscripciones, etc.
+        </p>
+        {urlExternaError ? (
+          <p className="mt-1 text-[11px] text-[#CC4B37]" style={latoBody}>
+            {urlExternaError}
+          </p>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-3">

@@ -23,6 +23,7 @@ export function EventoInfo({
   ciudad,
   cupo,
   rsvpCount,
+  urlExterna,
   organizador_id,
   organizador_nombre,
   organizador_alias,
@@ -39,6 +40,7 @@ export function EventoInfo({
   ciudad: string | null
   cupo: number
   rsvpCount: number
+  urlExterna: string | null
   organizador_id: string | null
   organizador_nombre: string | null
   organizador_alias: string | null
@@ -116,7 +118,7 @@ export function EventoInfo({
         initialHasRsvp={userHasRsvp}
         sessionUserId={sessionUserId}
       >
-        {organizador_id || field_slug?.trim() ? (
+        {organizador_id || field_slug?.trim() || urlExterna?.trim() ? (
           <div className="space-y-8">
             {organizador_id ? (
               <section>
@@ -172,6 +174,35 @@ export function EventoInfo({
               >
                 VER CAMPO
               </Link>
+            ) : null}
+
+            {urlExterna?.trim() ? (
+              <section>
+                <h2
+                  style={jost}
+                  className="text-[11px] font-extrabold uppercase tracking-widest text-[#999999]"
+                >
+                  MÁS INFO
+                </h2>
+                <a
+                  href={urlExterna.trim()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 border border-solid border-[#111111] bg-[#FFFFFF] px-4 py-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#111111] transition-colors hover:bg-[#111111] hover:text-[#FFFFFF]"
+                  style={{ ...jost, fontWeight: 800 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <path
+                      d="M14 3h7v7M21 3l-9 9M10 5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Ver más info
+                </a>
+              </section>
             ) : null}
           </div>
         ) : null}

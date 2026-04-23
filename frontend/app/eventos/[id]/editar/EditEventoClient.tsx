@@ -28,6 +28,7 @@ type Props = {
     title: string
     descripcion: string | null
     imagen_url: string | null
+    url_externa: string | null
     cupo: number
     tipo: string | null
     field_id: string | null
@@ -61,6 +62,8 @@ export function EditEventoClient({
   const [imagenUrl, setImagenUrl] = useState<string | null>(
     initial.imagen_url?.trim() || null
   )
+  const [urlExterna, setUrlExterna] = useState(initial.url_externa ?? '')
+  const [urlExternaError, setUrlExternaError] = useState<string | null>(null)
   const [cupo, setCupo] = useState(String(initial.cupo ?? 0))
   const [tipo, setTipo] = useState<'publico' | 'privado'>(
     (initial.tipo || '').toLowerCase() === 'privado' ? 'privado' : 'publico'
@@ -106,11 +109,19 @@ export function EditEventoClient({
         fechaIso = new Date(fechaLocal).toISOString()
       }
 
+      const urlExt = urlExterna.trim()
+      if (urlExt && !/^https?:\/\//i.test(urlExt)) {
+        setUrlExternaError('Debe iniciar con http:// o https://')
+        return
+      }
+      setUrlExternaError(null)
+
       setSaving(true)
       const res = await updateEventoEdicion(eventId, {
         title: t,
         descripcion: descripcion.trim() || null,
         imagen_url: imagenUrl,
+        url_externa: urlExterna.trim() || null,
         cupo: cupoNum,
         tipo,
         ...(isAdmin
@@ -133,6 +144,7 @@ export function EditEventoClient({
       title,
       descripcion,
       imagenUrl,
+      urlExterna,
       cupo,
       tipo,
       eventId,
@@ -204,6 +216,35 @@ export function EditEventoClient({
           onUploadStart={() => setUploadBusy((n) => n + 1)}
           onUploadEnd={() => setUploadBusy((n) => Math.max(0, n - 1))}
         />
+
+        <label className="block">
+          <span
+            className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+            style={jost}
+          >
+            Link externo (opcional)
+          </span>
+          <input
+            type="url"
+            value={urlExterna}
+            onChange={(ev) => {
+              setUrlExterna(ev.target.value)
+              if (urlExternaError) setUrlExternaError(null)
+            }}
+            placeholder="https://ejemplo.com/mi-evento"
+            maxLength={500}
+            className="mt-1.5 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2.5 text-[14px] text-[#111111] outline-none focus:border-[#CC4B37]"
+            style={{ borderRadius: 0, ...lato }}
+          />
+          <span className="mt-1 block text-[11px] text-[#999999]" style={lato}>
+            Página oficial del productor, reglamento, inscripciones, etc.
+          </span>
+          {urlExternaError ? (
+            <span className="mt-1 block text-[11px] text-[#CC4B37]" style={lato}>
+              {urlExternaError}
+            </span>
+          ) : null}
+        </label>
 
         <label className="block">
           <span

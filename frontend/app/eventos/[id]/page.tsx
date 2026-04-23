@@ -58,6 +58,7 @@ type EventDetailRow = {
   cupo: number
   disciplina: string | null
   imagen_url: string | null
+  url_externa: string | null
   tipo: string | null
   published: boolean
   organizador_id: string | null
@@ -79,6 +80,7 @@ const getEventoById = cache(async (id: string): Promise<EventDetailRow | null> =
       cupo,
       disciplina,
       imagen_url,
+      url_externa,
       tipo,
       published,
       organizador_id,
@@ -417,6 +419,7 @@ export default async function EventoDetailPage({
         ciudad={f.ciudad}
         cupo={Number(row.cupo ?? 0)}
         rsvpCount={rsvpCount}
+        urlExterna={row.url_externa}
         organizador_id={orgId}
         organizador_nombre={org.nombre}
         organizador_alias={org.alias}

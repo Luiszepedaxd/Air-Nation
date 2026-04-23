@@ -3,12 +3,20 @@
 import { revalidatePath } from 'next/cache'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 
+function normalizeUrlExterna(v: string | null | undefined): string | null {
+  const raw = (v ?? '').trim()
+  if (!raw) return null
+  if (!/^https?:\/\//i.test(raw)) return null
+  return raw
+}
+
 export async function updateEventoEdicion(
   eventId: string,
   payload: {
     title: string
     descripcion: string | null
     imagen_url: string | null
+    url_externa: string | null
     cupo: number
     tipo: 'publico' | 'privado'
     field_id?: string | null
@@ -83,6 +91,7 @@ export async function updateEventoEdicion(
     title: t.slice(0, 100),
     descripcion: desc ? desc.slice(0, 1000) : null,
     imagen_url: payload.imagen_url?.trim() || null,
+    url_externa: normalizeUrlExterna(payload.url_externa),
     cupo,
     tipo,
   }

@@ -24,6 +24,7 @@ export function EventoTabs({
   ciudad,
   cupo,
   rsvpCount,
+  urlExterna,
   organizador_id,
   organizador_nombre,
   organizador_alias,
@@ -44,6 +45,7 @@ export function EventoTabs({
   ciudad: string | null
   cupo: number
   rsvpCount: number
+  urlExterna: string | null
   organizador_id: string | null
   organizador_nombre: string | null
   organizador_alias: string | null
@@ -113,6 +115,7 @@ export function EventoTabs({
             ciudad={ciudad}
             cupo={cupo}
             rsvpCount={rsvpCount}
+            urlExterna={urlExterna}
             organizador_id={organizador_id}
             organizador_nombre={organizador_nombre}
             organizador_alias={organizador_alias}
