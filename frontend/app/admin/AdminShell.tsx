@@ -211,6 +211,29 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: '/admin/mailings',
+    label: 'Mailings',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x="3"
+          y="5"
+          width="18"
+          height="14"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+        />
+        <path
+          d="M3 6l9 7 9-7"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/bloodmoney2',
     label: 'Blood Money 2',
     icon: (active) => (
