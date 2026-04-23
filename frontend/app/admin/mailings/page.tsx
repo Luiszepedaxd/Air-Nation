@@ -67,11 +67,5 @@ export default async function MailingsPage() {
 
   const history = (historyRows ?? []) as MailingHistoryRow[]
 
-  return (
-    <MailingsClient
-      users={users}
-      history={history}
-      currentUserId={adminId}
-    />
-  )
+  return <MailingsClient users={users} history={history} />
 }

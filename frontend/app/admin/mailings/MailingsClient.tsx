@@ -3,6 +3,11 @@
 import { useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { MailingHistoryRow, MailingUser } from './page'
+import {
+  completeMailingAction,
+  createMailingAction,
+  failMailingAction,
+} from './actions'
 
 const jostHeading = {
   fontFamily: "'Jost', sans-serif",
@@ -88,11 +93,9 @@ function renderPreviewHtml(
 export default function MailingsClient({
   users,
   history: historyInitial,
-  currentUserId,
 }: {
   users: MailingUser[]
   history: MailingHistoryRow[]
-  currentUserId: string
 }) {
   const [step, setStep] = useState<Step>(1)
   const [sortMode, setSortMode] = useState<SortMode>('last_sign_in_at')
@@ -179,33 +182,24 @@ export default function MailingsClient({
     try {
       const recipientEmails = selectedUsers
         .map((u) => u.email)
-        .filter((e): e is string => Boolean(e))
+        .filter((e): e is string => !!e)
 
-      const { data: mailing, error: insertErr } = await supabase
-        .from('admin_mailings')
-        .insert({
-          asunto,
-          html,
-          recipient_count: selectedUsers.length,
-          recipient_emails: recipientEmails,
-          enviado_por: currentUserId,
-          status: 'sending',
-        })
-        .select('id')
-        .single()
+      const createResult = await createMailingAction({
+        asunto,
+        html,
+        recipient_emails: recipientEmails,
+      })
 
-      if (insertErr || !mailing) {
+      if ('error' in createResult) {
         setSendResult({
           sent: 0,
           failed: 0,
-          error:
-            insertErr?.message ||
-            'No se pudo registrar el mailing en la base de datos',
+          error: createResult.error,
         })
         setSending(false)
         return
       }
-      mailingId = (mailing as { id: string }).id
+      mailingId = createResult.id
 
       const API_URL = (
         process.env.NEXT_PUBLIC_API_URL ||
@@ -240,16 +234,7 @@ export default function MailingsClient({
       }
 
       if (!res.ok) {
-        await supabase
-          .from('admin_mailings')
-          .update({
-            sent_count: 0,
-            failed_count: selectedUsers.length,
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', mailingId)
-
+        await failMailingAction(mailingId)
         setSendResult({
           sent: 0,
           failed: selectedUsers.length,
@@ -261,41 +246,26 @@ export default function MailingsClient({
       const sent = data.sent ?? 0
       const failed = data.failed ?? 0
 
-      await supabase
-        .from('admin_mailings')
-        .update({
-          sent_count: sent,
-          failed_count: failed,
-          status: failed === 0 ? 'completed' : 'failed',
-          completed_at: new Date().toISOString(),
-        })
-        .eq('id', mailingId)
+      await completeMailingAction(mailingId, {
+        sent_count: sent,
+        failed_count: failed,
+      })
 
       setSendResult({ sent, failed })
 
-      setHistory((prev) => [
-        {
-          id: mailingId as string,
-          asunto,
-          recipient_count: selectedUsers.length,
-          sent_count: sent,
-          failed_count: failed,
-          created_at: new Date().toISOString(),
-        },
-        ...prev,
-      ].slice(0, 20))
+      const newHistoryRow: MailingHistoryRow = {
+        id: mailingId,
+        asunto,
+        recipient_count: selectedUsers.length,
+        sent_count: sent,
+        failed_count: failed,
+        created_at: new Date().toISOString(),
+      }
+      setHistory((prev) => [newHistoryRow, ...prev].slice(0, 20))
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error inesperado'
       if (mailingId) {
-        await supabase
-          .from('admin_mailings')
-          .update({
-            sent_count: 0,
-            failed_count: selectedUsers.length,
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-          })
-          .eq('id', mailingId)
+        await failMailingAction(mailingId)
       }
       setSendResult({ sent: 0, failed: selectedUsers.length, error: msg })
     } finally {
