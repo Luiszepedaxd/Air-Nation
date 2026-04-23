@@ -48,6 +48,7 @@ export async function uploadFile(file: File): Promise<string> {
 
 export type VideoUploadResult = {
   video_url: string
+  video_mp4_url: string | null
   thumbnail_url: string | null
   duration_s: number
 }
@@ -59,6 +60,7 @@ export async function uploadVideo(file: File): Promise<VideoUploadResult> {
   const res = await apiFetch('/upload/video', { method: 'POST', body: formData })
   const json = (await res.json()) as {
     video_url?: string
+    video_mp4_url?: string | null
     thumbnail_url?: string | null
     duration_s?: number
     error?: string
@@ -71,6 +73,7 @@ export async function uploadVideo(file: File): Promise<VideoUploadResult> {
   }
   return {
     video_url: json.video_url,
+    video_mp4_url: json.video_mp4_url ?? null,
     thumbnail_url: json.thumbnail_url ?? null,
     duration_s: typeof json.duration_s === 'number' ? json.duration_s : 0,
   }

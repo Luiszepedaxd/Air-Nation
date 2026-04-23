@@ -26,7 +26,13 @@ const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 /** Video estilo reel (9:16 por defecto; 16:9 si el archivo es horizontal). Tap: play/pause. */
-export function FeedInlineVideo({ src }: { src: string }) {
+export function FeedInlineVideo({
+  src,
+  videoMp4Url,
+}: {
+  src: string
+  videoMp4Url?: string | null
+}) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [videoError, setVideoError] = useState(false)
@@ -106,7 +112,7 @@ export function FeedInlineVideo({ src }: { src: string }) {
     >
       <video
         ref={videoRef}
-        src={src}
+        src={videoMp4Url ?? src}
         width="100%"
         height="100%"
         className="absolute inset-0 h-full w-full cursor-pointer object-cover"
@@ -269,6 +275,7 @@ type FeedItem =
       content: string | null
       fotos_urls: string[] | null
       video_url?: string | null
+      video_mp4_url?: string | null
       video_duration_s?: number | null
       mentions?: string[]
       mentionAliasById?: Record<string, string>
@@ -284,6 +291,7 @@ type FeedItem =
       content: string | null
       fotos_urls: string[] | null
       video_url?: string | null
+      video_mp4_url?: string | null
       video_duration_s?: number | null
       mentions?: string[]
       mentionAliasById?: Record<string, string>
@@ -631,6 +639,7 @@ export function PostBox({
       }
 
       let videoUrl: string | null = null
+      let videoMp4Url: string | null = null
       let videoDurationS: number | null = null
       if (pendingVideo) {
         console.log(
@@ -640,13 +649,14 @@ export function PostBox({
         )
         const v = await uploadVideo(pendingVideo.file)
         videoUrl = v.video_url
+        videoMp4Url = v.video_mp4_url ?? null
         videoDurationS = Math.round(v.duration_s)
       }
 
       const content = text.trim() || null
       const videoFieldsPlayer =
         videoUrl != null && videoDurationS != null
-          ? { video_url: videoUrl, video_duration_s: videoDurationS }
+          ? { video_url: videoUrl, video_mp4_url: videoMp4Url, video_duration_s: videoDurationS }
           : {}
 
       if (postAs.type === 'player') {
@@ -1200,7 +1210,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1220,7 +1230,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
         </>
       )}
       <PostActions
@@ -1325,7 +1335,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1345,7 +1355,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </p>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} /> : null}
+          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
         </>
       )}
       <PostActions
@@ -1966,6 +1976,7 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           video_url: (r.video_url as string | null) ?? null,
+          video_mp4_url: (r.video_mp4_url as string | null) ?? null,
           video_duration_s:
             r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
               ? Number(r.video_duration_s)
@@ -1991,6 +2002,7 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           video_url: (r.video_url as string | null) ?? null,
+          video_mp4_url: (r.video_mp4_url as string | null) ?? null,
           video_duration_s:
             r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
               ? Number(r.video_duration_s)
@@ -2241,6 +2253,7 @@ function FeedTab({
           content: (r.content as string | null) ?? null,
           fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
           video_url: (r.video_url as string | null) ?? null,
+          video_mp4_url: (r.video_mp4_url as string | null) ?? null,
           video_duration_s:
             r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
               ? Number(r.video_duration_s)

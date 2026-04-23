@@ -166,14 +166,19 @@ router.post("/video", requireAuth, (req, res) => {
 
       const video_url = result?.playback?.hls;
       const thumbnail_url = result?.thumbnail;
-      if (!video_url) {
+      const uid = result?.uid;
+      if (!video_url || !uid) {
         return res.status(502).json({
-          error: "Respuesta inesperada de Cloudflare Stream (sin HLS)",
+          error: "Respuesta inesperada de Cloudflare Stream (sin HLS o UID)",
         });
       }
-
+      const customer = process.env.CF_CUSTOMER_SUBDOMAIN;
+      const video_mp4_url = customer
+        ? `https://${customer}.cloudflarestream.com/${uid}/downloads/default.mp4`
+        : null;
       return res.status(200).json({
         video_url,
+        video_mp4_url: video_mp4_url ?? null,
         thumbnail_url: thumbnail_url ?? null,
         duration_s: Math.round(durationNum),
       });
