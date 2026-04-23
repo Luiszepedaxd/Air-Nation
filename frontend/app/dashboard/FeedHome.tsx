@@ -1828,7 +1828,7 @@ function FeedTab({
           .eq('published', true)
           .eq('pinned', false)
           .order('created_at', { ascending: false })
-          .limit(25),
+          .limit(100),
         supabase
           .from('field_posts')
           .select(
@@ -2146,7 +2146,7 @@ function FeedTab({
               .eq('pinned', false)
               .lt('created_at', cursorPlayerPosts)
               .order('created_at', { ascending: false })
-              .limit(20)
+              .limit(50)
           : Promise.resolve({ data: [] as Record<string, unknown>[] }),
       ])
 
