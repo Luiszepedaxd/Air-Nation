@@ -81,7 +81,10 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
       .order('created_at', { ascending: false })
       .limit(50)
 
-    if (!error && data) setPosts(data as PlayerPost[])
+    if (!error && data) {
+      console.log('[PlayerPostsTab] raw data:', JSON.stringify(data?.slice(0, 3)))
+      setPosts(data as PlayerPost[])
+    }
     setLoading(false)
   }, [userId])
 
