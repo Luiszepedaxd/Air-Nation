@@ -75,7 +75,7 @@ export function FeedInlineVideo({
           }
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0 }
     )
     observer.observe(wrap)
     return () => observer.disconnect()
@@ -116,6 +116,7 @@ export function FeedInlineVideo({
         width="100%"
         height="100%"
         className="absolute inset-0 h-full w-full cursor-pointer object-cover"
+        autoPlay
         muted={isMuted}
         playsInline
         loop
