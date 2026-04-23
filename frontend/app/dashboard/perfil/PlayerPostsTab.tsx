@@ -133,6 +133,7 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
         <ul className="flex w-full min-w-0 flex-col">
           {posts.map((post) => {
             const urls = normalizeFotoUrls(post.fotos_urls).slice(0, 4)
+            console.log('[PostsTab] post:', post.id, 'video_url:', post.video_url)
             return (
               <li key={post.id} className="list-none">
                 <div className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4">
