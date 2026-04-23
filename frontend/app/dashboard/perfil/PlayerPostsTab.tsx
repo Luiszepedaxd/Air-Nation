@@ -98,7 +98,7 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
         userTeams={[]}
         userFields={[]}
         onPublished={async () => {
-          await new Promise((resolve) => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 2000))
           await fetchPosts()
         }}
       />

@@ -28,6 +28,7 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 /** Video estilo reel (9:16 por defecto; 16:9 si el archivo es horizontal). Tap: play/pause. */
 export function FeedInlineVideo({ src }: { src: string }) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
   const [videoError, setVideoError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [isMuted, setIsMuted] = useState(true)
@@ -36,7 +37,7 @@ export function FeedInlineVideo({ src }: { src: string }) {
   const aspectClass =
     isLandscape === true ? 'aspect-video' : 'aspect-[9/16]'
 
-  // Retry automático: reintenta hasta 8 veces con 15s de intervalo
+  // Retry automático cada 15s hasta 8 veces
   useEffect(() => {
     if (!videoError || retryCount >= 8) return
     const timer = setTimeout(() => {
@@ -46,13 +47,33 @@ export function FeedInlineVideo({ src }: { src: string }) {
     return () => clearTimeout(timer)
   }, [videoError, retryCount])
 
-  // Forzar recarga del elemento video en cada retry
   useEffect(() => {
     if (retryCount === 0) return
-    const el = videoRef.current
-    if (!el) return
-    el.load()
+    videoRef.current?.load()
   }, [retryCount])
+
+  // Autoplay solo cuando el video entra al viewport
+  useEffect(() => {
+    const el = videoRef.current
+    const wrap = wrapRef.current
+    if (!el || !wrap) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            void el.play().catch(() => {
+              /* bloqueado por browser, ok */
+            })
+          } else {
+            el.pause()
+          }
+        }
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(wrap)
+    return () => observer.disconnect()
+  }, [videoError, retryCount])
 
   const togglePlayPause = () => {
     const el = videoRef.current
@@ -80,6 +101,7 @@ export function FeedInlineVideo({ src }: { src: string }) {
 
   return (
     <div
+      ref={wrapRef}
       className={`relative block w-full overflow-hidden bg-black ${aspectClass}`}
     >
       <video
@@ -88,7 +110,6 @@ export function FeedInlineVideo({ src }: { src: string }) {
         width="100%"
         height="100%"
         className="absolute inset-0 h-full w-full cursor-pointer object-cover"
-        autoPlay
         muted={isMuted}
         playsInline
         loop
