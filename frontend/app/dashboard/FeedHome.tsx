@@ -73,7 +73,7 @@ export function FeedInlineVideo({ src }: { src: string }) {
     )
     observer.observe(wrap)
     return () => observer.disconnect()
-  }, [videoError, retryCount])
+  }, [videoError])
 
   const togglePlayPause = () => {
     const el = videoRef.current
