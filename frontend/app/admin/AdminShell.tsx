@@ -210,6 +210,22 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: '/admin/bloodmoney2',
+    label: 'Blood Money 2',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 2l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1.5L12 2z"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+          fill={active ? '#CC4B37' : 'none'}
+          fillOpacity={active ? 0.15 : 0}
+        />
+      </svg>
+    ),
+  },
 ]
 
 function navActive(pathname: string, href: string) {
