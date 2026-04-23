@@ -75,7 +75,7 @@ export function FeedInlineVideo({
           }
         }
       },
-      { threshold: 0 }
+      { threshold: 0.4 }
     )
     observer.observe(wrap)
     return () => observer.disconnect()
