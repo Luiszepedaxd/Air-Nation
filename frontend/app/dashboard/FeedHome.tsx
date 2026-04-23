@@ -29,11 +29,30 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 export function FeedInlineVideo({ src }: { src: string }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoError, setVideoError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [isMuted, setIsMuted] = useState(true)
   const [isLandscape, setIsLandscape] = useState<boolean | null>(null)
 
   const aspectClass =
     isLandscape === true ? 'aspect-video' : 'aspect-[9/16]'
+
+  // Retry automático: reintenta hasta 8 veces con 15s de intervalo
+  useEffect(() => {
+    if (!videoError || retryCount >= 8) return
+    const timer = setTimeout(() => {
+      setVideoError(false)
+      setRetryCount((n) => n + 1)
+    }, 15_000)
+    return () => clearTimeout(timer)
+  }, [videoError, retryCount])
+
+  // Forzar recarga del elemento video en cada retry
+  useEffect(() => {
+    if (retryCount === 0) return
+    const el = videoRef.current
+    if (!el) return
+    el.load()
+  }, [retryCount])
 
   const togglePlayPause = () => {
     const el = videoRef.current
@@ -52,25 +71,8 @@ export function FeedInlineVideo({ src }: { src: string }) {
       <div
         className={`flex w-full flex-col items-center justify-center bg-black ${aspectClass}`}
       >
-        <svg
-          width="40"
-          height="40"
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden
-          className="text-white"
-        >
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
-          <path
-            d="M12 7v5l4 2"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
         <p className="mt-3 text-center text-sm text-white" style={lato}>
-          Procesando video...
+          {retryCount >= 8 ? 'No se pudo cargar el video.' : 'Procesando video…'}
         </p>
       </div>
     )
@@ -3073,7 +3075,9 @@ export function FeedHome({
           userTeams={userTeams}
           userFields={userFields}
           onPublished={() => {
-            setFeedKey((prev) => prev + 1)
+            setTimeout(() => {
+              setFeedKey((prev) => prev + 1)
+            }, 1500)
           }}
         />
       )}
