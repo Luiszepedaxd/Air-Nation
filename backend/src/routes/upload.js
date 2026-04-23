@@ -153,6 +153,11 @@ router.post("/video", requireAuth, (req, res) => {
         });
       }
       const durationNum = Number(duration);
+      if (durationNum < 0) {
+        return res.status(422).json({
+          error: "El video aún está siendo procesado. Espera unos segundos e intenta de nuevo.",
+        });
+      }
       if (durationNum > VIDEO_MAX_DURATION_SEC) {
         return res.status(400).json({
           error: "El video no puede durar más de 30 segundos",
