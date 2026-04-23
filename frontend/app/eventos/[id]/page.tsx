@@ -6,7 +6,7 @@ import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-se
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 import { formatEventoFechaCorta } from '../lib/format-evento-fecha'
 import { EventoHero } from './components/EventoHero'
-import { EventoInfo } from './components/EventoInfo'
+import { EventoTabs } from './components/EventoTabs'
 
 export const revalidate = 0
 
@@ -149,6 +149,148 @@ export async function generateMetadata({
   }
 }
 
+type EventFeedPostRow = {
+  kind: 'player' | 'team'
+  id: string
+  content: string | null
+  fotos_urls: string[] | null
+  video_url: string | null
+  video_mp4_url: string | null
+  video_duration_s: number | null
+  mentions: string[] | null
+  mentionAliasById: Record<string, string> | null
+  created_at: string
+  author_id: string
+  author_nombre: string | null
+  author_alias: string | null
+  author_slug: string | null
+  author_avatar_url: string | null
+}
+
+async function fetchEventoPosts(eventId: string): Promise<EventFeedPostRow[]> {
+  const supabase = createPublicSupabaseClient()
+
+  const [playerRes, teamRes] = await Promise.all([
+    supabase
+      .from('player_posts')
+      .select(
+        `id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, mentions, created_at,
+         users!player_posts_user_id_fkey ( id, nombre, alias, avatar_url )`
+      )
+      .eq('event_id', eventId)
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('team_posts')
+      .select(
+        `id, team_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, mentions, created_at,
+         teams!team_posts_team_id_fkey ( id, nombre, slug, logo_url )`
+      )
+      .eq('event_id', eventId)
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ])
+
+  const mentionIds = new Set<string>()
+  const collect = (rows: unknown[] | null | undefined) => {
+    for (const r of rows ?? []) {
+      const m = (r as { mentions?: unknown }).mentions
+      if (Array.isArray(m)) for (const uid of m) mentionIds.add(String(uid))
+    }
+  }
+  collect(playerRes.data)
+  collect(teamRes.data)
+
+  const aliasById = new Map<string, string>()
+  if (mentionIds.size > 0) {
+    const { data: mu } = await supabase
+      .from('users')
+      .select('id, alias')
+      .in('id', Array.from(mentionIds))
+    for (const u of mu ?? []) {
+      const r = u as { id: string; alias: string | null }
+      if (r.alias?.trim()) aliasById.set(r.id, r.alias.trim())
+    }
+  }
+
+  const buildMentionMap = (mentions: unknown): Record<string, string> | null => {
+    if (!Array.isArray(mentions) || mentions.length === 0) return null
+    const o: Record<string, string> = {}
+    for (const uid of mentions) {
+      const sid = String(uid)
+      const al = aliasById.get(sid)
+      if (al) o[sid] = al
+    }
+    return Object.keys(o).length > 0 ? o : null
+  }
+
+  const playerRows: EventFeedPostRow[] = (playerRes.data ?? []).map((raw) => {
+    const r = raw as Record<string, unknown>
+    const u = Array.isArray(r.users) ? r.users[0] : r.users
+    const uo = (u ?? {}) as Record<string, unknown>
+    const mentions = Array.isArray(r.mentions) ? (r.mentions as unknown[]).map(String) : null
+    return {
+      kind: 'player',
+      id: String(r.id),
+      content: (r.content as string | null) ?? null,
+      fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+      video_url: (r.video_url as string | null) ?? null,
+      video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+      video_duration_s:
+        r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
+          ? Number(r.video_duration_s)
+          : null,
+      mentions,
+      mentionAliasById: buildMentionMap(r.mentions),
+      created_at: String(r.created_at ?? ''),
+      author_id: String(r.user_id ?? ''),
+      author_nombre: (uo.nombre as string | null) ?? null,
+      author_alias: (uo.alias as string | null) ?? null,
+      author_slug: null,
+      author_avatar_url: (uo.avatar_url as string | null) ?? null,
+    }
+  })
+
+  const teamRows: EventFeedPostRow[] = (teamRes.data ?? []).map((raw) => {
+    const r = raw as Record<string, unknown>
+    const t = Array.isArray(r.teams) ? r.teams[0] : r.teams
+    const to = (t ?? {}) as Record<string, unknown>
+    const mentions = Array.isArray(r.mentions) ? (r.mentions as unknown[]).map(String) : null
+    return {
+      kind: 'team',
+      id: String(r.id),
+      content: (r.content as string | null) ?? null,
+      fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+      video_url: (r.video_url as string | null) ?? null,
+      video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+      video_duration_s:
+        r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
+          ? Number(r.video_duration_s)
+          : null,
+      mentions,
+      mentionAliasById: buildMentionMap(r.mentions),
+      created_at: String(r.created_at ?? ''),
+      author_id: String(r.team_id ?? ''),
+      author_nombre: (to.nombre as string | null) ?? null,
+      author_alias: null,
+      author_slug: (to.slug as string | null) ?? null,
+      author_avatar_url: (to.logo_url as string | null) ?? null,
+    }
+  })
+
+  const merged = [...playerRows, ...teamRows].sort((a, b) => {
+    const ta = new Date(a.created_at).getTime()
+    const tb = new Date(b.created_at).getTime()
+    return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta)
+  })
+
+  return merged
+}
+
+export type { EventFeedPostRow }
+
 export default async function EventoDetailPage({
   params,
 }: {
@@ -183,6 +325,36 @@ export default async function EventoDetailPage({
   }
 
   const orgId = org.id ?? row.organizador_id
+
+  const eventoPosts = await fetchEventoPosts(id)
+
+  let canPublish = false
+  if (user) {
+    if (userHasRsvp) {
+      canPublish = true
+    } else {
+      const fechaMs = new Date(row.fecha).getTime()
+      if (Number.isFinite(fechaMs)) {
+        const now = Date.now()
+        const THREE_DAYS = 3 * 24 * 60 * 60 * 1000
+        if (Math.abs(fechaMs - now) <= THREE_DAYS) {
+          canPublish = true
+        }
+      }
+    }
+  }
+
+  let currentUserAlias: string | null = null
+  let currentUserAvatar: string | null = null
+  if (user) {
+    const { data: me } = await dash
+      .from('users')
+      .select('alias, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+    currentUserAlias = (me?.alias as string | null) ?? null
+    currentUserAvatar = (me?.avatar_url as string | null) ?? null
+  }
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
@@ -235,7 +407,7 @@ export default async function EventoDetailPage({
         tipo={row.tipo}
         disciplina={row.disciplina}
       />
-      <EventoInfo
+      <EventoTabs
         eventId={id}
         descripcion={row.descripcion}
         disciplina={row.disciplina}
@@ -251,6 +423,10 @@ export default async function EventoDetailPage({
         organizador_avatar_url={org.avatar_url}
         sessionUserId={user?.id ?? null}
         userHasRsvp={userHasRsvp}
+        initialPosts={eventoPosts}
+        currentUserAlias={currentUserAlias}
+        currentUserAvatar={currentUserAvatar}
+        canPublish={canPublish}
       />
     </div>
   )
