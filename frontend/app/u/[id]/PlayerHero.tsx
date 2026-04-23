@@ -120,6 +120,25 @@ function mapPlatformRole(rol: string | null | undefined): string | null {
   return null
 }
 
+type PlayerStatusKey = 'activo' | 'reserva' | 'trial'
+
+const PLAYER_STATUS_STYLES: Record<
+  PlayerStatusKey,
+  { label: string; bg: string; fg: string }
+> = {
+  activo: { label: 'ACTIVO', bg: '#E1F5EE', fg: '#085041' },
+  reserva: { label: 'RESERVA', bg: '#FAEEDA', fg: '#633806' },
+  trial: { label: 'TRIAL', bg: '#EEEDFE', fg: '#3C3489' },
+}
+
+function normalizePlayerStatusKey(
+  ps: string | null | undefined
+): PlayerStatusKey | null {
+  const v = (ps ?? '').toLowerCase().trim()
+  if (v === 'activo' || v === 'reserva' || v === 'trial') return v
+  return null
+}
+
 const followButtonClass =
   'flex-1 py-2 text-[13px] font-extrabold rounded-[6px]'
 const messageButtonClass =
@@ -131,6 +150,7 @@ type TeamCardItem = {
   slug: string
   logo_url: string | null
   team_role: string | null
+  player_status?: 'activo' | 'reserva' | 'trial' | null
 }
 
 function teamLogoInitial(nombre: string) {
@@ -219,6 +239,11 @@ export function PlayerHero({
 
   const singleRoleLabel =
     teams.length === 1 ? mapPlatformRole(teams[0].team_role) ?? teamRole : null
+
+  const singlePlayerStatus: PlayerStatusKey | null =
+    teams.length === 1
+      ? normalizePlayerStatusKey(teams[0].player_status ?? user.player_status)
+      : normalizePlayerStatusKey(user.player_status)
 
   const socialLinks: SocialLinkItem[] = [
     user.instagram?.trim() && {
@@ -450,11 +475,26 @@ export function PlayerHero({
               <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
                 {teams[0].nombre}
               </p>
-              {singleRoleLabel ? (
-                <p className="text-[11px] text-[#666666]" style={lato}>
-                  {singleRoleLabel}
-                </p>
-              ) : null}
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                {singleRoleLabel ? (
+                  <p className="text-[11px] text-[#666666]" style={lato}>
+                    {singleRoleLabel}
+                  </p>
+                ) : null}
+                {singlePlayerStatus ? (
+                  <span
+                    style={{
+                      ...jost,
+                      backgroundColor:
+                        PLAYER_STATUS_STYLES[singlePlayerStatus].bg,
+                      color: PLAYER_STATUS_STYLES[singlePlayerStatus].fg,
+                    }}
+                    className="inline-block rounded-[2px] px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wide"
+                  >
+                    {PLAYER_STATUS_STYLES[singlePlayerStatus].label}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <ChevronRightIcon />
           </Link>
@@ -504,11 +544,30 @@ export function PlayerHero({
                         <p className="truncate text-[13px] font-extrabold text-[#111111]" style={jostName}>
                           {t.nombre}
                         </p>
-                        {rolLabel ? (
-                          <p className="text-[11px] text-[#666666]" style={lato}>
-                            {rolLabel}
-                          </p>
-                        ) : null}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                          {rolLabel ? (
+                            <p className="text-[11px] text-[#666666]" style={lato}>
+                              {rolLabel}
+                            </p>
+                          ) : null}
+                          {(() => {
+                            const ps = normalizePlayerStatusKey(t.player_status)
+                            if (!ps) return null
+                            const s = PLAYER_STATUS_STYLES[ps]
+                            return (
+                              <span
+                                style={{
+                                  ...jost,
+                                  backgroundColor: s.bg,
+                                  color: s.fg,
+                                }}
+                                className="inline-block rounded-[2px] px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wide"
+                              >
+                                {s.label}
+                              </span>
+                            )
+                          })()}
+                        </div>
                       </div>
                       <ChevronRightIcon />
                     </>

@@ -73,7 +73,7 @@ async function fetchPublicProfile(id: string) {
   let teams_list: PublicUserProfile['teams_list'] = undefined
   const { data: memberRows } = await supabase
     .from('team_members')
-    .select('rol_plataforma, teams(id, nombre, slug, logo_url)')
+    .select('rol_plataforma, player_status, team_id, teams(id, nombre, slug, logo_url)')
     .eq('user_id', row.id)
     .eq('status', 'activo')
 
@@ -82,6 +82,8 @@ async function fetchPublicProfile(id: string) {
     const list: NonNullable<PublicUserProfile['teams_list']> = []
     for (const mr of memberRows as {
       rol_plataforma: string | null
+      player_status: string | null
+      team_id: string
       teams:
         | { id: string; nombre: string; slug: string; logo_url: string | null }
         | { id: string; nombre: string; slug: string; logo_url: string | null }[]
@@ -97,6 +99,9 @@ async function fetchPublicProfile(id: string) {
         slug: team.slug,
         logo_url: team.logo_url,
         team_role: mr.rol_plataforma ?? null,
+        player_status:
+          (mr.player_status as 'activo' | 'reserva' | 'trial' | null) ??
+          'activo',
       })
     }
     if (list.length > 0) teams_list = list
@@ -310,7 +315,7 @@ export default async function PublicProfilePage({
     user.team_id
       ? supabasePublic
           .from('team_members')
-          .select('rol_plataforma')
+          .select('rol_plataforma, player_status')
           .eq('user_id', user.id)
           .eq('team_id', user.team_id)
           .eq('status', 'activo')
@@ -322,10 +327,23 @@ export default async function PublicProfilePage({
     teamMemberRes.data?.rol_plataforma as string | undefined
   )
 
+  const playerStatusMain =
+    (teamMemberRes.data?.player_status as
+      | 'activo'
+      | 'reserva'
+      | 'trial'
+      | null
+      | undefined) ?? null
+
+  const userWithStatus: PublicUserProfile = {
+    ...user,
+    player_status: playerStatusMain,
+  }
+
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <PlayerHero
-        user={user}
+        user={userWithStatus}
         subtitle={subtitle}
         followersCount={followersCount ?? 0}
         followingCount={followingCount ?? 0}

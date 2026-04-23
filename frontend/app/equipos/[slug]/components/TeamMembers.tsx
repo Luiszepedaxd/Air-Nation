@@ -9,6 +9,8 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
+type PlayerStatus = 'activo' | 'reserva' | 'trial'
+
 function StarWhiteIcon() {
   return (
     <svg
@@ -32,6 +34,33 @@ function normalizeRol(rol: string | null): 'founder' | 'admin' | 'member' {
   if (r === 'founder' || r === 'fundador') return 'founder'
   if (r === 'admin') return 'admin'
   return 'member'
+}
+
+function normalizePlayerStatus(ps: string | null | undefined): PlayerStatus {
+  const v = (ps ?? '').toLowerCase().trim()
+  if (v === 'reserva') return 'reserva'
+  if (v === 'trial') return 'trial'
+  return 'activo'
+}
+
+function PlayerStatusBadge({ status }: { status: PlayerStatus }) {
+  const config: Record<
+    PlayerStatus,
+    { label: string; bg: string; fg: string }
+  > = {
+    activo: { label: 'ACTIVO', bg: '#E1F5EE', fg: '#085041' },
+    reserva: { label: 'RESERVA', bg: '#FAEEDA', fg: '#633806' },
+    trial: { label: 'TRIAL', bg: '#EEEDFE', fg: '#3C3489' },
+  }
+  const c = config[status]
+  return (
+    <span
+      style={{ ...jost, backgroundColor: c.bg, color: c.fg }}
+      className="inline-block rounded-[2px] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide"
+    >
+      {c.label}
+    </span>
+  )
 }
 
 function MemberRoleLine({ m }: { m: MemberDisplay }) {
@@ -71,6 +100,63 @@ function MemberRoleLine({ m }: { m: MemberDisplay }) {
   )
 }
 
+function MemberCard({ m }: { m: MemberDisplay }) {
+  const displayName = (m.alias || m.nombre || '—').trim()
+  const initial = (displayName[0] || '?').toUpperCase()
+  const ps = normalizePlayerStatus(m.player_status)
+
+  return (
+    <Link
+      key={m.id}
+      href={`/u/${m.user_id}`}
+      className="relative border border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-colors hover:bg-[#F4F4F4]"
+    >
+      <div className="absolute right-2 top-2">
+        <PlayerStatusBadge status={ps} />
+      </div>
+      <div className="mx-auto h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
+        {m.avatar_url ? (
+          <img
+            src={m.avatar_url}
+            alt=""
+            width={64}
+            height={64}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex h-full w-full items-center justify-center text-[18px] text-[#CC4B37]"
+            style={jost}
+          >
+            {initial}
+          </div>
+        )}
+      </div>
+      <div className="mt-3">
+        <p
+          style={{ ...jost, fontWeight: 700, textTransform: 'none' }}
+          className="line-clamp-2 text-center text-[14px] text-[#111111]"
+        >
+          {displayName}
+        </p>
+        <div className="mt-2 flex justify-center">
+          <MemberRoleLine m={m} />
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function MembersGrid({ members }: { members: MemberDisplay[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {members.map((m) => (
+        <MemberCard key={m.id} m={m} />
+      ))}
+    </div>
+  )
+}
+
 export function TeamMembers({
   members,
   variant = 'section',
@@ -88,6 +174,25 @@ export function TeamMembers({
     )
   }
 
+  const activos = members.filter(
+    (m) => normalizePlayerStatus(m.player_status) === 'activo'
+  )
+  const reserva = members.filter(
+    (m) => normalizePlayerStatus(m.player_status) === 'reserva'
+  )
+  const trial = members.filter(
+    (m) => normalizePlayerStatus(m.player_status) === 'trial'
+  )
+
+  const sectionHeading = (label: string, count: number) => (
+    <h3
+      style={jost}
+      className="mb-4 text-[12px] font-extrabold uppercase tracking-wide text-[#111111]"
+    >
+      {label} ({count})
+    </h3>
+  )
+
   return (
     <section
       className={
@@ -104,50 +209,27 @@ export function TeamMembers({
           Integrantes ({n})
         </h2>
       ) : null}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {members.map((m) => {
-          const displayName = (m.alias || m.nombre || '—').trim()
-          const initial = (displayName[0] || '?').toUpperCase()
 
-          return (
-            <Link
-              key={m.id}
-              href={`/u/${m.user_id}`}
-              className="border border-[#EEEEEE] bg-[#FFFFFF] p-3 transition-colors hover:bg-[#F4F4F4]"
-            >
-              <div className="mx-auto h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#F4F4F4]">
-                {m.avatar_url ? (
-                  <img
-                    src={m.avatar_url}
-                    alt=""
-                    width={64}
-                    height={64}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className="flex h-full w-full items-center justify-center text-[18px] text-[#CC4B37]"
-                    style={jost}
-                  >
-                    {initial}
-                  </div>
-                )}
-              </div>
-              <div className="mt-3">
-                <p
-                  style={{ ...jost, fontWeight: 700, textTransform: 'none' }}
-                  className="line-clamp-2 text-center text-[14px] text-[#111111]"
-                >
-                  {displayName}
-                </p>
-                <div className="mt-2 flex justify-center">
-                  <MemberRoleLine m={m} />
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
+      {activos.length > 0 ? (
+        <div className="mb-8">
+          {sectionHeading('Activos', activos.length)}
+          <MembersGrid members={activos} />
+        </div>
+      ) : null}
+
+      {reserva.length > 0 ? (
+        <div className="mb-8">
+          {sectionHeading('Reserva', reserva.length)}
+          <MembersGrid members={reserva} />
+        </div>
+      ) : null}
+
+      {trial.length > 0 ? (
+        <div className="mb-8">
+          {sectionHeading('En trial', trial.length)}
+          <MembersGrid members={trial} />
+        </div>
+      ) : null}
     </section>
   )
 }

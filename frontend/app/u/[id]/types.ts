@@ -22,7 +22,11 @@ export type PublicUserProfile = {
     slug: string
     logo_url: string | null
     team_role: string | null
+    /** activo | reserva | trial — status en ese equipo */
+    player_status?: 'activo' | 'reserva' | 'trial' | null
   }>
+  /** Status del jugador en su equipo principal (team_id) */
+  player_status?: 'activo' | 'reserva' | 'trial' | null
 }
 
 export type PlayerPostRow = {

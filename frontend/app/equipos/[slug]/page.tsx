@@ -90,7 +90,7 @@ async function fetchMembers(teamId: string): Promise<MemberDisplay[]> {
   const supabase = createPublicSupabaseClient()
   const { data: rows, error } = await supabase
     .from('team_members')
-    .select('id, user_id, rol_plataforma, rango_militar, created_at')
+    .select('id, user_id, rol_plataforma, rango_militar, player_status, created_at')
     .eq('team_id', teamId)
     .eq('status', 'activo')
 
@@ -119,6 +119,9 @@ async function fetchMembers(teamId: string): Promise<MemberDisplay[]> {
       nombre: u?.nombre ?? null,
       alias: u?.alias ?? null,
       avatar_url: u?.avatar_url ?? null,
+      player_status:
+        (r as { player_status?: 'activo' | 'reserva' | 'trial' | null })
+          .player_status ?? 'activo',
       created_at: String((r as { created_at?: string }).created_at ?? ''),
     }
   })

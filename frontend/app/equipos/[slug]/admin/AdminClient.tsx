@@ -39,6 +39,25 @@ const RANGO_OPTIONS = [
   'miembro',
 ] as const
 
+const PLAYER_STATUS_OPTIONS = ['activo', 'reserva', 'trial'] as const
+type PlayerStatusValue = (typeof PLAYER_STATUS_OPTIONS)[number]
+
+const PLAYER_STATUS_STYLES: Record<
+  PlayerStatusValue,
+  { label: string; bg: string; fg: string }
+> = {
+  activo: { label: 'ACTIVO', bg: '#E1F5EE', fg: '#085041' },
+  reserva: { label: 'RESERVA', bg: '#FAEEDA', fg: '#633806' },
+  trial: { label: 'TRIAL', bg: '#EEEDFE', fg: '#3C3489' },
+}
+
+function normalizePlayerStatus(ps: string | null | undefined): PlayerStatusValue {
+  const v = (ps ?? '').toLowerCase().trim()
+  if (v === 'reserva') return 'reserva'
+  if (v === 'trial') return 'trial'
+  return 'activo'
+}
+
 function one<T>(v: T | T[] | null | undefined): T | null {
   if (v == null) return null
   return Array.isArray(v) ? (v[0] ?? null) : v
@@ -320,6 +339,7 @@ export function AdminClient({
           user_id,
           rol_plataforma,
           rango_militar,
+          player_status,
           status,
           users (
             id,
@@ -377,6 +397,7 @@ export function AdminClient({
               user_id: string
               rol_plataforma: string | null
               rango_militar: string | null
+              player_status: string | null
               users: unknown
             }[]).map((r) => {
               const u = one(r.users) as {
@@ -391,6 +412,8 @@ export function AdminClient({
                 user_id: r.user_id,
                 rol_plataforma: r.rol_plataforma,
                 rango_militar: r.rango_militar,
+                player_status:
+                  (r.player_status as PlayerStatusValue | null) ?? 'activo',
                 nombre: u?.nombre ?? null,
                 alias: u?.alias ?? null,
                 avatar_url: u?.avatar_url ?? null,
@@ -883,6 +906,32 @@ function IntegrantesTab({
     }
   }
 
+  const updatePlayerStatus = async (
+    memberId: string,
+    nuevo: PlayerStatusValue
+  ) => {
+    setBusyMemberId(memberId)
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .update({ player_status: nuevo })
+        .eq('id', memberId)
+        .eq('team_id', teamId)
+
+      if (error) throw error
+
+      setMembers((prev) =>
+        prev.map((x) =>
+          x.id === memberId ? { ...x, player_status: nuevo } : x
+        )
+      )
+    } catch {
+      /* noop */
+    } finally {
+      setBusyMemberId(null)
+    }
+  }
+
   const toggleRol = async (
     memberId: string,
     next: 'founder' | 'admin' | 'member'
@@ -1047,6 +1096,54 @@ function IntegrantesTab({
                         </option>
                       ))}
                     </select>
+                  </div>
+                ) : null}
+
+                {(viewerIsFounder || viewerIsAdmin) &&
+                m.user_id !== viewerUserId ? (
+                  <div className="mt-3">
+                    <label
+                      style={jost}
+                      className="mb-1 block text-[10px] text-[#666666]"
+                    >
+                      Status en equipo
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <select
+                        disabled={busy}
+                        value={normalizePlayerStatus(m.player_status)}
+                        onChange={(e) =>
+                          void updatePlayerStatus(
+                            m.id,
+                            e.target.value as PlayerStatusValue
+                          )
+                        }
+                        style={lato}
+                        className="max-w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] py-2 pl-2 pr-8 text-[13px] text-[#111111]"
+                      >
+                        {PLAYER_STATUS_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {PLAYER_STATUS_STYLES[opt].label.toLowerCase()}
+                          </option>
+                        ))}
+                      </select>
+                      {(() => {
+                        const ps = normalizePlayerStatus(m.player_status)
+                        const s = PLAYER_STATUS_STYLES[ps]
+                        return (
+                          <span
+                            style={{
+                              ...jost,
+                              backgroundColor: s.bg,
+                              color: s.fg,
+                            }}
+                            className="inline-block rounded-[2px] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide"
+                          >
+                            {s.label}
+                          </span>
+                        )
+                      })()}
+                    </div>
                   </div>
                 ) : null}
 
