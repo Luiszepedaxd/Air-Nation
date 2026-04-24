@@ -5,10 +5,11 @@ import { getSiteAssets } from "@/lib/site-assets";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
+  title: "Crear cuenta — AirNation",
+  description:
+    "Crea tu cuenta gratis en AirNation. Obtén tu credencial digital, registra tu arsenal, únete a equipos y conecta con la comunidad airsoft en México.",
+  robots: { index: false, follow: false },
+  alternates: { canonical: "https://www.airnation.online/register" },
 };
 
 export default async function RegisterPage() {
