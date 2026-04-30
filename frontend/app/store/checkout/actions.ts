@@ -1,6 +1,7 @@
 'use server'
 
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import { createAnonSupabaseClient } from '@/lib/supabase-anon'
 import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 
@@ -48,7 +49,11 @@ export async function createOrder(
   | { ok: true; order_id: string; order_number: string }
   | { error: string }
 > {
-  const supabase = createDashboardSupabaseServerClient()
+  // Cliente con cookies: SOLO para detectar si hay sesión activa (auth.getUser).
+  const supabaseSession = createDashboardSupabaseServerClient()
+  // Cliente sin cookies: para todas las operaciones de DB. Evita problemas con
+  // cookies stale de invitados que tienen tokens expirados.
+  const supabase = createAnonSupabaseClient()
 
   if (!input.items.length) return { error: 'El carrito está vacío.' }
   if (!input.direccion.nombre.trim()) return { error: 'El nombre es requerido.' }
@@ -78,7 +83,7 @@ export async function createOrder(
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabaseSession.auth.getUser()
   const user_id = user?.id ?? input.user_id ?? null
   const costo_envio = input.costo_envio ?? 0
 
