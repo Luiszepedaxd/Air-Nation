@@ -12,6 +12,7 @@ const assetsRouter = require("./routes/assets");
 const feedbackRouter = require("./routes/feedback");
 const adminMailRouter = require("./routes/admin-mail");
 const pushRouter = require("./routes/push");
+const stripeRouter = require("./routes/stripe");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -27,6 +28,17 @@ app.use(cors({
 // Subidas multipart: montar ANTES de express.json (límite por defecto ~100kb) para no
 // interferir con cuerpos grandes en /upload/video. Ver también BODY_PARSER_LIMIT.
 app.use("/api/v1/upload", uploadRouter);
+
+// Stripe webhook necesita raw body para verificar firma. DEBE ir antes de express.json().
+app.post(
+  "/api/v1/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res, next) => {
+    // Delegar al handler dentro del router de stripe
+    req.url = "/webhook";
+    stripeRouter.handle(req, res, next);
+  }
+);
 
 // Por defecto 100mb (Railway: puedes fijar BODY_PARSER_LIMIT=100mb en variables)
 const bodyParserLimit = process.env.BODY_PARSER_LIMIT || "100mb";
@@ -48,6 +60,7 @@ app.use("/api/v1/assets", assetsRouter);
 app.use("/api/v1/feedback", feedbackRouter);
 app.use("/api/v1/admin", adminMailRouter);
 app.use("/api/v1/push", pushRouter);
+app.use("/api/v1/stripe", stripeRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
