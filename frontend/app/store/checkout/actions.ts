@@ -156,19 +156,23 @@ export async function createOrder(
     ? ((configRow as { value: { banco: string; clabe: string; titular: string; concepto: string } }).value)
     : null
 
-  await sendOrderConfirmationEmail({
-    email: input.direccion.email,
-    nombre: input.direccion.nombre,
-    order_number,
-    items: input.items,
-    subtotal,
-    descuento_monto,
-    costo_envio,
-    total: total_con_envio,
-    metodo_pago: input.metodo_pago,
-    direccion: input.direccion,
-    datosBancarios,
-  })
+  // Solo mandar email inmediato para transferencia.
+  // Para tarjeta, el email se manda cuando el webhook de Stripe confirma el pago.
+  if (input.metodo_pago !== 'tarjeta') {
+    await sendOrderConfirmationEmail({
+      email: input.direccion.email,
+      nombre: input.direccion.nombre,
+      order_number,
+      items: input.items,
+      subtotal,
+      descuento_monto,
+      costo_envio,
+      total: total_con_envio,
+      metodo_pago: input.metodo_pago,
+      direccion: input.direccion,
+      datosBancarios,
+    })
+  }
 
   return { ok: true, order_id: orderId, order_number }
 }
