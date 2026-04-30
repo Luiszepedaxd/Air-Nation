@@ -608,12 +608,6 @@ export function StoreExploreClient({
                     />
                   </svg>
                 </button>
-                <span
-                  className="hidden bg-[#F4F4F4] px-2 py-0.5 text-[8px] font-extrabold uppercase text-[#999999] md:inline"
-                  style={jost}
-                >
-                  ADMIN PREVIEW
-                </span>
                 <Link
                   href="/store/pedidos"
                   className="hidden items-center gap-1.5 border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[#666666] transition-colors hover:border-[#111111] hover:text-[#111111] md:flex"
