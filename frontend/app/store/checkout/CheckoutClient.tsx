@@ -721,6 +721,19 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                 >
                   <StripePaymentForm
                     total={totalFinal}
+                    billingDetails={{
+                      name: form.nombre,
+                      email: form.email,
+                      phone: form.telefono,
+                      address: {
+                        line1: `${form.calle} ${form.numero}`.trim(),
+                        line2: form.colonia || undefined,
+                        city: form.ciudad,
+                        state: form.estado,
+                        postal_code: form.cp,
+                        country: 'MX',
+                      },
+                    }}
                     onSuccess={() => {
                       clearCart()
                       setStep('confirmacion')

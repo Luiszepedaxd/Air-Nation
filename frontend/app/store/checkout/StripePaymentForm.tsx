@@ -6,13 +6,28 @@ import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
+type BillingDetails = {
+  name: string
+  email: string
+  phone: string
+  address: {
+    line1: string
+    line2?: string
+    city: string
+    state: string
+    postal_code: string
+    country: string
+  }
+}
+
 type Props = {
   total: number
+  billingDetails: BillingDetails
   onSuccess: () => void
   onError: (msg: string) => void
 }
 
-export function StripePaymentForm({ total, onSuccess, onError }: Props) {
+export function StripePaymentForm({ total, billingDetails, onSuccess, onError }: Props) {
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
@@ -30,7 +45,21 @@ export function StripePaymentForm({ total, onSuccess, onError }: Props) {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // No usamos return_url porque manejamos el éxito en el cliente.
+        payment_method_data: {
+          billing_details: {
+            name: billingDetails.name,
+            email: billingDetails.email,
+            phone: billingDetails.phone || undefined,
+            address: {
+              line1: billingDetails.address.line1,
+              line2: billingDetails.address.line2 || undefined,
+              city: billingDetails.address.city,
+              state: billingDetails.address.state,
+              postal_code: billingDetails.address.postal_code,
+              country: billingDetails.address.country,
+            },
+          },
+        },
       },
       redirect: 'if_required',
     })
@@ -46,7 +75,6 @@ export function StripePaymentForm({ total, onSuccess, onError }: Props) {
       return
     }
 
-    // Si llegamos aquí sin error, el pago fue exitoso (o requiere acción adicional ya manejada).
     onSuccess()
   }
 
