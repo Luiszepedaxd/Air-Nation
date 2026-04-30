@@ -56,6 +56,18 @@ export function StripePaymentForm({ total, onSuccess, onError }: Props) {
         <PaymentElement
           options={{
             layout: 'tabs',
+            wallets: {
+              applePay: 'never',
+              googlePay: 'never',
+            },
+            fields: {
+              billingDetails: {
+                name: 'never',
+                email: 'never',
+                phone: 'never',
+                address: 'never',
+              },
+            },
           }}
         />
       </div>

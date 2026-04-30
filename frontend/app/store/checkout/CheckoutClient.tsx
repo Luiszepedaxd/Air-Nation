@@ -708,6 +708,7 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                   stripe={stripePromise}
                   options={{
                     clientSecret: stripeClientSecret,
+                    loader: 'auto',
                     appearance: {
                       theme: 'stripe',
                       variables: {
