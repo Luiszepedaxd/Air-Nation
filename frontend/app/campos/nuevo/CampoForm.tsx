@@ -155,6 +155,7 @@ export function CampoForm({
 }) {
   const [nombre, setNombre] = useState('')
   const [ciudad, setCiudad] = useState('')
+  const [estado, setEstado] = useState('')
   const [tipo, setTipo] = useState<'publico' | 'privado'>('publico')
   const [descripcion, setDescripcion] = useState('')
   const [schedule, setSchedule] = useState<WeekScheduleState>(() =>
@@ -298,6 +299,7 @@ export function CampoForm({
         aria-hidden
       />
       <input type="hidden" name="tipo" value={tipo} readOnly aria-hidden />
+      <input type="hidden" name="estado" value={estado} readOnly aria-hidden />
 
       <h1
         className="text-[22px] font-extrabold leading-tight text-[#111111] md:text-[26px]"
@@ -350,17 +352,25 @@ export function CampoForm({
               onPlaceChanged={() => {
                 const place = autocompleteRef.current?.getPlace()
                 if (!place?.address_components) return
-                const locality =
-                  place.address_components.find((c) =>
-                    c.types.includes('locality')
-                  )?.long_name ||
-                  place.address_components.find((c) =>
-                    c.types.includes('administrative_area_level_2')
-                  )?.long_name ||
-                  place.address_components.find((c) =>
-                    c.types.includes('administrative_area_level_1')
-                  )?.long_name ||
+
+                const getComponent = (type: string) =>
+                  place.address_components!.find((c) =>
+                    c.types.includes(type)
+                  )?.long_name?.trim() ?? ''
+
+                const estadoLugar =
+                  getComponent('administrative_area_level_1') ||
+                  getComponent('administrative_area_level_2') ||
                   ''
+
+                const locality =
+                  getComponent('locality') ||
+                  getComponent('sublocality_level_1') ||
+                  getComponent('administrative_area_level_2') ||
+                  getComponent('administrative_area_level_1') ||
+                  ''
+
+                setEstado(estadoLugar)
                 if (locality) {
                   setCiudad(locality)
                   setCiudadInput(locality)
@@ -378,7 +388,10 @@ export function CampoForm({
                 value={ciudadInput}
                 onChange={(e) => {
                   setCiudadInput(e.target.value)
-                  if (e.target.value === '') setCiudad('')
+                  if (e.target.value === '') {
+                    setCiudad('')
+                    setEstado('')
+                  }
                 }}
                 autoComplete="off"
               />

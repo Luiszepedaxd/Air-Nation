@@ -10,6 +10,7 @@ export type UpdateFieldAdminPayload = {
   fieldId: string
   nombre: string
   ciudad: string | null
+  estado: string | null
   descripcion: string | null
   horarios_json: Record<string, unknown> | null
   direccion: string | null
@@ -78,6 +79,7 @@ export async function updateFieldAdmin(
     .update({
       nombre: n,
       ciudad: payload.ciudad?.trim() || null,
+      estado: payload.estado?.trim() || null,
       descripcion: descripcion || null,
       horarios_json: payload.horarios_json,
       direccion: direccion || null,

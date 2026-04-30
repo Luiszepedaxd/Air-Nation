@@ -108,6 +108,7 @@ export async function createCampoAction(
 
   const nombre = String(formData.get('nombre') ?? '').trim()
   const ciudad = String(formData.get('ciudad') ?? '').trim()
+  const estado = String(formData.get('estado') ?? '').trim()
   const tipoRaw = String(formData.get('tipo') ?? '').toLowerCase()
   const tipo = tipoRaw === 'privado' ? 'privado' : 'publico'
   const descripcion = String(formData.get('descripcion') ?? '').trim()
@@ -208,6 +209,7 @@ export async function createCampoAction(
         nombre,
         slug: uniqueSlug,
         ciudad,
+        estado: estado || null,
         tipo,
         descripcion: descripcion || null,
         direccion: direccion || null,
@@ -279,6 +281,7 @@ export async function createCampoAction(
       nombre,
       slug: uniqueSlug,
       ciudad,
+      estado: estado || null,
       tipo,
       descripcion: descripcion || null,
       direccion: direccion || null,
