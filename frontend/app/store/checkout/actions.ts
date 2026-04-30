@@ -49,10 +49,7 @@ export async function createOrder(
   | { ok: true; order_id: string; order_number: string }
   | { error: string }
 > {
-  // Cliente con cookies: SOLO para detectar si hay sesión activa (auth.getUser).
-  const supabaseSession = createDashboardSupabaseServerClient()
-  // Cliente sin cookies: para todas las operaciones de DB. Evita problemas con
-  // cookies stale de invitados que tienen tokens expirados.
+  // Cliente sin cookies. El user_id viene del input (frontend lo determina).
   const supabase = createAnonSupabaseClient()
 
   if (!input.items.length) return { error: 'El carrito está vacío.' }
@@ -81,10 +78,7 @@ export async function createOrder(
 
   const order_number = generateOrderNumber()
 
-  const {
-    data: { user },
-  } = await supabaseSession.auth.getUser()
-  const user_id = user?.id ?? input.user_id ?? null
+  const user_id = input.user_id ?? null
   const costo_envio = input.costo_envio ?? 0
 
   const subtotal = input.items.reduce((acc, i) => acc + i.precio * i.cantidad, 0)
