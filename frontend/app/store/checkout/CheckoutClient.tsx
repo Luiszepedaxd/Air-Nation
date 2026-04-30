@@ -10,6 +10,14 @@ import { createOrder } from './actions'
 import type { DireccionEnvio } from './actions'
 import { cotizarEnvio } from '@/lib/fedex-tarifas'
 import type { CotizacionEnvio } from '@/lib/fedex-tarifas'
+import { Elements } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+import { apiFetch } from '@/lib/apiFetch'
+import { StripePaymentForm } from './StripePaymentForm'
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -33,6 +41,8 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
   const [orderResult, setOrderResult] = useState<{ order_id: string; order_number: string } | null>(
     null
   )
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null)
+  const [stripeOrderId, setStripeOrderId] = useState<string | null>(null)
 
   const [form, setForm] = useState<DireccionEnvio>({
     nombre: user?.nombre ?? '',
@@ -133,16 +143,48 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
       costo_envio: 0,
     })
 
-    setSubmitting(false)
     if ('error' in res) {
+      setSubmitting(false)
       setError(res.error)
       return
     }
 
-    setOrderResult({ order_id: res.order_id, order_number: res.order_number })
-    clearCart()
-    setStep('confirmacion')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Si es transferencia, flujo igual que antes: directo a confirmación.
+    if (metodoPago === 'transferencia') {
+      setSubmitting(false)
+      setOrderResult({ order_id: res.order_id, order_number: res.order_number })
+      clearCart()
+      setStep('confirmacion')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    // Si es tarjeta: pedir client_secret al backend Express y mostrar Stripe Elements.
+    try {
+      const piRes = await apiFetch('/stripe/create-payment-intent', {
+        method: 'POST',
+        body: JSON.stringify({ order_id: res.order_id }),
+      })
+
+      if (!piRes.ok) {
+        const errBody = await piRes.json().catch(() => ({}))
+        setError(errBody.error || 'No se pudo iniciar el pago. Intenta de nuevo.')
+        setSubmitting(false)
+        return
+      }
+
+      const piData = await piRes.json() as { client_secret: string; payment_intent_id: string }
+
+      setStripeClientSecret(piData.client_secret)
+      setStripeOrderId(res.order_id)
+      // Guardar order_number para mostrarlo en la confirmación luego.
+      setOrderResult({ order_id: res.order_id, order_number: res.order_number })
+      setSubmitting(false)
+    } catch (err) {
+      console.error('[checkout] error iniciando pago tarjeta:', err)
+      setError('No se pudo conectar con el servicio de pago. Verifica tu conexión.')
+      setSubmitting(false)
+    }
   }
 
   const inputCls =
@@ -538,12 +580,6 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                     <p className="text-[13px] font-extrabold uppercase text-[#111111]" style={jost}>
                       Tarjeta de crédito / débito
                     </p>
-                    <span
-                      className="bg-[#F4F4F4] px-2 py-0.5 text-[9px] font-extrabold uppercase text-[#999999]"
-                      style={jost}
-                    >
-                      Próximamente
-                    </span>
                   </div>
                   <p className="mt-0.5 text-[11px] text-[#666666]" style={lato}>
                     Pago seguro con Stripe
@@ -641,14 +677,14 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
             <button
               type="button"
               onClick={handleConfirmar}
-              disabled={submitting || metodoPago === 'tarjeta'}
+              disabled={submitting}
               className="w-full bg-[#CC4B37] py-4 text-[13px] font-extrabold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               style={jost}
             >
               {submitting
                 ? 'Procesando...'
                 : metodoPago === 'tarjeta'
-                ? 'Disponible próximamente'
+                ? 'Continuar al pago →'
                 : 'Confirmar pedido →'}
             </button>
 
@@ -657,6 +693,51 @@ export function CheckoutClient({ user, datosBancarios }: Props) {
                 Al confirmar recibirás los datos bancarios para realizar tu transferencia. Tu pedido
                 se reserva por <strong>48 horas</strong>.
               </p>
+            )}
+
+            {/* Stripe Elements: aparece después de crear la orden con tarjeta */}
+            {metodoPago === 'tarjeta' && stripeClientSecret && stripePromise && (
+              <div className="border border-[#EEEEEE] bg-white p-5">
+                <p
+                  className="mb-4 text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+                  style={jost}
+                >
+                  Información de pago
+                </p>
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret: stripeClientSecret,
+                    appearance: {
+                      theme: 'stripe',
+                      variables: {
+                        colorPrimary: '#CC4B37',
+                        fontFamily: 'Lato, sans-serif',
+                        borderRadius: '0px',
+                      },
+                    },
+                  }}
+                >
+                  <StripePaymentForm
+                    total={totalFinal}
+                    onSuccess={() => {
+                      clearCart()
+                      setStep('confirmacion')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    onError={(msg) => setError(msg)}
+                  />
+                </Elements>
+              </div>
+            )}
+
+            {metodoPago === 'tarjeta' && !stripePromise && (
+              <div className="border border-[#CC4B37] bg-[#FFF5F4] p-4">
+                <p className="text-[12px] text-[#CC4B37]" style={lato}>
+                  El pago con tarjeta no está disponible temporalmente. Intenta con transferencia o
+                  contacta a info@airnation.online.
+                </p>
+              </div>
             )}
           </div>
         )}
