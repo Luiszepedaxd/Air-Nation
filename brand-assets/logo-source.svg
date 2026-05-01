@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- AirNation isotipo: hexágono blanco sobre cuadrado rojo redondeado -->
+  <!-- Paleta: #CC4B37 (rojo AN) + #FFFFFF (blanco) -->
+  <rect x="0" y="0" width="1024" height="1024" rx="180" ry="180" fill="#CC4B37"/>
+  <!-- Hexágono blanco centrado, escalado al ~62% del cuadrado -->
+  <path d="M 512 192 L 786.5 350.4 L 786.5 673.6 L 512 832 L 237.5 673.6 L 237.5 350.4 Z" fill="#FFFFFF"/>
+</svg>
