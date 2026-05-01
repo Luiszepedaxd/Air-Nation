@@ -3,6 +3,8 @@
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { isNativeApp } from "@/lib/platform";
+
 const SESSION_KEY = "an_pwa_session";
 
 type BeforeInstallPromptLike = {
@@ -56,8 +58,9 @@ function isStandalone(): boolean {
 
 export function usePwaInstall() {
   const ios = typeof window !== "undefined" && isIOSPlatform();
+  const native = typeof window !== "undefined" && isNativeApp();
 
-  const canInstall = true;
+  const canInstall = !native;
 
   const triggerInstall = useCallback(async () => {
     const d = getDeferredPromptSingleton();
@@ -168,6 +171,7 @@ export default function PwaInstallPrompt() {
   }, []);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && isNativeApp()) return;
     return registerPwaInstallOverlay(() => {
       setVariant("ios");
       setOpen(true);
@@ -176,6 +180,7 @@ export default function PwaInstallPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isNativeApp()) return;
 
     const clearTimer = () => {
       if (timerRef.current) {
@@ -260,6 +265,8 @@ export default function PwaInstallPrompt() {
     setDeferredPromptSingleton(null);
     dismissPermanent();
   };
+
+  if (typeof window !== "undefined" && isNativeApp()) return null;
 
   if (!pathname?.startsWith("/dashboard")) return null;
 
