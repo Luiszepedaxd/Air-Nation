@@ -1,6 +1,6 @@
 import BottomNav from '@/components/dashboard/BottomNav'
 import { PushNotifManager } from '@/components/PushNotifManager'
-import AlphaBanner from '@/components/ui/AlphaBanner'
+import BetaBanner from '@/components/ui/BetaBanner'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function AppShell({
@@ -24,7 +24,7 @@ export default async function AppShell({
           overscrollBehavior: 'contain',
         }}
       >
-        <AlphaBanner />
+        <BetaBanner />
         {children}
       </div>
       <BottomNav />

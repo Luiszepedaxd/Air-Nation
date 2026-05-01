@@ -4,8 +4,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import { api } from '@/lib/api'
+import { isNativeApp, isAndroidWeb } from '@/lib/platform'
 
-const STORAGE_KEY = 'airnation_alpha_dismissed'
+const STORAGE_KEY = 'airnation_beta_dismissed'
+const ANDROID_BANNER_KEY = 'airnation_android_play_dismissed'
+
+const PLAY_STORE_URL =
+  'https://play.google.com/store/apps/details?id=com.atomikapps.airnation'
 
 const CATEGORIAS = [
   'General',
@@ -26,9 +31,14 @@ const latoBody = { fontFamily: "'Lato', sans-serif" }
 const inputClass =
   'w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[#111111] outline-none focus:border-[#CC4B37]'
 
-export default function AlphaBanner() {
+export default function BetaBanner() {
+  const [hydrated, setHydrated] = useState(false)
+  const [isNative, setIsNative] = useState(false)
+  const [isAndroidWebPlatform, setIsAndroidWebPlatform] = useState(false)
+
   const [storageReady, setStorageReady] = useState(false)
   const [sessionDismissed, setSessionDismissed] = useState(false)
+  const [androidDismissed, setAndroidDismissed] = useState(false)
   const [thanksPhase, setThanksPhase] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null)
@@ -40,6 +50,13 @@ export default function AlphaBanner() {
   const [sending, setSending] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
+  // Detección de plataforma — solo client-side
+  useEffect(() => {
+    setIsNative(isNativeApp())
+    setIsAndroidWebPlatform(isAndroidWeb())
+    setHydrated(true)
+  }, [])
+
   useEffect(() => {
     setPortalEl(document.body)
   }, [])
@@ -47,8 +64,12 @@ export default function AlphaBanner() {
   useEffect(() => {
     try {
       setSessionDismissed(sessionStorage.getItem(STORAGE_KEY) === 'true')
+      setAndroidDismissed(
+        sessionStorage.getItem(ANDROID_BANNER_KEY) === 'true'
+      )
     } catch {
       setSessionDismissed(false)
+      setAndroidDismissed(false)
     }
     setStorageReady(true)
   }, [])
@@ -85,7 +106,7 @@ export default function AlphaBanner() {
     return () => window.removeEventListener('keydown', onKey)
   }, [modalOpen, closeModal])
 
-  const dismissBanner = useCallback(() => {
+  const dismissBetaBanner = useCallback(() => {
     try {
       sessionStorage.setItem(STORAGE_KEY, 'true')
     } catch {
@@ -93,6 +114,15 @@ export default function AlphaBanner() {
     }
     setSessionDismissed(true)
     setThanksPhase(false)
+  }, [])
+
+  const dismissAndroidBanner = useCallback(() => {
+    try {
+      sessionStorage.setItem(ANDROID_BANNER_KEY, 'true')
+    } catch {
+      /* ignore */
+    }
+    setAndroidDismissed(true)
   }, [])
 
   useEffect(() => {
@@ -131,8 +161,64 @@ export default function AlphaBanner() {
     setThanksPhase(true)
   }
 
-  const showStrip =
-    storageReady && (thanksPhase || !sessionDismissed)
+  // 1. App nativa: no renderiza absolutamente nada.
+  if (!hydrated) return null
+  if (isNative) return null
+
+  // 2. Web Android (no nativa): banner "descarga la app de Play Store".
+  if (isAndroidWebPlatform) {
+    if (!storageReady || androidDismissed) return null
+    return (
+      <div
+        className="relative z-[40] w-full px-4 py-3 text-white"
+        style={{ backgroundColor: '#111111', padding: '12px 16px' }}
+      >
+        <button
+          type="button"
+          onClick={dismissAndroidBanner}
+          className="absolute right-4 top-3 text-white opacity-60 hover:opacity-100"
+          aria-label="Cerrar aviso"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path
+              d="M6 6L18 18M18 6L6 18"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+        <div className="pr-8">
+          <div className="flex flex-col gap-1 md:flex-row md:flex-wrap md:items-center md:gap-x-2">
+            <span
+              className="block shrink-0 font-bold leading-snug"
+              style={latoBody}
+            >
+              AirNation ya está en Google Play
+            </span>
+            <span
+              className="block text-sm leading-snug text-white/95 md:inline md:text-sm"
+              style={latoBody}
+            >
+              Descarga la app oficial para la mejor experiencia.{' '}
+              <a
+                href={PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline underline decoration-white/50 underline-offset-2 hover:decoration-white"
+                style={latoBody}
+              >
+                Descargar →
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 3. Web iOS y desktop: banner Beta + feedback (comportamiento original con renombre).
+  const showStrip = storageReady && (thanksPhase || !sessionDismissed)
 
   const modal =
     modalOpen && portalEl
@@ -216,9 +302,7 @@ export default function AlphaBanner() {
                   <textarea
                     id="feedback-mensaje"
                     value={mensaje}
-                    onChange={(e) =>
-                      setMensaje(e.target.value.slice(0, 1000))
-                    }
+                    onChange={(e) => setMensaje(e.target.value.slice(0, 1000))}
                     rows={5}
                     maxLength={1000}
                     placeholder="Cuéntanos lo que piensas..."
@@ -287,7 +371,7 @@ export default function AlphaBanner() {
             <>
               <button
                 type="button"
-                onClick={dismissBanner}
+                onClick={dismissBetaBanner}
                 className="absolute right-4 top-3 text-white opacity-60 hover:opacity-100"
                 aria-label="Cerrar aviso"
               >
@@ -306,15 +390,14 @@ export default function AlphaBanner() {
                     className="block shrink-0 font-bold leading-snug"
                     style={latoBody}
                   >
-                    AirNation está en Alpha
+                    AirNation está en Beta
                   </span>
                   <span
                     className="block text-sm leading-snug text-white/95 md:inline md:text-sm"
                     style={latoBody}
                   >
-                    Estamos construyendo esto para la comunidad. Algunas
-                    funciones están en desarrollo — tu opinión nos ayuda a
-                    mejorar.{' '}
+                    Estamos construyendo esto para la comunidad. Algunas funciones
+                    están en desarrollo — tu opinión nos ayuda a mejorar.{' '}
                     <button
                       type="button"
                       onClick={openModal}
