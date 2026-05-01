@@ -105,32 +105,6 @@ const FEATURES = [
       </svg>
     ),
   },
-  {
-    num: "07",
-    tag: "Emergencia",
-    title: "SOS + Documentos",
-    description:
-      "PDFs de GN, SSP, SCT y Policía Municipal siempre disponibles. Y un árbol de decisiones paso a paso si te detienen.",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
-        <path
-          d="M7 2h8l4 4v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h3Z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-        <path d="M15 2v4h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-        <path d="M7 10h8M7 13h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <path
-          d="M17 17.5h-3v-3M14 17.5l3.5-3.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
 ];
 
 const ITEMS = [...FEATURES, ...FEATURES, ...FEATURES];
@@ -340,7 +314,7 @@ export default function Features() {
             NECESITABA.
           </h2>
           <p className="mt-6 max-w-lg font-body text-base leading-[1.7] text-an-text-dim sm:text-[1.05rem]">
-            Siete herramientas construidas desde adentro del juego — no desde una oficina.
+            Seis herramientas construidas desde adentro del juego — no desde una oficina.
           </p>
         </div>
 

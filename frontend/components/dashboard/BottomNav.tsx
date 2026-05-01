@@ -183,7 +183,6 @@ function ProfileIconWithBadge({
 export default function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
-  const [panicModal, setPanicModal] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [pendingJoinCount, setPendingJoinCount] = useState(0)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
@@ -341,16 +340,6 @@ export default function BottomNav() {
             )
           })}
 
-          <button onClick={() => setPanicModal(true)}
-                  className="flex flex-col items-center gap-1 px-4 py-2 relative">
-            <span className="absolute top-1 right-3 w-1.5 h-1.5 bg-[#CC4B37] rounded-full animate-pulse"/>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="#CCCCCC" strokeWidth="1.8"/>
-              <path d="M12 8v4M12 16h.01" stroke="#CCCCCC" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-[#CCCCCC]">SOS</span>
-          </button>
-
           {isAdmin && (
             <Link
               href="/admin"
@@ -426,91 +415,6 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {panicModal && (
-        <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center"
-             onClick={() => setPanicModal(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
-
-          <div className="relative w-full max-w-lg bg-white z-10 p-8 pb-12"
-               onClick={(e) => e.stopPropagation()}>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-[#CC4B37] flex items-center justify-center shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2"/>
-                  <path d="M12 8v4M12 16h.01" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </div>
-              <div>
-                <span className="text-[#CC4B37] text-[0.6rem] font-bold uppercase tracking-[0.25em] block">
-                  Próximamente
-                </span>
-                <h3 style={{fontFamily:'Jost,sans-serif'}}
-                    className="font-black text-xl uppercase text-[#111111] leading-none">
-                  BOTÓN DE PÁNICO
-                </h3>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-4 mb-8">
-              {[
-                {
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="#CC4B37" strokeWidth="1.8"/>
-                      <path d="M12 8v4M12 16h.01" stroke="#CC4B37" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  ),
-                  text: 'Alerta inmediata a tu equipo con tu ubicación'
-                },
-                {
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M9 12h6M9 16h4M7 3h10l4 4v14a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1h3Z"
-                        stroke="#CC4B37" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  ),
-                  text: 'Guía paso a paso según la autoridad que te detuvo'
-                },
-                {
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="6" width="20" height="13" rx="1.5" stroke="#CC4B37" strokeWidth="1.8"/>
-                      <path d="M8 11h8M8 14.5h5" stroke="#CC4B37" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  ),
-                  text: 'Tus documentos listos para mostrar al instante'
-                },
-                {
-                  icon: (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 3v4M4.93 7.93l2.83 2.83M3 15h4M4.93 20.07l2.83-2.83M12 21v-4M19.07 20.07l-2.83-2.83M21 15h-4M19.07 7.93l-2.83 2.83"
-                        stroke="#CC4B37" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  ),
-                  text: 'Información de tus derechos según tu estado'
-                },
-              ].map(({ icon, text }) => (
-                <div key={text} className="flex items-start gap-3">
-                  <span className="shrink-0 mt-0.5">{icon}</span>
-                  <p className="text-[#444444] text-sm leading-relaxed">{text}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 bg-[#F4F4F4] border-l-2 border-[#CC4B37] mb-6">
-              <p className="text-[#444444] text-xs leading-relaxed">
-                Estamos construyendo esto con cuidado. Tu seguridad y la de tu equipo merecen que lo hagamos bien.
-              </p>
-            </div>
-
-            <button onClick={() => setPanicModal(false)}
-                    className="w-full py-3.5 bg-[#111111] text-white font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:bg-[#333333] transition-colors">
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }
