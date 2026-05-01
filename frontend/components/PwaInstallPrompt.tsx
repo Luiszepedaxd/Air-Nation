@@ -306,7 +306,7 @@ export default function PwaInstallPrompt() {
         </h2>
 
         <p className="mt-4 font-body text-sm leading-relaxed text-[#444444]">
-          Estás dentro antes que nadie. Mientras AirNation llega a App Store y Google Play, ya puedes tenerla en tu
+          Estás dentro antes que nadie. Mientras AirNation llega a App Store, ya puedes tenerla en tu
           pantalla de inicio — sin esperar permiso de nadie.
         </p>
 
