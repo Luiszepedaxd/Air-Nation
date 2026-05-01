@@ -16,7 +16,6 @@ const config: CapacitorConfig = {
 
   // Suffix custom en User Agent. El middleware Next.js detecta 'AirNationApp'
   // para redirigir '/' sin sesión a '/welcome' (en lugar de mostrar la landing).
-  // Capacitor por default ya añade su firma, pero este suffix lo hace robusto.
   android: {
     appendUserAgent: 'AirNationApp',
     backgroundColor: '#FFFFFF',
@@ -24,6 +23,32 @@ const config: CapacitorConfig = {
   ios: {
     appendUserAgent: 'AirNationApp',
     backgroundColor: '#FFFFFF',
+  },
+
+  plugins: {
+    SplashScreen: {
+      // Tiempo máximo del splash en milisegundos. Si la web carga antes,
+      // el splash se oculta antes (controlado desde JS).
+      launchShowDuration: 2000,
+      // No esperar a que JS llame manualmente a hide() — auto-hide al cargar.
+      launchAutoHide: true,
+      // Fondo blanco alineado con design system AirNation.
+      backgroundColor: '#FFFFFF',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      // Sin spinner — el splash es una pausa, no una pantalla de carga.
+      showSpinner: false,
+      // No transición fade — corte limpio a la app.
+      splashFullScreen: true,
+      splashImmersive: false,
+    },
+    StatusBar: {
+      // Barra superior alineada con fondo blanco de la app.
+      // 'DARK' = texto oscuro sobre fondo claro (correcto para fondo blanco).
+      style: 'DARK',
+      backgroundColor: '#FFFFFF',
+      overlaysWebView: false,
+    },
   },
 };
 

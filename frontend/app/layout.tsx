@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import CapacitorBridge from "@/components/CapacitorBridge";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import PwaRegister from "@/components/PwaRegister";
@@ -83,6 +84,7 @@ export default function RootLayout({
         />
         {children}
         <GoogleAnalytics />
+        <CapacitorBridge />
         <PwaRegister />
         <PwaInstallPrompt />
       </body>
