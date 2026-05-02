@@ -27,6 +27,7 @@ import {
 } from './MisEventosRsvpSection'
 import { MisEquiposSection, type MisEquipoItem } from './MisEquiposSection'
 import { NotificacionesTab } from './NotificacionesTab'
+import { BloqueadosSection } from './BloqueadosSection'
 import { PerfilLogoutButton } from './PerfilLogoutButton'
 import {
   ProfileView,
@@ -797,6 +798,9 @@ export function PerfilTabsClient({
               triggerPush={triggerPush}
               pushLoading={pushLoading}
             />
+            <div className="mt-8 max-w-[640px]">
+              <BloqueadosSection userId={user.id} />
+            </div>
             <div className="mt-8 space-y-3 border-t border-[#EEEEEE] pt-8">
               {isAdmin && (
                 <Link
