@@ -262,6 +262,49 @@ export default async function PublicProfilePage({
     data: { user: currentUser },
   } = await supabaseServer.auth.getUser()
 
+  const supabasePublic = createPublicSupabaseClient()
+
+  // Verificar bloqueo bidireccional
+  let isBlockedByMe = false
+  let amIBlockedByThem = false
+  if (currentUser && currentUser.id !== user.id) {
+    const { data: blocks } = await supabasePublic
+      .from('user_blocks')
+      .select('blocker_id, blocked_id')
+      .or(
+        `and(blocker_id.eq.${currentUser.id},blocked_id.eq.${user.id}),and(blocker_id.eq.${user.id},blocked_id.eq.${currentUser.id})`
+      )
+
+    for (const b of blocks ?? []) {
+      const row = b as { blocker_id: string; blocked_id: string }
+      if (row.blocker_id === currentUser.id && row.blocked_id === user.id) {
+        isBlockedByMe = true
+      }
+      if (row.blocker_id === user.id && row.blocked_id === currentUser.id) {
+        amIBlockedByThem = true
+      }
+    }
+  }
+
+  // Si el otro usuario me bloqueó, mostrar perfil no disponible
+  if (amIBlockedByThem) {
+    return (
+      <main className="flex min-h-screen min-w-[375px] items-center justify-center bg-[#FFFFFF] px-8 py-8 text-[#111111]">
+        <div className="text-center">
+          <h1
+            style={jost}
+            className="text-[24px] font-extrabold uppercase leading-tight text-[#111111]"
+          >
+            Perfil no disponible
+          </h1>
+          <p className="mt-4 text-[14px] text-[#666666]" style={lato}>
+            Este perfil no está disponible
+          </p>
+        </div>
+      </main>
+    )
+  }
+
   if (user.perfil_publico === false) {
     return (
       <main className="flex min-h-screen min-w-[375px] items-center justify-center bg-[#FFFFFF] px-8 py-8 text-[#111111]">
@@ -289,7 +332,6 @@ export default async function PublicProfilePage({
     !!user.foto_portada_url &&
     (replicas.length > 0 || posts.length > 0)
 
-  const supabasePublic = createPublicSupabaseClient()
   const [
     { count: followersCount },
     { count: followingCount },
@@ -353,19 +395,33 @@ export default async function PublicProfilePage({
         isVerified={isVerified}
         arsenalCount={replicas.length}
         postsCount={posts.length}
+        isBlockedByMe={isBlockedByMe}
       />
 
-      <PlayerProfileClient
-        user={user}
-        posts={posts}
-        events={events}
-        replicas={replicas}
-        rolLabels={ROL_LABELS}
-        currentUserId={currentUser?.id ?? null}
-        showPostBox={currentUser?.id === user.id}
-        currentUserAlias={currentUser?.user_metadata?.alias ?? null}
-        currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}
-      />
+      {isBlockedByMe ? (
+        <div className="mx-auto max-w-[960px] px-4 py-12 md:px-6 md:py-16">
+          <div className="border border-[#EEEEEE] bg-[#F9F9F9] px-6 py-8 text-center">
+            <p style={jost} className="text-[14px] font-extrabold uppercase text-[#111111] mb-2">
+              Has bloqueado a este jugador
+            </p>
+            <p style={lato} className="text-[13px] text-[#666666]">
+              No puedes ver su contenido. Toca el botón de bloqueo arriba para desbloquearlo.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <PlayerProfileClient
+          user={user}
+          posts={posts}
+          events={events}
+          replicas={replicas}
+          rolLabels={ROL_LABELS}
+          currentUserId={currentUser?.id ?? null}
+          showPostBox={currentUser?.id === user.id}
+          currentUserAlias={currentUser?.user_metadata?.alias ?? null}
+          currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}
+        />
+      )}
     </main>
   )
 }

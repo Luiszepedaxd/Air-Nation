@@ -9,6 +9,7 @@ import { FollowButton } from './FollowButton'
 import { MessageButton } from './MessageButton'
 import { FollowListModal } from './FollowListModal'
 import { ReportModal } from '@/components/ReportModal'
+import { BlockButton } from './BlockButton'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -203,6 +204,7 @@ export function PlayerHero({
   onEditClick,
   arsenalCount,
   postsCount,
+  isBlockedByMe = false,
 }: {
   user: PublicUserProfile
   subtitle: string
@@ -216,6 +218,7 @@ export function PlayerHero({
   onEditClick?: () => void
   arsenalCount?: number
   postsCount?: number
+  isBlockedByMe?: boolean
 }) {
   const router = useRouter()
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null)
@@ -396,18 +399,26 @@ export function PlayerHero({
                 </svg>
               </button>
             ) : currentUserId && currentUserId !== user.id ? (
-              <button
-                type="button"
-                onClick={() => setReportOpen(true)}
-                className="ml-auto flex h-8 w-8 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] transition-colors hover:border-[#CCCCCC]"
-                aria-label="Reportar usuario"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
-                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-                  <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
-                </svg>
-              </button>
+              <div className="ml-auto flex items-center gap-2">
+                <BlockButton
+                  profileUserId={user.id}
+                  currentUserId={currentUserId}
+                  initialIsBlocked={isBlockedByMe ?? false}
+                  profileAlias={user.alias}
+                />
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(true)}
+                  className="flex h-8 w-8 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] transition-colors hover:border-[#CCCCCC]"
+                  aria-label="Reportar usuario"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+                    <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                    <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+                  </svg>
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
