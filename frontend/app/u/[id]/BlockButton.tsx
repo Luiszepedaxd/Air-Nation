@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { clearFeedSessionCache } from '@/app/dashboard/FeedHome'
 import { blockUser, unblockUser } from '@/lib/user-blocks'
 
 const jost = {
@@ -36,6 +37,7 @@ export function BlockButton({
       setIsBlocked(true)
       setConfirming(false)
       onBlockedChange?.(true)
+      clearFeedSessionCache()
       // Recargar la página para que el server component aplique la pantalla bloqueada
       window.location.reload()
     }
@@ -49,6 +51,7 @@ export function BlockButton({
       setIsBlocked(false)
       setConfirming(false)
       onBlockedChange?.(false)
+      clearFeedSessionCache()
       window.location.reload()
     }
   }

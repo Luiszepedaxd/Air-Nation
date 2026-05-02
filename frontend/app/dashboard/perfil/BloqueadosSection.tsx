@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { clearFeedSessionCache } from '@/app/dashboard/FeedHome'
 import { supabase } from '@/lib/supabase'
 import { unblockUser } from '@/lib/user-blocks'
 
@@ -108,6 +109,9 @@ export function BloqueadosSection({ userId }: { userId: string }) {
       setUsers((prev) => prev.filter((u) => u.id !== blockedId))
       setCount((c) => (c != null ? Math.max(0, c - 1) : null))
       setConfirmingId(null)
+      // Invalidar cache del feed para que la próxima carga incluya
+      // los posts del usuario que acabamos de desbloquear
+      clearFeedSessionCache()
     }
   }
 
