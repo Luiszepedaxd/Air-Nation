@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { PostActions } from '@/components/posts/PostInteractions'
+import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { formatEventoFechaCorta } from '@/app/eventos/lib/format-evento-fecha'
 import {
   FIELD_DAY_KEYS,
@@ -551,7 +552,7 @@ export function CampoPublicTabs({
                         <p className="text-[11px] text-[#999999]" style={lato}>
                           {formatRelative(p.created_at)}
                         </p>
-                        <PostMenu
+                        <ReportablePostMenu
                           canDelete={isFieldOwner}
                           onDelete={async () => {
                             const { error } = await supabase
@@ -565,6 +566,15 @@ export function CampoPublicTabs({
                               )
                             }
                           }}
+                          reporterId={
+                            currentUserId && !isFieldOwner ? currentUserId : null
+                          }
+                          targetType="post"
+                          targetId={p.id}
+                          targetLabel={
+                            p.content?.trim().slice(0, 80) ||
+                            `Publicación en ${field.nombre}`
+                          }
                         />
                       </div>
                       {p.content?.trim() ? (

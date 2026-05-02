@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { PostActions } from '@/components/posts/PostInteractions'
+import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
@@ -1574,7 +1575,7 @@ function PostsTab({
                     <p className="text-[11px] text-[#999999]" style={lato}>
                       {relativeTime(post.created_at)}
                     </p>
-                    <PostMenu
+                    <ReportablePostMenu
                       canDelete={true}
                       onDelete={async () => {
                         const { error } = await supabase
@@ -1586,6 +1587,12 @@ function PostsTab({
                           setPosts((prev) => prev.filter((x) => x.id !== post.id))
                         }
                       }}
+                      reporterId={null}
+                      targetType="post"
+                      targetId={post.id}
+                      targetLabel={
+                        post.content?.trim().slice(0, 80) || 'Publicación'
+                      }
                     />
                   </div>
                   {post.content?.trim() ? (

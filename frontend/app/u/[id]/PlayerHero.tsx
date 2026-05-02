@@ -8,6 +8,7 @@ import type { PublicUserProfile } from './types'
 import { FollowButton } from './FollowButton'
 import { MessageButton } from './MessageButton'
 import { FollowListModal } from './FollowListModal'
+import { ReportModal } from '@/components/ReportModal'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -221,6 +222,7 @@ export function PlayerHero({
   const [showAllSocials, setShowAllSocials] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
   const [followModal, setFollowModal] = useState<'followers' | 'following' | null>(null)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const initial = (user.alias?.trim()?.[0] || '?').toUpperCase()
   const hasMemberNo =
@@ -386,6 +388,19 @@ export function PlayerHero({
                 onClick={onEditClick}
                 className="ml-auto flex h-8 w-8 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] transition-colors hover:border-[#CCCCCC]"
                 aria-label="Editar perfil"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+                </svg>
+              </button>
+            ) : currentUserId && currentUserId !== user.id ? (
+              <button
+                type="button"
+                onClick={() => setReportOpen(true)}
+                className="ml-auto flex h-8 w-8 items-center justify-center border border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] transition-colors hover:border-[#CCCCCC]"
+                aria-label="Reportar usuario"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
@@ -667,6 +682,15 @@ export function PlayerHero({
         userId={user.id}
         mode={followModal ?? 'followers'}
         title={followModal === 'following' ? 'Siguiendo' : 'Seguidores'}
+      />
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        reporterId={currentUserId}
+        targetType="user"
+        targetId={user.id}
+        targetLabel={user.alias || 'este usuario'}
       />
     </header>
   )

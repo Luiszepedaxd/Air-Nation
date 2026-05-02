@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { PostActions } from '@/components/posts/PostInteractions'
+import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
 import { PostBox, FeedInlineVideo } from '@/app/dashboard/FeedHome'
 
@@ -141,7 +142,7 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                     <p className="text-[11px] text-[#999999]" style={lato}>
                       {formatDate(post.created_at)}
                     </p>
-                    <PostMenu
+                    <ReportablePostMenu
                       canDelete={true}
                       onDelete={async () => {
                         const { error } = await supabase
@@ -153,6 +154,12 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                           setPosts((prev) => prev.filter((x) => x.id !== post.id))
                         }
                       }}
+                      reporterId={null}
+                      targetType="post"
+                      targetId={post.id}
+                      targetLabel={
+                        post.content?.trim().slice(0, 80) || 'Publicación'
+                      }
                     />
                   </div>
                   {post.content?.trim() ? (

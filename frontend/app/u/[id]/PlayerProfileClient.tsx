@@ -11,7 +11,8 @@ import {
 } from '@/app/dashboard/FeedHome'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { PostActions } from '@/components/posts/PostInteractions'
+import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
 import type {
   PlayerEventRow,
@@ -252,7 +253,7 @@ function PostsPanel({
                   year: 'numeric',
                 }).format(new Date(post.created_at))}
               </p>
-              <PostMenu
+              <ReportablePostMenu
                 canDelete={isOwner}
                 onDelete={async () => {
                   const { error } = await supabase
@@ -265,6 +266,13 @@ function PostsPanel({
                     void router.refresh()
                   }
                 }}
+                reporterId={!isOwner ? currentUserId : null}
+                targetType="post"
+                targetId={post.id}
+                targetLabel={
+                  post.content?.trim().slice(0, 80) ||
+                  'Publicación'
+                }
               />
             </div>
             {post.content?.trim() ? (

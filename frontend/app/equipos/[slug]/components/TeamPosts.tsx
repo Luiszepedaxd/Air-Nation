@@ -2,7 +2,8 @@
 
 import type { TeamPostRow } from '../types'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { PostActions, PostMenu } from '@/components/posts/PostInteractions'
+import { PostActions } from '@/components/posts/PostInteractions'
+import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -93,6 +94,11 @@ export function TeamPosts({
         {posts.map((post) => {
           const urls = postPhotoUrls(post)
           const ex = excerpt(post.content, 120)
+          const authorId = post.created_by ?? teamOwnerId
+          const reportReporterId =
+            currentUserId && authorId && currentUserId !== authorId
+              ? currentUserId
+              : null
 
           return (
             <article
@@ -107,7 +113,7 @@ export function TeamPosts({
                 >
                   {formatDate(post.created_at)}
                 </time>
-                <PostMenu
+                <ReportablePostMenu
                   canDelete={
                     userTeamRole === 'founder' || userTeamRole === 'admin'
                   }
@@ -120,6 +126,10 @@ export function TeamPosts({
                       window.location.reload()
                     }
                   }}
+                  reporterId={reportReporterId}
+                  targetType="post"
+                  targetId={post.id}
+                  targetLabel={ex ? ex.slice(0, 80) : 'Publicación del equipo'}
                 />
               </div>
               {ex ? (

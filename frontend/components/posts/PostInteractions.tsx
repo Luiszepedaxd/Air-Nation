@@ -179,17 +179,21 @@ export function PostMenu({
   canPin = false,
   isPinned = false,
   onPin,
+  canReport = false,
+  onReport,
 }: {
   canDelete: boolean
   onDelete: () => void
   canPin?: boolean
   isPinned?: boolean
   onPin?: () => void
+  canReport?: boolean
+  onReport?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
-  if (!canDelete && !canPin) return null
+  if (!canDelete && !canPin && !canReport) return null
 
   return (
     <div className="relative">
@@ -266,6 +270,19 @@ export function PostMenu({
                       <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     Eliminar publicación
+                  </button>
+                )}
+                {canReport && onReport && (
+                  <button
+                    type="button"
+                    onClick={() => { onReport(); setOpen(false); setConfirming(false) }}
+                    style={lato}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-[13px] text-[#666666] hover:bg-[#F4F4F4] transition-colors border-t border-[#EEEEEE]"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <path d="M4 21V4M4 4h13l-2 4 2 4H4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Reportar publicación
                   </button>
                 )}
               </>

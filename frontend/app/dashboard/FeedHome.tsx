@@ -14,7 +14,8 @@ import {
 } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { PostMenu, PostActions } from '@/components/posts/PostInteractions'
+import { PostActions } from '@/components/posts/PostInteractions'
+import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
 import { uploadFile, uploadVideo } from '@/lib/apiFetch'
 import { CropModal } from '@/components/posts/CropModal'
@@ -1085,7 +1086,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
           <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(item.created_at)}</p>
         </div>
         <div className="ml-auto">
-          <PostMenu
+          <ReportablePostMenu
             canDelete={userTeamRole === 'founder' || userTeamRole === 'admin'}
             onDelete={async () => {
               const { error } = await supabase
@@ -1095,6 +1096,15 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
                 .eq('team_id', item.team_id)
               if (!error) onPostDeleted(item.id)
             }}
+            reporterId={
+              currentUserId &&
+              (!item.post_owner_id || currentUserId !== item.post_owner_id)
+                ? currentUserId
+                : null
+            }
+            targetType="post"
+            targetId={item.id}
+            targetLabel={`Publicación de ${item.team.nombre}`}
           />
         </div>
       </div>
@@ -1187,12 +1197,16 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               )}
             </span>
           </Link>
-          <PostMenu
+          <ReportablePostMenu
             canDelete={isOwner}
             onDelete={handleDelete}
             canPin={isAdmin}
             isPinned={false}
             onPin={handlePin}
+            reporterId={currentUserId && !isOwner ? currentUserId : null}
+            targetType="post"
+            targetId={item.id}
+            targetLabel={`Publicación de ${name}`}
           />
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
@@ -1312,12 +1326,20 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               )}
             </span>
           </Link>
-          <PostMenu
+          <ReportablePostMenu
             canPin={isAdmin}
             isPinned={true}
             onPin={handleUnpin}
             canDelete={isAdmin}
             onDelete={handleUnpin}
+            reporterId={
+              currentUserId && currentUserId !== item.user_id
+                ? currentUserId
+                : null
+            }
+            targetType="post"
+            targetId={item.id}
+            targetLabel={`Publicación de ${name}`}
           />
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
@@ -1423,7 +1445,7 @@ function FieldPostCard({
             {formatRelativeTime(item.created_at)}
           </p>
         </div>
-        <PostMenu
+        <ReportablePostMenu
           canDelete={currentUserId === item.created_by}
           onDelete={async () => {
             const { error } = await supabase
@@ -1432,6 +1454,14 @@ function FieldPostCard({
               .eq('id', item.id)
             if (!error) onPostDeleted(item.id)
           }}
+          reporterId={
+            currentUserId && currentUserId !== item.created_by
+              ? currentUserId
+              : null
+          }
+          targetType="post"
+          targetId={item.id}
+          targetLabel={`Publicación en ${item.field.nombre}`}
         />
       </div>
       {item.content?.trim() && (
