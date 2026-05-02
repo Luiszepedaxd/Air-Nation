@@ -1866,6 +1866,12 @@ function FeedTab({
       if (currentUserId) {
         try {
           blockedIds = await getBlockedUserIds(currentUserId)
+          console.log(
+            '[FeedTab] blockedIds size:',
+            blockedIds.size,
+            'ids:',
+            Array.from(blockedIds)
+          )
         } catch (e) {
           console.error('[FeedTab] getBlockedUserIds failed', e)
         }

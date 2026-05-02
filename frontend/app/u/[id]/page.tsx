@@ -268,12 +268,16 @@ export default async function PublicProfilePage({
   let isBlockedByMe = false
   let amIBlockedByThem = false
   if (currentUser && currentUser.id !== user.id) {
-    const { data: blocks } = await supabasePublic
+    const { data: blocks, error: blocksErr } = await supabaseServer
       .from('user_blocks')
       .select('blocker_id, blocked_id')
       .or(
         `and(blocker_id.eq.${currentUser.id},blocked_id.eq.${user.id}),and(blocker_id.eq.${user.id},blocked_id.eq.${currentUser.id})`
       )
+
+    if (blocksErr) {
+      console.error('[u/profile] user_blocks query error:', blocksErr)
+    }
 
     for (const b of blocks ?? []) {
       const row = b as { blocker_id: string; blocked_id: string }
