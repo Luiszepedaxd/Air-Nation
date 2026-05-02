@@ -17,6 +17,7 @@ import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
+import { getBlockedUserIds } from '@/lib/user-blocks'
 import { uploadFile, uploadVideo } from '@/lib/apiFetch'
 import { CropModal } from '@/components/posts/CropModal'
 import { MentionInput } from '@/components/posts/MentionInput'
@@ -1861,6 +1862,14 @@ function FeedTab({
       loadingMoreRef.current = false
       setLoadingMore(false)
       setLoading(true)
+      let blockedIds: Set<string> = new Set()
+      if (currentUserId) {
+        try {
+          blockedIds = await getBlockedUserIds(currentUserId)
+        } catch (e) {
+          console.error('[FeedTab] getBlockedUserIds failed', e)
+        }
+      }
       try {
       const [
         teamPostsRes,
@@ -2147,10 +2156,32 @@ function FeedTab({
         })
       }
 
-      const pinnedRows = feedItems.filter(
+      // Filtro de bloqueos: descartar posts de usuarios bloqueados (bidireccional)
+      const filteredItems =
+        blockedIds.size > 0
+          ? feedItems.filter((item) => {
+              if (
+                (item.kind === 'player_post' || item.kind === 'pinned_post') &&
+                item.user_id &&
+                blockedIds.has(item.user_id)
+              ) {
+                return false
+              }
+              if (
+                (item.kind === 'team_post' || item.kind === 'field_post') &&
+                item.post_owner_id &&
+                blockedIds.has(item.post_owner_id)
+              ) {
+                return false
+              }
+              return true
+            })
+          : feedItems
+
+      const pinnedRows = filteredItems.filter(
         (i): i is Extract<FeedItem, { kind: 'pinned_post' }> => i.kind === 'pinned_post'
       )
-      const rest = feedItems.filter((i) => i.kind !== 'pinned_post')
+      const rest = filteredItems.filter((i) => i.kind !== 'pinned_post')
       rest.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -2179,7 +2210,7 @@ function FeedTab({
       } finally {
         setLoading(false)
       }
-  }, [])
+  }, [currentUserId])
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || !hasMore || loading) return
@@ -2192,6 +2223,14 @@ function FeedTab({
     setLoadingMore(true)
     let didAppendFromServer = false
     try {
+      let blockedIdsLoadMore: Set<string> = new Set()
+      if (currentUserId) {
+        try {
+          blockedIdsLoadMore = await getBlockedUserIds(currentUserId)
+        } catch (e) {
+          console.error('[FeedTab loadMore] getBlockedUserIds failed', e)
+        }
+      }
       const [teamRes, playerRes] = await Promise.all([
         cursorTeamPosts
           ? supabase
@@ -2299,7 +2338,28 @@ function FeedTab({
         })
       }
 
-      newItems.sort(
+      const filteredNewItems =
+        blockedIdsLoadMore.size > 0
+          ? newItems.filter((item) => {
+              if (
+                item.kind === 'player_post' &&
+                item.user_id &&
+                blockedIdsLoadMore.has(item.user_id)
+              ) {
+                return false
+              }
+              if (
+                (item.kind === 'team_post' || item.kind === 'field_post') &&
+                item.post_owner_id &&
+                blockedIdsLoadMore.has(item.post_owner_id)
+              ) {
+                return false
+              }
+              return true
+            })
+          : newItems
+
+      filteredNewItems.sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
@@ -2312,13 +2372,13 @@ function FeedTab({
         setCursorPlayerPosts(String(last.created_at))
       }
 
-      setItems((prev) => [...prev, ...newItems])
+      setItems((prev) => [...prev, ...filteredNewItems])
     } finally {
       loadingMoreRef.current = false
       setLoadingMore(false)
       if (didAppendFromServer) touchFeedItemsTimestamp()
     }
-  }, [cursorPlayerPosts, cursorTeamPosts, hasMore, loading])
+  }, [cursorPlayerPosts, cursorTeamPosts, hasMore, loading, currentUserId])
 
   useLayoutEffect(() => {
     const cached = readFeedTabSessionCache()
