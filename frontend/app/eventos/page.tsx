@@ -224,15 +224,8 @@ export default async function EventosPage() {
         {/* Contenido */}
         <div className="relative z-10 mx-auto w-full max-w-[1200px] px-5 py-12 sm:px-8 md:px-6 md:py-16">
           <div className="max-w-[640px]">
-            <p
-              className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#CC4B37]"
-              style={{ ...jost, fontWeight: 800 }}
-            >
-              CALENDARIO 2026
-            </p>
-
             <h1
-              className="mt-4 font-extrabold uppercase leading-[1.02] text-white"
+              className="font-extrabold uppercase leading-[1.02] text-white"
               style={{ ...jost, fontWeight: 800, fontSize: 'clamp(2rem, 7vw, 4.5rem)' }}
             >
               Eventos de Airsoft en México
