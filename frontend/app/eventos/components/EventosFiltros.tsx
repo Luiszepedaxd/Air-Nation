@@ -1,19 +1,19 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { EventoCard, type EventoCardRow } from './EventoCard'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const MESES_ES = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
 type MesOption = {
-  key: string // 'YYYY-MM'
-  label: string // 'Mayo' o 'May 2027'
+  key: string
+  label: string
   year: number
   month: number
 }
@@ -62,6 +62,157 @@ function eventoMatchesCiudad(e: EventoCardRow, ciudad: string | null): boolean {
   return c === ciudad
 }
 
+function ChevronDown() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6 9l6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function CloseX() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6 6l12 12M18 6L6 18"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function FilterDropdown({
+  label,
+  activeLabel,
+  options,
+  onSelect,
+  onClear,
+}: {
+  label: string
+  activeLabel: string | null
+  options: { key: string; label: string }[]
+  onSelect: (key: string) => void
+  onClear: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open])
+
+  const hasActive = activeLabel !== null
+
+  return (
+    <div ref={containerRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`flex items-center gap-2 border border-solid px-3 py-2 text-[10px] font-extrabold uppercase tracking-[0.1em] transition-colors ${
+          hasActive
+            ? 'border-[#CC4B37] bg-[#CC4B37] text-white'
+            : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
+        }`}
+        style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+      >
+        <span>
+          {label}
+          {hasActive ? `: ${activeLabel}` : ''}
+        </span>
+        {hasActive ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation()
+              onClear()
+              setOpen(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                e.stopPropagation()
+                onClear()
+                setOpen(false)
+              }
+            }}
+            className="flex h-4 w-4 items-center justify-center hover:opacity-70"
+            aria-label="Limpiar filtro"
+          >
+            <CloseX />
+          </span>
+        ) : (
+          <ChevronDown />
+        )}
+      </button>
+
+      {open ? (
+        <>
+          <div
+            className="fixed inset-0 z-[90]"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div
+            className="absolute left-0 top-full z-[100] mt-1 min-w-[180px] border border-solid border-[#EEEEEE] bg-white shadow-lg"
+            style={{ borderRadius: 2 }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onClear()
+                setOpen(false)
+              }}
+              className={`flex w-full items-center px-4 py-2.5 text-left text-[12px] uppercase tracking-[0.06em] transition-colors hover:bg-[#F4F4F4] ${
+                !hasActive ? 'font-extrabold text-[#CC4B37]' : 'text-[#111111]'
+              }`}
+              style={{ ...jost, fontWeight: !hasActive ? 800 : 600 }}
+            >
+              Todos
+            </button>
+            <div className="border-t border-solid border-[#EEEEEE]" />
+            {options.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  onSelect(opt.key)
+                  setOpen(false)
+                }}
+                className={`flex w-full items-center px-4 py-2.5 text-left text-[12px] uppercase tracking-[0.06em] transition-colors hover:bg-[#F4F4F4] ${
+                  activeLabel === opt.label
+                    ? 'font-extrabold text-[#CC4B37]'
+                    : 'text-[#111111]'
+                }`}
+                style={{
+                  ...jost,
+                  fontWeight: activeLabel === opt.label ? 800 : 600,
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
   const [mesActivo, setMesActivo] = useState<string | null>(null)
   const [ciudadActiva, setCiudadActiva] = useState<string | null>(null)
@@ -87,6 +238,11 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
     setCiudadActiva(null)
   }
 
+  const mesActivoLabel = mesActivo
+    ? mesesOptions.find((m) => m.key === mesActivo)?.label ?? null
+    : null
+  const ciudadActivaLabel = ciudadActiva ?? null
+
   return (
     <>
       {showFiltrosBar ? (
@@ -95,102 +251,48 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
           style={{ borderRadius: 0 }}
         >
           <div className="mx-auto max-w-[1200px] px-4 py-3 md:px-6">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-              {showMes ? (
-                <div className="flex items-start gap-2 overflow-x-auto md:items-center">
-                  <span
-                    className="shrink-0 self-center text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
-                    style={{ ...jost, fontWeight: 800 }}
-                  >
-                    MES
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMesActivo(null)}
-                      className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                        mesActivo === null
-                          ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                          : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
-                      }`}
-                      style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-                    >
-                      Todos
-                    </button>
-                    {mesesOptions.map((m) => (
-                      <button
-                        key={m.key}
-                        type="button"
-                        onClick={() => setMesActivo(m.key)}
-                        className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                          mesActivo === m.key
-                            ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                            : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
-                        }`}
-                        style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="shrink-0 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+                style={{ ...jost, fontWeight: 800 }}
+              >
+                FILTRAR:
+              </span>
 
-              {showMes && showCiudad ? (
-                <div
-                  className="hidden h-6 w-px shrink-0 bg-[#EEEEEE] md:block"
-                  aria-hidden
+              {showMes ? (
+                <FilterDropdown
+                  label="Mes"
+                  activeLabel={mesActivoLabel}
+                  options={mesesOptions.map((m) => ({
+                    key: m.key,
+                    label: m.label,
+                  }))}
+                  onSelect={(k) => setMesActivo(k)}
+                  onClear={() => setMesActivo(null)}
                 />
               ) : null}
 
               {showCiudad ? (
-                <div className="flex items-start gap-2 overflow-x-auto md:items-center">
-                  <span
-                    className="shrink-0 self-center text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
-                    style={{ ...jost, fontWeight: 800 }}
-                  >
-                    CIUDAD
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCiudadActiva(null)}
-                      className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                        ciudadActiva === null
-                          ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                          : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
-                      }`}
-                      style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-                    >
-                      Todas
-                    </button>
-                    {ciudadesOptions.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setCiudadActiva(c)}
-                        className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                          ciudadActiva === c
-                            ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                            : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
-                        }`}
-                        style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <FilterDropdown
+                  label="Ciudad"
+                  activeLabel={ciudadActivaLabel}
+                  options={ciudadesOptions.map((c) => ({
+                    key: c,
+                    label: c,
+                  }))}
+                  onSelect={(k) => setCiudadActiva(k)}
+                  onClear={() => setCiudadActiva(null)}
+                />
               ) : null}
 
               {hayFiltrosActivos ? (
                 <button
                   type="button"
                   onClick={limpiarFiltros}
-                  className="shrink-0 self-start text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#CC4B37] hover:underline md:ml-auto md:self-center"
+                  className="ml-auto shrink-0 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#CC4B37] hover:underline"
                   style={{ ...jost, fontWeight: 800 }}
                 >
-                  Limpiar filtros ✕
+                  Limpiar todo
                 </button>
               ) : null}
             </div>
@@ -201,10 +303,7 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
         {eventosFiltrados.length === 0 ? (
           <div className="py-12 text-center">
-            <p
-              className="text-sm text-[#666666]"
-              style={lato}
-            >
+            <p className="text-sm text-[#666666]" style={lato}>
               {hayFiltrosActivos
                 ? 'No hay eventos con estos filtros.'
                 : 'No hay eventos publicados por ahora.'}

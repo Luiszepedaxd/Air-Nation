@@ -203,15 +203,21 @@ export default async function EventosPage() {
           />
         ) : null}
 
-        {/* Overlay 1: gradiente lateral oscuro para legibilidad del texto */}
+        {/* Overlay 1: oscuro intenso solo en el lado izquierdo donde monta el texto, transparente en el lado derecho */}
         <div
-          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/90 to-[#111111]/55"
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/70 to-transparent"
           aria-hidden
         />
 
-        {/* Overlay 2: fade inferior sutil para transición al grid */}
+        {/* Overlay 2: oscurecimiento sutil global solo para mantener contraste */}
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-32 bg-gradient-to-t from-[#111111]/60 to-transparent"
+          className="pointer-events-none absolute inset-0 z-[1] bg-[#111111]/20"
+          aria-hidden
+        />
+
+        {/* Overlay 3: fade inferior sutil para transición al grid */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-24 bg-gradient-to-t from-[#111111]/50 to-transparent"
           aria-hidden
         />
 
