@@ -22,6 +22,8 @@ export function EventoTabs({
   field_nombre,
   field_slug,
   ciudad,
+  sede_nombre,
+  sede_ciudad,
   cupo,
   rsvpCount,
   urlExterna,
@@ -43,6 +45,8 @@ export function EventoTabs({
   field_nombre: string | null
   field_slug: string | null
   ciudad: string | null
+  sede_nombre: string | null
+  sede_ciudad: string | null
   cupo: number
   rsvpCount: number
   urlExterna: string | null
@@ -113,6 +117,8 @@ export function EventoTabs({
             field_nombre={field_nombre}
             field_slug={field_slug}
             ciudad={ciudad}
+            sede_nombre={sede_nombre}
+            sede_ciudad={sede_ciudad}
             cupo={cupo}
             rsvpCount={rsvpCount}
             urlExterna={urlExterna}

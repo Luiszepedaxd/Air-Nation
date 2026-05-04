@@ -20,6 +20,8 @@ export type EventoCardRow = {
   ciudad: string | null
   /** Conteo de RSVPs (listado público). */
   rsvp_count?: number
+  sede_nombre: string | null
+  sede_ciudad: string | null
 }
 
 function PinIcon() {
@@ -62,63 +64,82 @@ function cupoLine(cupo: number, rsvpCount: number | undefined) {
 export function EventoCard({ evento }: { evento: EventoCardRow }) {
   const fechaTxt = formatEventoFechaCorta(evento.fecha)
   const disc = disciplinaLabel(evento.disciplina)
-  const campo = evento.field_nombre?.trim() || null
   const imagenFinal =
     evento.imagen_url?.trim() || evento.field_foto?.trim() || null
+  const fieldNombre = evento.field_nombre?.trim() || null
+  const sedeLibre = evento.sede_nombre?.trim() || null
+  const sedeFinal = fieldNombre || sedeLibre || null
+  const ciudadFinal =
+    evento.ciudad?.trim() || evento.sede_ciudad?.trim() || null
+  const slug = evento.field_slug?.trim() || null
+  const campoLinkSlug =
+    slug && fieldNombre && sedeFinal === fieldNombre ? slug : null
 
   return (
-    <Link
-      href={`/eventos/${evento.id}`}
-      className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC]"
-    >
-      <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-        {imagenFinal ? (
-          <img
-            src={imagenFinal}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[#AAAAAA]">
-            <CalendarioPlaceholderIcon size={48} />
-          </div>
-        )}
-        <span
-          style={jost}
-          className="absolute left-2 top-2 bg-[#111111]/85 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-        >
-          {tipoBadge(evento.tipo)}
-        </span>
-        <span
-          style={jost}
-          className="absolute right-2 top-2 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-        >
-          {disc}
-        </span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 p-3">
-        <h2
-          style={jost}
-          className="line-clamp-2 text-base font-extrabold leading-snug text-[#111111]"
-        >
-          {evento.title}
-        </h2>
-        {campo ? (
-          <p
-            className="flex items-center gap-1.5 text-[13px] text-[#666666]"
-            style={lato}
+    <div className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] transition-colors hover:border-[#CCCCCC]">
+      <Link
+        href={`/eventos/${evento.id}`}
+        className="flex flex-1 flex-col text-left"
+      >
+        <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+          {imagenFinal ? (
+            <img
+              src={imagenFinal}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[#AAAAAA]">
+              <CalendarioPlaceholderIcon size={48} />
+            </div>
+          )}
+          <span
+            style={jost}
+            className="absolute left-2 top-2 bg-[#111111]/85 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
           >
-            <PinIcon />
-            <span className="min-w-0 truncate">{campo}</span>
+            {tipoBadge(evento.tipo)}
+          </span>
+          <span
+            style={jost}
+            className="absolute right-2 top-2 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+          >
+            {disc}
+          </span>
+        </div>
+        <div className="flex flex-1 flex-col gap-2 p-3">
+          <h2
+            style={jost}
+            className="line-clamp-2 text-base font-extrabold leading-snug text-[#111111]"
+          >
+            {evento.title}
+          </h2>
+          <p className="text-[13px] text-[#666666]" style={lato}>
+            {fechaTxt}
           </p>
-        ) : null}
-        <p className="text-[13px] text-[#666666]" style={lato}>
-          {fechaTxt}
-        </p>
-        <p className="mt-auto text-[12px] text-[#999999]" style={lato}>
-          {cupoLine(evento.cupo, evento.rsvp_count)}
-        </p>
-      </div>
-    </Link>
+          <p className="mt-auto text-[12px] text-[#999999]" style={lato}>
+            {cupoLine(evento.cupo, evento.rsvp_count)}
+          </p>
+        </div>
+      </Link>
+      {sedeFinal || ciudadFinal ? (
+        <div className="flex items-center gap-1 border-t border-solid border-[#EEEEEE] px-3 pb-3 pt-2 text-[11px] text-[#666666]">
+          <PinIcon />
+          <span className="min-w-0 truncate">
+            {campoLinkSlug ? (
+              <Link
+                href={`/campos/${encodeURIComponent(campoLinkSlug)}`}
+                className="hover:text-[#CC4B37]"
+              >
+                {sedeFinal}
+              </Link>
+            ) : (
+              sedeFinal
+            )}
+            {sedeFinal && ciudadFinal ? ' · ' : ''}
+            {ciudadFinal}
+          </span>
+        </div>
+      ) : null}
+    </div>
   )
 }

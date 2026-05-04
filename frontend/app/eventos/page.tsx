@@ -80,6 +80,8 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       disciplina,
       imagen_url,
       tipo,
+      sede_nombre,
+      sede_ciudad,
       fields ( nombre, slug, ciudad, foto_portada_url )
     `
     )
@@ -125,6 +127,8 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       field_slug: f.slug,
       ciudad: f.ciudad,
       rsvp_count: countMap.get(id) ?? 0,
+      sede_nombre: (r.sede_nombre as string | null) ?? null,
+      sede_ciudad: (r.sede_ciudad as string | null) ?? null,
     }
   })
 }
@@ -164,10 +168,10 @@ export default async function EventosPage() {
                   : {}),
                 location: {
                   '@type': 'Place',
-                  name: e.field_nombre ?? 'Por confirmar',
+                  name: e.field_nombre ?? e.sede_nombre ?? 'Por confirmar',
                   address: {
                     '@type': 'PostalAddress',
-                    addressLocality: e.ciudad ?? '',
+                    addressLocality: e.ciudad ?? e.sede_ciudad ?? '',
                     addressCountry: 'MX',
                   },
                 },

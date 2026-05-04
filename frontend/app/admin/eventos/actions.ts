@@ -80,6 +80,9 @@ export type EventoUpsertPayload = {
    * En edición, si se envía, actualiza organizador (solo admin).
    */
   organizador_id?: string | null
+  /** Solo admin: sede de texto libre (eventos editoriales sin field AN). */
+  sede_nombre?: string | null
+  sede_ciudad?: string | null
 }
 
 export async function upsertEvento(
@@ -109,6 +112,11 @@ export async function upsertEvento(
     url_externa: normalizeUrlExterna(payload.url_externa),
     published: payload.published,
     status,
+  }
+
+  if (ctx.role === 'admin') {
+    base.sede_nombre = payload.sede_nombre ?? null
+    base.sede_ciudad = payload.sede_ciudad ?? null
   }
 
   if (payload.id) {

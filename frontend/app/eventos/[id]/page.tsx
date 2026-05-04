@@ -59,6 +59,8 @@ type EventDetailRow = {
   disciplina: string | null
   imagen_url: string | null
   url_externa: string | null
+  sede_nombre: string | null
+  sede_ciudad: string | null
   tipo: string | null
   published: boolean
   organizador_id: string | null
@@ -81,6 +83,8 @@ const getEventoById = cache(async (id: string): Promise<EventDetailRow | null> =
       disciplina,
       imagen_url,
       url_externa,
+      sede_nombre,
+      sede_ciudad,
       tipo,
       published,
       organizador_id,
@@ -127,6 +131,8 @@ export async function generateMetadata({
   const fMeta = normalizeFieldsEmbed(row.fields)
   const imagenOg =
     row.imagen_url?.trim() || fMeta.foto_portada_url?.trim() || null
+  const localidad =
+    fMeta.ciudad?.trim() || row.sede_ciudad?.trim() || 'México'
 
   const fechaTxt = formatEventoFechaCorta(row.fecha)
   const desc =
@@ -134,13 +140,13 @@ export async function generateMetadata({
     `Evento de airsoft${fechaTxt ? ` el ${fechaTxt}` : ''} — AirNation`
 
   return {
-    title: `${row.title} — Airsoft en ${fMeta.ciudad ?? 'México'} | AirNation`,
+    title: `${row.title} — Airsoft en ${localidad} | AirNation`,
     description: desc.slice(0, 160),
     alternates: {
       canonical: `https://www.airnation.online/eventos/${id}`,
     },
     openGraph: {
-      title: `${row.title} — Airsoft en ${fMeta.ciudad ?? 'México'} | AirNation`,
+      title: `${row.title} — Airsoft en ${localidad} | AirNation`,
       description: desc.slice(0, 160),
       url: `https://www.airnation.online/eventos/${id}`,
       type: 'website',
@@ -387,13 +393,23 @@ export default async function EventoDetailPage({
                     addressCountry: 'MX',
                   },
                 }
-              : {
-                  '@type': 'Place',
-                  address: {
-                    '@type': 'PostalAddress',
-                    addressCountry: 'MX',
+              : row.sede_nombre?.trim()
+                ? {
+                    '@type': 'Place',
+                    name: row.sede_nombre.trim(),
+                    address: {
+                      '@type': 'PostalAddress',
+                      addressLocality: row.sede_ciudad?.trim() ?? '',
+                      addressCountry: 'MX',
+                    },
+                  }
+                : {
+                    '@type': 'Place',
+                    address: {
+                      '@type': 'PostalAddress',
+                      addressCountry: 'MX',
+                    },
                   },
-                },
             organizer: {
               '@type': 'Organization',
               name: 'AirNation',
@@ -417,6 +433,8 @@ export default async function EventoDetailPage({
         field_nombre={f.nombre}
         field_slug={f.slug}
         ciudad={f.ciudad}
+        sede_nombre={row.sede_nombre}
+        sede_ciudad={row.sede_ciudad}
         cupo={Number(row.cupo ?? 0)}
         rsvpCount={rsvpCount}
         urlExterna={row.url_externa}

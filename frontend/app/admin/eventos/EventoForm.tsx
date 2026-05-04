@@ -58,6 +58,8 @@ export function EventoForm({
     status: string
     organizador_id?: string | null
     organizador_display?: string | null
+    sede_nombre?: string | null
+    sede_ciudad?: string | null
   }
 }) {
   const router = useRouter()
@@ -80,6 +82,8 @@ export function EventoForm({
   )
   const [imagenUrl, setImagenUrl] = useState(initial?.imagen_url ?? '')
   const [urlExterna, setUrlExterna] = useState(initial?.url_externa ?? '')
+  const [sedeNombre, setSedeNombre] = useState(initial?.sede_nombre ?? '')
+  const [sedeCiudad, setSedeCiudad] = useState(initial?.sede_ciudad ?? '')
   const [urlExternaError, setUrlExternaError] = useState('')
   const [published, setPublished] = useState(initial?.published ?? false)
   const [clientError, setClientError] = useState('')
@@ -198,7 +202,11 @@ export function EventoForm({
             ? 'cancelado'
             : undefined,
         ...(showOrganizerPicker
-          ? { organizador_id: selectedOrganizerId.trim() || null }
+          ? {
+              organizador_id: selectedOrganizerId.trim() || null,
+              sede_nombre: sedeNombre.trim() || null,
+              sede_ciudad: sedeCiudad.trim() || null,
+            }
           : {}),
       })
       setSaving(false)
@@ -226,6 +234,8 @@ export function EventoForm({
       router,
       showOrganizerPicker,
       selectedOrganizerId,
+      sedeNombre,
+      sedeCiudad,
     ]
   )
 
@@ -387,6 +397,50 @@ export function EventoForm({
           ))}
         </select>
       </div>
+
+      {showOrganizerPicker ? (
+        <>
+          <div>
+            <label
+              className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+              style={jostHeading}
+            >
+              Sede (texto libre, opcional)
+            </label>
+            <input
+              type="text"
+              value={sedeNombre}
+              onChange={(e) => setSedeNombre(e.target.value)}
+              maxLength={120}
+              placeholder="Ej. Hospital Naturista, La Joya, Campo Privado X..."
+              className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+              style={{ borderRadius: 2 }}
+            />
+            <p className="mt-1 text-[11px] text-[#999999]" style={latoBody}>
+              Úsalo solo cuando NO hay un campo AN registrado (eventos editoriales /
+              terrenos privados).
+            </p>
+          </div>
+
+          <div>
+            <label
+              className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+              style={jostHeading}
+            >
+              Ciudad (texto libre, opcional)
+            </label>
+            <input
+              type="text"
+              value={sedeCiudad}
+              onChange={(e) => setSedeCiudad(e.target.value)}
+              maxLength={80}
+              placeholder="Ej. Ciudad Madero Tampico, León Guanajuato..."
+              className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+              style={{ borderRadius: 2 }}
+            />
+          </div>
+        </>
+      ) : null}
 
       <div>
         <label

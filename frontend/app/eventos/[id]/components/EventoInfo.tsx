@@ -21,6 +21,8 @@ export function EventoInfo({
   field_nombre,
   field_slug,
   ciudad,
+  sede_nombre,
+  sede_ciudad,
   cupo,
   rsvpCount,
   urlExterna,
@@ -38,6 +40,8 @@ export function EventoInfo({
   field_nombre: string | null
   field_slug: string | null
   ciudad: string | null
+  sede_nombre: string | null
+  sede_ciudad: string | null
   cupo: number
   rsvpCount: number
   urlExterna: string | null
@@ -85,7 +89,17 @@ export function EventoInfo({
                 </span>
               ) : null}
             </li>
-          ) : ciudad?.trim() ? (
+          ) : null}
+          {!field_nombre?.trim() && sede_nombre?.trim() ? (
+            <li>
+              <span className="text-[#666666]">Sede: </span>
+              <span className="font-semibold">{sede_nombre.trim()}</span>
+              {sede_ciudad?.trim() ? (
+                <span className="text-[#666666]"> · {sede_ciudad.trim()}</span>
+              ) : null}
+            </li>
+          ) : null}
+          {!field_nombre?.trim() && !sede_nombre?.trim() && ciudad?.trim() ? (
             <li>
               <span className="text-[#666666]">Ciudad: </span>
               <span className="font-semibold">{ciudad.trim()}</span>
