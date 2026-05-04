@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
+import { getSiteAssets } from '@/lib/site-assets'
 import { EventoCard, type EventoCardRow } from './components/EventoCard'
 
 export const revalidate = 0
@@ -139,6 +140,8 @@ export default async function EventosPage() {
   const {
     data: { session },
   } = await userSb.auth.getSession()
+  const assets = await getSiteAssets()
+  const heroBgUrl = assets['eventos_hero_background'] ?? null
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
@@ -185,39 +188,96 @@ export default async function EventosPage() {
           }),
         }}
       />
-      <header className="bg-[#111111] px-4 py-10 md:py-14">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-6 md:flex-row md:items-end md:justify-between md:px-6">
-          <div className="max-w-3xl">
+      <section className="relative flex min-h-[420px] flex-col justify-center overflow-hidden bg-[#111111] md:min-h-[480px]">
+        {heroBgUrl ? (
+          <img
+            src={heroBgUrl}
+            alt=""
+            className="absolute inset-0 z-0 h-full w-full object-cover object-center"
+            loading="eager"
+            decoding="async"
+          />
+        ) : null}
+
+        {/* Overlay 1: gradiente lateral oscuro para legibilidad del texto */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/85 to-[#111111]/40"
+          aria-hidden
+        />
+
+        {/* Overlay 2: fade inferior sutil para transición al grid */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-32 bg-gradient-to-t from-[#111111]/60 to-transparent"
+          aria-hidden
+        />
+
+        {/* Contenido */}
+        <div className="relative z-10 mx-auto w-full max-w-[1200px] px-5 py-12 sm:px-8 md:px-6 md:py-16">
+          <div className="max-w-[640px]">
             <p
               className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#CC4B37]"
               style={{ ...jost, fontWeight: 800 }}
             >
               CALENDARIO 2026
             </p>
+
             <h1
-              className="mt-3 text-3xl font-extrabold uppercase leading-tight text-white md:text-4xl"
-              style={{ ...jost, fontWeight: 800 }}
+              className="mt-4 font-extrabold uppercase leading-[0.92] text-white"
+              style={{ ...jost, fontWeight: 800, fontSize: 'clamp(2rem, 7vw, 4.5rem)' }}
             >
-              Eventos de Airsoft en México
+              Eventos de Airsoft<br />en México
             </h1>
+
             <p
-              className="mt-4 text-sm leading-relaxed text-[#CCCCCC] md:text-base"
+              className="mt-5 max-w-[480px] text-[14px] leading-relaxed text-white/70 md:text-[15px]"
               style={lato}
             >
-              Calendario oficial de los eventos de airsoft, milsim y partidas comunitarias más relevantes del país. Fechas confirmadas, sedes, precios y enlaces directos a boletos. Si organizas un evento, publícalo gratis. Si vas como jugador, haz RSVP, conecta con tu equipo y prepara tu participación.
+              Calendario oficial de eventos milsim, torneos y partidas comunitarias del país.
             </p>
+
+            {/* CTAs condicionales según sesión */}
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              {session ? (
+                <>
+                  <Link
+                    href="/eventos/nuevo"
+                    className="inline-flex items-center justify-center gap-2 bg-[#CC4B37] px-6 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90"
+                    style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+                  >
+                    CREAR EVENTO
+                    <span aria-hidden>→</span>
+                  </Link>
+                  <Link
+                    href="/dashboard/perfil"
+                    className="inline-flex items-center justify-center border border-solid border-white/35 px-6 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/90 transition-colors hover:border-white hover:text-white"
+                    style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+                  >
+                    MIS RSVPS
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center justify-center gap-2 bg-[#CC4B37] px-6 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90"
+                    style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+                  >
+                    CREAR CUENTA GRATIS
+                    <span aria-hidden>→</span>
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center justify-center border border-solid border-white/35 px-6 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/90 transition-colors hover:border-white hover:text-white"
+                    style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+                  >
+                    INICIAR SESIÓN
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
-          {session ? (
-            <Link
-              href="/eventos/nuevo"
-              className="inline-flex shrink-0 items-center justify-center border border-solid border-[#FFFFFF]/30 bg-[#CC4B37] px-5 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#FFFFFF] transition-opacity hover:opacity-90"
-              style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-            >
-              CREAR EVENTO
-            </Link>
-          ) : null}
         </div>
-      </header>
+      </section>
 
       <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
         {eventos.length === 0 ? (
