@@ -95,84 +95,91 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
           style={{ borderRadius: 0 }}
         >
           <div className="mx-auto max-w-[1200px] px-4 py-3 md:px-6">
-            <div className="flex items-center gap-3 overflow-x-auto">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
               {showMes ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2 overflow-x-auto md:items-center">
                   <span
-                    className="shrink-0 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+                    className="shrink-0 self-center text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
                     style={{ ...jost, fontWeight: 800 }}
                   >
                     MES
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setMesActivo(null)}
-                    className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                      mesActivo === null
-                        ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                        : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
-                    }`}
-                    style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-                  >
-                    Todos
-                  </button>
-                  {mesesOptions.map((m) => (
+                  <div className="flex items-center gap-2">
                     <button
-                      key={m.key}
                       type="button"
-                      onClick={() => setMesActivo(m.key)}
+                      onClick={() => setMesActivo(null)}
                       className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                        mesActivo === m.key
+                        mesActivo === null
                           ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
                           : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
                       }`}
                       style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
                     >
-                      {m.label}
+                      Todos
                     </button>
-                  ))}
+                    {mesesOptions.map((m) => (
+                      <button
+                        key={m.key}
+                        type="button"
+                        onClick={() => setMesActivo(m.key)}
+                        className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
+                          mesActivo === m.key
+                            ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
+                            : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
+                        }`}
+                        style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
               {showMes && showCiudad ? (
-                <div className="h-6 w-px shrink-0 bg-[#EEEEEE]" aria-hidden />
+                <div
+                  className="hidden h-6 w-px shrink-0 bg-[#EEEEEE] md:block"
+                  aria-hidden
+                />
               ) : null}
 
               {showCiudad ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2 overflow-x-auto md:items-center">
                   <span
-                    className="shrink-0 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+                    className="shrink-0 self-center text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
                     style={{ ...jost, fontWeight: 800 }}
                   >
                     CIUDAD
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setCiudadActiva(null)}
-                    className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                      ciudadActiva === null
-                        ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                        : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
-                    }`}
-                    style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
-                  >
-                    Todas
-                  </button>
-                  {ciudadesOptions.map((c) => (
+                  <div className="flex items-center gap-2">
                     <button
-                      key={c}
                       type="button"
-                      onClick={() => setCiudadActiva(c)}
+                      onClick={() => setCiudadActiva(null)}
                       className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
-                        ciudadActiva === c
+                        ciudadActiva === null
                           ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
                           : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
                       }`}
                       style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
                     >
-                      {c}
+                      Todas
                     </button>
-                  ))}
+                    {ciudadesOptions.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setCiudadActiva(c)}
+                        className={`shrink-0 border border-solid px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] transition-colors ${
+                          ciudadActiva === c
+                            ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
+                            : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666] hover:border-[#CCCCCC]'
+                        }`}
+                        style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 
@@ -180,7 +187,7 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
                 <button
                   type="button"
                   onClick={limpiarFiltros}
-                  className="ml-auto shrink-0 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#CC4B37] hover:underline"
+                  className="shrink-0 self-start text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#CC4B37] hover:underline md:ml-auto md:self-center"
                   style={{ ...jost, fontWeight: 800 }}
                 >
                   Limpiar filtros ✕
