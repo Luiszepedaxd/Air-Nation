@@ -68,6 +68,7 @@ function normalizeFieldsEmbed(raw: unknown): {
 
 async function fetchEventos(): Promise<EventoCardRow[]> {
   const supabase = createPublicSupabaseClient()
+  const nowIso = new Date().toISOString()
   const { data, error } = await supabase
     .from('events')
     .select(
@@ -84,6 +85,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
     )
     .eq('published', true)
     .eq('status', 'publicado')
+    .gte('fecha', nowIso)
     .order('fecha', { ascending: true })
 
   if (error) {
