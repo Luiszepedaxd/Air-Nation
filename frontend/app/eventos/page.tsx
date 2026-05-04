@@ -4,6 +4,7 @@ import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { getSiteAssets } from '@/lib/site-assets'
 import type { EventoCardRow } from './components/EventoCard'
+import { EventosPorQue, EventosCTASecundario } from './components/EventosPorQue'
 import { EventosFiltros } from './components/EventosFiltros'
 
 export const revalidate = 0
@@ -283,6 +284,8 @@ export default async function EventosPage() {
       </section>
 
       <EventosFiltros eventos={eventos} />
+      <EventosPorQue />
+      <EventosCTASecundario hasSession={!!session} />
     </div>
   )
 }
