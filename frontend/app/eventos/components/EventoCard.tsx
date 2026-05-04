@@ -11,6 +11,7 @@ export type EventoCardRow = {
   fecha: string
   cupo: number
   disciplina: string | null
+  descripcion: string | null
   imagen_url: string | null
   /** `fields.foto_portada_url` */
   field_foto: string | null

@@ -81,6 +81,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       fecha,
       cupo,
       disciplina,
+      descripcion,
       imagen_url,
       tipo,
       sede_nombre,
@@ -124,6 +125,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       fecha: String(r.fecha ?? ''),
       cupo: Number(r.cupo ?? 0),
       disciplina: (r.disciplina as string | null) ?? null,
+      descripcion: (r.descripcion as string | null) ?? null,
       imagen_url: (r.imagen_url as string | null) ?? null,
       field_foto: f.foto_portada_url,
       tipo: (r.tipo as string | null) ?? null,
@@ -187,6 +189,9 @@ export default async function EventosPage() {
                   name: 'AirNation',
                   url: 'https://www.airnation.online',
                 },
+                ...(e.descripcion?.trim()
+                  ? { description: e.descripcion.trim().slice(0, 500) }
+                  : {}),
               },
             })),
           }),
