@@ -253,7 +253,7 @@ export default async function EventosPage() {
                     className="inline-flex items-center justify-center border border-solid border-white/35 px-6 py-3.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/90 transition-colors hover:border-white hover:text-white"
                     style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
                   >
-                    MIS RSVPS
+                    MI AGENDA
                   </Link>
                 </>
               ) : (
