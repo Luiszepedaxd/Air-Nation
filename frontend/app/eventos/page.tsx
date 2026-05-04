@@ -7,8 +7,40 @@ import { EventoCard, type EventoCardRow } from './components/EventoCard'
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'Eventos — AirNation',
-  description: 'Partidas y eventos de la comunidad de airsoft.',
+  title: 'Eventos de Airsoft en México 2026 — Calendario, fechas y boletos | AirNation',
+  description:
+    'Calendario oficial de eventos de airsoft en México 2026. Fechas, sedes, precios y boletos de los principales eventos milsim, torneos y partidas comunitarias. Wild West, Asalto a Guantánamo, Blood Money, Casta Vanguardia, Código Irene y más.',
+  keywords: [
+    'eventos airsoft méxico',
+    'eventos de airsoft en méxico',
+    'calendario airsoft méxico 2026',
+    'eventos airsoft 2026',
+    'milsim méxico',
+    'torneos airsoft méxico',
+    'partidas airsoft méxico',
+    'eventos airsoft cdmx',
+    'eventos airsoft guadalajara',
+    'eventos airsoft monterrey',
+    'comunidad airsoft méxico',
+    'boletos airsoft méxico',
+  ],
+  alternates: {
+    canonical: 'https://www.airnation.online/eventos',
+  },
+  openGraph: {
+    title: 'Eventos de Airsoft en México 2026 | AirNation',
+    description:
+      'Calendario oficial de eventos de airsoft en México. Fechas, sedes, precios y boletos. Milsim, torneos y partidas comunitarias.',
+    url: 'https://www.airnation.online/eventos',
+    type: 'website',
+    images: [
+      {
+        url: 'https://www.airnation.online/og-eventos.jpg',
+        width: 1200,
+        height: 630,
+      },
+    ],
+  },
 }
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
@@ -104,20 +136,69 @@ export default async function EventosPage() {
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
-      <header className="bg-[#111111] px-4 py-8 md:py-10">
-        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 md:flex-row md:items-end md:justify-between md:px-6">
-          <div>
-            <h1
-              className="text-2xl font-extrabold uppercase leading-tight text-white"
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: 'Eventos de Airsoft en México 2026',
+            description:
+              'Calendario oficial de eventos de airsoft, milsim y partidas comunitarias en México 2026.',
+            url: 'https://www.airnation.online/eventos',
+            numberOfItems: eventos.length,
+            itemListElement: eventos.map((e, idx) => ({
+              '@type': 'ListItem',
+              position: idx + 1,
+              item: {
+                '@type': 'Event',
+                name: e.title,
+                startDate: e.fecha,
+                eventStatus: 'https://schema.org/EventScheduled',
+                eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+                url: `https://www.airnation.online/eventos/${e.id}`,
+                ...(e.imagen_url || e.field_foto
+                  ? { image: e.imagen_url ?? e.field_foto ?? undefined }
+                  : {}),
+                location: {
+                  '@type': 'Place',
+                  name: e.field_nombre ?? 'Por confirmar',
+                  address: {
+                    '@type': 'PostalAddress',
+                    addressLocality: e.ciudad ?? '',
+                    addressCountry: 'MX',
+                  },
+                },
+                organizer: {
+                  '@type': 'Organization',
+                  name: 'AirNation',
+                  url: 'https://www.airnation.online',
+                },
+              },
+            })),
+          }),
+        }}
+      />
+      <header className="bg-[#111111] px-4 py-10 md:py-14">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-6 md:flex-row md:items-end md:justify-between md:px-6">
+          <div className="max-w-3xl">
+            <p
+              className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#CC4B37]"
               style={{ ...jost, fontWeight: 800 }}
             >
-              EVENTOS
+              CALENDARIO 2026
+            </p>
+            <h1
+              className="mt-3 text-3xl font-extrabold uppercase leading-tight text-white md:text-4xl"
+              style={{ ...jost, fontWeight: 800 }}
+            >
+              Eventos de Airsoft en México
             </h1>
             <p
-              className="mt-2 text-sm text-[#999999]"
+              className="mt-4 text-sm leading-relaxed text-[#CCCCCC] md:text-base"
               style={lato}
             >
-              Partidas y eventos de la comunidad
+              Calendario oficial de los eventos de airsoft, milsim y partidas comunitarias más relevantes del país. Fechas confirmadas, sedes, precios y enlaces directos a boletos. Si organizas un evento, publícalo gratis. Si vas como jugador, haz RSVP, conecta con tu equipo y prepara tu participación.
             </p>
           </div>
           {session ? (
