@@ -22,6 +22,30 @@ export type EventoCardRow = {
   rsvp_count?: number
   sede_nombre: string | null
   sede_ciudad: string | null
+  cupo_vendido_creador: number | null
+}
+
+function getOcupacionData(evento: EventoCardRow): {
+  ocupados: number
+  porcentaje: number
+  hayCupo: boolean
+} {
+  const cupo = evento.cupo ?? 0
+  if (cupo <= 0) return { ocupados: 0, porcentaje: 0, hayCupo: false }
+  const ocupados = evento.cupo_vendido_creador ?? evento.rsvp_count ?? 0
+  const porcentaje = Math.min(100, Math.round((ocupados / cupo) * 100))
+  return { ocupados, porcentaje, hayCupo: true }
+}
+
+function getCardBadge(
+  evento: EventoCardRow,
+  index: number
+): { label: string; variant: 'agotado' | 'pocos' | 'proximo' } | null {
+  const { porcentaje, hayCupo } = getOcupacionData(evento)
+  if (hayCupo && porcentaje >= 100) return { label: 'AGOTADO', variant: 'agotado' }
+  if (hayCupo && porcentaje >= 80) return { label: 'POCOS LUGARES', variant: 'pocos' }
+  if (index === 0) return { label: 'PRÓXIMO', variant: 'proximo' }
+  return null
 }
 
 function PinIcon() {
@@ -55,13 +79,20 @@ function tipoBadge(tipo: string | null) {
   return pub ? 'PÚBLICO' : 'PRIVADO'
 }
 
-function cupoLine(cupo: number, rsvpCount: number | undefined) {
-  if (!cupo || cupo <= 0) return 'Sin límite'
-  const x = rsvpCount ?? 0
-  return `${x} / ${cupo} lugares`
+function cupoLine(evento: EventoCardRow): string {
+  const cupo = evento.cupo ?? 0
+  if (cupo <= 0) return 'Sin límite'
+  const { ocupados } = getOcupacionData(evento)
+  return `${ocupados} / ${cupo} lugares`
 }
 
-export function EventoCard({ evento }: { evento: EventoCardRow }) {
+export function EventoCard({
+  evento,
+  index = 0,
+}: {
+  evento: EventoCardRow
+  index?: number
+}) {
   const fechaTxt = formatEventoFechaCorta(evento.fecha)
   const disc = disciplinaLabel(evento.disciplina)
   const imagenFinal =
@@ -74,6 +105,15 @@ export function EventoCard({ evento }: { evento: EventoCardRow }) {
   const slug = evento.field_slug?.trim() || null
   const campoLinkSlug =
     slug && fieldNombre && sedeFinal === fieldNombre ? slug : null
+
+  const badge = getCardBadge(evento, index)
+  const variantStyles = badge
+    ? {
+        agotado: 'bg-[#666666] text-white',
+        pocos: 'bg-[#CC4B37] text-white',
+        proximo: 'bg-white text-[#111111]',
+      }[badge.variant]
+    : ''
 
   return (
     <div className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] transition-colors hover:border-[#CCCCCC]">
@@ -99,12 +139,22 @@ export function EventoCard({ evento }: { evento: EventoCardRow }) {
           >
             {tipoBadge(evento.tipo)}
           </span>
-          <span
-            style={jost}
-            className="absolute right-2 top-2 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-          >
-            {disc}
-          </span>
+          <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1">
+            {badge ? (
+              <span
+                className={`inline-block px-2 py-1 text-[9px] font-extrabold uppercase tracking-wider ${variantStyles}`}
+                style={{ ...jost, fontWeight: 800, borderRadius: 2 }}
+              >
+                {badge.label}
+              </span>
+            ) : null}
+            <span
+              style={jost}
+              className="bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+            >
+              {disc}
+            </span>
+          </div>
         </div>
         <div className="flex flex-1 flex-col gap-2 p-3">
           <h2
@@ -116,9 +166,35 @@ export function EventoCard({ evento }: { evento: EventoCardRow }) {
           <p className="text-[13px] text-[#666666]" style={lato}>
             {fechaTxt}
           </p>
-          <p className="mt-auto text-[12px] text-[#999999]" style={lato}>
-            {cupoLine(evento.cupo, evento.rsvp_count)}
-          </p>
+          <div className="mt-auto">
+            <p className="text-[12px] text-[#999999]" style={lato}>
+              {cupoLine(evento)}
+            </p>
+            {(() => {
+              const { porcentaje, hayCupo } = getOcupacionData(evento)
+              if (!hayCupo) return null
+              return (
+                <div
+                  className="mt-1.5 h-[3px] w-full overflow-hidden bg-[#EEEEEE]"
+                  role="progressbar"
+                  aria-valuenow={porcentaje}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className={`h-full transition-all ${
+                      porcentaje >= 100
+                        ? 'bg-[#666666]'
+                        : porcentaje >= 80
+                          ? 'bg-[#CC4B37]'
+                          : 'bg-[#CC4B37]/60'
+                    }`}
+                    style={{ width: `${porcentaje}%` }}
+                  />
+                </div>
+              )
+            })()}
+          </div>
         </div>
       </Link>
       {sedeFinal || ciudadFinal ? (

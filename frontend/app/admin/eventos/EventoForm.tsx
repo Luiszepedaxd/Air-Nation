@@ -60,6 +60,7 @@ export function EventoForm({
     organizador_display?: string | null
     sede_nombre?: string | null
     sede_ciudad?: string | null
+    cupo_vendido_creador?: number | null
   }
 }) {
   const router = useRouter()
@@ -73,6 +74,9 @@ export function EventoForm({
   )
   const [cupo, setCupo] = useState(
     initial?.cupo != null ? String(initial.cupo) : '0'
+  )
+  const [cupoVendidoCreador, setCupoVendidoCreador] = useState(
+    initial?.cupo_vendido_creador != null ? String(initial.cupo_vendido_creador) : ''
   )
   const [disciplina] = useState('airsoft')
   const [tipo, setTipo] = useState<'publico' | 'privado'>(
@@ -175,6 +179,20 @@ export function EventoForm({
         setClientError('Cupo inválido.')
         return
       }
+      const cupoVendidoNum =
+        cupoVendidoCreador.trim() === ''
+          ? null
+          : Number.parseInt(cupoVendidoCreador, 10)
+      if (cupoVendidoNum !== null) {
+        if (!Number.isFinite(cupoVendidoNum) || cupoVendidoNum < 0) {
+          setClientError('Lugares vendidos inválido.')
+          return
+        }
+        if (cupoNum > 0 && cupoVendidoNum > cupoNum) {
+          setClientError('Los lugares vendidos no pueden superar el cupo total.')
+          return
+        }
+      }
       const fechaIso = new Date(fechaLocal).toISOString()
 
       const urlExt = urlExterna.trim()
@@ -192,6 +210,7 @@ export function EventoForm({
         field_id: fid || null,
         fecha: fechaIso,
         cupo: cupoNum,
+        cupo_vendido_creador: cupoVendidoNum,
         disciplina,
         tipo,
         imagen_url: imagenUrl.trim() || null,
@@ -223,6 +242,7 @@ export function EventoForm({
       fieldId,
       fechaLocal,
       cupo,
+      cupoVendidoCreador,
       disciplina,
       tipo,
       imagenUrl,
@@ -474,6 +494,27 @@ export function EventoForm({
           className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
           style={{ borderRadius: 2 }}
         />
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+          style={jostHeading}
+        >
+          Lugares ya vendidos (opcional)
+        </label>
+        <input
+          type="number"
+          min={0}
+          value={cupoVendidoCreador}
+          onChange={(e) => setCupoVendidoCreador(e.target.value)}
+          placeholder="0"
+          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          style={{ borderRadius: 2 }}
+        />
+        <p className="mt-1 text-[11px] text-[#999999]" style={latoBody}>
+          Si ya estás vendiendo afuera de AN, indica cuántos lugares llevas ocupados. Esto se muestra a los jugadores en la card del evento.
+        </p>
       </div>
 
       <div>

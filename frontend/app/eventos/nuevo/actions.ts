@@ -9,6 +9,7 @@ export type CreateUserEventoPayload = {
   field_id: string | null
   fecha: string
   cupo: number
+  cupo_vendido_creador: number | null
   tipo: 'publico' | 'privado'
   imagen_url: string | null
 }
@@ -47,6 +48,18 @@ export async function createUserEvento(
   const cupo = Math.max(0, Math.min(100000, Math.floor(Number(payload.cupo))))
   if (!Number.isFinite(cupo) || cupo < 0) return { error: 'Cupo inválido.' }
 
+  if (payload.cupo_vendido_creador !== null) {
+    if (
+      !Number.isFinite(payload.cupo_vendido_creador) ||
+      payload.cupo_vendido_creador < 0
+    ) {
+      return { error: 'Lugares vendidos inválido.' }
+    }
+    if (cupo > 0 && payload.cupo_vendido_creador > cupo) {
+      return { error: 'Los lugares vendidos no pueden superar el cupo total.' }
+    }
+  }
+
   if (!payload.fecha) return { error: 'Indica fecha y hora.' }
 
   let fieldId: string | null = payload.field_id?.trim() || null
@@ -77,6 +90,11 @@ export async function createUserEvento(
     }
   }
 
+  const cupoVendidoInsert =
+    payload.cupo_vendido_creador === null
+      ? null
+      : Math.floor(payload.cupo_vendido_creador)
+
   const { data, error } = await supabase
     .from('events')
     .insert({
@@ -85,6 +103,7 @@ export async function createUserEvento(
       field_id: fieldId,
       fecha: payload.fecha,
       cupo,
+      cupo_vendido_creador: cupoVendidoInsert,
       disciplina: 'airsoft',
       tipo: payload.tipo,
       imagen_url: payload.imagen_url?.trim() || null,

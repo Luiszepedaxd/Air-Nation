@@ -83,6 +83,7 @@ export type EventoUpsertPayload = {
   /** Solo admin: sede de texto libre (eventos editoriales sin field AN). */
   sede_nombre?: string | null
   sede_ciudad?: string | null
+  cupo_vendido_creador: number | null
 }
 
 export async function upsertEvento(
@@ -100,12 +101,25 @@ export async function upsertEvento(
         ? 'publicado'
         : 'borrador'
 
+  const cupoNorm = Math.max(0, Math.min(100000, payload.cupo))
+  let cupoVendido: number | null = payload.cupo_vendido_creador
+  if (cupoVendido !== null) {
+    if (!Number.isFinite(cupoVendido) || cupoVendido < 0) {
+      return { error: 'Lugares vendidos inválido.' }
+    }
+    cupoVendido = Math.floor(cupoVendido)
+    if (cupoNorm > 0 && cupoVendido > cupoNorm) {
+      return { error: 'Los lugares vendidos no pueden superar el cupo total.' }
+    }
+  }
+
   const base: Record<string, unknown> = {
     title: payload.title.slice(0, 100),
     descripcion: payload.descripcion ? payload.descripcion.slice(0, 1000) : null,
     field_id: payload.field_id || null,
     fecha: payload.fecha,
-    cupo: Math.max(0, Math.min(100000, payload.cupo)),
+    cupo: cupoNorm,
+    cupo_vendido_creador: cupoVendido,
     disciplina: payload.disciplina || 'airsoft',
     tipo: payload.tipo,
     imagen_url: payload.imagen_url?.trim() || null,

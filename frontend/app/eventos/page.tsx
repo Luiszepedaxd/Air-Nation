@@ -84,6 +84,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       tipo,
       sede_nombre,
       sede_ciudad,
+      cupo_vendido_creador,
       fields ( nombre, slug, ciudad, foto_portada_url )
     `
     )
@@ -131,6 +132,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       rsvp_count: countMap.get(id) ?? 0,
       sede_nombre: (r.sede_nombre as string | null) ?? null,
       sede_ciudad: (r.sede_ciudad as string | null) ?? null,
+      cupo_vendido_creador: (r.cupo_vendido_creador as number | null) ?? null,
     }
   })
 }
@@ -202,7 +204,7 @@ export default async function EventosPage() {
 
         {/* Overlay 1: gradiente lateral oscuro para legibilidad del texto */}
         <div
-          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/85 to-[#111111]/40"
+          className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/90 to-[#111111]/55"
           aria-hidden
         />
 
@@ -223,10 +225,10 @@ export default async function EventosPage() {
             </p>
 
             <h1
-              className="mt-4 font-extrabold uppercase leading-[0.92] text-white"
+              className="mt-4 font-extrabold uppercase leading-[1.02] text-white"
               style={{ ...jost, fontWeight: 800, fontSize: 'clamp(2rem, 7vw, 4.5rem)' }}
             >
-              Eventos de Airsoft<br />en México
+              Eventos de Airsoft en México
             </h1>
 
             <p

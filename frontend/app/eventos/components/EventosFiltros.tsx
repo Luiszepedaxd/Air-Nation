@@ -215,8 +215,8 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {eventosFiltrados.map((e) => (
-              <EventoCard key={e.id} evento={e} />
+            {eventosFiltrados.map((e, idx) => (
+              <EventoCard key={e.id} evento={e} index={idx} />
             ))}
           </div>
         )}
