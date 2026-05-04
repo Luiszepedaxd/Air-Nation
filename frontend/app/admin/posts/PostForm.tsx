@@ -52,6 +52,7 @@ export type AdminPost = {
   published: boolean
   created_by: string | null
   created_at: string
+  faqs?: Array<{ question: string; answer: string }> | null
 }
 
 function slugifyTitle(title: string): string {
@@ -191,6 +192,16 @@ export default function PostForm({
     post?.meta_description ?? ''
   )
   const [published, setPublished] = useState(post?.published ?? false)
+  const [faqs, setFaqs] = useState<{ question: string; answer: string }[]>(
+    () => {
+      const raw = post?.faqs
+      if (!raw || !Array.isArray(raw)) return []
+      return raw.map((f) => ({
+        question: typeof f?.question === 'string' ? f.question : '',
+        answer: typeof f?.answer === 'string' ? f.answer : '',
+      }))
+    }
+  )
   const [seoOpen, setSeoOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, setPending] = useState<'draft' | 'publish' | null>(null)
@@ -299,6 +310,7 @@ export default function PostForm({
     meta_title: metaTitle,
     meta_description: metaDescription,
     published: publishedFlag,
+    faqs: faqs.length > 0 ? faqs : null,
   })
 
   const submit = async (publishedFlag: boolean) => {
@@ -690,6 +702,85 @@ export default function PostForm({
           <EditorContent editor={editor} />
         </div>
         </div>
+      </div>
+
+      <div>
+        <label
+          className="mb-2 block text-[0.65rem] tracking-[0.12em] text-[#666666]"
+          style={jostHeading}
+        >
+          PREGUNTAS FRECUENTES (SEO)
+        </label>
+        <p className="mb-3 text-sm text-[#666666]">
+          Opcional. Aparecen al final del artículo y generan datos estructurados
+          FAQ para Google.
+        </p>
+        <div className="space-y-4">
+          {faqs.map((faq, index) => (
+            <div
+              key={index}
+              className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-4"
+              style={{ borderRadius: 2 }}
+            >
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <span
+                  className="text-[0.65rem] tracking-[0.12em] text-[#666666]"
+                  style={jostHeading}
+                >
+                  PREGUNTA {index + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFaqs((prev) => prev.filter((_, i) => i !== index))
+                  }
+                  className="shrink-0 text-[0.65rem] tracking-[0.12em] text-[#CC4B37] underline"
+                  style={jostHeading}
+                >
+                  ELIMINAR
+                </button>
+              </div>
+              <input
+                type="text"
+                value={faq.question}
+                onChange={(e) =>
+                  setFaqs((prev) =>
+                    prev.map((f, i) =>
+                      i === index ? { ...f, question: e.target.value } : f
+                    )
+                  )
+                }
+                placeholder="Pregunta corta"
+                className={inputClass}
+                style={{ borderRadius: 2, ...latoBody }}
+              />
+              <textarea
+                value={faq.answer}
+                onChange={(e) =>
+                  setFaqs((prev) =>
+                    prev.map((f, i) =>
+                      i === index ? { ...f, answer: e.target.value } : f
+                    )
+                  )
+                }
+                placeholder="Respuesta"
+                rows={4}
+                className={`${inputClass} mt-3`}
+                style={{ borderRadius: 2, ...latoBody, resize: 'vertical' }}
+              />
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            setFaqs((prev) => [...prev, { question: '', answer: '' }])
+          }
+          className="mt-3 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-sm text-[#111111] transition-colors hover:border-[#CCCCCC]"
+          style={{ borderRadius: 2, ...latoBody }}
+        >
+          + Agregar pregunta
+        </button>
       </div>
 
       <div className="border border-solid border-[#EEEEEE] bg-[#F4F4F4]">

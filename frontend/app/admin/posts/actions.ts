@@ -13,6 +13,7 @@ export type PostInput = {
   meta_title: string
   meta_description: string
   published: boolean
+  faqs: Array<{ question: string; answer: string }> | null
 }
 
 function textFromHtml(html: string): string {
@@ -64,6 +65,8 @@ export async function createPost(
       meta_title: formData.meta_title?.trim() || null,
       meta_description: formData.meta_description?.trim() || null,
       published: formData.published,
+      faqs:
+        formData.faqs && formData.faqs.length > 0 ? formData.faqs : null,
       created_by: user.id,
     })
     .select('id')
@@ -116,6 +119,8 @@ export async function updatePost(
       meta_title: formData.meta_title?.trim() || null,
       meta_description: formData.meta_description?.trim() || null,
       published: formData.published,
+      faqs:
+        formData.faqs && formData.faqs.length > 0 ? formData.faqs : null,
     })
     .eq('id', id)
 

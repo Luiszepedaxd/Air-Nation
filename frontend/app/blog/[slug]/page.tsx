@@ -25,6 +25,7 @@ type PostFull = {
   published: boolean
   created_at: string
   created_by: string | null
+  faqs: unknown | null
 }
 
 type RelatedPost = {
@@ -34,6 +35,22 @@ type RelatedPost = {
   cover_url: string | null
   category: string | null
   created_at: string
+}
+
+function parsePostFaqs(raw: unknown): { question: string; answer: string }[] {
+  if (!Array.isArray(raw)) return []
+  const out: { question: string; answer: string }[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const q = (item as { question?: unknown }).question
+    const a = (item as { answer?: unknown }).answer
+    if (typeof q !== 'string' || typeof a !== 'string') continue
+    const question = q.trim()
+    const answer = a.trim()
+    if (!question || !answer) continue
+    out.push({ question, answer })
+  }
+  return out
 }
 
 function formatPostDate(iso: string) {
@@ -72,7 +89,7 @@ async function fetchPostBySlug(slug: string): Promise<PostFull | null> {
   const { data, error } = await supabase
     .from('posts')
     .select(
-      'id, title, slug, category, excerpt, content, cover_url, meta_title, meta_description, published, created_at, created_by'
+      'id, title, slug, category, excerpt, content, cover_url, meta_title, meta_description, published, created_at, created_by, faqs'
     )
     .eq('slug', slug)
     .eq('published', true)
@@ -121,6 +138,8 @@ export default async function BlogPostPage({
 }) {
   const post = await fetchPostBySlug(params.slug)
   if (!post) notFound()
+
+  const faqItems = parsePostFaqs(post.faqs)
 
   const supabase = createPublicSupabaseClient()
   let related: RelatedPost[] = []
@@ -172,6 +191,25 @@ export default async function BlogPostPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {faqItems.length > 0 ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: faqItems.map((faq) => ({
+                '@type': 'Question',
+                name: faq.question,
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: faq.answer,
+                },
+              })),
+            }),
+          }}
+        />
+      ) : null}
 
       {post.cover_url ? (
         <div className="w-full overflow-hidden bg-[#F4F4F4]">
@@ -218,6 +256,60 @@ export default async function BlogPostPage({
           className="prose-airnation"
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+
+        {faqItems.length > 0 ? (
+          <section
+            className="mt-10"
+            aria-labelledby="blog-faq-heading"
+          >
+            <h2
+              id="blog-faq-heading"
+              style={jost}
+              className="mb-4 text-[14px] font-extrabold uppercase tracking-widest text-[#111111] md:text-[16px]"
+            >
+              PREGUNTAS FRECUENTES
+            </h2>
+            <div className="space-y-2">
+              {faqItems.map((faq, i) => (
+                <details
+                  key={`${faq.question.slice(0, 40)}-${i}`}
+                  className="group border border-solid border-[#EEEEEE] bg-[#F4F4F4]"
+                >
+                  <summary
+                    className="cursor-pointer list-none px-4 py-3 text-left text-[13px] font-semibold text-[#111111] marker:hidden [&::-webkit-details-marker]:hidden"
+                    style={lato}
+                  >
+                    <span className="flex items-start justify-between gap-2">
+                      {faq.question}
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="shrink-0 text-[#CC4B37] transition-transform group-open:rotate-180"
+                        aria-hidden
+                      >
+                        <path
+                          d="M6 9l6 6 6-6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  </summary>
+                  <div
+                    className="border-t border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 py-3 text-[14px] leading-relaxed text-[#333333]"
+                    style={lato}
+                  >
+                    <p className="whitespace-pre-wrap">{faq.answer}</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className="mt-10">
           <h2

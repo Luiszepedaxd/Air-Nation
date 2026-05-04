@@ -17,7 +17,7 @@ export default async function EditarPostPage({
   const { data, error } = await supabase
     .from('posts')
     .select(
-      'id, title, slug, category, excerpt, content, cover_url, meta_title, meta_description, published, created_by, created_at'
+      'id, title, slug, category, excerpt, content, cover_url, meta_title, meta_description, published, created_by, created_at, faqs'
     )
     .eq('id', params.id)
     .maybeSingle()
