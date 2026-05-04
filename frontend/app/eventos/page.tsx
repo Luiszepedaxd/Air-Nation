@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { getSiteAssets } from '@/lib/site-assets'
-import { EventoCard, type EventoCardRow } from './components/EventoCard'
+import type { EventoCardRow } from './components/EventoCard'
+import { EventosFiltros } from './components/EventosFiltros'
 
 export const revalidate = 0
 
@@ -279,19 +280,7 @@ export default async function EventosPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
-        {eventos.length === 0 ? (
-          <p className="py-12 text-center text-sm text-[#666666]" style={lato}>
-            No hay eventos publicados por ahora.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {eventos.map((e) => (
-              <EventoCard key={e.id} evento={e} />
-            ))}
-          </div>
-        )}
-      </div>
+      <EventosFiltros eventos={eventos} />
     </div>
   )
 }
