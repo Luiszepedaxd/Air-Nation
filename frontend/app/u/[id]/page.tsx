@@ -100,7 +100,7 @@ async function fetchPublicProfile(id: string) {
         logo_url: team.logo_url,
         team_role: mr.rol_plataforma ?? null,
         player_status:
-          (mr.player_status as 'activo' | 'reserva' | 'trial' | null) ??
+          (mr.player_status as 'activo' | 'reserva' | 'en_prueba' | null) ??
           'activo',
       })
     }
@@ -377,7 +377,7 @@ export default async function PublicProfilePage({
     (teamMemberRes.data?.player_status as
       | 'activo'
       | 'reserva'
-      | 'trial'
+      | 'en_prueba'
       | null
       | undefined) ?? null
 

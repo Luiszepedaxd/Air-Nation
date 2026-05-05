@@ -19,7 +19,7 @@ export type TeamMemberAdminRow = {
   alias: string | null
   avatar_url: string | null
   ciudad: string | null
-  player_status?: 'activo' | 'reserva' | 'trial' | null
+  player_status?: 'activo' | 'reserva' | 'en_prueba' | null
 }
 
 export type TeamPostAdminRow = {

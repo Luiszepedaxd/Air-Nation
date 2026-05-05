@@ -289,7 +289,7 @@ router.post("/", async (req, res) => {
       team_id: team.id,
       user_id: created_by,
       rol_plataforma: "founder",
-      rango_militar: "fundador",
+      rango_militar: "capitan",
       status: "activo",
     });
 

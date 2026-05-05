@@ -44,7 +44,7 @@ BEGIN
   END IF;
 
   INSERT INTO public.team_members (team_id, user_id, rol_plataforma, rango_militar, status)
-VALUES (p_team_id, p_user_id, 'member', 'operador', 'activo')
+  VALUES (p_team_id, p_user_id, 'member', 'operador', 'activo')
   ON CONFLICT (team_id, user_id) DO UPDATE
   SET status = 'activo';
 

@@ -27,7 +27,7 @@ export type MemberDisplay = {
   alias: string | null
   avatar_url: string | null
   /** activo | reserva | trial */
-  player_status?: 'activo' | 'reserva' | 'trial' | null
+  player_status?: 'activo' | 'reserva' | 'en_prueba' | null
   /** Ordenación: `team_members.created_at` */
   created_at: string
 }

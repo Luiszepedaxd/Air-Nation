@@ -34,13 +34,12 @@ const MAX_MB = 5
 const MAX_BYTES = MAX_MB * 1024 * 1024
 
 const RANGO_OPTIONS = [
-  'fundador',
   'capitan',
   'lider_escuadra',
-  'miembro',
+  'operador',
 ] as const
 
-const PLAYER_STATUS_OPTIONS = ['activo', 'reserva', 'trial'] as const
+const PLAYER_STATUS_OPTIONS = ['activo', 'reserva', 'en_prueba'] as const
 type PlayerStatusValue = (typeof PLAYER_STATUS_OPTIONS)[number]
 
 const PLAYER_STATUS_STYLES: Record<
@@ -49,13 +48,13 @@ const PLAYER_STATUS_STYLES: Record<
 > = {
   activo: { label: 'ACTIVO', bg: '#E1F5EE', fg: '#085041' },
   reserva: { label: 'RESERVA', bg: '#FAEEDA', fg: '#633806' },
-  trial: { label: 'TRIAL', bg: '#EEEDFE', fg: '#3C3489' },
+  en_prueba: { label: 'EN PRUEBA', bg: '#EEEDFE', fg: '#3C3489' },
 }
 
 function normalizePlayerStatus(ps: string | null | undefined): PlayerStatusValue {
   const v = (ps ?? '').toLowerCase().trim()
   if (v === 'reserva') return 'reserva'
-  if (v === 'trial') return 'trial'
+  if (v === 'en_prueba') return 'en_prueba'
   return 'activo'
 }
 
@@ -939,18 +938,12 @@ function IntegrantesTab({
   ) => {
     setBusyMemberId(memberId)
     try {
-      const currentMember = members.find((x) => x.id === memberId)
-      const currentRango = (currentMember?.rango_militar || '').toLowerCase().trim()
-
       const updates: { rol_plataforma: string; rango_militar?: string } = {
         rol_plataforma: next,
       }
 
       if (next === 'founder') {
-        updates.rango_militar = 'fundador'
-      } else if (currentRango === 'fundador') {
-        // Solo resetear si quedó residuo de cuando era founder
-        updates.rango_militar = 'miembro'
+        updates.rango_militar = 'capitan'
       }
 
       const { error } = await supabase
@@ -1099,14 +1092,20 @@ function IntegrantesTab({
 
                 {showRango ? (
                   <div className="mt-3">
+                    <p
+                      style={jost}
+                      className="mb-1 text-[10px] font-extrabold uppercase tracking-wide text-[#999999]"
+                    >
+                      Rango en el equipo
+                    </p>
                     <label className="sr-only">Cambiar rango militar</label>
                     <select
                       disabled={busy}
                       value={(() => {
-                        const r = (m.rango_militar || 'miembro').trim()
+                        const r = (m.rango_militar || 'operador').trim()
                         return RANGO_OPTIONS.some((o) => o === r)
                           ? r
-                          : 'miembro'
+                          : 'operador'
                       })()}
                       onChange={(e) =>
                         void updateRango(m.id, e.target.value)
@@ -1126,12 +1125,12 @@ function IntegrantesTab({
                 {(viewerIsFounder || viewerIsAdmin) &&
                 m.user_id !== viewerUserId ? (
                   <div className="mt-3">
-                    <label
+                    <p
                       style={jost}
-                      className="mb-1 block text-[10px] text-[#666666]"
+                      className="mb-1 text-[10px] font-extrabold uppercase tracking-wide text-[#999999]"
                     >
-                      Status en equipo
-                    </label>
+                      Estado en el equipo
+                    </p>
                     <div className="flex items-center gap-2">
                       <select
                         disabled={busy}
@@ -1173,9 +1172,12 @@ function IntegrantesTab({
 
                 {showRol ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <span style={jost} className="text-[10px] text-[#666666]">
-                      Rol:
-                    </span>
+                    <p
+                      style={jost}
+                      className="mb-1 w-full text-[10px] font-extrabold uppercase tracking-wide text-[#999999]"
+                    >
+                      Permisos en la app
+                    </p>
                     <div className="flex flex-wrap gap-1">
                       <button
                         type="button"

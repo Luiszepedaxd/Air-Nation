@@ -9,7 +9,7 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-type PlayerStatus = 'activo' | 'reserva' | 'trial'
+type PlayerStatus = 'activo' | 'reserva' | 'en_prueba'
 
 function StarWhiteIcon() {
   return (
@@ -31,7 +31,7 @@ function StarWhiteIcon() {
 
 function normalizeRol(rol: string | null): 'founder' | 'admin' | 'member' {
   const r = (rol ?? '').toLowerCase().trim()
-  if (r === 'founder' || r === 'fundador') return 'founder'
+  if (r === 'founder') return 'founder'
   if (r === 'admin') return 'admin'
   return 'member'
 }
@@ -39,7 +39,7 @@ function normalizeRol(rol: string | null): 'founder' | 'admin' | 'member' {
 function normalizePlayerStatus(ps: string | null | undefined): PlayerStatus {
   const v = (ps ?? '').toLowerCase().trim()
   if (v === 'reserva') return 'reserva'
-  if (v === 'trial') return 'trial'
+  if (v === 'en_prueba') return 'en_prueba'
   return 'activo'
 }
 
@@ -50,7 +50,7 @@ function PlayerStatusBadge({ status }: { status: PlayerStatus }) {
   > = {
     activo: { label: 'ACTIVO', bg: '#E1F5EE', fg: '#085041' },
     reserva: { label: 'RESERVA', bg: '#FAEEDA', fg: '#633806' },
-    trial: { label: 'TRIAL', bg: '#EEEDFE', fg: '#3C3489' },
+    en_prueba: { label: 'EN PRUEBA', bg: '#EEEDFE', fg: '#3C3489' },
   }
   const c = config[status]
   return (
@@ -65,37 +65,37 @@ function PlayerStatusBadge({ status }: { status: PlayerStatus }) {
 
 function MemberRoleLine({ m }: { m: MemberDisplay }) {
   const kind = normalizeRol(m.rol_plataforma)
+  const rangoRaw = (m.rango_militar || '').trim()
+  const rangoLabel = rangoRaw
+    ? rangoRaw.replace(/_/g, ' ').toUpperCase()
+    : 'OPERADOR'
 
   if (kind === 'founder') {
     return (
-      <span
-        className="inline-flex items-center justify-center gap-1 bg-[#111111] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white"
-        style={jost}
-      >
-        <StarWhiteIcon />
-        FUNDADOR
-      </span>
+      <div className="flex flex-col items-center gap-1">
+        <span
+          className="inline-flex items-center justify-center gap-1 bg-[#111111] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white"
+          style={jost}
+        >
+          <StarWhiteIcon />
+          FUNDADOR
+        </span>
+        <p
+          style={lato}
+          className="text-center text-[11px] font-normal uppercase text-dim"
+        >
+          {rangoLabel}
+        </p>
+      </div>
     )
   }
 
-  if (kind === 'admin') {
-    return (
-      <span
-        className="inline-flex items-center justify-center border border-[#111111] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#111111]"
-        style={jost}
-      >
-        ADMIN
-      </span>
-    )
-  }
-
-  const rank = m.rango_militar?.trim() || 'MIEMBRO'
   return (
     <p
       style={lato}
       className="text-center text-[11px] font-normal uppercase text-dim"
     >
-      {rank}
+      {rangoLabel}
     </p>
   )
 }
@@ -180,8 +180,8 @@ export function TeamMembers({
   const reserva = members.filter(
     (m) => normalizePlayerStatus(m.player_status) === 'reserva'
   )
-  const trial = members.filter(
-    (m) => normalizePlayerStatus(m.player_status) === 'trial'
+  const enPrueba = members.filter(
+    (m) => normalizePlayerStatus(m.player_status) === 'en_prueba'
   )
 
   const sectionHeading = (label: string, count: number) => (
@@ -224,10 +224,10 @@ export function TeamMembers({
         </div>
       ) : null}
 
-      {trial.length > 0 ? (
+      {enPrueba.length > 0 ? (
         <div className="mb-8">
-          {sectionHeading('En trial', trial.length)}
-          <MembersGrid members={trial} />
+          {sectionHeading('En prueba', enPrueba.length)}
+          <MembersGrid members={enPrueba} />
         </div>
       ) : null}
     </section>

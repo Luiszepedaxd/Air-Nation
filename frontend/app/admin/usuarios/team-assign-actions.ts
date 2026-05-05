@@ -143,7 +143,7 @@ export async function assignUserToTeamAction(
       team_id: tid,
       user_id: uid,
       rol_plataforma: 'member',
-      rango_militar: 'miembro',
+      rango_militar: 'operador',
       status: 'activo',
     })
     if (insErr) return { error: insErr.message }

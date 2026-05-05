@@ -23,10 +23,10 @@ export type PublicUserProfile = {
     logo_url: string | null
     team_role: string | null
     /** activo | reserva | trial — status en ese equipo */
-    player_status?: 'activo' | 'reserva' | 'trial' | null
+    player_status?: 'activo' | 'reserva' | 'en_prueba' | null
   }>
   /** Status del jugador en su equipo principal (team_id) */
-  player_status?: 'activo' | 'reserva' | 'trial' | null
+  player_status?: 'activo' | 'reserva' | 'en_prueba' | null
 }
 
 export type PlayerPostRow = {

@@ -201,7 +201,7 @@ export function NotificacionesTab({
         team_id: row.team_id,
         user_id: row.user_id,
         rol_plataforma: 'member',
-        rango_militar: 'miembro',
+        rango_militar: 'operador',
         status: 'activo',
       })
       if (iErr) throw iErr

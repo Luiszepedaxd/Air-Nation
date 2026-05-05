@@ -18,7 +18,7 @@ import type {
 
 function memberRoleRank(rol: string | null): number {
   const r = (rol ?? '').toLowerCase().trim()
-  if (r === 'founder' || r === 'fundador') return 0
+  if (r === 'founder') return 0
   if (r === 'admin') return 1
   return 2
 }
@@ -120,7 +120,7 @@ async function fetchMembers(teamId: string): Promise<MemberDisplay[]> {
       alias: u?.alias ?? null,
       avatar_url: u?.avatar_url ?? null,
       player_status:
-        (r as { player_status?: 'activo' | 'reserva' | 'trial' | null })
+        (r as { player_status?: 'activo' | 'reserva' | 'en_prueba' | null })
           .player_status ?? 'activo',
       created_at: String((r as { created_at?: string }).created_at ?? ''),
     }

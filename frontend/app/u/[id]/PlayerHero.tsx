@@ -122,7 +122,7 @@ function mapPlatformRole(rol: string | null | undefined): string | null {
   return null
 }
 
-type PlayerStatusKey = 'activo' | 'reserva' | 'trial'
+type PlayerStatusKey = 'activo' | 'reserva' | 'en_prueba'
 
 const PLAYER_STATUS_STYLES: Record<
   PlayerStatusKey,
@@ -130,14 +130,14 @@ const PLAYER_STATUS_STYLES: Record<
 > = {
   activo: { label: 'ACTIVO', bg: '#E1F5EE', fg: '#085041' },
   reserva: { label: 'RESERVA', bg: '#FAEEDA', fg: '#633806' },
-  trial: { label: 'TRIAL', bg: '#EEEDFE', fg: '#3C3489' },
+  en_prueba: { label: 'EN PRUEBA', bg: '#EEEDFE', fg: '#3C3489' },
 }
 
 function normalizePlayerStatusKey(
   ps: string | null | undefined
 ): PlayerStatusKey | null {
   const v = (ps ?? '').toLowerCase().trim()
-  if (v === 'activo' || v === 'reserva' || v === 'trial') return v
+  if (v === 'activo' || v === 'reserva' || v === 'en_prueba') return v
   return null
 }
 
@@ -152,7 +152,7 @@ type TeamCardItem = {
   slug: string
   logo_url: string | null
   team_role: string | null
-  player_status?: 'activo' | 'reserva' | 'trial' | null
+  player_status?: 'activo' | 'reserva' | 'en_prueba' | null
 }
 
 function teamLogoInitial(nombre: string) {
