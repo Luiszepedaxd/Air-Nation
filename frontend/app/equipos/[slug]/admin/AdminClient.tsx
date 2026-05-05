@@ -939,9 +939,23 @@ function IntegrantesTab({
   ) => {
     setBusyMemberId(memberId)
     try {
+      const currentMember = members.find((x) => x.id === memberId)
+      const currentRango = (currentMember?.rango_militar || '').toLowerCase().trim()
+
+      const updates: { rol_plataforma: string; rango_militar?: string } = {
+        rol_plataforma: next,
+      }
+
+      if (next === 'founder') {
+        updates.rango_militar = 'fundador'
+      } else if (currentRango === 'fundador') {
+        // Solo resetear si quedó residuo de cuando era founder
+        updates.rango_militar = 'miembro'
+      }
+
       const { error } = await supabase
         .from('team_members')
-        .update({ rol_plataforma: next })
+        .update(updates)
         .eq('id', memberId)
         .eq('team_id', teamId)
 
@@ -949,7 +963,16 @@ function IntegrantesTab({
 
       setMembers((prev) => {
         const nextList = prev.map((x) =>
-          x.id === memberId ? { ...x, rol_plataforma: next } : x
+          x.id === memberId
+            ? {
+                ...x,
+                rol_plataforma: next,
+                rango_militar:
+                  updates.rango_militar !== undefined
+                    ? updates.rango_militar
+                    : x.rango_militar,
+              }
+            : x
         )
         return [...nextList].sort((a, b) => {
           const rank = (r: string | null) => {
