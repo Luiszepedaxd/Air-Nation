@@ -94,11 +94,11 @@ export default async function ProximosEventosHome() {
   return (
     <section
       id="proximos-eventos"
-      className="relative bg-[#F4F4F4] px-5 py-20 sm:px-8 sm:py-24 lg:py-32"
+      className="relative bg-[#F4F4F4] px-5 py-14 sm:px-8 sm:py-20 lg:py-24"
     >
       <div className="mx-auto max-w-7xl">
         <RevealOnScroll>
-          <div className="mb-10 flex flex-col gap-6 sm:mb-16 lg:mb-20 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mb-8 flex flex-col gap-6 sm:mb-12 lg:mb-16 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="mb-5 flex items-center gap-4">
                 <span className="block h-[2px] w-7 bg-[#CC4B37]" />

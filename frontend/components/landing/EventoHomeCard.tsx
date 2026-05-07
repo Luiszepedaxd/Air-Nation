@@ -121,13 +121,13 @@ export function EventoHomeCard({
           ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col p-5 sm:p-6">
+        <div className="flex flex-1 flex-col p-4 sm:p-5">
           <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#CC4B37]">
             {formatFecha(evento.fecha)}
           </p>
           <h3
-            className="mt-2 line-clamp-2 font-display font-extrabold uppercase leading-[1.1] text-[#111111] transition-colors group-hover:text-[#CC4B37]"
-            style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.35rem)' }}
+            className="mt-1.5 line-clamp-2 font-display font-extrabold uppercase leading-[1.1] text-[#111111] transition-colors group-hover:text-[#CC4B37]"
+            style={{ fontSize: 'clamp(1.05rem, 1.6vw, 1.35rem)' }}
           >
             {evento.title}
           </h3>
@@ -140,6 +140,7 @@ export function EventoHomeCard({
                 viewBox="0 0 12 12"
                 fill="none"
                 aria-hidden
+                className="shrink-0"
               >
                 <path
                   d="M6 11s4-3.5 4-7a4 4 0 0 0-8 0c0 3.5 4 7 4 7z"
@@ -162,7 +163,7 @@ export function EventoHomeCard({
             </p>
           ) : null}
 
-          <span className="mt-auto inline-flex items-center gap-1.5 pt-4 font-body text-[10px] font-bold uppercase tracking-[0.18em] text-[#CC4B37]">
+          <span className="mt-auto inline-flex items-center gap-1.5 border-t border-solid border-[#EEEEEE] pt-3 font-body text-[10px] font-bold uppercase tracking-[0.18em] text-[#CC4B37]">
             Ver evento
             <svg
               width="11"

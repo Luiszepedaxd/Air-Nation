@@ -41,7 +41,7 @@ export default async function CtaBandaUnete() {
         aria-hidden
       />
 
-      <div className="relative z-10 mx-auto max-w-7xl px-5 py-20 sm:px-8 sm:py-28 lg:py-32">
+      <div className="relative z-10 mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:py-24">
         <RevealOnScroll>
           <div className="mx-auto max-w-3xl text-center">
             <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
