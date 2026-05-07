@@ -4,6 +4,7 @@ export const revalidate = 0;
 
 import Navbar           from "@/components/landing/Navbar";
 import Hero             from "@/components/landing/Hero";
+import QueEsAirNation   from "@/components/landing/QueEsAirNation";
 import Features         from "@/components/landing/Features";
 import ProductPreview   from "@/components/landing/ProductPreview";
 import CommunitySection from "@/components/landing/CommunitySection";
@@ -59,6 +60,7 @@ export default function Home() {
       />
       <Navbar />
       <Hero />
+      <QueEsAirNation />
       <Features />
       <ProductPreview />
       <CommunitySection />
