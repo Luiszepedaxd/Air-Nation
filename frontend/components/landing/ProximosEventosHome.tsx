@@ -146,13 +146,33 @@ export default async function ProximosEventosHome() {
           </div>
         </RevealOnScroll>
 
+        {/* Mobile: carrusel horizontal centrado */}
         <div className="-mx-5 sm:hidden">
           <div
-            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-4"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingLeft: '1.25rem',
+              paddingRight: '1.25rem',
+              scrollPaddingLeft: '1.25rem',
+              scrollPaddingRight: '1.25rem',
+            }}
           >
             {eventos.map((e, i) => (
-              <div key={e.id} className="w-[82%] shrink-0 snap-start">
+              <div
+                key={e.id}
+                className={`w-[82%] shrink-0 snap-start ${
+                  i === eventos.length - 1 ? 'pr-5' : ''
+                }`}
+                style={{
+                  scrollSnapAlign:
+                    i === 0
+                      ? 'start'
+                      : i === eventos.length - 1
+                        ? 'end'
+                        : 'start',
+                }}
+              >
                 <EventoHomeCard evento={e} index={i} />
               </div>
             ))}

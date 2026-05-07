@@ -16,7 +16,7 @@ const FEATURES: Feature[] = [
   {
     key: 'feed',
     assetKey: 'home_que_es_image_1',
-    eyebrow: '01 · COMUNIDAD',
+    eyebrow: 'COMUNIDAD',
     titulo: 'Tu feed',
     descripcion:
       'Comparte fotos, videos y experiencias de tus partidas. Conecta con tu equipo y con jugadores de toda la república.',
@@ -26,7 +26,7 @@ const FEATURES: Feature[] = [
   {
     key: 'equipos',
     assetKey: 'home_que_es_image_2',
-    eyebrow: '02 · IDENTIDAD',
+    eyebrow: 'IDENTIDAD',
     titulo: 'Tu equipo',
     descripcion:
       'Crea o únete a tu equipo. Roles claros, miembros activos, reservas y trial. Tu identidad táctica vive aquí.',
@@ -36,7 +36,7 @@ const FEATURES: Feature[] = [
   {
     key: 'eventos',
     assetKey: 'home_que_es_image_3',
-    eyebrow: '03 · AGENDA',
+    eyebrow: 'AGENDA',
     titulo: 'Eventos',
     descripcion:
       'Calendario público de partidas, milsim y torneos en México. Filtros por mes y ciudad. Confirma tu asistencia gratis.',
@@ -46,12 +46,12 @@ const FEATURES: Feature[] = [
   {
     key: 'marketplace',
     assetKey: 'home_que_es_image_4',
-    eyebrow: '04 · ARSENAL',
-    titulo: 'Marketplace + Tienda',
+    eyebrow: 'MARKETPLACE',
+    titulo: 'Marketplace',
     descripcion:
-      'Compra y vende réplicas y gear entre la comunidad. Tienda oficial AN Store con descuento por transferencia.',
-    href: '/store',
-    cta: 'Ver tienda',
+      'Compra y vende réplicas y gear entre la comunidad.',
+    href: '/marketplace',
+    cta: 'Ver marketplace',
   },
 ]
 
@@ -89,14 +89,33 @@ export default async function QueEsAirNation() {
           </div>
         </RevealOnScroll>
 
-        {/* Mobile: carrusel horizontal con scroll-snap */}
+        {/* Mobile: carrusel horizontal con scroll-snap centrado */}
         <div className="-mx-5 sm:hidden">
           <div
-            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-4"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingLeft: '1.25rem',
+              paddingRight: '1.25rem',
+              scrollPaddingLeft: '1.25rem',
+              scrollPaddingRight: '1.25rem',
+            }}
           >
-            {FEATURES.map((f) => (
-              <div key={f.key} className="w-[78%] shrink-0 snap-start">
+            {FEATURES.map((f, idx) => (
+              <div
+                key={f.key}
+                className={`w-[78%] shrink-0 snap-start ${
+                  idx === FEATURES.length - 1 ? 'pr-5' : ''
+                }`}
+                style={{
+                  scrollSnapAlign:
+                    idx === 0
+                      ? 'start'
+                      : idx === FEATURES.length - 1
+                        ? 'end'
+                        : 'start',
+                }}
+              >
                 <QueEsCard
                   imageUrl={assets[f.assetKey] ?? '/og-default.jpg'}
                   eyebrow={f.eyebrow}
