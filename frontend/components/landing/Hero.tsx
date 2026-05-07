@@ -14,7 +14,7 @@ export default async function Hero() {
       <div className="absolute inset-0 z-0 h-full w-full overflow-hidden">
         <img
           src={heroUrl}
-          alt="Airsoft — jugadores en acción"
+          alt=""
           className="absolute inset-0 h-full w-full min-h-full min-w-full animate-an-ken-burns object-cover object-center"
           loading="eager"
           decoding="async"
@@ -23,7 +23,7 @@ export default async function Hero() {
 
       {/* 2. Overlay oscuro */}
       <div
-        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/85 to-[#111111]/40"
+        className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#111111] via-[#111111]/65 to-[#111111]/15"
         aria-hidden
       />
 
@@ -129,14 +129,11 @@ export default async function Hero() {
         className="absolute bottom-12 left-1/2 z-10 -translate-x-1/2 animate-an-fade-in"
         style={{ animationDelay: "1.4s", animationFillMode: "both" }}
       >
-        <div className="animate-an-bounce-slow flex flex-col items-center gap-2">
-          <span className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-white/50">
-            Scroll
-          </span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <div className="animate-an-bounce-slow flex items-center justify-center">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path
               d="M6 9l6 6 6-6"
-              stroke="rgba(255,255,255,0.5)"
+              stroke="rgba(255,255,255,0.45)"
               strokeWidth="1.6"
               strokeLinecap="round"
               strokeLinejoin="round"
