@@ -10,8 +10,8 @@ import { uploadFile } from '@/lib/apiFetch'
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-const SISTEMAS = ['Rifle de Asalto', 'Subfusil (SMG)', 'Ametralladora Ligera (LMG)', 'DMR', 'Francotirador (Sniper)', 'Pistola', 'Escopeta', 'Otro']
-const MECANISMOS = ['AEG', 'GBB', 'HPA', 'Muelle (Spring)', 'CO2']
+export const SISTEMAS = ['Rifle de Asalto', 'Subfusil (SMG)', 'Ametralladora Ligera (LMG)', 'DMR', 'Francotirador (Sniper)', 'Pistola', 'Escopeta', 'Otro']
+export const MECANISMOS = ['AEG', 'GBB', 'HPA', 'Muelle (Spring)', 'CO2']
 
 const ACCESORIOS_SUBCATS = [
   'Miras y ópticas',
@@ -157,6 +157,10 @@ export function RegistrarForm({
     if (!nombre.trim()) { setError('El nombre es obligatorio.'); return }
     if (!sistema) { setError('Selecciona el sistema de arma.'); return }
     if (!mecanismo) { setError('Selecciona el mecanismo.'); return }
+    if (uploading) {
+      setError('Espera a que termine de subir la foto.')
+      return
+    }
     setSaving(true)
     setError('')
     try {

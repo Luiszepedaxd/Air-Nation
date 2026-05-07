@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
-import { ArsenalIcon } from '../ArsenalClient'
-import type { ReplicaRow } from '../ArsenalClient'
+import { ArsenalIcon, SISTEMAS, MECANISMOS, type ReplicaRow } from '../ArsenalClient'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -49,6 +48,49 @@ export function ReplicaDetailClient({
   const [showTransferForm, setShowTransferForm] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editError, setEditError] = useState('')
+  const [editForm, setEditForm] = useState({
+    nombre: initialReplica.nombre,
+    sistema: initialReplica.sistema ?? '',
+    mecanismo: initialReplica.mecanismo ?? '',
+    condicion: (initialReplica.condicion as 'stock' | 'upgrades') ?? 'stock',
+    upgrades: initialReplica.upgrades ?? '',
+    descripcion: initialReplica.descripcion ?? '',
+    serial: initialReplica.serial ?? '',
+  })
+
+  const handleSaveEdit = async () => {
+    if (!editForm.nombre.trim()) { setEditError('El nombre es obligatorio.'); return }
+    if (!editForm.sistema) { setEditError('Selecciona el sistema.'); return }
+    if (!editForm.mecanismo) { setEditError('Selecciona el mecanismo.'); return }
+    setEditing(true)
+    setEditError('')
+    try {
+      const payload = {
+        nombre: editForm.nombre.trim(),
+        sistema: editForm.sistema,
+        mecanismo: editForm.mecanismo,
+        condicion: editForm.condicion,
+        upgrades: editForm.condicion === 'upgrades' ? (editForm.upgrades.trim() || null) : null,
+        descripcion: editForm.descripcion.trim() || null,
+        serial: editForm.serial.trim() || null,
+        verificada: !!editForm.serial.trim(),
+      }
+      const { error } = await supabase
+        .from('arsenal')
+        .update(payload)
+        .eq('id', replica.id)
+      if (error) throw error
+      setReplica(r => ({ ...r, ...payload }))
+      setShowEdit(false)
+    } catch {
+      setEditError('Error al guardar. Intenta de nuevo.')
+    } finally {
+      setEditing(false)
+    }
+  }
 
   const handleToggleVenta = async () => {
     const { error } = await supabase
@@ -126,6 +168,7 @@ export function ReplicaDetailClient({
   }
 
   const inputClass = 'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
+  const labelClass = 'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]'
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
@@ -225,6 +268,27 @@ export function ReplicaDetailClient({
         {isOwner && (
           <div className="mt-6 flex flex-col gap-3">
             <p style={jost} className="text-[10px] font-extrabold uppercase text-[#999999]">Acciones</p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setEditForm({
+                  nombre: replica.nombre,
+                  sistema: replica.sistema ?? '',
+                  mecanismo: replica.mecanismo ?? '',
+                  condicion: (replica.condicion as 'stock' | 'upgrades') ?? 'stock',
+                  upgrades: replica.upgrades ?? '',
+                  descripcion: replica.descripcion ?? '',
+                  serial: replica.serial ?? '',
+                })
+                setEditError('')
+                setShowEdit(true)
+              }}
+              style={jost}
+              className="w-full border border-[#EEEEEE] bg-[#FFFFFF] py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] hover:bg-[#F4F4F4] transition-colors"
+            >
+              Editar datos
+            </button>
 
             <button
               type="button"
@@ -332,6 +396,108 @@ export function ReplicaDetailClient({
         )}
 
       </div>
+
+      {showEdit && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center" onClick={() => !editing && setShowEdit(false)}>
+          <div className="bg-white w-full max-w-[480px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 style={jost} className="text-[18px] font-extrabold uppercase text-[#111111]">Editar réplica</h2>
+                <button type="button" onClick={() => !editing && setShowEdit(false)} className="text-[#999999] hover:text-[#111111]">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex flex-col gap-5">
+                <div>
+                  <label className={labelClass} style={jost}>Nombre / Modelo *</label>
+                  <input type="text" className={inputClass} value={editForm.nombre} maxLength={80}
+                    onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} />
+                </div>
+
+                <div>
+                  <label className={labelClass} style={jost}>Sistema de arma *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SISTEMAS.map(s => (
+                      <button key={s} type="button" style={jost}
+                        onClick={() => setEditForm(f => ({ ...f, sistema: s }))}
+                        className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${editForm.sistema === s ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass} style={jost}>Mecanismo *</label>
+                  <div className="flex flex-wrap gap-2">
+                    {MECANISMOS.map(m => (
+                      <button key={m} type="button" style={jost}
+                        onClick={() => setEditForm(f => ({ ...f, mecanismo: m }))}
+                        className={`border px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${editForm.mecanismo === m ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass} style={jost}>Condición *</label>
+                  <div className="flex gap-2">
+                    {(['stock', 'upgrades'] as const).map(c => (
+                      <button key={c} type="button" style={jost}
+                        onClick={() => setEditForm(f => ({ ...f, condicion: c }))}
+                        className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${editForm.condicion === c ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                        {c === 'stock' ? 'Stock' : 'Con upgrades'}
+                      </button>
+                    ))}
+                  </div>
+                  {editForm.condicion === 'upgrades' && (
+                    <textarea className={`${inputClass} mt-2 resize-none`} rows={3}
+                      placeholder="Describe los upgrades: motor, hopup, inner barrel..."
+                      value={editForm.upgrades} maxLength={300}
+                      onChange={e => setEditForm(f => ({ ...f, upgrades: e.target.value }))} />
+                  )}
+                </div>
+
+                <div>
+                  <label className={labelClass} style={jost}>
+                    Número de serie <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional — verifica la réplica)</span>
+                  </label>
+                  <input type="text" className={inputClass} value={editForm.serial} maxLength={40}
+                    onChange={e => setEditForm(f => ({ ...f, serial: e.target.value }))} />
+                </div>
+
+                <div>
+                  <label className={labelClass} style={jost}>Descripción</label>
+                  <textarea className={`${inputClass} resize-none`} rows={3} maxLength={300}
+                    value={editForm.descripcion}
+                    onChange={e => setEditForm(f => ({ ...f, descripcion: e.target.value }))} />
+                </div>
+
+                {editError && (
+                  <p style={lato} className="text-[12px] text-[#CC4B37]">{editError}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowEdit(false)} disabled={editing}
+                    style={jost}
+                    className="flex-1 border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase text-[#666666] disabled:opacity-50">
+                    Cancelar
+                  </button>
+                  <button type="button" onClick={() => void handleSaveEdit()} disabled={editing}
+                    style={jost}
+                    className="flex-1 bg-[#CC4B37] py-3 text-[11px] font-extrabold uppercase text-white disabled:opacity-50">
+                    {editing ? 'Guardando…' : 'Guardar cambios'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
