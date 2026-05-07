@@ -24,40 +24,22 @@ export function QueEsCard({
     <Link href={href} className="group block h-full">
       <TiltCard intensity={6} className="h-full">
         <div className="relative flex h-full flex-col overflow-hidden border border-solid border-[#EEEEEE] bg-white transition-all duration-300 group-hover:border-[#CC4B37] group-hover:shadow-[0_20px_40px_-15px_rgba(204,75,55,0.25)]">
-          {/* Mockup iPhone */}
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#111111]">
-            {/* Glow rojo difuminado en hover */}
-            <div
-              className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,rgba(204,75,55,0.25)_0%,transparent_60%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-              aria-hidden
+          {/* Imagen del feature (mockup completo subido por admin) */}
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#111111]">
+            {/* Imagen llenando todo el cuadro */}
+            <img
+              src={imageUrl}
+              alt=""
+              className="absolute inset-0 z-[1] h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+              decoding="async"
             />
 
-            {/* Imagen mockup */}
-            <div className="absolute inset-0 z-[2] flex items-center justify-center p-6 sm:p-8">
-              <div
-                className="relative h-full w-auto max-w-[180px] overflow-hidden border-[3px] border-solid border-[#222222] bg-[#000000]"
-                style={{
-                  aspectRatio: '9 / 19',
-                  borderRadius: '32px',
-                  boxShadow:
-                    '0 20px 50px rgba(0,0,0,0.5), inset 0 0 0 2px #1a1a1a',
-                }}
-              >
-                <img
-                  src={imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-                {/* Notch */}
-                <div
-                  className="absolute left-1/2 top-2 z-10 h-[14px] w-[60px] -translate-x-1/2 bg-black"
-                  style={{ borderRadius: '999px' }}
-                  aria-hidden
-                />
-              </div>
-            </div>
+            {/* Glow rojo difuminado en hover */}
+            <div
+              className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,rgba(204,75,55,0.25)_0%,transparent_70%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+              aria-hidden
+            />
           </div>
 
           {/* Contenido textual */}
