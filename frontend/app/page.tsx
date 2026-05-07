@@ -8,6 +8,7 @@ import QueEsAirNation   from "@/components/landing/QueEsAirNation";
 import ProximosEventosHome from "@/components/landing/ProximosEventosHome";
 import CtaBandaUnete from "@/components/landing/CtaBandaUnete";
 import CredencialHolografica from "@/components/landing/CredencialHolografica";
+import BlogHome from "@/components/landing/BlogHome";
 import Features         from "@/components/landing/Features";
 import ProductPreview   from "@/components/landing/ProductPreview";
 import CommunitySection from "@/components/landing/CommunitySection";
@@ -67,6 +68,7 @@ export default function Home() {
       <ProximosEventosHome />
       <CtaBandaUnete />
       <CredencialHolografica />
+      <BlogHome />
       <Features />
       <ProductPreview />
       <CommunitySection />
