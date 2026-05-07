@@ -126,7 +126,7 @@ export function EventoHomeCard({
             {formatFecha(evento.fecha)}
           </p>
           <h3
-            className="mt-2 font-display font-extrabold uppercase leading-[1.1] text-[#111111] transition-colors group-hover:text-[#CC4B37]"
+            className="mt-2 line-clamp-2 font-display font-extrabold uppercase leading-[1.1] text-[#111111] transition-colors group-hover:text-[#CC4B37]"
             style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.35rem)' }}
           >
             {evento.title}

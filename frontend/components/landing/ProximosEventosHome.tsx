@@ -161,7 +161,7 @@ export default async function ProximosEventosHome() {
             {eventos.map((e, i) => (
               <div
                 key={e.id}
-                className={`w-[82%] shrink-0 snap-start ${
+                className={`h-[420px] w-[82%] shrink-0 snap-start ${
                   i === eventos.length - 1 ? 'pr-5' : ''
                 }`}
                 style={{
