@@ -149,7 +149,7 @@ export default async function ProximosEventosHome() {
         {/* Mobile: carrusel horizontal centrado */}
         <div className="-mx-5 sm:hidden">
           <div
-            className="scrollbar-hide flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto scroll-smooth pb-4"
+            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
             style={{
               WebkitOverflowScrolling: 'touch',
               paddingLeft: '1.25rem',
@@ -161,7 +161,7 @@ export default async function ProximosEventosHome() {
             {eventos.map((e, i) => (
               <div
                 key={e.id}
-                className={`flex w-[82%] shrink-0 snap-start ${
+                className={`w-[82%] shrink-0 snap-start ${
                   i === eventos.length - 1 ? 'pr-5' : ''
                 }`}
                 style={{
@@ -173,9 +173,7 @@ export default async function ProximosEventosHome() {
                         : 'start',
                 }}
               >
-                <div className="w-full">
-                  <EventoHomeCard evento={e} index={i} />
-                </div>
+                <EventoHomeCard evento={e} index={i} />
               </div>
             ))}
           </div>

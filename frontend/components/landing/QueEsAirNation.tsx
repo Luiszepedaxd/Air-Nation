@@ -92,7 +92,7 @@ export default async function QueEsAirNation() {
         {/* Mobile: carrusel horizontal con scroll-snap centrado */}
         <div className="-mx-5 sm:hidden">
           <div
-            className="scrollbar-hide flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto scroll-smooth pb-4"
+            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
             style={{
               WebkitOverflowScrolling: 'touch',
               paddingLeft: '1.25rem',
@@ -104,7 +104,7 @@ export default async function QueEsAirNation() {
             {FEATURES.map((f, idx) => (
               <div
                 key={f.key}
-                className={`flex w-[78%] shrink-0 snap-start ${
+                className={`w-[78%] shrink-0 snap-start ${
                   idx === FEATURES.length - 1 ? 'pr-5' : ''
                 }`}
                 style={{
@@ -116,16 +116,14 @@ export default async function QueEsAirNation() {
                         : 'start',
                 }}
               >
-                <div className="w-full">
-                  <QueEsCard
-                    imageUrl={assets[f.assetKey] ?? '/og-default.jpg'}
-                    eyebrow={f.eyebrow}
-                    titulo={f.titulo}
-                    descripcion={f.descripcion}
-                    href={f.href}
-                    cta={f.cta}
-                  />
-                </div>
+                <QueEsCard
+                  imageUrl={assets[f.assetKey] ?? '/og-default.jpg'}
+                  eyebrow={f.eyebrow}
+                  titulo={f.titulo}
+                  descripcion={f.descripcion}
+                  href={f.href}
+                  cta={f.cta}
+                />
               </div>
             ))}
           </div>
