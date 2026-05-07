@@ -89,8 +89,38 @@ export default async function QueEsAirNation() {
           </div>
         </RevealOnScroll>
 
-        {/* Grid de cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        {/* Mobile: carrusel horizontal con scroll-snap */}
+        <div className="-mx-5 sm:hidden">
+          <div
+            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-4"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            {FEATURES.map((f) => (
+              <div key={f.key} className="w-[78%] shrink-0 snap-start">
+                <QueEsCard
+                  imageUrl={assets[f.assetKey] ?? '/og-default.jpg'}
+                  eyebrow={f.eyebrow}
+                  titulo={f.titulo}
+                  descripcion={f.descripcion}
+                  href={f.href}
+                  cta={f.cta}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-center gap-1.5 px-5">
+            {FEATURES.map((f) => (
+              <span
+                key={f.key}
+                className="h-1 w-1 rounded-full bg-[#CCCCCC]"
+                aria-hidden
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: grid con stagger reveal */}
+        <div className="hidden gap-6 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {FEATURES.map((f, i) => (
             <RevealOnScroll
               key={f.key}
