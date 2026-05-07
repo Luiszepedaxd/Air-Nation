@@ -95,7 +95,7 @@ export function EventoHomeCard({
   return (
     <Link href={`/eventos/${evento.id}`} className="group block h-full">
       <article className="relative flex h-full flex-col overflow-hidden border border-solid border-[#EEEEEE] bg-white transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#CC4B37] group-hover:shadow-[0_25px_50px_-15px_rgba(204,75,55,0.3)]">
-        <div className="relative h-44 w-full shrink-0 overflow-hidden bg-[#111111] sm:h-auto sm:aspect-video">
+        <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#111111] sm:h-auto sm:aspect-video">
           <img
             src={imageUrl}
             alt=""

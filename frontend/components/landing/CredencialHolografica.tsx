@@ -18,7 +18,7 @@ export default async function CredencialHolografica() {
   const ctaLabel = hasSession ? 'Ver mi credencial' : 'Crear cuenta gratis'
 
   return (
-    <section className="relative overflow-hidden bg-[#111111] px-5 py-14 sm:px-8 sm:py-20 lg:py-24">
+    <section className="relative overflow-hidden bg-[#111111] px-5 py-10 sm:px-8 sm:py-14 lg:py-20">
       {/* Background gradient sutil */}
       <div
         className="pointer-events-none absolute inset-0 z-0 opacity-40"

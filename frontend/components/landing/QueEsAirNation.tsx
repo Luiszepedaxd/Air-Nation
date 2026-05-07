@@ -61,12 +61,12 @@ export default async function QueEsAirNation() {
   return (
     <section
       id="que-es"
-      className="relative bg-white px-5 py-14 sm:px-8 sm:py-20 lg:py-24"
+      className="relative bg-white px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
     >
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <RevealOnScroll>
-          <div className="mb-10 sm:mb-12 lg:mb-16">
+          <div className="mb-8 sm:mb-10 lg:mb-14">
             <div className="mb-5 flex items-center gap-4">
               <span className="block h-[2px] w-7 bg-[#CC4B37]" />
               <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">

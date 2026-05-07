@@ -94,11 +94,11 @@ export default async function ProximosEventosHome() {
   return (
     <section
       id="proximos-eventos"
-      className="relative bg-[#F4F4F4] px-5 py-14 sm:px-8 sm:py-20 lg:py-24"
+      className="relative bg-[#F4F4F4] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
     >
       <div className="mx-auto max-w-7xl">
         <RevealOnScroll>
-          <div className="mb-8 flex flex-col gap-6 sm:mb-12 lg:mb-16 lg:flex-row lg:items-end lg:justify-between">
+          <div className="mb-6 flex flex-col gap-6 sm:mb-10 lg:mb-12 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="mb-5 flex items-center gap-4">
                 <span className="block h-[2px] w-7 bg-[#CC4B37]" />
@@ -161,7 +161,7 @@ export default async function ProximosEventosHome() {
             {eventos.map((e, i) => (
               <div
                 key={e.id}
-                className={`h-[420px] w-[82%] shrink-0 snap-start ${
+                className={`h-[360px] w-[82%] shrink-0 snap-start ${
                   i === eventos.length - 1 ? 'pr-5' : ''
                 }`}
                 style={{
