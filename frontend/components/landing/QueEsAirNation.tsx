@@ -26,10 +26,10 @@ const FEATURES: Feature[] = [
   {
     key: 'equipos',
     assetKey: 'home_que_es_image_2',
-    eyebrow: 'IDENTIDAD',
+    eyebrow: 'EQUIPOS',
     titulo: 'Tu equipo',
     descripcion:
-      'Crea o únete a tu equipo. Roles claros, miembros activos, reservas y trial. Tu identidad táctica vive aquí.',
+      'Dale visibilidad a tu equipo, publica contenido y recluta nuevos integrantes. Toda la comunidad airsoftera mexicana en un solo lugar.',
     href: '/equipos',
     cta: 'Ver equipos',
   },
