@@ -2,47 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+
+const FEED_INTERVAL_MS = 3500;
+const EXIT_DURATION_MS = 600;
 
 const FEED_ITEMS = [
-  { text: "GhostMx completó su perfil en AirNation", keyword: "perfil", time: "hace 1 min" },
-  { text: "Equipo Lobo Negro fue creado en Guadalajara", keyword: "Equipo", time: "hace 2 min" },
-  { text: "Campo Zona Alfa fue registrado en CDMX", keyword: "Campo", time: "hace 3 min" },
-  { text: "ShadowFox registró su primera réplica", keyword: "réplica", time: "hace 4 min" },
-  { text: "Delta 5 tiene 8 nuevos integrantes", keyword: "integrantes", time: "hace 6 min" },
-  { text: "IronWolf generó su credencial digital", keyword: "credencial", time: "hace 7 min" },
-  { text: "Evento nocturno creado en Campo El Bosque", keyword: "Evento", time: "hace 9 min" },
-  { text: "Phantom Unit abrió solicitudes de membresía", keyword: "solicitudes", time: "hace 11 min" },
-  { text: "ViperX transfirió una réplica a SteelGhost", keyword: "réplica", time: "hace 13 min" },
-  { text: "Campo Trinchera registró 3 reseñas nuevas", keyword: "reseñas", time: "hace 15 min" },
-  { text: "NightHawk descargó su credencial por primera vez", keyword: "credencial", time: "hace 17 min" },
-  { text: "Equipo Spetsnaz MX fue fundado en Monterrey", keyword: "Equipo", time: "hace 19 min" },
-  { text: "RavenOps actualizó su perfil de jugador", keyword: "perfil", time: "hace 21 min" },
-  { text: "Evento CQB Urbano abrió 20 lugares", keyword: "Evento", time: "hace 23 min" },
-  { text: "Campo Desert Storm fue destacado esta semana", keyword: "Campo", time: "hace 25 min" },
-  { text: "TigerClaw registró su réplica HK416", keyword: "réplica", time: "hace 28 min" },
-  { text: "Equipo Red Fox completó su perfil de equipo", keyword: "equipo", time: "hace 30 min" },
-  { text: "SilentBlade se unió a su primer equipo", keyword: "equipo", time: "hace 33 min" },
-  { text: "Campo La Fortaleza subió nueva galería", keyword: "Campo", time: "hace 36 min" },
-  { text: "WraithMx generó su credencial con QR", keyword: "credencial", time: "hace 38 min" },
-  { text: "Equipo Insurgentes aprobó 5 solicitudes", keyword: "solicitudes", time: "hace 41 min" },
-  { text: "BullseyeMx registró su réplica número 3", keyword: "réplica", time: "hace 44 min" },
-  { text: "Evento Operación Tormenta lleva 34 RSVPs", keyword: "Evento", time: "hace 47 min" },
-  { text: "Campo Guerrero abrió agenda para este fin de semana", keyword: "Campo", time: "hace 50 min" },
-  { text: "CobraUnit actualizó su perfil con nueva foto", keyword: "perfil", time: "hace 53 min" },
-  { text: "StrikerMx reportó una réplica como robada", keyword: "réplica", time: "hace 56 min" },
-  { text: "Equipo Alpha Team alcanzó 20 integrantes", keyword: "integrantes", time: "hace 59 min" },
-  { text: "PhantomX descargó documentos de Guardia Nacional", keyword: "documentos", time: "hace 62 min" },
-  { text: "Campo Bunker Norte recibió su primera reseña", keyword: "reseña", time: "hace 65 min" },
-  { text: "FalconMx generó su credencial y la compartió", keyword: "credencial", time: "hace 68 min" },
-] as const;
-
-const FEED_INTERVAL_MS = 4000;
-const EXIT_DURATION_MS = 450;
-
-const STATS = [
-  { num: "Entra", label: "El registro es gratis", accent: false as boolean },
-  { num: "Juega", label: "La comunidad te espera", accent: true },
-  { num: "Gana", label: "Tu identidad, tu historia", accent: false },
+  { text: "Un equipo registró 8 nuevos integrantes", keyword: "equipo", time: "hace minutos" },
+  { text: "Se registró una nueva réplica en Arsenal", keyword: "réplica", time: "hace minutos" },
+  { text: "Un nuevo campo fue registrado en CDMX", keyword: "campo", time: "hace minutos" },
+  { text: "Equipo creado en Guadalajara", keyword: "equipo", time: "hace minutos" },
+  { text: "Un jugador completó su perfil en AirNation", keyword: "perfil", time: "hace minutos" },
+  { text: "Nuevo evento publicado en el calendario", keyword: "evento", time: "hace minutos" },
+  { text: "Solicitud aceptada en un equipo", keyword: "solicitudes", time: "hace minutos" },
+  { text: "Se generó una credencial digital nueva", keyword: "credencial", time: "hace minutos" },
+  { text: "Un equipo confirmó asistencia a un evento", keyword: "evento", time: "hace minutos" },
+  { text: "Se cargó un parche oficial al perfil de equipo", keyword: "equipo", time: "hace minutos" },
+  { text: "Un campo recibió una nueva reseña", keyword: "reseña", time: "hace minutos" },
+  { text: "Se subieron documentos a una réplica", keyword: "documentos", time: "hace minutos" },
 ];
 
 function getDotColor(keyword: string): string {
@@ -65,7 +42,7 @@ function HighlightedText({ text, keyword }: { text: string; keyword: string }) {
   return (
     <>
       {before}
-      <span className="text-an-accent font-bold">{match}</span>
+      <span className="font-bold text-[#CC4B37]">{match}</span>
       {after}
     </>
   );
@@ -76,8 +53,10 @@ type VisibleRow = { id: number; feedIndex: number };
 function CommunityActivityFeed() {
   const idRef = useRef(1);
   const [items, setItems] = useState<VisibleRow[]>([{ id: 0, feedIndex: 0 }]);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) return;
     const t = window.setInterval(() => {
       setItems((prev) => {
         if (prev.length === 0) return [{ id: idRef.current++, feedIndex: 0 }];
@@ -87,7 +66,7 @@ function CommunityActivityFeed() {
       });
     }, FEED_INTERVAL_MS);
     return () => window.clearInterval(t);
-  }, []);
+  }, [reducedMotion]);
 
   useEffect(() => {
     if (items.length < 6) return;
@@ -101,22 +80,12 @@ function CommunityActivityFeed() {
     <>
       <style>{`
         @keyframes community-feed-enter {
-          from {
-            transform: translateY(-100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
+          from { transform: translateY(-100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         @keyframes community-feed-exit {
-          from {
-            opacity: 1;
-          }
-          to {
-            opacity: 0;
-          }
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
         .community-feed-enter {
           animation: community-feed-enter 0.55s ease-out forwards;
@@ -126,10 +95,22 @@ function CommunityActivityFeed() {
         }
       `}</style>
       <div
-        className="w-full overflow-hidden border-l-2 border-an-border bg-[#F4F4F4] p-4 sm:p-5 min-h-[280px] min-w-0"
+        className="relative w-full overflow-hidden border border-solid border-[#EEEEEE] bg-white p-5 shadow-[0_20px_40px_-20px_rgba(0,0,0,0.08)] sm:p-6"
         aria-live="polite"
         aria-label="Actividad reciente en la comunidad"
+        style={{ minHeight: 320 }}
       >
+        {/* Pulso indicador "EN VIVO" */}
+        <div className="mb-4 flex items-center gap-2 border-b border-solid border-[#EEEEEE] pb-3">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#CC4B37] opacity-75"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#CC4B37]"></span>
+          </span>
+          <span className="font-body text-[0.6rem] font-extrabold uppercase tracking-[0.18em] text-[#666666]">
+            Actividad en vivo
+          </span>
+        </div>
+
         <div className="flex flex-col gap-0">
           {items.map((row, i) => {
             const item = FEED_ITEMS[row.feedIndex];
@@ -139,7 +120,7 @@ function CommunityActivityFeed() {
             return (
               <div
                 key={row.id}
-                className={`flex gap-3 border-b border-an-border py-3 first:pt-0 last:border-b-0 last:pb-0 ${
+                className={`flex gap-3 border-b border-[#EEEEEE] py-3 first:pt-0 last:border-b-0 last:pb-0 ${
                   isFirst ? "community-feed-enter" : ""
                 } ${isExiting ? "community-feed-exit" : ""}`}
               >
@@ -149,10 +130,10 @@ function CommunityActivityFeed() {
                   </svg>
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-body text-sm leading-snug text-an-text">
+                  <p className="font-body text-[0.875rem] leading-snug text-[#111111]">
                     <HighlightedText text={item.text} keyword={item.keyword} />
                   </p>
-                  <p className="mt-1 font-body text-xs text-an-text-dim">{item.time}</p>
+                  <p className="mt-1 font-body text-[0.7rem] text-[#999999]">{item.time}</p>
                 </div>
               </div>
             );
@@ -163,78 +144,82 @@ function CommunityActivityFeed() {
   );
 }
 
+function RevealWrapper({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const reducedMotion = useReducedMotion();
+  if (reducedMotion) return <>{children}</>;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.6, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function CommunitySection() {
   return (
-    <section id="comunidad" className="bg-[#F4F4F4] px-5 py-16 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16 lg:items-start">
-        <div>
-          <div className="mb-5 flex items-center gap-4">
-            <span className="block h-[2px] w-7 bg-an-accent" />
-            <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-an-accent">
-              Comunidad
-            </p>
-          </div>
-          <h2
-            className="font-display font-black uppercase leading-[0.9] text-an-text"
-            style={{ fontSize: "clamp(2.4rem, 5.5vw, 4.8rem)" }}
-          >
-            CONSTRUIDA
-            <br />
-            POR LOS
-            <br />
-            QUE JUEGAN.
-          </h2>
-          <p className="mt-6 max-w-lg font-body text-base leading-[1.7] text-an-text-dim sm:text-[1.05rem]">
-            Cada perfil, equipo y campo registrado suma a la plataforma que todos queríamos. AirNation nació del airsoft
-            mexicano — y sigue creciendo desde adentro.
-          </p>
-
-          <div className="mt-10 grid grid-cols-3 gap-px bg-an-border">
-            {STATS.map(({ num, label, accent }) => (
-              <div
-                key={num}
-                className={`flex flex-col items-center text-center py-5 px-3 ${
-                  accent ? "bg-an-accent" : "bg-an-surface2"
-                }`}
-              >
-                <span
-                  className={`font-display font-black text-xl sm:text-2xl uppercase leading-none ${
-                    accent ? "text-white" : "text-an-text"
-                  }`}
-                >
-                  {num}
-                </span>
-                <span
-                  className={`font-body text-[0.58rem] sm:text-[0.62rem] tracking-[0.02em] mt-1.5 leading-snug ${
-                    accent ? "text-white/80" : "text-an-text-dim"
-                  }`}
-                >
-                  {label}
-                </span>
+    <section
+      id="comunidad"
+      className="relative bg-[#F4F4F4] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
+    >
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
+          {/* Columna izquierda: texto editorial */}
+          <RevealWrapper>
+            <div>
+              <div className="mb-5 flex items-center gap-4">
+                <span className="block h-[2px] w-7 bg-[#CC4B37]" />
+                <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
+                  Comunidad
+                </p>
               </div>
-            ))}
-          </div>
+              <h2
+                className="font-display font-black uppercase leading-[0.9] text-[#111111]"
+                style={{ fontSize: "clamp(2.4rem, 5.5vw, 4.5rem)" }}
+              >
+                CONSTRUIDA
+                <br />
+                POR LOS QUE
+                <br />
+                <span className="text-[#CC4B37]">JUEGAN.</span>
+              </h2>
+              <p className="mt-6 max-w-lg font-body text-base leading-[1.7] text-[#666666] sm:text-[1.05rem]">
+                Cada perfil, equipo y campo registrado suma a la plataforma que todos queríamos.
+                AirNation nació del airsoft mexicano y crece desde adentro.
+              </p>
+              <Link
+                href="/register"
+                className="group mt-8 inline-flex items-center gap-2.5 bg-[#CC4B37] px-7 py-[1rem] font-body text-[0.7rem] font-bold uppercase tracking-[0.18em] text-white transition-all hover:bg-[#CC4B37]/90"
+              >
+                Únete a la comunidad
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden
+                  className="transition-transform group-hover:translate-x-1"
+                >
+                  <path
+                    d="M2.5 7h9M8 3.5L11.5 7 8 10.5"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+            </div>
+          </RevealWrapper>
 
-          <div className="mt-10">
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center gap-2.5 px-8 py-[1.1rem] bg-an-accent text-white font-body font-bold text-[0.75rem] uppercase tracking-[0.18em] hover:bg-an-accent-h transition-colors rounded-[2px]"
-            >
-              Unirme a la comunidad
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-                <path
-                  d="M2.5 7h9M8 3.5L11.5 7 8 10.5"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </Link>
-          </div>
+          {/* Columna derecha: feed animado */}
+          <RevealWrapper delay={0.15}>
+            <CommunityActivityFeed />
+          </RevealWrapper>
         </div>
-
-        <CommunityActivityFeed />
       </div>
     </section>
   );
