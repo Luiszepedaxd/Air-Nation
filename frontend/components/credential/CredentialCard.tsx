@@ -29,9 +29,12 @@ export type CredentialUserData = {
   rol: string | null
   avatar_url: string | null
   foto_credencial_url: string | null
+  credencial_nombre_completo: string | null
+  credencial_fecha_nacimiento: string | null
   member_number: string | number | null
   created_at: string
   teamNombre: string | null
+  teamsActivos: string[]
 }
 
 function rolLabel(rol: string | null) {
@@ -112,7 +115,23 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
     const alias = data.alias?.trim() || '—'
     const nombreTrim = data.nombre?.trim() || ''
     const initial = (data.alias?.trim()?.[0] || data.nombre?.trim()?.[0] || '?').toUpperCase()
-    const teamTrim = data.teamNombre?.trim() || ''
+    const teamsActivos = (data.teamsActivos || []).filter((t) => t && t.trim().length > 0)
+    const teamsToShow = teamsActivos.slice(0, 3)
+    const teamsExtraCount = teamsActivos.length - teamsToShow.length
+    const nombreCompleto = data.credencial_nombre_completo?.trim() || ''
+    const fechaNacFormatted = (() => {
+      if (!data.credencial_fecha_nacimiento) return ''
+      try {
+        const d = new Date(data.credencial_fecha_nacimiento + 'T00:00:00')
+        const dd = String(d.getDate()).padStart(2, '0')
+        const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
+        const mm = meses[d.getMonth()]
+        const yyyy = d.getFullYear()
+        return `${dd}/${mm}/${yyyy}`
+      } catch {
+        return ''
+      }
+    })()
     const ciudadTrim = data.ciudad?.trim() || ''
     const memberDisplay = formatMemberNo(data.member_number)
     const verifyUrl = `https://airnation.online/verify/${data.id}`
@@ -164,7 +183,11 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               <p style={jost} className="text-[18px] font-extrabold uppercase leading-tight text-[#111111]">
                 {alias}
               </p>
-              {nombreTrim ? (
+              {nombreCompleto ? (
+                <p style={lato} className="mt-1 text-[13px] font-normal normal-case text-[#666666]">
+                  {nombreCompleto}
+                </p>
+              ) : nombreTrim ? (
                 <p style={lato} className="mt-1 text-[13px] font-normal normal-case text-[#666666]">
                   {nombreTrim}
                 </p>
@@ -175,14 +198,26 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               >
                 {rolLabel(data.rol)}
               </p>
-              {(teamTrim || ciudadTrim) ? (
+              {(teamsToShow.length > 0 || ciudadTrim) ? (
                 <div className="mt-1.5 flex flex-col gap-1.5">
-                  {teamTrim ? (
-                    <div className="inline-flex max-w-full items-center gap-1.5 self-start border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-2 py-0.5 rounded-[2px]">
-                      <ShieldIcon14 />
-                      <span style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">
-                        {teamTrim}
-                      </span>
+                  {teamsToShow.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1">
+                      {teamsToShow.map((t) => (
+                        <div
+                          key={t}
+                          className="inline-flex max-w-full items-center gap-1.5 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-2 py-0.5 rounded-[2px]"
+                        >
+                          <ShieldIcon14 />
+                          <span style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">
+                            {t}
+                          </span>
+                        </div>
+                      ))}
+                      {teamsExtraCount > 0 ? (
+                        <span style={lato} className="text-[11px] text-[#666666]">
+                          +{teamsExtraCount}
+                        </span>
+                      ) : null}
                     </div>
                   ) : null}
                   {ciudadTrim ? (
@@ -208,6 +243,12 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               DESDE: {formatDesde(data.created_at)}
             </p>
           </div>
+
+          {fechaNacFormatted ? (
+            <p style={lato} className="mt-2 text-[11px] text-[#666666]">
+              Fecha de nacimiento: <span className="text-[#111111]">{fechaNacFormatted}</span>
+            </p>
+          ) : null}
 
           <div className="my-4 border-t border-solid border-[#EEEEEE]" />
 

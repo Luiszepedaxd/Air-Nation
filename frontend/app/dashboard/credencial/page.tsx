@@ -21,6 +21,8 @@ type UserRow = {
   rol: string | null
   avatar_url: string | null
   foto_credencial_url: string | null
+  credencial_nombre_completo: string | null
+  credencial_fecha_nacimiento: string | null
   member_number: string | number | null
   created_at: string
 }
@@ -38,7 +40,7 @@ export default async function CredencialPage() {
   const { data: row, error } = await supabase
     .from('users')
     .select(
-      'id, nombre, alias, ciudad, rol, avatar_url, foto_credencial_url, member_number, created_at'
+      'id, nombre, alias, ciudad, rol, avatar_url, foto_credencial_url, credencial_nombre_completo, credencial_fecha_nacimiento, member_number, created_at'
     )
     .eq('id', session.user.id)
     .maybeSingle()
@@ -48,6 +50,7 @@ export default async function CredencialPage() {
   }
 
   let teamNombre: string | null = null
+  let teamsActivos: string[] = []
   if (row) {
     const { data: userWithTeam } = await supabase
       .from('users')
@@ -58,6 +61,23 @@ export default async function CredencialPage() {
     const teams = (userWithTeam as any)?.teams
     if (teams) {
       teamNombre = Array.isArray(teams) ? teams[0]?.nombre ?? null : teams.nombre
+    }
+
+    const { data: memberships } = await supabase
+      .from('team_members')
+      .select('team_id, status, teams(nombre)')
+      .eq('user_id', session.user.id)
+      .eq('status', 'activo')
+
+    if (memberships && memberships.length > 0) {
+      teamsActivos = memberships
+        .map((m: any) => {
+          const t = m.teams
+          if (!t) return null
+          if (Array.isArray(t)) return t[0]?.nombre ?? null
+          return t.nombre ?? null
+        })
+        .filter((n): n is string => typeof n === 'string' && n.trim().length > 0)
     }
   }
 
@@ -71,9 +91,12 @@ export default async function CredencialPage() {
     rol: r.rol,
     avatar_url: r.avatar_url,
     foto_credencial_url: r.foto_credencial_url,
+    credencial_nombre_completo: r.credencial_nombre_completo,
+    credencial_fecha_nacimiento: r.credencial_fecha_nacimiento,
     member_number: r.member_number,
     created_at: r.created_at,
     teamNombre,
+    teamsActivos,
   }
 
   return (

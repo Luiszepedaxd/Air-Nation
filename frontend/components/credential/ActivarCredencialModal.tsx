@@ -15,12 +15,28 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
 
-type Step = 'upload' | 'camera' | 'validating' | 'rejected' | 'confirm' | 'saving' | 'done'
+type Step =
+  | 'data'
+  | 'upload'
+  | 'camera'
+  | 'validating'
+  | 'rejected'
+  | 'confirm'
+  | 'saving'
+  | 'done'
 
 type Props = {
   userId: string
+  initialNombre?: string | null
+  initialFechaNac?: string | null
+  initialFotoUrl?: string | null
+  mode?: 'create' | 'edit'
   onClose: () => void
-  onActivated: (signedUrl: string) => void
+  onActivated: (payload: {
+    fotoUrl: string
+    nombreCompleto: string
+    fechaNacimiento: string
+  }) => void
 }
 
 const MAX_SIDE = 1024
@@ -40,7 +56,6 @@ async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string 
     img.onerror = reject
   })
 
-  // Recorte cuadrado centrado para encuadre tipo credencial
   const minSide = Math.min(img.width, img.height)
   const sx = Math.round((img.width - minSide) / 2)
   const sy = Math.round((img.height - minSide) / 2)
@@ -80,8 +95,22 @@ function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) {
-  const [step, setStep] = useState<Step>('upload')
+export function ActivarCredencialModal({
+  userId,
+  initialNombre,
+  initialFechaNac,
+  initialFotoUrl,
+  mode = 'create',
+  onClose,
+  onActivated,
+}: Props) {
+  const [step, setStep] = useState<Step>('data')
+  const [nombreCompleto, setNombreCompleto] = useState<string>(initialNombre || '')
+  const [fechaNac, setFechaNac] = useState<string>(initialFechaNac || '')
+  const [dataError, setDataError] = useState<string | null>(null)
+  const [keepExistingPhoto, setKeepExistingPhoto] = useState<boolean>(
+    mode === 'edit' && !!initialFotoUrl
+  )
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -119,6 +148,46 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
       stopCamera()
     }
   }, [])
+
+  const validateData = (): boolean => {
+    setDataError(null)
+    const trimmed = nombreCompleto.trim()
+    if (trimmed.length < 3) {
+      setDataError('Escribe tu nombre completo (mínimo 3 caracteres).')
+      return false
+    }
+    if (trimmed.length > 120) {
+      setDataError('El nombre completo es demasiado largo (máx 120).')
+      return false
+    }
+    if (!fechaNac) {
+      setDataError('Selecciona tu fecha de nacimiento.')
+      return false
+    }
+    const isoDateRe = /^\d{4}-\d{2}-\d{2}$/
+    if (!isoDateRe.test(fechaNac)) {
+      setDataError('Fecha de nacimiento inválida.')
+      return false
+    }
+    const d = new Date(fechaNac + 'T00:00:00')
+    if (Number.isNaN(d.getTime())) {
+      setDataError('Fecha de nacimiento inválida.')
+      return false
+    }
+    const now = new Date()
+    const minDate = new Date(now.getFullYear() - 100, now.getMonth(), now.getDate())
+    const maxDate = new Date(now.getFullYear() - 13, now.getMonth(), now.getDate())
+    if (d < minDate || d > maxDate) {
+      setDataError('Fecha fuera de rango. Debes tener al menos 13 años.')
+      return false
+    }
+    return true
+  }
+
+  const goFromDataToUpload = () => {
+    if (!validateData()) return
+    setStep('upload')
+  }
 
   const validateCapturedBlob = async (blob: Blob) => {
     setStep('validating')
@@ -178,7 +247,6 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
       })
       streamRef.current = stream
       setStep('camera')
-      // Esperar el siguiente tick para que el <video> exista en DOM
       setTimeout(() => {
         if (videoRef.current && streamRef.current) {
           videoRef.current.srcObject = streamRef.current
@@ -207,7 +275,6 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
     const h = video.videoHeight
     if (!w || !h) return
 
-    // Recorte cuadrado centrado del frame
     const minSide = Math.min(w, h)
     const sx = Math.round((w - minSide) / 2)
     const sy = Math.round((h - minSide) / 2)
@@ -219,7 +286,6 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // La cámara frontal está espejada visualmente, des-espejar para guardar
     ctx.translate(targetSide, 0)
     ctx.scale(-1, 1)
     ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, targetSide, targetSide)
@@ -273,31 +339,39 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
   }, [handleClose])
 
   const handleConfirm = async () => {
-    if (!previewBlob) return
     setStep('saving')
     setErrorMsg(null)
     try {
-      const path = `${userId}/credencial-${Date.now()}.jpg`
-      const { error: upErr } = await supabase.storage
-        .from('credenciales')
-        .upload(path, previewBlob, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        })
-      if (upErr) throw upErr
+      let signedUrl = initialFotoUrl || ''
 
-      const { data: signed, error: signErr } = await supabase.storage
-        .from('credenciales')
-        .createSignedUrl(path, 60 * 60 * 24 * 365)
-      if (signErr || !signed?.signedUrl) {
-        throw new Error('No se pudo generar la URL firmada')
+      if (previewBlob) {
+        const path = `${userId}/credencial-${Date.now()}.jpg`
+        const { error: upErr } = await supabase.storage
+          .from('credenciales')
+          .upload(path, previewBlob, {
+            contentType: 'image/jpeg',
+            upsert: true,
+          })
+        if (upErr) throw upErr
+
+        const { data: signed, error: signErr } = await supabase.storage
+          .from('credenciales')
+          .createSignedUrl(path, 60 * 60 * 24 * 365)
+        if (signErr || !signed?.signedUrl) {
+          throw new Error('No se pudo generar la URL firmada')
+        }
+        signedUrl = signed.signedUrl
+      }
+
+      if (!signedUrl) {
+        throw new Error('Falta foto de credencial')
       }
 
       const {
         data: { session },
       } = await supabase.auth.getSession()
       const token = session?.access_token
-      if (!token) throw new Error('Sesion expirada')
+      if (!token) throw new Error('Sesión expirada')
 
       const patchRes = await fetch(`${API_BASE}/users/${userId}`, {
         method: 'PATCH',
@@ -305,7 +379,11 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ foto_credencial_url: signed.signedUrl }),
+        body: JSON.stringify({
+          foto_credencial_url: signedUrl,
+          credencial_nombre_completo: nombreCompleto.trim(),
+          credencial_fecha_nacimiento: fechaNac,
+        }),
       })
       if (!patchRes.ok) {
         const j = await patchRes.json().catch(() => ({}))
@@ -313,7 +391,11 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
       }
 
       setStep('done')
-      onActivated(signed.signedUrl)
+      onActivated({
+        fotoUrl: signedUrl,
+        nombreCompleto: nombreCompleto.trim(),
+        fechaNacimiento: fechaNac,
+      })
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Error desconocido')
       setStep('confirm')
@@ -328,6 +410,7 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
     setErrorMsg(null)
     setCameraError(null)
     setStep('upload')
+    setKeepExistingPhoto(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -344,7 +427,7 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
       >
         <div className="flex items-start justify-between">
           <h2 style={jost} className="text-[16px] font-extrabold uppercase text-[#111111]">
-            ACTIVAR CREDENCIAL
+            {mode === 'edit' ? 'EDITAR CREDENCIAL' : 'ACTIVAR CREDENCIAL'}
           </h2>
           <button
             type="button"
@@ -355,6 +438,79 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
             ×
           </button>
         </div>
+
+        {step === 'data' && (
+          <div className="mt-4">
+            <p style={lato} className="text-[13px] leading-relaxed text-[#666666]">
+              Estos datos aparecerán en tu credencial. No se muestran en tu perfil público.
+            </p>
+
+            <label style={lato} className="mt-4 block text-[12px] text-[#666666]">
+              Nombre completo
+              <input
+                type="text"
+                value={nombreCompleto}
+                onChange={(e) => setNombreCompleto(e.target.value)}
+                placeholder="Ej. Luis García Pérez"
+                maxLength={120}
+                style={lato}
+                className="mt-1.5 block h-12 w-full rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 text-[14px] text-[#111111] focus:border-[#111111] focus:outline-none"
+              />
+            </label>
+
+            <label style={lato} className="mt-4 block text-[12px] text-[#666666]">
+              Fecha de nacimiento
+              <input
+                type="date"
+                value={fechaNac}
+                onChange={(e) => setFechaNac(e.target.value)}
+                max={new Date(new Date().getFullYear() - 13, new Date().getMonth(), new Date().getDate()).toISOString().slice(0, 10)}
+                min={new Date(new Date().getFullYear() - 100, new Date().getMonth(), new Date().getDate()).toISOString().slice(0, 10)}
+                style={lato}
+                className="mt-1.5 block h-12 w-full rounded-[2px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 text-[14px] text-[#111111] focus:border-[#111111] focus:outline-none"
+              />
+            </label>
+
+            {dataError && (
+              <p style={lato} className="mt-3 text-[12px] text-[#CC4B37]">
+                {dataError}
+              </p>
+            )}
+
+            {mode === 'edit' && initialFotoUrl && (
+              <div className="mt-5 flex items-center gap-3 border border-solid border-[#EEEEEE] p-3">
+                <input
+                  type="checkbox"
+                  id="keepPhoto"
+                  checked={keepExistingPhoto}
+                  onChange={(e) => setKeepExistingPhoto(e.target.checked)}
+                  className="h-4 w-4 accent-[#CC4B37]"
+                />
+                <label htmlFor="keepPhoto" style={lato} className="text-[12px] text-[#111111]">
+                  Conservar foto actual (solo cambiar datos)
+                </label>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                if (mode === 'edit' && keepExistingPhoto && initialFotoUrl) {
+                  if (!validateData()) return
+                  setPreviewUrl(initialFotoUrl)
+                  setPreviewBlob(null)
+                  setStep('confirm')
+                } else {
+                  goFromDataToUpload()
+                }
+              }}
+              style={jost}
+              className="mt-5 flex h-12 w-full items-center justify-center rounded-[2px] bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+            >
+              CONTINUAR
+            </button>
+          </div>
+        )}
 
         {step === 'upload' && (
           <div className="mt-4">
@@ -430,7 +586,6 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
                 className="absolute inset-0 h-full w-full object-cover"
                 style={{ transform: 'scaleX(-1)' }}
               />
-              {/* Overlay oscuro con óvalo recortado */}
               <div
                 className="pointer-events-none absolute inset-0"
                 style={{
@@ -438,7 +593,6 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
                     'radial-gradient(ellipse 38% 52% at 50% 50%, transparent 98%, rgba(0,0,0,0.65) 100%)',
                 }}
               />
-              {/* Borde del óvalo */}
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div
                   className="h-[78%] w-[58%] border-2 border-dashed border-white/90"

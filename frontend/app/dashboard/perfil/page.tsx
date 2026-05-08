@@ -58,7 +58,7 @@ export default async function PerfilPage({
       : Promise.resolve({ data: null } as { data: null }),
     supabase
       .from('team_members')
-      .select('team_id, rol_plataforma, rango_militar')
+      .select('team_id, rol_plataforma, rango_militar, teams(nombre)')
       .eq('user_id', authUser.id)
       .eq('status', 'activo'),
     fetchPendingJoinRequestsForModerator(supabase, authUser.id),
@@ -189,6 +189,22 @@ export default async function PerfilPage({
     credencialTeamNombre = Array.isArray(teamsEmbed)
       ? (teamsEmbed[0] as { nombre?: string } | undefined)?.nombre ?? null
       : (teamsEmbed as { nombre?: string }).nombre ?? null
+  }
+
+  const teamsActivos: string[] = []
+  const teamsActivosSeen = new Set<string>()
+  for (const m of memberships ?? []) {
+    const raw = m as {
+      teams?: { nombre?: string } | { nombre?: string }[] | null
+    }
+    const t = raw.teams
+    if (!t) continue
+    const n = Array.isArray(t) ? t[0]?.nombre : t.nombre
+    const name = typeof n === 'string' ? n.trim() : ''
+    if (name && !teamsActivosSeen.has(name)) {
+      teamsActivosSeen.add(name)
+      teamsActivos.push(name)
+    }
   }
 
   const postsData = postsResult.data
@@ -400,9 +416,12 @@ export default async function PerfilPage({
     rol: row.rol ?? null,
     avatar_url: row.avatar_url ?? null,
     foto_credencial_url: (row as any).foto_credencial_url ?? null,
+    credencial_nombre_completo: (row as any).credencial_nombre_completo ?? null,
+    credencial_fecha_nacimiento: (row as any).credencial_fecha_nacimiento ?? null,
     member_number: row.member_number ?? null,
     created_at: String(row.created_at ?? ''),
     teamNombre: credencialTeamNombre,
+    teamsActivos,
   }
 
   return (
