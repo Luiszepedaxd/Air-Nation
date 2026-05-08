@@ -399,6 +399,7 @@ export default async function PerfilPage({
     ciudad: row.ciudad ?? null,
     rol: row.rol ?? null,
     avatar_url: row.avatar_url ?? null,
+    foto_credencial_url: (row as any).foto_credencial_url ?? null,
     member_number: row.member_number ?? null,
     created_at: String(row.created_at ?? ''),
     teamNombre: credencialTeamNombre,
