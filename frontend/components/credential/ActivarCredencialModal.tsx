@@ -13,7 +13,7 @@ const jost = {
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000/api/v1'
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
 
 type Step = 'upload' | 'validating' | 'rejected' | 'confirm' | 'saving' | 'done'
 
