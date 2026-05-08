@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -86,7 +87,12 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rejectMsg, setRejectMsg] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -95,6 +101,14 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
 
   const handleFile = async (file: File) => {
     setErrorMsg(null)
@@ -214,13 +228,15 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  return (
+  if (!mounted) return null
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
+      className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto bg-black/60 pb-6 pt-6 sm:items-center"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md bg-[#FFFFFF] p-5 shadow-xl sm:rounded-[2px]"
+        className="relative my-auto w-full max-w-md bg-[#FFFFFF] p-5 shadow-xl sm:rounded-[2px]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
@@ -389,6 +405,7 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
