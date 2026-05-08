@@ -12,6 +12,7 @@ import BlogHome from "@/components/landing/BlogHome";
 import Features         from "@/components/landing/Features";
 import ProductPreview   from "@/components/landing/ProductPreview";
 import CommunitySection from "@/components/landing/CommunitySection";
+import ContactoSection  from "@/components/landing/ContactoSection";
 import Footer           from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
@@ -72,6 +73,7 @@ export default function Home() {
       <Features />
       <ProductPreview />
       <CommunitySection />
+      <ContactoSection />
       <Footer />
     </main>
   );
