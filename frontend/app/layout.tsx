@@ -18,17 +18,46 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://www.airnation.online',
   },
-  title: "AirNation — Plataforma central del airsoft",
+  title: {
+    default: "AirNation — Plataforma del Airsoft en México",
+    template: "%s | AirNation",
+  },
   description:
-    "Perfil de jugador, credencial digital, equipos, documentación oficial y registro de réplicas. La plataforma hecha por y para la comunidad de airsoft en México.",
-  keywords: ["airsoft", "mexico", "gotcha", "paintball", "equipos", "replicas"],
+    "Eventos, equipos, campos, marketplace y credencial digital del airsoft mexicano. Únete gratis a la comunidad airsoftera más grande de México.",
+  keywords: [
+    "airsoft méxico",
+    "airsoft mexicano",
+    "comunidad airsoft méxico",
+    "eventos airsoft méxico",
+    "milsim méxico",
+    "equipos de airsoft",
+    "campos de airsoft",
+    "marketplace airsoft",
+    "credencial airsoft",
+    "gotcha méxico",
+    "gelsoft méxico",
+  ],
   openGraph: {
-    title: "AirNation",
-    description: "La base del Airsoft en México",
+    title: "AirNation — Plataforma del Airsoft en México",
+    description: "La comunidad airsoftera más grande de México. Eventos, equipos, campos, marketplace y más.",
     url: "https://www.airnation.online",
     siteName: "AirNation",
     locale: "es_MX",
     type: "website",
+    images: [
+      {
+        url: "https://www.airnation.online/og-default.jpg",
+        width: 1200,
+        height: 630,
+        alt: "AirNation",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AirNation — Plataforma del Airsoft en México",
+    description: "La comunidad airsoftera más grande de México.",
+    images: ["https://www.airnation.online/og-default.jpg"],
   },
   verification: {
     google: 'w4G4FX4FGEQaRBh4nnNMQDAHmAJdOHYVU57tpgGY6Fw',
@@ -71,14 +100,26 @@ export default function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               name: 'AirNation',
+              alternateName: 'AirNation México',
               url: 'https://www.airnation.online',
               logo: 'https://www.airnation.online/icons/icon-180.png',
-              sameAs: [],
-              knowsAbout: ['airsoft', 'paintball', 'milsim'],
+              sameAs: [
+                'https://www.instagram.com/airnation_online',
+                'https://www.facebook.com/share/1Gb9RJXiQ8/',
+              ],
+              knowsAbout: ['airsoft', 'paintball', 'milsim', 'gotcha', 'gelsoft'],
               description:
-                'Plataforma central del airsoft en México. Equipos, campos, eventos, credencial digital y registro de réplicas.',
-              areaServed: 'MX',
-              foundingDate: '2024',
+                'Plataforma central del airsoft en México. Eventos, equipos, campos, marketplace, credencial digital y registro de réplicas.',
+              areaServed: {
+                '@type': 'Country',
+                name: 'México',
+              },
+              contactPoint: {
+                '@type': 'ContactPoint',
+                email: 'info@airnation.online',
+                contactType: 'customer support',
+                availableLanguage: ['Spanish', 'es'],
+              },
             }),
           }}
         />
