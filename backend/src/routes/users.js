@@ -146,6 +146,42 @@ router.patch("/:id", requireAuth, async (req, res) => {
       }
       updates.foto_credencial_url = body.foto_credencial_url;
     }
+    if (body.credencial_nombre_completo !== undefined) {
+      if (body.credencial_nombre_completo !== null && typeof body.credencial_nombre_completo !== "string") {
+        return res.status(400).json({ error: "credencial_nombre_completo debe ser string o null" });
+      }
+      const trimmed = typeof body.credencial_nombre_completo === "string"
+        ? body.credencial_nombre_completo.trim().slice(0, 120)
+        : body.credencial_nombre_completo;
+      if (typeof trimmed === "string" && trimmed.length > 0 && trimmed.length < 3) {
+        return res.status(400).json({ error: "credencial_nombre_completo debe tener al menos 3 caracteres" });
+      }
+      updates.credencial_nombre_completo = typeof trimmed === "string" && trimmed.length === 0 ? null : trimmed;
+    }
+    if (body.credencial_fecha_nacimiento !== undefined) {
+      if (body.credencial_fecha_nacimiento !== null && typeof body.credencial_fecha_nacimiento !== "string") {
+        return res.status(400).json({ error: "credencial_fecha_nacimiento debe ser string ISO (YYYY-MM-DD) o null" });
+      }
+      if (typeof body.credencial_fecha_nacimiento === "string") {
+        const isoDateRe = /^\d{4}-\d{2}-\d{2}$/;
+        if (body.credencial_fecha_nacimiento.length > 0 && !isoDateRe.test(body.credencial_fecha_nacimiento)) {
+          return res.status(400).json({ error: "credencial_fecha_nacimiento debe tener formato YYYY-MM-DD" });
+        }
+        if (body.credencial_fecha_nacimiento.length > 0) {
+          const d = new Date(body.credencial_fecha_nacimiento);
+          if (Number.isNaN(d.getTime())) {
+            return res.status(400).json({ error: "credencial_fecha_nacimiento no es una fecha válida" });
+          }
+          const now = new Date();
+          const minDate = new Date(now.getFullYear() - 100, now.getMonth(), now.getDate());
+          const maxDate = new Date(now.getFullYear() - 13, now.getMonth(), now.getDate());
+          if (d < minDate || d > maxDate) {
+            return res.status(400).json({ error: "Fecha de nacimiento fuera de rango razonable" });
+          }
+        }
+      }
+      updates.credencial_fecha_nacimiento = body.credencial_fecha_nacimiento === "" ? null : body.credencial_fecha_nacimiento;
+    }
     for (const field of ["instagram", "tiktok", "youtube", "facebook"]) {
       if (body[field] !== undefined) {
         if (body[field] !== null && typeof body[field] !== "string") {
