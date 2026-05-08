@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
+import { LandingNav } from './components/LandingNav'
 import { getOperacionKursk2Blocks } from './lib/get-blocks'
 import { BlockRenderer } from './components/BlockRenderer'
 import type { HeroConfig } from './lib/types'
@@ -93,9 +93,14 @@ export default async function OperacionKursk2Page() {
 
   const visibleBlocks = blocks.filter((b) => b.activo)
 
+  const navCta =
+    heroConfig?.cta1_link?.trim() ||
+    heroConfig?.cta2_link?.trim() ||
+    '#inscripcion'
+
   return (
     <div className="min-h-screen min-w-[375px] bg-[#0a0a0a] text-white">
-      <PublicSiteHeader />
+      <LandingNav ctaLink={navCta} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
