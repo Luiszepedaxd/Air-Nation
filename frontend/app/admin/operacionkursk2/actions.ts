@@ -6,6 +6,52 @@ import { requireAppAdminUserId } from '../require-app-admin'
 import type { OperacionKursk2Slug } from '@/app/operacionkursk2/lib/types'
 import { OK2_SLUGS } from '@/app/operacionkursk2/lib/types'
 
+const OK2_STORAGE_BUCKET = 'operacionkursk2'
+
+const ACCEPTED_HERO_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+
+function sanitizeUploadFileName(name: string): string {
+  const base = name.replace(/^.*[/\\]/, '')
+  const cleaned = base.replace(/[^\w.\-]+/g, '_')
+  return cleaned.toLowerCase()
+}
+
+/**
+ * Sube una imagen al bucket público operacionkursk2 (desde admin autenticado).
+ * FormData: `file` (File), `slug` (string, prefijo de ruta).
+ */
+export async function uploadImageToBucket(formData: FormData): Promise<string> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) throw new Error('No autorizado.')
+
+  const file = formData.get('file')
+  const slugRaw = formData.get('slug')
+  const slug = typeof slugRaw === 'string' && slugRaw.trim() ? slugRaw.trim() : 'misc'
+
+  if (!(file instanceof File)) {
+    throw new Error('Archivo inválido.')
+  }
+  if (!ACCEPTED_HERO_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_HERO_IMAGE_TYPES)[number])) {
+    throw new Error('Solo JPG, PNG o WebP.')
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error('Imagen máximo 5 MB.')
+  }
+
+  const db = createAdminClient()
+  const safe = sanitizeUploadFileName(file.name)
+  const path = `${slug}/${Date.now()}-${safe}`
+  const { error } = await db.storage.from(OK2_STORAGE_BUCKET).upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type || 'image/jpeg',
+  })
+  if (error) throw new Error(error.message || 'Error al subir la imagen.')
+
+  const { data: pub } = db.storage.from(OK2_STORAGE_BUCKET).getPublicUrl(path)
+  return pub.publicUrl
+}
+
 function revalidateAll() {
   revalidatePath('/operacionkursk2')
   revalidatePath('/admin/operacionkursk2')

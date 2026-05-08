@@ -10,13 +10,13 @@ export function SedeSection({ config }: { config: SedeConfig }) {
       data-section="sede"
       className="relative w-full bg-[#0a0a0a] text-white"
     >
-      <div className="mx-auto max-w-7xl px-4 py-20 md:px-8 md:py-32">
+      <div className="mx-auto max-w-7xl px-4 py-16 md:px-8 md:py-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-12 md:mb-20"
+          className="mb-8 md:mb-12"
         >
           <p
             className="text-[0.65rem] tracking-[0.4em] text-[#CC4B37] md:text-xs"
@@ -25,7 +25,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
             {config.eyebrow}
           </p>
           <h2
-            className="mt-4 text-4xl leading-none md:text-7xl lg:text-8xl"
+            className="mt-3 text-3xl leading-none sm:text-4xl md:text-5xl lg:text-6xl"
             style={{
               fontFamily: 'Jost, sans-serif',
               fontWeight: 900,
@@ -62,7 +62,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
             </div>
           </div>
 
-          <div className="space-y-12 md:col-span-6 md:space-y-20 md:py-12">
+          <div className="space-y-8 md:col-span-6 md:space-y-12 md:py-6">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -70,7 +70,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
               transition={{ duration: 0.7 }}
             >
               <p
-                className="text-base leading-relaxed text-white/80 md:text-lg"
+                className="text-base leading-relaxed text-white/80 md:text-base lg:text-lg"
                 style={{ fontFamily: 'Jost, sans-serif', fontWeight: 400 }}
               >
                 {config.descripcion}
@@ -82,7 +82,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-100px' }}
               transition={{ duration: 0.7 }}
-              className="border-t border-white/10 pt-8"
+              className="border-t border-white/10 pt-6"
             >
               <p
                 className="text-[0.6rem] tracking-[0.3em] text-white/50"
@@ -91,7 +91,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
                 DIRECCIÓN
               </p>
               <p
-                className="mt-3 text-base text-white md:text-lg"
+                className="mt-2 text-base text-white"
                 style={{ fontFamily: 'Jost, sans-serif', fontWeight: 500 }}
               >
                 {config.direccion}
@@ -104,7 +104,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-100px' }}
                 transition={{ duration: 0.7 }}
-                className="border-t border-white/10 pt-8"
+                className="border-t border-white/10 pt-6"
               >
                 <p
                   className="text-[0.6rem] tracking-[0.3em] text-white/50"
@@ -113,7 +113,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
                   COORDENADAS
                 </p>
                 <p
-                  className="mt-3 text-base text-white md:text-lg"
+                  className="mt-2 text-base text-white"
                   style={{
                     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                     fontWeight: 500,

@@ -10,6 +10,15 @@ export const dynamic = 'force-dynamic'
 const CANONICAL = 'https://www.airnation.online/operacionkursk2'
 const DEFAULT_OG_IMAGE = 'https://www.airnation.online/og-default.jpg'
 
+/** OG/Twitter necesitan imagen estática; si el hero es solo video, usar default. */
+function heroOgShareUrl(cfg: HeroConfig | undefined): string {
+  if (!cfg) return DEFAULT_OG_IMAGE
+  const url = (cfg.media_url || cfg.imagen_fondo_url || '').trim()
+  if (!url) return DEFAULT_OG_IMAGE
+  if (cfg.media_type === 'video') return DEFAULT_OG_IMAGE
+  return url
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const blocks = await getOperacionKursk2Blocks()
   const heroBlock = blocks.find((b) => b.slug === 'hero')
@@ -21,7 +30,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     heroConfig?.seo_description ??
     'Evento de airsoft milsim en el pueblo fantasma de Hacienda Misnébalam, Yucatán. 12+ horas continuas. Preventa $700 hasta el 15 de mayo.'
-  const heroImage = heroConfig?.imagen_fondo_url || DEFAULT_OG_IMAGE
+  const heroImage = heroOgShareUrl(heroConfig)
 
   return {
     title,
@@ -47,7 +56,7 @@ export default async function OperacionKursk2Page() {
   const blocks = await getOperacionKursk2Blocks()
   const heroBlock = blocks.find((b) => b.slug === 'hero')
   const heroConfig = heroBlock?.config as HeroConfig | undefined
-  const heroImage = heroConfig?.imagen_fondo_url || DEFAULT_OG_IMAGE
+  const heroImage = heroOgShareUrl(heroConfig)
 
   const jsonLd = {
     '@context': 'https://schema.org',

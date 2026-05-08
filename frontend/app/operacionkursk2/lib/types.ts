@@ -33,7 +33,11 @@ export type HeroConfig = {
   eyebrow: string
   titulo: string
   subtitulo: string
-  imagen_fondo_url: string
+  /** URL de imagen o video de fondo (vacío si solo hay legacy) */
+  media_url?: string
+  media_type?: 'image' | 'video'
+  /** DEPRECATED — lectura solo retrocompat; usar media_url */
+  imagen_fondo_url?: string
   banderas_animadas: boolean
   cta1_texto: string
   cta1_link: string

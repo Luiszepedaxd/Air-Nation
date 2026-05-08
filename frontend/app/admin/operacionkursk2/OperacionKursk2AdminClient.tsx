@@ -10,6 +10,7 @@ import {
   toggleBlockActive,
   reorderOperacionKursk2Block,
 } from './actions'
+import { MediaUploadInput } from './components/MediaUploadInput'
 import type { OperacionKursk2Slug } from '@/app/operacionkursk2/lib/types'
 import type { GaleriaImagen } from '@/app/operacionkursk2/lib/types'
 const jost = {
@@ -36,7 +37,7 @@ type SectionDef = {
 }
 
 const SECTIONS: SectionDef[] = [
-  { slug: 'hero', label: 'Hero — Cabecera', descripcion: 'Imagen, textos, CTAs y SEO.' },
+  { slug: 'hero', label: 'Hero — Cabecera', descripcion: 'Imagen o video de fondo, textos, CTAs y SEO.' },
   { slug: 'narrativa', label: 'Narrativa — Tres tiempos', descripcion: 'Bloques año + texto.' },
   { slug: 'sede', label: 'Sede', descripcion: 'Imagen, dirección y mapa.' },
   { slug: 'countdown', label: 'Countdown', descripcion: 'Fecha ISO y eyebrow.' },
@@ -384,7 +385,11 @@ function emptyFaccion() {
 }
 
 function getThumb(slug: OperacionKursk2Slug, cfg: Record<string, unknown>): string {
-  if (slug === 'hero') return typeof cfg.imagen_fondo_url === 'string' ? cfg.imagen_fondo_url : ''
+  if (slug === 'hero') {
+    const m = typeof cfg.media_url === 'string' ? cfg.media_url : ''
+    const leg = typeof cfg.imagen_fondo_url === 'string' ? cfg.imagen_fondo_url : ''
+    return m || leg
+  }
   if (slug === 'sede') return typeof cfg.imagen_url === 'string' ? cfg.imagen_url : ''
   if (slug === 'facciones') {
     const r = cfg.rusa as { imagen_url?: string } | undefined
@@ -476,6 +481,19 @@ export function OperacionKursk2AdminClient({
       delete (out as Record<string, unknown>)['_fecha_local']
     }
 
+    if (slug === 'hero') {
+      const h = { ...(out as Record<string, unknown>) }
+      const legacy =
+        typeof h.imagen_fondo_url === 'string' ? h.imagen_fondo_url.trim() : ''
+      const media = typeof h.media_url === 'string' ? h.media_url.trim() : ''
+      if (!media && legacy) {
+        h.media_url = legacy
+        h.media_type = h.media_type === 'video' ? 'video' : 'image'
+      }
+      delete h.imagen_fondo_url
+      out = h
+    }
+
     const errV = validateConfig(slug, out)
     if (errV) {
       setError(errV)
@@ -548,12 +566,24 @@ export function OperacionKursk2AdminClient({
             <Field label="Subtítulo">
               <textarea rows={3} className={inputCls} value={str(slug, 'subtitulo')} onChange={(e) => setField(slug, 'subtitulo', e.target.value)} />
             </Field>
-            <Field label="Imagen fondo">
-              <ImageUploadInput slug="hero" value={str(slug, 'imagen_fondo_url')} onChange={(u) => setField(slug, 'imagen_fondo_url', u)} />
-            </Field>
+            <MediaUploadInput
+              label="MEDIA DE FONDO (IMAGEN O VIDEO)"
+              currentUrl={str(slug, 'media_url') || str(slug, 'imagen_fondo_url')}
+              currentType={cfg(slug).media_type === 'video' ? 'video' : 'image'}
+              slug="hero"
+              onChange={(url, type) => {
+                setConfigs((prev) => {
+                  const hero = { ...(prev.hero ?? {}) }
+                  hero.media_url = url
+                  hero.media_type = type
+                  delete hero.imagen_fondo_url
+                  return { ...prev, hero }
+                })
+              }}
+            />
             <label className="flex cursor-pointer items-center gap-2 text-[12px]" style={lato}>
               <input type="checkbox" checked={Boolean(cfg(slug).banderas_animadas ?? true)} onChange={(e) => setField(slug, 'banderas_animadas', e.target.checked)} />
-              Banderas animadas
+              Reservado para futuras animaciones (sin efecto visual actual)
             </label>
             <Field label="CTA 1 texto">
               <input className={inputCls} value={str(slug, 'cta1_texto')} onChange={(e) => setField(slug, 'cta1_texto', e.target.value)} />
