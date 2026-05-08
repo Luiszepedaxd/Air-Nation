@@ -9,8 +9,6 @@ import ProximosEventosHome from "@/components/landing/ProximosEventosHome";
 import CtaBandaUnete from "@/components/landing/CtaBandaUnete";
 import CredencialHolografica from "@/components/landing/CredencialHolografica";
 import BlogHome from "@/components/landing/BlogHome";
-import Features         from "@/components/landing/Features";
-import ProductPreview   from "@/components/landing/ProductPreview";
 import CommunitySection from "@/components/landing/CommunitySection";
 import ContactoSection  from "@/components/landing/ContactoSection";
 import Footer           from "@/components/landing/Footer";
@@ -70,8 +68,6 @@ export default function Home() {
       <CtaBandaUnete />
       <CredencialHolografica />
       <BlogHome />
-      <Features />
-      <ProductPreview />
       <CommunitySection />
       <ContactoSection />
       <Footer />

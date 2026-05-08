@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const NAV_LINKS = [
-  { label: "Funciones", href: "#funciones" },
-  { label: "Preview",   href: "#preview"   },
-  { label: "Comunidad", href: "#comunidad" },
+  { label: "Eventos", href: "/eventos" },
+  { label: "Equipos", href: "/equipos" },
+  { label: "Blog", href: "/blog" },
 ];
 
 export default function Navbar() {
@@ -55,13 +55,9 @@ export default function Navbar() {
         {/* ── Desktop nav links ── */}
         <div className="hidden md:flex items-center gap-8 flex-1 justify-center">
           {NAV_LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className={linkNav}
-            >
+            <Link key={l.href} href={l.href} className={linkNav}>
               {l.label}
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -110,14 +106,14 @@ export default function Navbar() {
         <div className="md:hidden bg-an-bg border-t border-an-border">
           <div className="px-5 py-6 flex flex-col gap-4">
             {NAV_LINKS.map((l) => (
-              <a
+              <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setMenuOpen(false)}
                 className="font-body text-sm text-[#333333] uppercase tracking-[0.12em]"
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
             <div className="pt-4 flex flex-col gap-3 border-t border-an-border">
               <Link

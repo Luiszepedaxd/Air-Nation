@@ -1,85 +1,285 @@
-const LINKS = {
-  Plataforma: [
-    { label: "Funciones",     href: "#funciones"     },
-    { label: "Preview", href: "#preview" },
-    { label: "Comunidad",     href: "#comunidad"     },
-  ],
-  Cuenta: [
-    { label: "Registrarse",   href: "/register" },
-    { label: "Iniciar sesión",href: "/login"    },
-  ],
-  Legal: [
-    { label: "Aviso de Privacidad", href: "/privacidad" },
-    { label: "Términos y Condiciones", href: "/terminos" },
-  ],
-};
+import Link from 'next/link'
 
-const FOOTER_BG =
-  "linear-gradient(180deg, #020202 0%, #000000 33%, #1C1C1C 66%, #070707 100%)";
+const jost = { fontFamily: "'Jost', sans-serif" } as const
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+const SOCIAL_LINKS = [
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/airnation_online',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="4"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/share/1Gb9RJXiQ8/',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M14 7h2.5V4H14c-2 0-3.5 1.5-3.5 3.5V10H8v3h2.5v8h3v-8H16l.5-3h-3V7.8c0-.5.4-.8.5-.8z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+]
 
 export default function Footer() {
   return (
-    <footer
-      className="border-t border-white/10 text-white"
-      style={{ background: FOOTER_BG }}
-    >
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-
-        {/* ── Top row ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-14">
-
-          {/* Brand col */}
+    <footer className="bg-[#0a0a0a] px-5 py-14 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-7xl">
+        <div className="grid gap-10 lg:grid-cols-4 lg:gap-12">
+          {/* Columna 1: Logo + tagline + redes */}
           <div className="lg:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
-              <span className="w-7 h-7 bg-an-accent flex items-center justify-center shrink-0">
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-                  <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff"/>
+            <Link href="/" className="inline-flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center bg-[#CC4B37]">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  aria-hidden
+                >
+                  <path
+                    d="M7 1L13 12H1L7 1Z"
+                    stroke="white"
+                    strokeWidth="1.4"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </span>
-              <span className="font-display font-black text-lg tracking-[0.18em] text-white uppercase leading-none">
-                AIR<span className="text-an-accent">NATION</span>
+              <span
+                className="text-[1.1rem] font-extrabold uppercase tracking-[0.06em] text-white"
+                style={{ ...jost, fontWeight: 800 }}
+              >
+                AIR<span className="text-[#CC4B37]">NATION</span>
               </span>
+            </Link>
+
+            <p
+              className="mt-5 max-w-xs text-[0.9rem] leading-[1.6] text-white/60"
+              style={lato}
+            >
+              La plataforma central del airsoft. Comunidad, identidad y
+              documentación en un solo lugar.
+            </p>
+
+            <p
+              className="mt-5 text-[0.7rem] font-extrabold uppercase tracking-[0.18em] text-[#CC4B37]"
+              style={{ ...jost, fontWeight: 800 }}
+            >
+              Construyendo la comunidad real del airsoft mexicano
+            </p>
+
+            {/* Redes sociales */}
+            <div className="mt-6 flex items-center gap-3">
+              {SOCIAL_LINKS.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
+                  className="flex h-10 w-10 items-center justify-center border border-solid border-white/15 text-white/60 transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
+                  style={{ borderRadius: 2 }}
+                >
+                  {social.icon}
+                </a>
+              ))}
             </div>
-            <p className="font-body text-sm leading-[1.7] max-w-[240px] text-white/50">
-              La plataforma central del airsoft. Comunidad, identidad y documentación en un solo lugar.
-            </p>
-            <p className="font-body font-bold text-an-accent text-[0.65rem] uppercase tracking-[0.2em] mt-4 italic">
-              Para jugadores · Por jugadores
-            </p>
           </div>
 
-          {/* Link columns */}
-          {Object.entries(LINKS).map(([group, items]) => (
-            <div key={group}>
-              <h4 className="font-ui font-semibold text-white text-[0.72rem] uppercase tracking-[0.2em] mb-5 pb-2.5 border-b border-white/[0.15]">
-                {group}
-              </h4>
-              <ul className="flex flex-col gap-3">
-                {items.map((item) => (
-                  <li key={item.href}>
-                    <a
-                      href={item.href}
-                      className="font-body text-white text-sm hover:text-white/80 transition-colors"
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Columna 2: Plataforma */}
+          <div>
+            <p
+              className="mb-5 border-b border-solid border-white/10 pb-3 text-[0.7rem] font-extrabold uppercase tracking-[0.22em] text-white"
+              style={{ ...jost, fontWeight: 800 }}
+            >
+              Plataforma
+            </p>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href="/eventos"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Eventos
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/equipos"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Equipos
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/campos"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Campos
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/marketplace"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Marketplace
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/store"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  AN Store
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Blog
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Columna 3: Cuenta */}
+          <div>
+            <p
+              className="mb-5 border-b border-solid border-white/10 pb-3 text-[0.7rem] font-extrabold uppercase tracking-[0.22em] text-white"
+              style={{ ...jost, fontWeight: 800 }}
+            >
+              Cuenta
+            </p>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href="/register"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Crear cuenta
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/login"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Iniciar sesión
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/dashboard"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Mi feed
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/dashboard/credencial"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Mi credencial
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#contacto"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Contacto
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Columna 4: Legal */}
+          <div>
+            <p
+              className="mb-5 border-b border-solid border-white/10 pb-3 text-[0.7rem] font-extrabold uppercase tracking-[0.22em] text-white"
+              style={{ ...jost, fontWeight: 800 }}
+            >
+              Legal
+            </p>
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  href="/privacidad"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Aviso de Privacidad
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/terminos"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Términos y Condiciones
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        {/* ── Bottom row ── */}
-        <div className="pt-8 border-t border-white/[0.15] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-body text-xs text-white/50">
+        {/* Línea inferior */}
+        <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-solid border-white/10 pt-6 sm:flex-row sm:items-center">
+          <p
+            className="text-[0.75rem] text-white/40"
+            style={lato}
+          >
             © {new Date().getFullYear()} AirNation · airnation.online
           </p>
-          <p className="font-body text-xs text-white/50">
+          <p
+            className="text-[0.7rem] font-extrabold uppercase tracking-[0.18em] text-white/40"
+            style={{ ...jost, fontWeight: 800 }}
+          >
             Early Access — México
           </p>
         </div>
       </div>
     </footer>
-  );
+  )
 }
