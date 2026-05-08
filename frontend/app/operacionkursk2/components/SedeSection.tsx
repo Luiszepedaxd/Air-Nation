@@ -24,7 +24,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
     <section
       id="sede"
       data-section="sede"
-      className="relative w-full bg-[#F5F3EF] py-16 text-[#111111] md:py-24"
+      className="relative w-full bg-[#FFFFFF] py-16 text-[#111111] md:py-24"
     >
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <motion.div
@@ -55,7 +55,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-12">
           <div className="md:col-span-7">
             {imagenesArr.length === 0 ? (
-              <div className="flex h-[50vh] w-full items-center justify-center border border-[#E5E0DA] bg-white text-xs uppercase tracking-[0.2em] text-[#999]">
+              <div className="flex h-[50vh] w-full items-center justify-center border border-[#EEEEEE] bg-white text-xs uppercase tracking-[0.2em] text-[#999]">
                 Imágenes pendientes
               </div>
             ) : (
@@ -124,7 +124,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
                         className={`h-1.5 transition-all ${
                           i === activeIndex
                             ? 'w-6 bg-[#CC4B37]'
-                            : 'w-1.5 bg-[#E5E0DA] hover:bg-[#999]'
+                            : 'w-1.5 bg-[#EEEEEE] hover:bg-[#999]'
                         }`}
                         aria-label={`Foto ${i + 1}`}
                       />
@@ -152,7 +152,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
               {config.descripcion}
             </p>
 
-            <div className="border-t border-[#E5E0DA] pt-5">
+            <div className="border-t border-[#EEEEEE] pt-5">
               <p
                 className="text-[0.6rem] tracking-[0.3em] text-[#CC4B37]"
                 style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
@@ -168,7 +168,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
             </div>
 
             {config.coordenadas ? (
-              <div className="border-t border-[#E5E0DA] pt-5">
+              <div className="border-t border-[#EEEEEE] pt-5">
                 <p
                   className="text-[0.6rem] tracking-[0.3em] text-[#CC4B37]"
                   style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}

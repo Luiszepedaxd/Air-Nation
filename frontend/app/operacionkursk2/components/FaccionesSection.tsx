@@ -29,30 +29,17 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
   useEffect(() => {
     const el = mobileScrollRef.current
     if (!el) return
+    const gapPx = 16
     const onScroll = () => {
-      const idx = Math.round(el.scrollLeft / Math.max(el.clientWidth, 1))
+      const first = el.children[0] as HTMLElement | undefined
+      const slideW = first?.offsetWidth ?? el.clientWidth
+      const idx = Math.round(el.scrollLeft / Math.max(slideW + gapPx, 1))
       setMobileActive(Math.min(1, Math.max(0, idx)))
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
-
-  const goMobilePrev = () => {
-    const el = mobileScrollRef.current
-    if (!el) return
-    const w = el.clientWidth
-    const idx = Math.round(el.scrollLeft / Math.max(w, 1))
-    el.scrollTo({ left: Math.max(0, idx - 1) * w, behavior: 'smooth' })
-  }
-
-  const goMobileNext = () => {
-    const el = mobileScrollRef.current
-    if (!el) return
-    const w = el.clientWidth
-    const idx = Math.round(el.scrollLeft / Math.max(w, 1))
-    el.scrollTo({ left: Math.min(1, idx + 1) * w, behavior: 'smooth' })
-  }
 
   return (
     <section
@@ -110,60 +97,32 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
         />
       </div>
 
-      <div className="relative md:hidden">
-        <button
-          type="button"
-          onClick={goMobilePrev}
-          className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-[#CC4B37]"
-          aria-label="Facción anterior"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={goMobileNext}
-          className="absolute right-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-[#CC4B37]"
-          aria-label="Siguiente facción"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" />
-          </svg>
-        </button>
-
+      {/* Mobile: swipe horizontal con cards */}
+      <div className="md:hidden">
         <div
           ref={mobileScrollRef}
-          className="flex snap-x snap-mandatory overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
         >
-          <div className="w-full shrink-0 snap-center">
+          <div className="w-[calc(100vw-2rem)] shrink-0 snap-center">
             <FactionMobileCard data={rusa} side="rusa" />
           </div>
-          <div className="w-full shrink-0 snap-center">
+          <div className="w-[calc(100vw-2rem)] shrink-0 snap-center">
             <FactionMobileCard data={ucraniana} side="ucraniana" />
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-2 bg-black py-4">
-          <div className="flex gap-2">
-            <span
-              className={`h-1.5 rounded-full transition-all ${
-                mobileActive === 0 ? 'w-6 bg-[#CC4B37]' : 'w-1.5 bg-white/30'
-              }`}
-            />
-            <span
-              className={`h-1.5 rounded-full transition-all ${
-                mobileActive === 1 ? 'w-6 bg-[#CC4B37]' : 'w-1.5 bg-white/30'
-              }`}
-            />
-          </div>
-          <p
-            className="text-[0.55rem] tracking-[0.3em] text-white/60"
-            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
-          >
-            {mobileActive + 1} / 2 — DESLIZA
-          </p>
+        <div className="flex items-center justify-center gap-1.5 bg-black py-4">
+          <span
+            className={`h-1 rounded-full transition-all ${
+              mobileActive === 0 ? 'w-8 bg-[#CC4B37]' : 'w-4 bg-[#E5E0DA]'
+            }`}
+          />
+          <span
+            className={`h-1 rounded-full transition-all ${
+              mobileActive === 1 ? 'w-8 bg-[#CC4B37]' : 'w-4 bg-[#E5E0DA]'
+            }`}
+          />
         </div>
       </div>
 
@@ -349,7 +308,7 @@ function FactionMobileCard({
   const nombre = (data.nombre || 'FACCIÓN').replace(/^FACCIÓN\s+/i, '')
 
   return (
-    <div className="relative min-h-[85vh] w-full overflow-hidden">
+    <div className="relative min-h-[72vh] w-full overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
       {data.imagen_url ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
@@ -370,7 +329,7 @@ function FactionMobileCard({
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/90" />
-      <div className="relative z-10 flex min-h-[85vh] flex-col justify-end p-6">
+      <div className="relative z-10 flex min-h-[72vh] flex-col justify-end p-6">
         <p
           className="text-[0.6rem] tracking-[0.4em] text-white/60"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}

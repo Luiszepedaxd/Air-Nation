@@ -57,7 +57,8 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
   }, [config.fecha_inicio])
 
   const pad = (n: number) => String(n).padStart(2, '0')
-  const padDays = (n: number) => String(n).padStart(3, '0')
+  const daysStr =
+    time.days >= 100 ? String(time.days).padStart(3, '0') : pad(time.days)
 
   return (
     <section
@@ -94,8 +95,8 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
             transition={{ duration: 0.8 }}
             className="mt-12 md:mt-16"
           >
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-8">
-              <Unit value={padDays(time.days)} label="DÍAS" />
+            <div className="flex flex-nowrap items-center justify-center gap-1.5 sm:gap-3 md:gap-8">
+              <Unit value={daysStr} label="DÍAS" />
               <Separator pulse={pulse} />
               <Unit value={pad(time.hours)} label="HRS" />
               <Separator pulse={pulse} />
@@ -117,7 +118,7 @@ function Unit({ value, label }: { value: string; label: string }) {
         {value.split('').map((char, i) => (
           <span
             key={`${label}-dig-${i}`}
-            className="inline-flex h-12 w-9 items-center justify-center border border-[#E5E0DA] bg-[#FFFFFF] text-2xl text-[#111111] shadow-inner md:h-28 md:w-20 md:text-6xl lg:h-32 lg:w-24 lg:text-7xl"
+            className="inline-flex h-12 w-7 items-center justify-center border border-[#E5E0DA] bg-[#FFFFFF] text-xl text-[#111111] shadow-inner sm:h-14 sm:w-9 sm:text-2xl md:h-28 md:w-20 md:text-6xl lg:h-32 lg:w-24 lg:text-7xl"
             style={{
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontWeight: 700,
@@ -139,7 +140,7 @@ function Unit({ value, label }: { value: string; label: string }) {
 
 function Separator({ pulse }: { pulse: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center pb-5 md:pb-9">
+    <div className="flex flex-col items-center justify-center pb-4 md:pb-9">
       <div
         className="h-1.5 w-1.5 rounded-full transition-colors duration-500 md:h-2 md:w-2"
         style={{ backgroundColor: pulse ? '#CC4B37' : 'rgba(204,75,55,0.3)' }}

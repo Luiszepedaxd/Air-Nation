@@ -16,15 +16,32 @@ export function CtaFinalSection({ config }: { config: CtaFinalConfig }) {
       className="relative w-full overflow-hidden bg-[#F5F3EF] py-24 text-[#111111] md:py-40"
     >
       <div className="relative mx-auto max-w-4xl px-4 text-center md:px-8">
+        {/* Desktop: texto RU · UA */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="mb-10 text-5xl md:mb-14 md:text-6xl"
-          aria-hidden
+          className="mb-10 hidden text-center md:mb-14 md:block"
         >
-          🇷🇺 🇺🇦
+          <p
+            className="text-3xl tracking-[0.3em] text-[#CC4B37] md:text-4xl"
+            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+          >
+            RU · UA
+          </p>
+        </motion.div>
+
+        {/* Mobile: emojis */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="mb-10 flex justify-center gap-3 text-5xl md:hidden"
+        >
+          <span>🇷🇺</span>
+          <span>🇺🇦</span>
         </motion.div>
 
         <div className="space-y-3 md:space-y-5">

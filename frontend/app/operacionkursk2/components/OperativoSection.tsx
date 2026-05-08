@@ -17,7 +17,7 @@ export function OperativoSection({ config }: { config: OperativoConfig }) {
     <section
       id="operativo"
       data-section="operativo"
-      className="relative w-full bg-[#F5F3EF] py-20 text-[#111111] md:py-32"
+      className="relative w-full bg-[#FFFFFF] py-20 text-[#111111] md:py-32"
     >
       <div className="mx-auto max-w-5xl px-4 md:px-8">
         <motion.div
@@ -89,7 +89,7 @@ function HitoRow({ hito, index }: { hito: OperativoHito; index: number }) {
       className="relative grid grid-cols-[40px_1fr] items-start gap-4 md:grid-cols-[100px_1fr] md:gap-12"
     >
       <div className="relative flex items-start justify-end pr-2 md:pr-4">
-        <div className="absolute left-[1px] top-1.5 h-3 w-3 rounded-full bg-[#CC4B37] ring-4 ring-[#F5F3EF] md:left-[71px]" />
+        <div className="absolute left-[1px] top-1.5 h-3 w-3 rounded-full bg-[#CC4B37] ring-4 ring-[#FFFFFF] md:left-[71px]" />
         <div className="text-right">
           <p
             className="text-base text-[#111111] md:text-2xl"

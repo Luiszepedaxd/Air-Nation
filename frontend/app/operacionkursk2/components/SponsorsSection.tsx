@@ -15,7 +15,7 @@ export function SponsorsSection({ config }: { config: SponsorsConfig }) {
   return (
     <section
       data-section="sponsors"
-      className="relative w-full overflow-hidden bg-[#F5F3EF] py-20 text-[#111111] md:py-28"
+      className="relative w-full overflow-hidden bg-[#FFFFFF] py-20 text-[#111111] md:py-28"
     >
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <motion.div

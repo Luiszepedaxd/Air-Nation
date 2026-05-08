@@ -1,105 +1,64 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
 import type { NarrativaConfig } from '../lib/types'
 
 export function NarrativaSection({ config }: { config: NarrativaConfig }) {
   const bloques = config.bloques ?? []
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el || bloques.length === 0) return
-    const onScroll = () => {
-      const first = el.children[0] as HTMLElement | undefined
-      const cardW = first?.offsetWidth ?? el.clientWidth
-      const gap = 16
-      const idx = Math.round(el.scrollLeft / Math.max(cardW + gap, 1))
-      setActiveIndex(Math.min(Math.max(0, idx), bloques.length - 1))
-    }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    onScroll()
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [bloques.length])
+  const ref = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ['start 0.85', 'end 0.4'],
+  })
+  const lineWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
 
   return (
     <section
       data-section="narrativa"
       className="relative w-full bg-[#F5F3EF] py-16 text-[#111111] md:py-28"
     >
-      <div className="mx-auto max-w-5xl px-4 md:px-8">
+      <div className="mx-auto max-w-6xl px-4 md:px-8">
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-10 text-[0.65rem] tracking-[0.4em] text-[#CC4B37] md:mb-20 md:text-xs"
+          className="mb-12 text-center text-[0.65rem] tracking-[0.4em] text-[#CC4B37] md:mb-20 md:text-xs"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
           UN CONFLICTO. TRES TIEMPOS.
         </motion.p>
-      </div>
 
-      <div className="md:hidden">
-        <div
-          ref={scrollRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          {bloques.map((bloque, i) => (
-            <div
-              key={`${bloque.anio}-${i}`}
-              data-narrativa-slide
-              className="w-[85vw] shrink-0 snap-center border border-[#E5E0DA] bg-white p-6"
-            >
-              <p
-                className="text-5xl leading-none text-[#111111]"
-                style={{
-                  fontFamily: 'Jost, sans-serif',
-                  fontWeight: 900,
-                  letterSpacing: '-0.02em',
-                }}
+        <div ref={ref} className="relative pt-4">
+          {/* Línea base (gris claro) */}
+          <div className="absolute left-0 right-0 top-[18px] h-[2px] bg-[#E5E0DA] md:top-[22px]" />
+
+          {/* Línea animada (coral) */}
+          <motion.div
+            className="absolute left-0 top-[18px] h-[2px] bg-[#CC4B37] md:top-[22px]"
+            style={{ width: lineWidth }}
+          />
+
+          {/* Nodos */}
+          <div className="relative grid grid-cols-3 gap-3 md:gap-8">
+            {bloques.map((bloque, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.6, delay: 0.2 + i * 0.25, ease: 'easeOut' }}
+                className="flex flex-col items-center text-center"
               >
-                {bloque.anio}
-              </p>
-              <p
-                className="mt-6 text-base leading-snug text-[#666666]"
-                style={{ fontFamily: 'Lato, sans-serif', fontWeight: 400 }}
-              >
-                {bloque.texto}
-              </p>
-            </div>
-          ))}
-        </div>
+                {/* Punto en la línea */}
+                <div className="relative h-9 w-9 md:h-11 md:w-11">
+                  <span className="absolute inset-0 m-auto h-3 w-3 rounded-full bg-[#CC4B37] ring-4 ring-[#F5F3EF] md:h-4 md:w-4" />
+                </div>
 
-        <div className="mt-4 flex justify-center gap-2">
-          {bloques.map((_, i) => (
-            <span
-              key={i}
-              className={`h-1.5 rounded-full transition-all ${
-                i === activeIndex ? 'w-6 bg-[#CC4B37]' : 'w-1.5 bg-[#E5E0DA]'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="mx-auto hidden max-w-5xl px-4 md:block md:px-8">
-        <div className="space-y-16 md:space-y-24">
-          {bloques.map((bloque, i) => (
-            <motion.div
-              key={`${bloque.anio}-d-${i}`}
-              initial={{ opacity: 0, y: 60 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-150px' }}
-              transition={{ duration: 0.9, ease: 'easeOut' }}
-              className="grid grid-cols-12 items-baseline gap-8"
-            >
-              <div className="col-span-4">
+                {/* Año */}
                 <p
-                  className="text-7xl leading-none text-[#111111] lg:text-9xl"
+                  className="mt-3 text-3xl leading-none text-[#111111] sm:text-4xl md:mt-5 md:text-6xl lg:text-7xl"
                   style={{
                     fontFamily: 'Jost, sans-serif',
                     fontWeight: 900,
@@ -108,19 +67,19 @@ export function NarrativaSection({ config }: { config: NarrativaConfig }) {
                 >
                   {bloque.anio}
                 </p>
-              </div>
-              <div className="col-span-8">
+
+                {/* Texto */}
                 <p
-                  className={`text-2xl leading-snug lg:text-3xl ${
+                  className={`mt-3 px-1 text-xs leading-snug sm:text-sm md:mt-5 md:text-base lg:text-lg ${
                     i === bloques.length - 1 ? 'text-[#111111]' : 'text-[#666666]'
                   }`}
                   style={{ fontFamily: 'Lato, sans-serif', fontWeight: 400 }}
                 >
                   {bloque.texto}
                 </p>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
