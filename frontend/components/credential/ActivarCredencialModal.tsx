@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 
@@ -15,7 +15,7 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'
 
-type Step = 'upload' | 'validating' | 'rejected' | 'confirm' | 'saving' | 'done'
+type Step = 'upload' | 'camera' | 'validating' | 'rejected' | 'confirm' | 'saving' | 'done'
 
 type Props = {
   userId: string
@@ -87,19 +87,14 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [rejectMsg, setRejectMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -109,35 +104,37 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
     }
   }, [])
 
-  const handleFile = async (file: File) => {
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [])
+
+  const validateCapturedBlob = async (blob: Blob) => {
+    setStep('validating')
     setErrorMsg(null)
     setRejectMsg(null)
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setErrorMsg('Formato no soportado. Usa JPG, PNG o WebP.')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setErrorMsg('Imagen demasiado grande. Max 10MB.')
-      return
-    }
-    setStep('validating')
     try {
-      const { blob, dataUrl } = await compressImage(file)
-      setPreviewBlob(blob)
-      setPreviewUrl(dataUrl)
-
       const base64 = await blobToBase64(blob)
-
       const {
         data: { session },
       } = await supabase.auth.getSession()
       const token = session?.access_token
       if (!token) {
-        setErrorMsg('Sesion expirada. Vuelve a iniciar sesion.')
+        setErrorMsg('Sesión expirada. Vuelve a iniciar sesión.')
         setStep('upload')
         return
       }
-
       const res = await fetch(`${API_BASE}/credencial/validar-foto`, {
         method: 'POST',
         headers: {
@@ -149,14 +146,12 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
           mime_type: 'image/jpeg',
         }),
       })
-
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
         setErrorMsg(j.error || 'No se pudo validar la foto. Intenta de nuevo.')
         setStep('upload')
         return
       }
-
       const result = await res.json()
       if (result.ok) {
         setStep('confirm')
@@ -169,6 +164,113 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
       setStep('upload')
     }
   }
+
+  const startCamera = async () => {
+    setCameraError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 1280 },
+        },
+        audio: false,
+      })
+      streamRef.current = stream
+      setStep('camera')
+      // Esperar el siguiente tick para que el <video> exista en DOM
+      setTimeout(() => {
+        if (videoRef.current && streamRef.current) {
+          videoRef.current.srcObject = streamRef.current
+          void videoRef.current.play().catch(() => {})
+        }
+      }, 50)
+    } catch (err) {
+      console.error('[camera]', err)
+      const name = err instanceof Error ? err.name : ''
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        setCameraError(
+          'Necesitamos permiso para usar la cámara. Revisa los permisos del navegador o sube una foto desde tu galería.'
+        )
+      } else if (name === 'NotFoundError') {
+        setCameraError('No se encontró cámara en este dispositivo. Sube una foto desde tu galería.')
+      } else {
+        setCameraError('No se pudo abrir la cámara. Sube una foto desde tu galería.')
+      }
+    }
+  }
+
+  const capturePhoto = async () => {
+    const video = videoRef.current
+    if (!video) return
+    const w = video.videoWidth
+    const h = video.videoHeight
+    if (!w || !h) return
+
+    // Recorte cuadrado centrado del frame
+    const minSide = Math.min(w, h)
+    const sx = Math.round((w - minSide) / 2)
+    const sy = Math.round((h - minSide) / 2)
+    const targetSide = Math.min(minSide, MAX_SIDE)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = targetSide
+    canvas.height = targetSide
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // La cámara frontal está espejada visualmente, des-espejar para guardar
+    ctx.translate(targetSide, 0)
+    ctx.scale(-1, 1)
+    ctx.drawImage(video, sx, sy, minSide, minSide, 0, 0, targetSide, targetSide)
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', JPEG_QUALITY)
+    })
+    if (!blob) return
+
+    const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY)
+
+    stopCamera()
+    setPreviewBlob(blob)
+    setPreviewUrl(dataUrl)
+    await validateCapturedBlob(blob)
+  }
+
+  const handleFile = async (file: File) => {
+    setErrorMsg(null)
+    setRejectMsg(null)
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setErrorMsg('Formato no soportado. Usa JPG, PNG o WebP.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('Imagen demasiado grande. Máx 10MB.')
+      return
+    }
+    try {
+      const { blob, dataUrl } = await compressImage(file)
+      setPreviewBlob(blob)
+      setPreviewUrl(dataUrl)
+      await validateCapturedBlob(blob)
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Error desconocido')
+      setStep('upload')
+    }
+  }
+
+  const handleClose = useCallback(() => {
+    stopCamera()
+    onClose()
+  }, [onClose])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [handleClose])
 
   const handleConfirm = async () => {
     if (!previewBlob) return
@@ -219,10 +321,12 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
   }
 
   const reset = () => {
+    stopCamera()
     setPreviewUrl(null)
     setPreviewBlob(null)
     setRejectMsg(null)
     setErrorMsg(null)
+    setCameraError(null)
     setStep('upload')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -232,7 +336,7 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto bg-black/60 pb-6 pt-6 sm:items-center"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="relative my-auto w-full max-w-md bg-[#FFFFFF] p-5 shadow-xl sm:rounded-[2px]"
@@ -244,19 +348,18 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Cerrar"
             className="text-[20px] leading-none text-[#666666] hover:text-[#111111]"
           >
-            x
+            ×
           </button>
         </div>
 
         {step === 'upload' && (
           <div className="mt-4">
             <p style={lato} className="text-[13px] leading-relaxed text-[#666666]">
-              Toma una foto tipo INE o pasaporte: rostro de frente, hombros visibles, fondo neutro. La
-              recortaremos en cuadrado y la validaremos al instante.
+              Toma una foto tipo INE o pasaporte: rostro de frente, hombros visibles, fondo neutro. Verás un contorno guía mientras tomas la foto.
             </p>
 
             <ul className="mt-3 space-y-1.5">
@@ -279,11 +382,16 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
               </p>
             )}
 
+            {cameraError && (
+              <p style={lato} className="mt-3 text-[12px] text-[#CC4B37]">
+                {cameraError}
+              </p>
+            )}
+
             <input
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              capture="user"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0]
@@ -293,12 +401,77 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
 
             <button
               type="button"
+              onClick={() => void startCamera()}
+              style={jost}
+              className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[2px] bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+            >
+              ABRIR CÁMARA
+            </button>
+
+            <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               style={jost}
-              className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-[2px] bg-[#111111] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
             >
-              SUBIR / TOMAR FOTO
+              SUBIR DESDE GALERÍA
             </button>
+          </div>
+        )}
+
+        {step === 'camera' && (
+          <div className="mt-4">
+            <div className="relative mx-auto aspect-square w-full max-w-[360px] overflow-hidden bg-black">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 h-full w-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
+              />
+              {/* Overlay oscuro con óvalo recortado */}
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    'radial-gradient(ellipse 38% 52% at 50% 50%, transparent 98%, rgba(0,0,0,0.65) 100%)',
+                }}
+              />
+              {/* Borde del óvalo */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div
+                  className="h-[78%] w-[58%] border-2 border-dashed border-white/90"
+                  style={{ borderRadius: '50%' }}
+                />
+              </div>
+            </div>
+
+            <p style={lato} className="mt-3 text-center text-[12px] text-[#666666]">
+              Coloca tu rostro dentro del óvalo. Hombros visibles.
+            </p>
+
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  stopCamera()
+                  setStep('upload')
+                }}
+                style={jost}
+                className="flex h-12 flex-1 items-center justify-center rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
+              >
+                CANCELAR
+              </button>
+              <button
+                type="button"
+                onClick={() => void capturePhoto()}
+                style={jost}
+                className="flex h-12 flex-1 items-center justify-center rounded-[2px] bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+              >
+                TOMAR FOTO
+              </button>
+            </div>
           </div>
         )}
 
@@ -436,7 +609,7 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
             </p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               style={jost}
               className="mt-5 flex h-12 w-full items-center justify-center rounded-[2px] bg-[#111111] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
             >
