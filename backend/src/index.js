@@ -15,6 +15,7 @@ const accountRouter = require("./routes/account");
 const adminMailRouter = require("./routes/admin-mail");
 const pushRouter = require("./routes/push");
 const stripeRouter = require("./routes/stripe");
+const credencialesRouter = require("./routes/credenciales");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -65,6 +66,7 @@ app.use("/api/v1/account", accountRouter);
 app.use("/api/v1/admin", adminMailRouter);
 app.use("/api/v1/push", pushRouter);
 app.use("/api/v1/stripe", stripeRouter);
+app.use("/api/v1/credencial", credencialesRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

@@ -140,6 +140,12 @@ router.patch("/:id", requireAuth, async (req, res) => {
       }
       updates.foto_portada_url = body.foto_portada_url;
     }
+    if (body.foto_credencial_url !== undefined) {
+      if (body.foto_credencial_url !== null && typeof body.foto_credencial_url !== "string") {
+        return res.status(400).json({ error: "foto_credencial_url debe ser string o null" });
+      }
+      updates.foto_credencial_url = body.foto_credencial_url;
+    }
     for (const field of ["instagram", "tiktok", "youtube", "facebook"]) {
       if (body[field] !== undefined) {
         if (body[field] !== null && typeof body[field] !== "string") {
