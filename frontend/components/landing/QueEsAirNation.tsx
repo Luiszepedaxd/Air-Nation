@@ -104,7 +104,7 @@ export default async function QueEsAirNation() {
             {FEATURES.map((f, idx) => (
               <div
                 key={f.key}
-                className={`h-[480px] w-[78%] shrink-0 snap-start ${
+                className={`w-[78%] shrink-0 snap-start ${
                   idx === FEATURES.length - 1 ? 'pr-5' : ''
                 }`}
                 style={{

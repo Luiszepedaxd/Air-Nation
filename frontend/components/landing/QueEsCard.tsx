@@ -24,17 +24,18 @@ export function QueEsCard({
     <Link href={href} className="group block h-full">
       <TiltCard intensity={6} className="h-full">
         <div className="relative flex h-full flex-col overflow-hidden border border-solid border-[#EEEEEE] bg-white transition-all duration-300 group-hover:border-[#CC4B37] group-hover:shadow-[0_20px_40px_-15px_rgba(204,75,55,0.25)]">
-          {/* Imagen del feature - mobile altura fija, desktop aspect-ratio */}
-          <div className="relative h-[260px] w-full shrink-0 overflow-hidden bg-[#111111] sm:h-auto sm:aspect-[3/4]">
+          {/* Imagen del feature - aspect-ratio consistente en mobile y desktop */}
+          <div className="relative w-full shrink-0 overflow-hidden bg-[#111111] aspect-[3/4]">
             <img
               src={imageUrl}
               alt=""
-              className="absolute inset-0 z-[1] h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
               loading="lazy"
               decoding="async"
             />
+            {/* Vignette muy sutil en bordes para integrar la imagen con la card, sin overlay rojo */}
             <div
-              className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(ellipse_at_center,rgba(204,75,55,0.25)_0%,transparent_70%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_60%,rgba(0,0,0,0.35)_100%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100"
               aria-hidden
             />
           </div>

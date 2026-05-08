@@ -85,15 +85,13 @@ export default async function CredencialHolografica() {
                 <span className="text-[#CC4B37]">DIGITAL.</span>
               </h2>
               <p className="mt-6 max-w-md font-body text-base leading-[1.7] text-white/70 sm:text-[1.05rem]">
-                Tu identificación oficial en AirNation. Con QR único de
-                verificación, descargable y válida en eventos AN. Gratis para
-                siempre.
+                Tu identidad oficial en AirNation. Con QR único de verificación, lista para guardarse en tu wallet y válida en eventos AN. Gratis para siempre.
               </p>
 
               <ul className="mt-8 space-y-3">
                 {[
                   'QR único de verificación',
-                  'Descargable a tu Apple Wallet',
+                  'Compatible con Apple Wallet y Google Wallet',
                   'Tu equipo, ciudad y rol oficial',
                   'Válida en eventos AN',
                 ].map((item) => (
