@@ -20,6 +20,7 @@ type UserRow = {
   ciudad: string | null
   rol: string | null
   avatar_url: string | null
+  foto_credencial_url: string | null
   member_number: string | number | null
   created_at: string
 }
@@ -37,7 +38,7 @@ export default async function CredencialPage() {
   const { data: row, error } = await supabase
     .from('users')
     .select(
-      'id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at'
+      'id, nombre, alias, ciudad, rol, avatar_url, foto_credencial_url, member_number, created_at'
     )
     .eq('id', session.user.id)
     .maybeSingle()
@@ -69,6 +70,7 @@ export default async function CredencialPage() {
     ciudad: r.ciudad,
     rol: r.rol,
     avatar_url: r.avatar_url,
+    foto_credencial_url: r.foto_credencial_url,
     member_number: r.member_number,
     created_at: r.created_at,
     teamNombre,

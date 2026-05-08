@@ -28,6 +28,7 @@ export type CredentialUserData = {
   ciudad: string | null
   rol: string | null
   avatar_url: string | null
+  foto_credencial_url: string | null
   member_number: string | number | null
   created_at: string
   teamNombre: string | null
@@ -139,22 +140,25 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
         <div className="px-5 py-4">
           <div className="flex gap-3">
             <div className="h-[72px] w-[72px] shrink-0 overflow-hidden bg-[#F4F4F4]">
-              {data.avatar_url ? (
-                <img
-                  src={data.avatar_url}
-                  alt=""
-                  width={72}
-                  height={72}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div
-                  className="flex h-full w-full items-center justify-center text-[22px] text-[#111111]"
-                  style={jost}
-                >
-                  {initial}
-                </div>
-              )}
+              {(() => {
+                const photoSrc = data.foto_credencial_url || data.avatar_url
+                return photoSrc ? (
+                  <img
+                    src={photoSrc}
+                    alt=""
+                    width={72}
+                    height={72}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center text-[22px] text-[#111111]"
+                    style={jost}
+                  >
+                    {initial}
+                  </div>
+                )
+              })()}
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p style={jost} className="text-[18px] font-extrabold uppercase leading-tight text-[#111111]">
