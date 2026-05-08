@@ -13,6 +13,21 @@ export type OperacionKursk2Slug =
   | 'airnation'
   | 'cta_final'
 
+export const OK2_SLUGS: readonly OperacionKursk2Slug[] = [
+  'hero',
+  'narrativa',
+  'sede',
+  'countdown',
+  'facciones',
+  'operativo',
+  'inscripcion',
+  'sponsors',
+  'galeria',
+  'manual',
+  'airnation',
+  'cta_final',
+] as const
+
 // Configs por slug
 export type HeroConfig = {
   eyebrow: string

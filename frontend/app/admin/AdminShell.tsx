@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const jostHeading = {
@@ -14,10 +14,50 @@ const jostHeading = {
 
 const latoBody = { fontFamily: "'Lato', sans-serif" }
 
-type NavItem = {
+type NavLeaf = {
   href: string
   label: string
   icon: (active: boolean) => ReactNode
+}
+
+type NavGroup = {
+  type: 'group'
+  label: string
+  icon: (active: boolean) => ReactNode
+  items: { href: string; label: string }[]
+}
+
+type NavItem = NavLeaf | NavGroup
+
+function isNavGroup(item: NavItem): item is NavGroup {
+  return 'type' in item && item.type === 'group'
+}
+
+function isGroupActive(pathname: string, group: NavGroup) {
+  return group.items.some(
+    (it) => pathname === it.href || pathname.startsWith(`${it.href}/`)
+  )
+}
+
+const SPONSORS_GROUP: NavGroup = {
+  type: 'group',
+  label: 'Sponsors',
+  icon: (active) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 2l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1.5L12 2z"
+        stroke={active ? '#CC4B37' : '#666666'}
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+        fill={active ? '#CC4B37' : 'none'}
+        fillOpacity={active ? 0.15 : 0}
+      />
+    </svg>
+  ),
+  items: [
+    { href: '/admin/bloodmoney2', label: 'Blood Money 2' },
+    { href: '/admin/operacionkursk2', label: 'Op. Kursk II' },
+  ],
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -233,22 +273,7 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
-  {
-    href: '/admin/bloodmoney2',
-    label: 'Blood Money 2',
-    icon: (active) => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <path
-          d="M12 2l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-1.5L12 2z"
-          stroke={active ? '#CC4B37' : '#666666'}
-          strokeWidth="1.7"
-          strokeLinejoin="round"
-          fill={active ? '#CC4B37' : 'none'}
-          fillOpacity={active ? 0.15 : 0}
-        />
-      </svg>
-    ),
-  },
+  SPONSORS_GROUP,
 ]
 
 function navActive(pathname: string, href: string) {
@@ -258,10 +283,71 @@ function navActive(pathname: string, href: string) {
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const groupActive = isGroupActive(pathname, SPONSORS_GROUP)
+  const [sponsorsExpanded, setSponsorsExpanded] = useState(groupActive)
+
+  useEffect(() => {
+    if (isGroupActive(pathname, SPONSORS_GROUP)) setSponsorsExpanded(true)
+    else setSponsorsExpanded(false)
+  }, [pathname])
 
   return (
     <nav className="flex flex-col gap-0.5 px-2 py-4">
       {NAV_ITEMS.map((item) => {
+        if (isNavGroup(item)) {
+          const gActive = isGroupActive(pathname, item)
+          return (
+            <div key={item.label} className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => setSponsorsExpanded((o) => !o)}
+                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-[0.7rem] tracking-[0.12em] transition-colors ${
+                  gActive
+                    ? 'bg-[#EEEEEE] text-[#CC4B37]'
+                    : 'text-[#666666] hover:bg-[#EEEEEE]/70 hover:text-[#111111]'
+                }`}
+                style={{ ...jostHeading, borderRadius: 0 }}
+                aria-expanded={sponsorsExpanded}
+              >
+                <span className="shrink-0">{item.icon(gActive)}</span>
+                <span className="min-w-0 flex-1">{item.label}</span>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                  className={`shrink-0 text-[#999999] transition-transform ${sponsorsExpanded ? 'rotate-180' : ''}`}
+                >
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+              {sponsorsExpanded && (
+                <div className="flex flex-col border-l border-[#DDDDDD] ml-[21px] pl-1">
+                  {item.items.map((sub) => {
+                    const subActive = navActive(pathname, sub.href)
+                    return (
+                      <Link
+                        key={sub.href}
+                        href={sub.href}
+                        onClick={onNavigate}
+                        className={`py-2 pl-4 pr-3 text-[0.62rem] tracking-[0.1em] transition-colors ${
+                          subActive
+                            ? 'border-l-2 border-[#CC4B37] bg-[#EEEEEE]/80 text-[#CC4B37]'
+                            : 'border-l-2 border-transparent text-[#666666] hover:bg-[#EEEEEE]/70 hover:text-[#111111]'
+                        }`}
+                        style={jostHeading}
+                      >
+                        {sub.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        }
+
         const active = navActive(pathname, item.href)
         return (
           <Link
