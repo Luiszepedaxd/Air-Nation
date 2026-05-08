@@ -55,6 +55,34 @@ Persona de perfil completo →
 Foto desde arriba mostrando solo frente y cabello →
 {"ok": false, "motivo": "La foto está tomada desde arriba. Toma la foto a la altura de tu cara, de frente.", "razon_codigo": "ENCUADRE_INCORRECTO"}`;
 
+/** Último bloque `{...}` balanceado; ignora texto previo (p. ej. razonamiento del modelo). */
+function extractLastJsonBlock(text) {
+  if (!text) return null;
+  const stripped = text
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  let depth = 0;
+  let endIdx = -1;
+  let startIdx = -1;
+  for (let i = stripped.length - 1; i >= 0; i--) {
+    const ch = stripped[i];
+    if (ch === "}") {
+      if (endIdx === -1) endIdx = i;
+      depth++;
+    } else if (ch === "{") {
+      depth--;
+      if (depth === 0 && endIdx !== -1) {
+        startIdx = i;
+        break;
+      }
+    }
+  }
+  if (startIdx === -1 || endIdx === -1) return null;
+  return stripped.slice(startIdx, endIdx + 1);
+}
+
 async function validateCredentialPhoto(base64Image, mimeType = "image/jpeg") {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -105,18 +133,19 @@ async function validateCredentialPhoto(base64Image, mimeType = "image/jpeg") {
   const json = await response.json();
   const raw = json?.choices?.[0]?.message?.content?.trim() || "";
 
-  // Limpiar posibles backticks o markdown si el modelo se rebela
-  const cleaned = raw
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
+  const candidateJson = extractLastJsonBlock(raw);
+
+  if (!candidateJson) {
+    console.error("[validator] respuesta cruda del modelo:", raw);
+    throw new Error("No se encontró bloque JSON en la respuesta");
+  }
 
   let parsed;
   try {
-    parsed = JSON.parse(cleaned);
+    parsed = JSON.parse(candidateJson);
   } catch (e) {
-    throw new Error(`Respuesta del modelo no es JSON valido: ${cleaned}`);
+    console.error("[validator] respuesta cruda del modelo:", raw);
+    throw new Error(`Respuesta del modelo no es JSON valido: ${raw.slice(0, 300)}`);
   }
 
   if (typeof parsed.ok !== "boolean") {
