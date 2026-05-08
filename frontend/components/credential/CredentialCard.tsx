@@ -9,11 +9,6 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
-const jostMedium = {
-  fontFamily: "'Jost', sans-serif",
-  fontWeight: 600,
-} as const
-
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const ROLE_LABELS: Record<string, string> = {
@@ -58,7 +53,7 @@ function formatMemberNo(n: string | number | null): string {
 function formatDesde(iso: string) {
   try {
     const d = new Date(iso)
-    const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+    const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
     return `${meses[d.getMonth()]} ${d.getFullYear()}`
   } catch {
     return ''
@@ -68,8 +63,8 @@ function formatDesde(iso: string) {
 function formatFechaNac(iso: string | null) {
   if (!iso) return ''
   try {
-    const d = new Date(`${iso}T00:00:00`)
-    const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+    const d = new Date(iso + 'T00:00:00')
+    const meses = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
     const dd = String(d.getDate()).padStart(2, '0')
     return `${dd} · ${meses[d.getMonth()]} · ${d.getFullYear()}`
   } catch {
@@ -88,11 +83,6 @@ function HexLogo() {
     >
       <svg width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden>
         <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#CC4B37" />
-        <path
-          d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z"
-          stroke="rgba(0,0,0,0.15)"
-          strokeWidth="0.5"
-        />
       </svg>
     </span>
   )
@@ -136,6 +126,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
     const photoSrc = data.foto_credencial_url || data.avatar_url
     const fechaNacFormatted = formatFechaNac(data.credencial_fecha_nacimiento)
     const desdeFormatted = formatDesde(data.created_at)
+
     const teamsActivos = (data.teamsActivos || []).filter((t) => t && t.trim().length > 0)
     const teamsToShow = teamsActivos.slice(0, 2)
     const teamsExtraCount = teamsActivos.length - teamsToShow.length
@@ -152,28 +143,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
           overflow: 'hidden',
         }}
       >
-        <div
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          aria-hidden
-          style={{ overflow: 'hidden' }}
-        >
-          <div
-            style={{
-              transform: 'rotate(-30deg)',
-              opacity: 0.04,
-              fontFamily: "'Jost', sans-serif",
-              fontWeight: 900,
-              fontSize: '120px',
-              letterSpacing: '0.05em',
-              color: '#111111',
-              whiteSpace: 'nowrap',
-              lineHeight: 1,
-            }}
-          >
-            AIRNATION
-          </div>
-        </div>
-
+        {/* Patrón holográfico estático sutil (sin marca de agua) */}
         <div
           className="pointer-events-none absolute inset-0"
           aria-hidden
@@ -184,11 +154,10 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
         />
 
         <div className="relative flex h-full flex-col">
+          {/* HEADER */}
           <div
             className="relative flex items-center justify-between px-4 py-3"
-            style={{
-              background: 'linear-gradient(135deg, #CC4B37 0%, #B33D2C 100%)',
-            }}
+            style={{ background: 'linear-gradient(135deg, #CC4B37 0%, #B33D2C 100%)' }}
           >
             <div className="min-w-0">
               <p
@@ -207,6 +176,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
             <HexLogo />
           </div>
 
+          {/* Banda micro-info */}
           <div className="flex items-center justify-between border-b border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-1.5">
             <span
               style={{ ...lato, letterSpacing: '0.16em' }}
@@ -222,7 +192,8 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
             </span>
           </div>
 
-          <div className="flex-1 px-4 pb-3 pt-3.5">
+          {/* CUERPO PRINCIPAL */}
+          <div className="flex flex-1 flex-col px-4 pt-3.5 pb-3">
             <div className="flex gap-3.5">
               <div
                 className="relative shrink-0"
@@ -286,7 +257,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               </div>
             </div>
 
-            {teamsToShow.length > 0 || ciudadTrim ? (
+            {(teamsToShow.length > 0 || ciudadTrim) ? (
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
                 {teamsToShow.map((t) => (
                   <span
@@ -296,8 +267,8 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
                   >
                     <ShieldIcon />
                     <span
-                      style={{ ...jostMedium, letterSpacing: '0.08em' }}
-                      className="text-[10px] uppercase text-[#111111]"
+                      style={{ ...jost, letterSpacing: '0.08em' }}
+                      className="text-[10px] font-extrabold uppercase text-[#111111]"
                     >
                       {t}
                     </span>
@@ -319,6 +290,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               </div>
             ) : null}
 
+            {/* Divisor con perforación */}
             <div className="relative my-3.5">
               <div className="border-t border-dashed border-[#DDDDDD]" />
               <span
@@ -331,6 +303,7 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
               />
             </div>
 
+            {/* Grid de datos compacto, alineado a izquierda */}
             <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
               <div>
                 <p
@@ -378,41 +351,56 @@ export const CredentialCard = forwardRef<HTMLDivElement, { data: CredentialUserD
                 </div>
               ) : null}
             </div>
+
+            {/* Spacer flexible que empuja el QR hacia abajo SIN crear hueco visual */}
+            <div className="flex-1 min-h-[8px]" />
+
+            {/* QR centrado dentro del cuerpo */}
+            <div className="flex flex-col items-center">
+              <div
+                className="bg-[#FFFFFF] p-1.5"
+                style={{ boxShadow: 'inset 0 0 0 1px #EEEEEE' }}
+              >
+                <QRCodeSVG
+                  value={verifyUrl}
+                  size={86}
+                  marginSize={0}
+                  fgColor="#111111"
+                  bgColor="#FFFFFF"
+                  level="M"
+                />
+              </div>
+              <p
+                style={{ ...lato, letterSpacing: '0.18em' }}
+                className="mt-2 text-[7px] uppercase text-[#999999]"
+              >
+                ESCANEA PARA VERIFICAR
+              </p>
+            </div>
           </div>
 
-          <div className="relative flex items-end justify-between border-t border-solid border-[#EEEEEE] bg-[#FAFAFA] px-4 pb-3 pt-3">
-            <div className="min-w-0 pr-3">
+          {/* FOOTER compacto */}
+          <div className="border-t border-solid border-[#EEEEEE] bg-[#FAFAFA] px-4 py-2">
+            <div className="flex items-center justify-between">
               <p
                 style={{ ...jost, letterSpacing: '0.16em' }}
                 className="text-[10px] font-extrabold uppercase leading-none text-[#111111]"
               >
                 AIRNATION · MX
               </p>
-              <p style={lato} className="mt-1 text-[9px] leading-tight text-[#666666]">
+              <p
+                style={lato}
+                className="text-[9px] leading-none text-[#666666]"
+              >
                 airnation.online
               </p>
-              <p
-                style={{ ...lato, letterSpacing: '0.18em' }}
-                className="mt-1.5 text-[7px] uppercase leading-none text-[#999999]"
-              >
-                IDENTIFICACION DE COMUNIDAD · NO OFICIAL
-              </p>
             </div>
-            <div
-              className="shrink-0 bg-[#FFFFFF] p-1"
-              style={{
-                boxShadow: 'inset 0 0 0 1px #EEEEEE',
-              }}
+            <p
+              style={{ ...lato, letterSpacing: '0.18em' }}
+              className="mt-1 text-[7px] uppercase leading-none text-[#999999]"
             >
-              <QRCodeSVG
-                value={verifyUrl}
-                size={70}
-                marginSize={0}
-                fgColor="#111111"
-                bgColor="#FFFFFF"
-                level="M"
-              />
-            </div>
+              IDENTIFICACIÓN DE COMUNIDAD · NO OFICIAL
+            </p>
           </div>
         </div>
       </div>

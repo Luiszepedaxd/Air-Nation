@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
 import { getSiteAssets } from '@/lib/site-assets'
+import { getSiteAssetValues } from '@/lib/site-assets'
+import type { CredentialUserData } from '@/components/credential/CredentialCard'
 import { RevealOnScroll } from '@/components/animations/RevealOnScroll'
 import { CredencialMockup } from './CredencialMockup'
 
@@ -10,8 +12,42 @@ export default async function CredencialHolografica() {
     data: { session },
   } = await supabase.auth.getSession()
 
-  const assets = await getSiteAssets()
-  const credencialUrl = assets['home_credencial_image'] ?? null
+  const [assets, values] = await Promise.all([
+    getSiteAssets(),
+    getSiteAssetValues(),
+  ])
+
+  const fotoCredencial = assets['credencial_avatar'] ?? null
+
+  // Construir el objeto CredentialUserData desde site_assets
+  const fechaAltaIso = values['credencial_fecha_alta'] || '2026-04-01'
+  const fechaAltaForCreatedAt = (() => {
+    try {
+      const d = new Date(fechaAltaIso + 'T00:00:00')
+      if (Number.isNaN(d.getTime())) return new Date('2026-04-01T00:00:00').toISOString()
+      return d.toISOString()
+    } catch {
+      return new Date('2026-04-01T00:00:00').toISOString()
+    }
+  })()
+
+  const equipoNombre = (values['credencial_equipo'] || '').trim()
+
+  const mockData: CredentialUserData = {
+    id: 'home-mockup',
+    nombre: null,
+    alias: values['credencial_alias'] || 'CERO UNO',
+    ciudad: values['credencial_ciudad'] || 'Guadalajara',
+    rol: (values['credencial_rol'] || 'sniper').toLowerCase().replace(/\s+/g, '_'),
+    avatar_url: null,
+    foto_credencial_url: fotoCredencial,
+    credencial_nombre_completo: values['credencial_nombre'] || 'Luis Gutierrez',
+    credencial_fecha_nacimiento: values['credencial_fecha_nacimiento'] || '2000-03-20',
+    member_number: values['credencial_numero'] || '1015',
+    created_at: fechaAltaForCreatedAt,
+    teamNombre: equipoNombre || null,
+    teamsActivos: equipoNombre ? [equipoNombre] : [],
+  }
 
   const hasSession = !!session
   const ctaHref = hasSession ? '/dashboard/credencial' : '/register'
@@ -113,7 +149,7 @@ export default async function CredencialHolografica() {
           {/* Mockup credencial */}
           <RevealOnScroll direction="right" distance={40} delay={0.15}>
             <div className="flex items-center justify-center">
-              <CredencialMockup imageUrl={credencialUrl} />
+              <CredencialMockup data={mockData} />
             </div>
           </RevealOnScroll>
         </div>
