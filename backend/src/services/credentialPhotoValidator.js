@@ -100,8 +100,8 @@ async function validateCredentialPhoto(base64Image, mimeType = "image/jpeg") {
       "X-Title": "AirNation Credential Validator",
     },
     body: JSON.stringify({
-      model: "anthropic/claude-3-haiku",
-      max_tokens: 400,
+      model: "anthropic/claude-3.5-sonnet",
+      max_tokens: 500,
       temperature: 0,
       messages: [
         {
