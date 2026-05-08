@@ -29,7 +29,7 @@ const FEATURES: Feature[] = [
     eyebrow: 'EQUIPOS',
     titulo: 'Tu equipo',
     descripcion:
-      'Dale visibilidad a tu equipo, publica contenido y recluta nuevos integrantes. Toda la comunidad airsoftera mexicana en un solo lugar.',
+      'Dale visibilidad a tu equipo, publica contenido y recluta nuevos integrantes.',
     href: '/equipos',
     cta: 'Ver equipos',
   },
