@@ -14,10 +14,10 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
   return (
     <section
       data-section="airnation"
-      className="relative w-full overflow-hidden bg-black py-24 text-white md:py-40"
+      className="relative w-full overflow-hidden bg-[#F5F3EF] py-24 text-[#111111] md:py-40"
     >
       <div
-        className="pointer-events-none absolute left-1/2 top-1/2 -z-0 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20 blur-[120px]"
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-0 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-15 blur-[120px]"
         style={{ backgroundColor: '#CC4B37' }}
       />
 
@@ -48,7 +48,8 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
               letterSpacing: '-0.03em',
             }}
           >
-            AIR<span className="text-[#CC4B37]">NATION</span>
+            <span className="text-[#111111]">AIR</span>
+            <span className="text-[#CC4B37]">NATION</span>
           </p>
         </motion.div>
 
@@ -57,7 +58,7 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.4 }}
-          className="text-2xl leading-tight md:text-4xl lg:text-5xl"
+          className="text-2xl leading-tight text-[#111111] md:text-4xl lg:text-5xl"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
         >
           {config.titulo}
@@ -68,8 +69,8 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.55 }}
-          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/70 md:text-lg"
-          style={{ fontFamily: 'Jost, sans-serif', fontWeight: 400 }}
+          className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[#666666] md:text-lg"
+          style={{ fontFamily: 'Lato, sans-serif', fontWeight: 400 }}
         >
           {config.descripcion}
         </motion.p>
@@ -87,11 +88,10 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
               {...(ctaExternal
                 ? { target: '_blank' as const, rel: 'noopener noreferrer' }
                 : {})}
-              className="group relative inline-block overflow-hidden border-2 border-[#CC4B37] px-8 py-4 text-[0.7rem] uppercase tracking-[0.25em] text-white transition-colors hover:text-white md:text-xs"
+              className="inline-flex items-center justify-center bg-[#CC4B37] px-7 py-4 text-[0.7rem] uppercase tracking-[0.2em] text-white transition-opacity hover:opacity-90"
               style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
             >
-              <span className="absolute inset-0 -z-10 origin-left scale-x-0 bg-[#CC4B37] transition-transform duration-500 ease-out group-hover:scale-x-100" />
-              <span className="relative">{config.cta_texto}</span>
+              {config.cta_texto}
             </a>
           </motion.div>
         ) : null}

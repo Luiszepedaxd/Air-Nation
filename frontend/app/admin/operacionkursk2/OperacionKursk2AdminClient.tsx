@@ -39,7 +39,7 @@ type SectionDef = {
 const SECTIONS: SectionDef[] = [
   { slug: 'hero', label: 'Hero — Cabecera', descripcion: 'Imagen o video de fondo, textos, CTAs y SEO.' },
   { slug: 'narrativa', label: 'Narrativa — Tres tiempos', descripcion: 'Bloques año + texto.' },
-  { slug: 'sede', label: 'Sede', descripcion: 'Imagen, dirección y mapa.' },
+  { slug: 'sede', label: 'Sede', descripcion: 'Galería de imágenes, dirección y mapa.' },
   { slug: 'countdown', label: 'Countdown', descripcion: 'Fecha ISO y eyebrow.' },
   { slug: 'facciones', label: 'Facciones', descripcion: 'Rusa / Ucraniana, uniformes y contacto.' },
   { slug: 'operativo', label: 'Operativo', descripcion: 'Línea de tiempo de hitos.' },
@@ -390,7 +390,13 @@ function getThumb(slug: OperacionKursk2Slug, cfg: Record<string, unknown>): stri
     const leg = typeof cfg.imagen_fondo_url === 'string' ? cfg.imagen_fondo_url : ''
     return m || leg
   }
-  if (slug === 'sede') return typeof cfg.imagen_url === 'string' ? cfg.imagen_url : ''
+  if (slug === 'sede') {
+    const imgs = cfg.imagenes
+    if (Array.isArray(imgs) && imgs.length > 0 && typeof imgs[0] === 'string' && imgs[0].trim()) {
+      return imgs[0]
+    }
+    return typeof cfg.imagen_url === 'string' ? cfg.imagen_url : ''
+  }
   if (slug === 'facciones') {
     const r = cfg.rusa as { imagen_url?: string } | undefined
     return r?.imagen_url ?? ''
@@ -649,18 +655,40 @@ export function OperacionKursk2AdminClient({
           </div>
         )
       }
-      case 'sede':
+      case 'sede': {
+        const sch = cfg(slug)
+        const legacyUrl = typeof sch.imagen_url === 'string' ? sch.imagen_url : ''
+        const rawImgs = sch.imagenes
+        const imagenesArr: string[] =
+          Array.isArray(rawImgs) && rawImgs.length > 0
+            ? rawImgs.filter((u): u is string => typeof u === 'string')
+            : legacyUrl
+              ? [legacyUrl]
+              : []
         return (
           <div className="flex flex-col gap-4">
             <Field label="Eyebrow"><input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
             <Field label="Título"><input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
-            <Field label="Imagen"><ImageUploadInput slug="sede" value={str(slug, 'imagen_url')} onChange={(u) => setField(slug, 'imagen_url', u)} /></Field>
+            <Field label="Galería sede (varias imágenes)">
+              <MultiImageUploader
+                slug="sede"
+                value={imagenesArr}
+                onChange={(urls) => {
+                  setField(slug, 'imagenes', urls)
+                  setField(slug, 'imagen_url', urls[0] ?? '')
+                }}
+              />
+            </Field>
+            <p className="text-[11px] text-[#888]" style={lato}>
+              La primera imagen rellena el campo interno legacy para datos antiguos.
+            </p>
             <Field label="Descripción"><textarea rows={4} className={inputCls} value={str(slug, 'descripcion')} onChange={(e) => setField(slug, 'descripcion', e.target.value)} /></Field>
             <Field label="Dirección"><input className={inputCls} value={str(slug, 'direccion')} onChange={(e) => setField(slug, 'direccion', e.target.value)} /></Field>
             <Field label="Coordenadas"><input className={inputCls} value={str(slug, 'coordenadas')} onChange={(e) => setField(slug, 'coordenadas', e.target.value)} /></Field>
             <Field label="Maps link"><input className={inputCls} value={str(slug, 'maps_link')} onChange={(e) => setField(slug, 'maps_link', e.target.value)} /></Field>
           </div>
         )
+      }
       case 'countdown': {
         const fechaIso = str(slug, 'fecha_inicio')
         const localVal = str(slug, '_fecha_local') || isoToDatetimeLocal(fechaIso)

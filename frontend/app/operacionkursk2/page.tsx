@@ -102,19 +102,14 @@ export default async function OperacionKursk2Page() {
 
   const visibleBlocks = blocks.filter((b) => b.activo)
 
-  const navCta =
-    heroConfig?.cta1_link?.trim() ||
-    heroConfig?.cta2_link?.trim() ||
-    '#inscripcion'
-
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#0a0a0a] text-white">
-      <LandingNav ctaLink={navCta} />
+    <div className="min-h-screen min-w-[375px] bg-[#F5F3EF] text-[#111111]">
+      <LandingNav />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <main className="min-h-screen w-full bg-[#0a0a0a] text-white">
+      <main className="min-h-screen w-full bg-[#F5F3EF] text-[#111111]">
         {visibleBlocks.map((block) => (
           <BlockRenderer key={block.id} block={block} />
         ))}

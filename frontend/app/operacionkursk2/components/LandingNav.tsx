@@ -10,13 +10,8 @@ const NAV_LINKS = [
   { href: '#inscripcion', label: 'Inscripción' },
 ]
 
-function isExternalHref(href: string) {
-  return /^https?:\/\//i.test(href) || href.startsWith('//')
-}
-
-export function LandingNav({ ctaLink }: { ctaLink: string }) {
+export function LandingNav() {
   const [scrolled, setScrolled] = useState(false)
-  const ctaExternal = isExternalHref(ctaLink)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 100)
@@ -29,7 +24,7 @@ export function LandingNav({ ctaLink }: { ctaLink: string }) {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'border-b border-white/10 bg-black/80 backdrop-blur-md'
+          ? 'border-b border-[#E5E0DA] bg-[#FFFFFF]/95 backdrop-blur-md'
           : 'bg-transparent'
       }`}
       aria-label="Navegación del evento"
@@ -37,7 +32,9 @@ export function LandingNav({ ctaLink }: { ctaLink: string }) {
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 md:h-16 md:px-8">
         <Link
           href="/"
-          className="text-[0.65rem] tracking-[0.25em] text-white md:text-[0.7rem]"
+          className={`text-[0.65rem] tracking-[0.25em] transition-colors md:text-[0.7rem] ${
+            scrolled ? 'text-[#111111]' : 'text-white'
+          }`}
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
         >
           AIRNATION
@@ -48,7 +45,11 @@ export function LandingNav({ ctaLink }: { ctaLink: string }) {
             <a
               key={link.href}
               href={link.href}
-              className="text-[0.7rem] uppercase tracking-[0.18em] text-white/70 transition-colors hover:text-white"
+              className={`text-[0.7rem] uppercase tracking-[0.18em] transition-colors ${
+                scrolled
+                  ? 'text-[#666666] hover:text-[#111111]'
+                  : 'text-white/80 hover:text-white'
+              }`}
               style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
             >
               {link.label}
@@ -56,16 +57,13 @@ export function LandingNav({ ctaLink }: { ctaLink: string }) {
           ))}
         </div>
 
-        <a
-          href={ctaLink}
-          {...(ctaExternal
-            ? { target: '_blank' as const, rel: 'noopener noreferrer' }
-            : {})}
-          className="bg-[#CC4B37] px-3 py-2 text-[0.6rem] uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#a83b2c] md:px-4 md:py-2.5 md:text-[0.65rem]"
+        <Link
+          href="/register"
+          className="bg-[#CC4B37] px-3 py-2 text-[0.6rem] uppercase tracking-[0.15em] text-white transition-opacity hover:opacity-90 md:px-4 md:py-2.5 md:text-[0.65rem]"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
         >
-          Inscribirme
-        </a>
+          Crear cuenta
+        </Link>
       </div>
     </nav>
   )

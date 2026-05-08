@@ -10,7 +10,7 @@ export function ManualSection({ config }: { config: ManualConfig }) {
   return (
     <section
       data-section="manual"
-      className="relative w-full overflow-hidden bg-[#f4f1ea] py-20 text-[#1a1a1a] md:py-32"
+      className="relative w-full overflow-hidden bg-[#F5F3EF] py-20 text-[#1a1a1a] md:py-32"
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.04]"

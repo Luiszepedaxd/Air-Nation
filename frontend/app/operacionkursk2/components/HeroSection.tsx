@@ -34,7 +34,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
       className="hero-scope relative min-h-[70vh] w-full overflow-hidden bg-[#0a0a0a] text-white md:min-h-screen"
     >
       {mediaUrl ? (
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 min-h-[70vh] md:min-h-screen">
           {mediaType === 'video' ? (
             <video
               src={mediaUrl}
@@ -42,7 +42,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
               muted
               loop
               playsInline
-              className="h-full w-full object-cover object-center"
+              className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
               style={{ filter: 'grayscale(0.4) brightness(0.5) contrast(1.1)' }}
             />
           ) : (
@@ -50,7 +50,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
             <img
               src={mediaUrl}
               alt=""
-              className="h-full w-full object-cover object-center"
+              className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
               style={{ filter: 'grayscale(0.4) brightness(0.5) contrast(1.1)' }}
             />
           )}

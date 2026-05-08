@@ -15,7 +15,7 @@ export function SponsorsSection({ config }: { config: SponsorsConfig }) {
   return (
     <section
       data-section="sponsors"
-      className="relative w-full overflow-hidden bg-black py-20 text-white md:py-28"
+      className="relative w-full overflow-hidden bg-[#F5F3EF] py-20 text-[#111111] md:py-28"
     >
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <motion.div
@@ -47,7 +47,7 @@ export function SponsorsSection({ config }: { config: SponsorsConfig }) {
       {!hasLogos ? (
         <div className="mx-auto max-w-3xl px-4 text-center md:px-8">
           <p
-            className="text-[0.7rem] uppercase tracking-[0.3em] text-white/30 md:text-xs"
+            className="text-[0.7rem] uppercase tracking-[0.3em] text-[#999999] md:text-xs"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
           >
             Patrocinadores próximamente
@@ -130,12 +130,11 @@ function SponsorLogoItem({ logo }: { logo: SponsorLogo }) {
         <img
           src={logo.logo_url}
           alt={logo.nombre}
-          className="max-h-full max-w-full object-contain opacity-70 transition-all duration-300 hover:opacity-100 ok2-sponsor-img"
-          style={{ filter: 'brightness(0) invert(1)' }}
+          className="max-h-full max-w-full object-contain opacity-80 transition-all duration-300 hover:opacity-100 ok2-sponsor-img"
         />
       ) : (
         <span
-          className="text-xs uppercase tracking-[0.2em] text-white/50"
+          className="text-xs uppercase tracking-[0.2em] text-[#999999]"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
           {logo.nombre}

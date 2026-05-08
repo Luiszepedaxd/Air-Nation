@@ -54,7 +54,9 @@ export type NarrativaConfig = {
 export type SedeConfig = {
   eyebrow: string
   titulo: string
-  imagen_url: string
+  /** @deprecated Lectura retrocompat; preferir `imagenes` */
+  imagen_url?: string
+  imagenes?: string[]
   descripcion: string
   direccion: string
   coordenadas: string

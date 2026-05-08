@@ -17,7 +17,7 @@ export function OperativoSection({ config }: { config: OperativoConfig }) {
     <section
       id="operativo"
       data-section="operativo"
-      className="relative w-full bg-[#0a0a0a] py-20 text-white md:py-32"
+      className="relative w-full bg-[#F5F3EF] py-20 text-[#111111] md:py-32"
     >
       <div className="mx-auto max-w-5xl px-4 md:px-8">
         <motion.div
@@ -89,10 +89,10 @@ function HitoRow({ hito, index }: { hito: OperativoHito; index: number }) {
       className="relative grid grid-cols-[40px_1fr] items-start gap-4 md:grid-cols-[100px_1fr] md:gap-12"
     >
       <div className="relative flex items-start justify-end pr-2 md:pr-4">
-        <div className="absolute left-[1px] top-1.5 h-3 w-3 rounded-full bg-[#CC4B37] ring-4 ring-[#0a0a0a] md:left-[71px]" />
+        <div className="absolute left-[1px] top-1.5 h-3 w-3 rounded-full bg-[#CC4B37] ring-4 ring-[#F5F3EF] md:left-[71px]" />
         <div className="text-right">
           <p
-            className="text-base text-white md:text-2xl"
+            className="text-base text-[#111111] md:text-2xl"
             style={{
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontWeight: 700,
@@ -107,7 +107,7 @@ function HitoRow({ hito, index }: { hito: OperativoHito; index: number }) {
         <div className="flex items-center gap-3">
           {hito.nocturno ? <MoonIcon /> : <SunIcon />}
           <h3
-            className="text-lg uppercase md:text-2xl"
+            className="text-lg uppercase text-[#111111] md:text-2xl"
             style={{
               fontFamily: 'Jost, sans-serif',
               fontWeight: 800,
@@ -119,8 +119,8 @@ function HitoRow({ hito, index }: { hito: OperativoHito; index: number }) {
         </div>
         {hito.descripcion ? (
           <p
-            className="mt-2 text-sm text-white/60 md:text-base"
-            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 400 }}
+            className="mt-2 text-sm text-[#666666] md:text-base"
+            style={{ fontFamily: 'Lato, sans-serif', fontWeight: 400 }}
           >
             {hito.descripcion}
           </p>

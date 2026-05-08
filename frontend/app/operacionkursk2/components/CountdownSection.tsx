@@ -62,7 +62,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
   return (
     <section
       data-section="countdown"
-      className="relative w-full overflow-hidden bg-black py-24 text-white md:py-40"
+      className="relative w-full overflow-hidden bg-[#F5F3EF] py-16 text-[#111111] md:py-40"
     >
       <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
         <motion.p
@@ -81,7 +81,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="mt-12 text-4xl md:text-7xl"
+            className="mt-12 text-4xl text-[#111111] md:text-7xl"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}
           >
             EL OPERATIVO HA INICIADO
@@ -117,12 +117,10 @@ function Unit({ value, label }: { value: string; label: string }) {
         {value.split('').map((char, i) => (
           <span
             key={`${label}-dig-${i}`}
-            className="inline-flex h-16 w-10 items-center justify-center bg-[#111] text-3xl shadow-inner md:h-28 md:w-20 md:text-6xl lg:h-32 lg:w-24 lg:text-7xl"
+            className="inline-flex h-12 w-9 items-center justify-center border border-[#E5E0DA] bg-[#FFFFFF] text-2xl text-[#111111] shadow-inner md:h-28 md:w-20 md:text-6xl lg:h-32 lg:w-24 lg:text-7xl"
             style={{
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontWeight: 700,
-              borderTop: '1px solid #222',
-              borderBottom: '1px solid #222',
             }}
           >
             <FlipDigit value={char} />
@@ -130,7 +128,7 @@ function Unit({ value, label }: { value: string; label: string }) {
         ))}
       </div>
       <p
-        className="mt-3 text-[0.55rem] tracking-[0.4em] text-white/50 md:text-[0.65rem]"
+        className="mt-2 text-[0.55rem] tracking-[0.4em] text-[#666666] md:mt-3 md:text-[0.65rem]"
         style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
       >
         {label}
@@ -141,7 +139,7 @@ function Unit({ value, label }: { value: string; label: string }) {
 
 function Separator({ pulse }: { pulse: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center pb-7 md:pb-9">
+    <div className="flex flex-col items-center justify-center pb-5 md:pb-9">
       <div
         className="h-1.5 w-1.5 rounded-full transition-colors duration-500 md:h-2 md:w-2"
         style={{ backgroundColor: pulse ? '#CC4B37' : 'rgba(204,75,55,0.3)' }}

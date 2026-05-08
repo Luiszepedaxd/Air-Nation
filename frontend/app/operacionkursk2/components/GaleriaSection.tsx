@@ -53,7 +53,7 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
   return (
     <section
       data-section="galeria"
-      className="relative w-full bg-[#0a0a0a] py-20 text-white md:py-32"
+      className="relative w-full bg-[#F5F3EF] py-20 text-[#111111] md:py-32"
     >
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <motion.div
@@ -82,9 +82,9 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
         </motion.div>
 
         {imagenes.length === 0 ? (
-          <div className="border border-white/10 py-20 text-center">
+          <div className="border border-[#E5E0DA] py-20 text-center">
             <p
-              className="text-[0.7rem] uppercase tracking-[0.3em] text-white/40 md:text-xs"
+              className="text-[0.7rem] uppercase tracking-[0.3em] text-[#999999] md:text-xs"
               style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
             >
               Galería disponible después del operativo
@@ -208,7 +208,7 @@ function GalleryItem({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.6, delay: (index % 8) * 0.05 }}
-      className="group mb-3 block w-full overflow-hidden bg-[#1a1a1a] md:mb-4"
+      className="group mb-3 block w-full overflow-hidden border border-[#EEEEEE] bg-white md:mb-4"
       style={{ breakInside: 'avoid' }}
     >
       <div className={`relative w-full ${aspect}`}>
@@ -217,7 +217,7 @@ function GalleryItem({
           src={img.url}
           alt=""
           loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover transition-all duration-500 grayscale-[0.6] brightness-[0.9] group-hover:scale-[1.03] group-hover:grayscale-0 group-hover:brightness-100"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
         />
       </div>
     </motion.button>
