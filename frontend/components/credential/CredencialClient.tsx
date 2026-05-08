@@ -17,33 +17,36 @@ export function CredencialClient({ data }: { data: CredentialUserData }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [localData, setLocalData] = useState<CredentialUserData>(data)
+
   const tieneFoto = !!localData.foto_credencial_url
 
   return (
     <>
       {!tieneFoto ? (
-        <div className="mx-auto mt-5 w-full max-w-[360px] border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-4">
-          <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+        <div className="mx-auto mt-5 w-full max-w-[360px] border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-5">
+          <p style={jost} className="text-[13px] font-extrabold uppercase text-[#111111]">
             FOTO INSTITUCIONAL
           </p>
-          <p style={lato} className="mt-1.5 text-[12px] leading-relaxed text-[#666666]">
-            Activa tu credencial con foto institucional validada. Queda lista al instante.
+          <p style={lato} className="mt-2 text-[13px] leading-relaxed text-[#666666]">
+            Tu credencial AirNation requiere una foto institucional validada (similar a una foto de pasaporte o INE). Actívala en menos de un minuto.
           </p>
           <button
             type="button"
             onClick={() => setOpen(true)}
             style={jost}
-            className="mt-3 flex h-11 w-full items-center justify-center rounded-[2px] bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
+            className="mt-4 flex h-12 w-full items-center justify-center rounded-[2px] bg-[#CC4B37] text-[12px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
           >
             ACTIVAR CREDENCIAL
           </button>
         </div>
-      ) : null}
-
-      <div className="mx-auto mt-5 w-full max-w-[360px]">
-        <CredentialCard ref={cardRef} data={localData} />
-      </div>
-      <CredentialActions cardRef={cardRef} data={localData} />
+      ) : (
+        <>
+          <div className="mx-auto mt-5 w-full max-w-[360px]">
+            <CredentialCard ref={cardRef} data={localData} />
+          </div>
+          <CredentialActions cardRef={cardRef} data={localData} />
+        </>
+      )}
 
       {open && (
         <ActivarCredencialModal

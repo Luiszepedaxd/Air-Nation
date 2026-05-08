@@ -40,21 +40,20 @@ async function compressImage(file: File): Promise<{ blob: Blob; dataUrl: string 
     img.onerror = reject
   })
 
-  let { width, height } = img
-  if (width > height && width > MAX_SIDE) {
-    height = Math.round((height * MAX_SIDE) / width)
-    width = MAX_SIDE
-  } else if (height > MAX_SIDE) {
-    width = Math.round((width * MAX_SIDE) / height)
-    height = MAX_SIDE
-  }
+  // Recorte cuadrado centrado para encuadre tipo credencial
+  const minSide = Math.min(img.width, img.height)
+  const sx = Math.round((img.width - minSide) / 2)
+  const sy = Math.round((img.height - minSide) / 2)
+
+  const targetSide = Math.min(minSide, MAX_SIDE)
 
   const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
+  canvas.width = targetSide
+  canvas.height = targetSide
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('No se pudo procesar la imagen')
-  ctx.drawImage(img, 0, 0, width, height)
+
+  ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, targetSide, targetSide)
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -256,16 +255,16 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
         {step === 'upload' && (
           <div className="mt-4">
             <p style={lato} className="text-[13px] leading-relaxed text-[#666666]">
-              Sube una foto institucional de tu rostro. La validamos al instante y queda en tu
-              credencial oficial.
+              Toma una foto tipo INE o pasaporte: rostro de frente, hombros visibles, fondo neutro. La
+              recortaremos en cuadrado y la validaremos al instante.
             </p>
 
             <ul className="mt-3 space-y-1.5">
               {[
-                'Rostro de frente, ojos visibles',
-                'Sin lentes oscuros ni cubrebocas',
-                'Buena iluminacion',
-                'Una sola persona',
+                'Rostro de frente, mirando a la cámara',
+                'Hombros visibles, encuadre tipo pasaporte',
+                'Sin lentes oscuros, gorras ni headsets',
+                'Buena iluminación, fondo neutro',
               ].map((req) => (
                 <li key={req} style={lato} className="flex items-center gap-2 text-[12px] text-[#111111]">
                   <span className="h-1 w-1 rounded-full bg-[#CC4B37]" />
@@ -305,7 +304,30 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
 
         {step === 'validating' && (
           <div className="mt-4 flex flex-col items-center py-8">
-            {previewUrl && <img src={previewUrl} alt="" className="h-32 w-32 rounded-[2px] object-cover" />}
+            {previewUrl && (
+              <div className="relative h-40 w-40">
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="h-40 w-40 object-cover rounded-[2px]"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse 40% 55% at 50% 50%, transparent 98%, rgba(0,0,0,0.55) 100%)',
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
+                  <div
+                    className="h-[78%] w-[58%] border-2 border-dashed border-white/80"
+                    style={{ borderRadius: '50%' }}
+                  />
+                </div>
+              </div>
+            )}
             <p style={lato} className="mt-4 text-[13px] text-[#666666]">
               Validando foto...
             </p>
@@ -315,11 +337,20 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
         {step === 'rejected' && (
           <div className="mt-4">
             {previewUrl && (
-              <img
-                src={previewUrl}
-                alt=""
-                className="mx-auto h-32 w-32 rounded-[2px] object-cover opacity-60"
-              />
+              <div className="relative mx-auto h-40 w-40">
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="h-40 w-40 object-cover rounded-[2px] opacity-60"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse 40% 55% at 50% 50%, transparent 98%, rgba(0,0,0,0.55) 100%)',
+                  }}
+                />
+              </div>
             )}
             <p style={jost} className="mt-4 text-center text-[12px] font-extrabold uppercase text-[#CC4B37]">
               FOTO RECHAZADA
@@ -341,14 +372,23 @@ export function ActivarCredencialModal({ userId, onClose, onActivated }: Props) 
         {step === 'confirm' && (
           <div className="mt-4">
             <p style={lato} className="text-[13px] text-[#666666]">
-              Foto aprobada. Asi se vera en tu credencial:
+              Foto aprobada. Así se verá en tu credencial:
             </p>
             {previewUrl && (
-              <img
-                src={previewUrl}
-                alt=""
-                className="mx-auto mt-3 h-40 w-40 rounded-[2px] border border-solid border-[#EEEEEE] object-cover"
-              />
+              <div className="relative mx-auto mt-3 h-40 w-40">
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="h-40 w-40 object-cover rounded-[2px] border border-solid border-[#EEEEEE]"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse 40% 55% at 50% 50%, transparent 98%, rgba(0,0,0,0.55) 100%)',
+                  }}
+                />
+              </div>
             )}
 
             {errorMsg && (
