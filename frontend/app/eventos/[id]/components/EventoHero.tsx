@@ -1,5 +1,6 @@
 import { formatEventoFechaCorta, disciplinaLabel } from '../../lib/format-evento-fecha'
 import { CalendarioPlaceholderIcon } from '../../lib/calendar-placeholder'
+import { EventoCtaPrincipal } from './EventoCtaPrincipal'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -15,16 +16,17 @@ export function EventoHero({
   imagen_url,
   tipo,
   disciplina,
+  urlExterna,
 }: {
   title: string
   fecha: string
   imagen_url: string | null
   tipo: string | null
   disciplina: string | null
+  urlExterna: string | null
 }) {
   const fechaTxt = formatEventoFechaCorta(fecha)
   const disc = disciplinaLabel(disciplina)
-
   return (
     <div className="w-full">
       <div className="relative h-[240px] w-full overflow-hidden bg-[#111111] md:h-[360px]">
@@ -68,6 +70,7 @@ export function EventoHero({
           </p>
         ) : null}
       </div>
+      <EventoCtaPrincipal urlExterna={urlExterna} />
     </div>
   )
 }

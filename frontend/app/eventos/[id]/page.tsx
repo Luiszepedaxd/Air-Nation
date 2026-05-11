@@ -424,6 +424,7 @@ export default async function EventoDetailPage({
         imagen_url={heroImagen}
         tipo={row.tipo}
         disciplina={row.disciplina}
+        urlExterna={row.url_externa}
       />
       <EventoTabs
         eventId={id}
