@@ -4,19 +4,21 @@ const DEFAULT_NOTA =
   'La venta de boletos la opera Airsoft Experience México (AEM). AirNation es sponsor oficial: te llevamos la cobertura, pero tu entrada se compra en el sitio oficial del evento, donde verás inclusiones, facciones disponibles y todo el detalle.'
 
 /**
- * Divide "$1,499.00" en ["$1,499", "00"].
- * Si no hay decimales, devuelve ["$1,499", null].
- * Soporta también formatos "$1,499" (sin decimales) → ["$1,499", null].
+ * Detecta si un estado representa "agotado / venta cerrada".
+ * Acepta variantes: "agotado", "agotados", "venta finalizada",
+ * "finalizada", "vendido", "sold out".
  */
+function estaAgotado(estado: string): boolean {
+  if (!estado || estado.trim().length === 0) return false
+  return /agotad|finaliz|vendido|sold\s*out/i.test(estado)
+}
+
 function splitPrice(raw: string): [string, string | null] {
   const match = raw.trim().match(/^(.+?)[.,](\d{2})$/)
   if (!match) return [raw.trim(), null]
   return [match[1], match[2]]
 }
 
-/**
- * Renderiza un precio con los centavos en superíndice estilo retail.
- */
 function PriceDisplay({
   value,
   size = 'lg',
@@ -48,6 +50,7 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
   const notaSuperior = getStr(config, 'nota_superior', DEFAULT_NOTA)
   const precioIndividual = getStr(config, 'precio_individual', '$1,499.00')
   const comisionIndividual = getStr(config, 'comision_individual', '+$37.48')
+  const paseIndividualEstado = getStr(config, 'pase_individual_estado', '')
   const teamPassPrecio = getStr(config, 'team_pass_precio', '$4,998.00')
   const teamPassComision = getStr(config, 'team_pass_comision', '+$124.95')
   const teamPassEstado = getStr(config, 'team_pass_estado', 'Venta finalizada')
@@ -63,7 +66,9 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
     'https://www.airsoftexperiencemexico.com/bloodmoney'
   )
 
-  const teamPassFinalizado = /finaliz/i.test(teamPassEstado)
+  const individualAgotado = estaAgotado(paseIndividualEstado)
+  const teamPassAgotado = estaAgotado(teamPassEstado)
+  const todoAgotado = individualAgotado && teamPassAgotado
 
   return (
     <section className="w-full bg-white py-16 md:py-24">
@@ -81,22 +86,54 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
           {notaSuperior}
         </p>
 
+        {todoAgotado && (
+          <div className="mt-6 inline-flex items-center gap-2 border-2 border-[#CC4B37] bg-[rgba(204,75,55,0.06)] px-4 py-2.5">
+            <span
+              className="inline-block h-2 w-2 rounded-full bg-[#CC4B37]"
+              aria-hidden
+            />
+            <span
+              className="text-[11px] tracking-[0.14em] text-[#CC4B37]"
+              style={jost}
+            >
+              BOLETOS AGOTADOS · NOS VEMOS EN CAMPO
+            </span>
+          </div>
+        )}
+
         <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
           {/* Card 1 — Pase Individual */}
-          <div className="flex flex-col gap-5 border border-[#E5E0DA] bg-[#FAF8F5] p-6 md:p-7">
+          <div
+            className={`flex flex-col gap-5 border p-6 md:p-7 ${
+              individualAgotado
+                ? 'border-[#E5E0DA] bg-[#F5F3EF]'
+                : 'border-[#E5E0DA] bg-[#FAF8F5]'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span
-                className="bg-[#111111] px-2.5 py-1 text-[9px] tracking-[0.18em] text-white"
+                className={`px-2.5 py-1 text-[9px] tracking-[0.18em] text-white ${
+                  individualAgotado ? 'bg-[#999999]' : 'bg-[#111111]'
+                }`}
                 style={jost}
               >
                 PASE INDIVIDUAL
               </span>
-              <span
-                className="text-[10px] tracking-[0.14em] text-[#999999]"
-                style={jost}
-              >
-                4 FACCIONES
-              </span>
+              {individualAgotado ? (
+                <span
+                  className="text-[10px] tracking-[0.14em] text-[#CC4B37]"
+                  style={jost}
+                >
+                  AGOTADO
+                </span>
+              ) : (
+                <span
+                  className="text-[10px] tracking-[0.14em] text-[#999999]"
+                  style={jost}
+                >
+                  4 FACCIONES
+                </span>
+              )}
             </div>
 
             <div>
@@ -109,17 +146,25 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
             </div>
 
             <div className="mt-auto flex items-end justify-between">
-              <div className="flex flex-col gap-1">
+              <div
+                className={`flex flex-col gap-1 ${
+                  individualAgotado ? 'opacity-50' : ''
+                }`}
+              >
                 <PriceDisplay value={precioIndividual} size="lg" />
                 <span className="text-[11px] text-[#999999]" style={lato}>
                   {comisionIndividual} de comisión
                 </span>
               </div>
               <span
-                className="text-[10px] tracking-[0.14em] text-[#666666]"
+                className={`text-[10px] tracking-[0.14em] ${
+                  individualAgotado ? 'text-[#CC4B37]' : 'text-[#666666]'
+                }`}
                 style={jost}
               >
-                CIERRE {fechaCierre.toUpperCase()}
+                {individualAgotado
+                  ? paseIndividualEstado.toUpperCase()
+                  : `CIERRE ${fechaCierre.toUpperCase()}`}
               </span>
             </div>
           </div>
@@ -127,7 +172,7 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
           {/* Card 2 — Team Pass */}
           <div
             className={`flex flex-col gap-5 border-2 p-6 md:p-7 ${
-              teamPassFinalizado
+              teamPassAgotado
                 ? 'border-[#E5E0DA] bg-[#F5F3EF]'
                 : 'border-[#CC4B37] bg-[rgba(204,75,55,0.05)]'
             }`}
@@ -135,13 +180,13 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
             <div className="flex items-center justify-between">
               <span
                 className={`px-2.5 py-1 text-[9px] tracking-[0.18em] text-white ${
-                  teamPassFinalizado ? 'bg-[#999999]' : 'bg-[#CC4B37]'
+                  teamPassAgotado ? 'bg-[#999999]' : 'bg-[#CC4B37]'
                 }`}
                 style={jost}
               >
                 TEAM PASS · 5 OPERADORES
               </span>
-              {teamPassFinalizado ? (
+              {teamPassAgotado ? (
                 <span
                   className="text-[10px] tracking-[0.14em] text-[#CC4B37]"
                   style={jost}
@@ -170,7 +215,7 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
             <div className="mt-auto flex items-end justify-between">
               <div
                 className={`flex flex-col gap-1 ${
-                  teamPassFinalizado ? 'opacity-50' : ''
+                  teamPassAgotado ? 'opacity-50' : ''
                 }`}
               >
                 <PriceDisplay value={teamPassPrecio} size="lg" />
@@ -180,7 +225,7 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
               </div>
               <span
                 className={`text-[10px] tracking-[0.14em] ${
-                  teamPassFinalizado ? 'text-[#CC4B37]' : 'text-[#666666]'
+                  teamPassAgotado ? 'text-[#CC4B37]' : 'text-[#666666]'
                 }`}
                 style={jost}
               >
@@ -190,18 +235,30 @@ export function EntradasSection({ config }: { config: Record<string, unknown> })
           </div>
         </div>
 
-        <a
-          href={ctaLink}
-          target={ctaLink.startsWith('http') ? '_blank' : undefined}
-          rel={ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
-          className="mt-6 inline-flex w-full items-center justify-center bg-[#CC4B37] px-6 py-4 text-[11px] tracking-[0.14em] text-white transition-opacity hover:opacity-90 md:w-fit"
-          style={jost}
-        >
-          {ctaTexto} →
-        </a>
+        {todoAgotado ? (
+          <div
+            aria-disabled
+            className="mt-6 inline-flex w-full cursor-not-allowed items-center justify-center bg-[#999999] px-6 py-4 text-[11px] tracking-[0.14em] text-white opacity-80 md:w-fit"
+            style={jost}
+          >
+            BOLETOS AGOTADOS — VENTA CERRADA
+          </div>
+        ) : (
+          <a
+            href={ctaLink}
+            target={ctaLink.startsWith('http') ? '_blank' : undefined}
+            rel={ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
+            className="mt-6 inline-flex w-full items-center justify-center bg-[#CC4B37] px-6 py-4 text-[11px] tracking-[0.14em] text-white transition-opacity hover:opacity-90 md:w-fit"
+            style={jost}
+          >
+            {ctaTexto} →
+          </a>
+        )}
 
         <p className="mt-4 text-[11px] leading-[1.55] text-[#999999]" style={lato}>
-          Al hacer clic sales de AirNation y entras al sitio oficial de AEM, donde completas tu compra.
+          {todoAgotado
+            ? 'La venta de boletos cerró. Si compraste boleto, llega con tu QR el día del evento. Te esperamos en Aguascalientes.'
+            : 'Al hacer clic sales de AirNation y entras al sitio oficial de AEM, donde completas tu compra.'}
         </p>
       </div>
     </section>
