@@ -1,6 +1,5 @@
 'use client'
 
-import type { CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import type { SponsorsConfig, SponsorLogo } from '../lib/types'
 
@@ -10,7 +9,9 @@ export function SponsorsSection({ config }: { config: SponsorsConfig }) {
 
   const half = Math.ceil(logos.length / 2)
   const row1 = logos.slice(0, half)
-  const row2 = logos.slice(half).length > 0 ? logos.slice(half) : row1
+  const row2 = logos.slice(half)
+  const finalRow1 = row1
+  const finalRow2 = row2.length > 0 ? row2 : row1
 
   return (
     <section
@@ -55,42 +56,10 @@ export function SponsorsSection({ config }: { config: SponsorsConfig }) {
         </div>
       ) : (
         <div className="space-y-8 md:space-y-12">
-          <Marquee logos={row1} direction="left" duration={40} />
-          <Marquee logos={row2} direction="right" duration={55} />
+          <Marquee logos={finalRow1} direction="left" duration={40} />
+          <Marquee logos={finalRow2} direction="right" duration={55} />
         </div>
       )}
-
-      <style jsx global>{`
-        @keyframes ok2MarqueeLeft {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(-50%);
-          }
-        }
-        @keyframes ok2MarqueeRight {
-          from {
-            transform: translateX(-50%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-        .ok2-marquee-track-left {
-          animation: ok2MarqueeLeft var(--ok2-marquee-dur, 40s) linear infinite;
-        }
-        .ok2-marquee-track-right {
-          animation: ok2MarqueeRight var(--ok2-marquee-dur, 55s) linear infinite;
-        }
-        .ok2-marquee-container:hover .ok2-marquee-track-left,
-        .ok2-marquee-container:hover .ok2-marquee-track-right {
-          animation-play-state: paused;
-        }
-        .ok2-sponsor-cell:hover .ok2-sponsor-logo-inner {
-          transform: scale(1.12);
-        }
-      `}</style>
     </section>
   )
 }
@@ -105,36 +74,68 @@ function Marquee({
   duration: number
 }) {
   const items = [...logos, ...logos]
-  const trackClass =
-    direction === 'left' ? 'ok2-marquee-track-left' : 'ok2-marquee-track-right'
 
   return (
-    <div
-      className="ok2-marquee-container relative w-full overflow-hidden"
-      style={{ '--ok2-marquee-dur': `${duration}s` } as CSSProperties}
-    >
-      <div className={`flex w-fit gap-12 md:gap-20 ${trackClass}`}>
+    <div className="marquee-container relative w-full overflow-hidden">
+      <div
+        className={`marquee-track flex shrink-0 marquee-${direction}`}
+        style={{
+          animationDuration: `${duration}s`,
+        }}
+      >
         {items.map((logo, i) => (
           <SponsorLogoItem key={`${logo.nombre}-${i}`} logo={logo} />
         ))}
       </div>
+      <style jsx>{`
+        .marquee-track {
+          animation-iteration-count: infinite;
+          animation-timing-function: linear;
+          width: max-content;
+        }
+        .marquee-left {
+          animation-name: marquee-left;
+        }
+        .marquee-right {
+          animation-name: marquee-right;
+        }
+        .marquee-container:hover .marquee-track {
+          animation-play-state: paused;
+        }
+        @keyframes marquee-left {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-50%);
+          }
+        }
+        @keyframes marquee-right {
+          from {
+            transform: translateX(-50%);
+          }
+          to {
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   )
 }
 
 function SponsorLogoItem({ logo }: { logo: SponsorLogo }) {
   const content = (
-    <div className="flex h-20 w-40 shrink-0 items-center justify-center transition-transform duration-300 md:h-28 md:w-56 ok2-sponsor-logo-inner">
+    <div className="mx-6 flex h-20 w-40 shrink-0 items-center justify-center md:mx-10 md:h-28 md:w-56">
       {logo.logo_url ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={logo.logo_url}
           alt={logo.nombre}
-          className="max-h-full max-w-full object-contain opacity-80 transition-all duration-300 hover:opacity-100 ok2-sponsor-img"
+          className="max-h-full max-w-full object-contain opacity-80 transition-opacity duration-300 hover:opacity-100"
         />
       ) : (
         <span
-          className="text-xs uppercase tracking-[0.2em] text-[#999999]"
+          className="text-xs uppercase tracking-[0.2em] text-[#999]"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
           {logo.nombre}
@@ -145,10 +146,10 @@ function SponsorLogoItem({ logo }: { logo: SponsorLogo }) {
 
   if (logo.link) {
     return (
-      <a href={logo.link} target="_blank" rel="noopener noreferrer" className="ok2-sponsor-cell">
+      <a href={logo.link} target="_blank" rel="noopener noreferrer" className="shrink-0">
         {content}
       </a>
     )
   }
-  return <div className="ok2-sponsor-cell">{content}</div>
+  return <div className="shrink-0">{content}</div>
 }
