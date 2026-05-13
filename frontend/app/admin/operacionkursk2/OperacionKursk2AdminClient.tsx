@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
@@ -316,6 +316,27 @@ function datetimeLocalToIsoMexico(dt: string): string {
 function httpUrlOk(v: string): boolean {
   const t = v.trim()
   return !t || /^https?:\/\//i.test(t)
+}
+
+function SponsorAdminDetailsRow({
+  openByDefault,
+  summary,
+  children,
+}: {
+  openByDefault: boolean
+  summary: ReactNode
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  useLayoutEffect(() => {
+    if (ref.current && openByDefault) ref.current.open = true
+  }, [openByDefault])
+  return (
+    <details ref={ref} data-sponsors-item className="border border-[#EEEEEE] bg-[#FAFAFA]">
+      {summary}
+      {children}
+    </details>
+  )
 }
 
 function validateConfig(slug: OperacionKursk2Slug, cfg: Record<string, unknown>): string | null {
@@ -854,37 +875,157 @@ export function OperacionKursk2AdminClient({
             <Field label="Eyebrow"><input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
             <Field label="Título"><input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
             <button type="button" className="self-start border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setLogos([...norm, { nombre: '', logo_url: '', link: '', tier: 'patrocinador' }])}>+ Sponsor</button>
-            {norm.map((l, i) => (
-              <div key={i} className="border border-[#EEEEEE] bg-[#FAFAFA] p-3">
-                <div className="mb-2 flex gap-2">
-                  <button type="button" disabled={i === 0} onClick={() => {
-                    const n = [...norm]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setLogos(n)
-                  }} className="text-[10px]" style={jost}>↑</button>
-                  <button type="button" disabled={i === norm.length - 1} onClick={() => {
-                    const n = [...norm]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; setLogos(n)
-                  }} className="text-[10px]" style={jost}>↓</button>
-                  <button type="button" className="text-[10px] text-[#CC4B37]" style={jost} onClick={() => setLogos(norm.filter((_, j) => j !== i))}>Eliminar</button>
-                </div>
-                <Field label="Nombre"><input className={inputCls} value={l.nombre} onChange={(e) => {
-                  const n = [...norm]; n[i] = { ...n[i], nombre: e.target.value }; setLogos(n)
-                }} /></Field>
-                <Field label="Logo"><ImageUploadInput slug="sponsors" value={l.logo_url} onChange={(u) => {
-                  const n = [...norm]; n[i] = { ...n[i], logo_url: u }; setLogos(n)
-                }} /></Field>
-                <Field label="Link"><input className={inputCls} value={l.link} onChange={(e) => {
-                  const n = [...norm]; n[i] = { ...n[i], link: e.target.value }; setLogos(n)
-                }} /></Field>
-                <Field label="Tier">
-                  <select className={inputCls} value={l.tier} onChange={(e) => {
-                    const n = [...norm]; n[i] = { ...n[i], tier: e.target.value as typeof l.tier }; setLogos(n)
-                  }}>
-                    <option value="principal">principal</option>
-                    <option value="aliado">aliado</option>
-                    <option value="patrocinador">patrocinador</option>
-                  </select>
-                </Field>
+            {norm.length > 2 ? (
+              <div className="mb-1 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const containers = document.querySelectorAll(`details[data-sponsors-item]`)
+                    containers.forEach((d) => d.removeAttribute('open'))
+                  }}
+                  className="text-[10px] uppercase tracking-[0.12em] text-[#666] hover:text-[#111]"
+                  style={jost}
+                >
+                  Colapsar todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const containers = document.querySelectorAll(`details[data-sponsors-item]`)
+                    containers.forEach((d) => d.setAttribute('open', ''))
+                  }}
+                  className="text-[10px] uppercase tracking-[0.12em] text-[#666] hover:text-[#111]"
+                  style={jost}
+                >
+                  Expandir todos
+                </button>
               </div>
-            ))}
+            ) : null}
+            {norm.map((l, i) => {
+              const labelName = l.nombre?.trim() || `Sponsor ${i + 1}`
+              const isLast = i === norm.length - 1
+              const isNewEmpty = !l.nombre && !l.logo_url && !l.link
+              const openByDefault = isLast && isNewEmpty
+              return (
+                <SponsorAdminDetailsRow
+                  key={i}
+                  openByDefault={openByDefault}
+                  summary={
+                    <summary className="flex cursor-pointer list-none items-center gap-3 p-3 hover:bg-[#F4F4F4] [&::-webkit-details-marker]:hidden">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-[#EEEEEE] bg-white">
+                        {l.logo_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={l.logo_url} alt="" className="max-h-7 max-w-7 object-contain" />
+                        ) : (
+                          <span className="text-[9px] text-[#999]" style={jost}>
+                            S/L
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-[12px] text-[#111111]" style={jost}>
+                          {labelName}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-[#999]" style={jost}>
+                          {l.tier || 'patrocinador'}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-[#999]" style={jost}>
+                        {i + 1} / {norm.length}
+                      </span>
+                    </summary>
+                  }
+                >
+                  <div className="border-t border-[#EEEEEE] p-3">
+                    <div className="mb-3 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => {
+                          const n = [...norm]
+                          ;[n[i - 1], n[i]] = [n[i], n[i - 1]]
+                          setLogos(n)
+                        }}
+                        className="text-[10px] disabled:opacity-30"
+                        style={jost}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === norm.length - 1}
+                        onClick={() => {
+                          const n = [...norm]
+                          ;[n[i + 1], n[i]] = [n[i], n[i + 1]]
+                          setLogos(n)
+                        }}
+                        className="text-[10px] disabled:opacity-30"
+                        style={jost}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[10px] text-[#CC4B37]"
+                        style={jost}
+                        onClick={() => setLogos(norm.filter((_, j) => j !== i))}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+
+                    <Field label="Nombre">
+                      <input
+                        className={inputCls}
+                        value={l.nombre}
+                        onChange={(e) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], nombre: e.target.value }
+                          setLogos(n)
+                        }}
+                      />
+                    </Field>
+                    <Field label="Logo">
+                      <ImageUploadInput
+                        slug="sponsors"
+                        value={l.logo_url}
+                        onChange={(u) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], logo_url: u }
+                          setLogos(n)
+                        }}
+                      />
+                    </Field>
+                    <Field label="Link">
+                      <input
+                        className={inputCls}
+                        value={l.link}
+                        onChange={(e) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], link: e.target.value }
+                          setLogos(n)
+                        }}
+                      />
+                    </Field>
+                    <Field label="Tier">
+                      <select
+                        className={inputCls}
+                        value={l.tier}
+                        onChange={(e) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], tier: e.target.value as typeof l.tier }
+                          setLogos(n)
+                        }}
+                      >
+                        <option value="principal">principal</option>
+                        <option value="aliado">aliado</option>
+                        <option value="patrocinador">patrocinador</option>
+                      </select>
+                    </Field>
+                  </div>
+                </SponsorAdminDetailsRow>
+              )
+            })}
           </div>
         )
       }
