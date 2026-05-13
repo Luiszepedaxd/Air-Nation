@@ -46,7 +46,6 @@ const SECTIONS: SectionDef[] = [
   { slug: 'galeria', label: 'Galería', descripcion: 'Masonry + lightbox.' },
   { slug: 'manual', label: 'Manual de campo', descripcion: 'Lista de reglas.' },
   { slug: 'airnation', label: 'AirNation', descripcion: 'Presencia plataforma.' },
-  { slug: 'cta_final', label: 'CTA final', descripcion: 'Cierre y CTAs.' },
 ]
 
 function MultiImageUploader({
@@ -247,10 +246,6 @@ function validateConfig(slug: OperacionKursk2Slug, cfg: Record<string, unknown>)
   }
   if (slug === 'airnation' && !httpUrlOk(chk(cfg.cta_link))) {
     return 'CTA link debe ser http(s) o vacío.'
-  }
-  if (slug === 'cta_final') {
-    if (!httpUrlOk(chk(cfg.cta1_link))) return 'CTA 1 debe ser http(s) o vacío.'
-    if (!httpUrlOk(chk(cfg.cta2_link))) return 'CTA 2 debe ser http(s) o vacío.'
   }
   if (slug === 'sponsors') {
     const logos = cfg.logos
@@ -999,19 +994,6 @@ export function OperacionKursk2AdminClient({
             <Field label="Descripción"><textarea rows={4} className={inputCls} value={str(slug, 'descripcion')} onChange={(e) => setField(slug, 'descripcion', e.target.value)} /></Field>
             <Field label="CTA texto"><input className={inputCls} value={str(slug, 'cta_texto')} onChange={(e) => setField(slug, 'cta_texto', e.target.value)} /></Field>
             <Field label="CTA link"><input className={inputCls} value={str(slug, 'cta_link')} onChange={(e) => setField(slug, 'cta_link', e.target.value)} /></Field>
-          </div>
-        )
-      case 'cta_final':
-        return (
-          <div className="flex flex-col gap-4">
-            <Field label="Línea 1"><input className={inputCls} value={str(slug, 'linea1')} onChange={(e) => setField(slug, 'linea1', e.target.value)} /></Field>
-            <Field label="Línea 2"><input className={inputCls} value={str(slug, 'linea2')} onChange={(e) => setField(slug, 'linea2', e.target.value)} /></Field>
-            <Field label="Línea 3"><input className={inputCls} value={str(slug, 'linea3')} onChange={(e) => setField(slug, 'linea3', e.target.value)} /></Field>
-            <Field label="CTA título"><input className={inputCls} value={str(slug, 'cta_titulo')} onChange={(e) => setField(slug, 'cta_titulo', e.target.value)} /></Field>
-            <Field label="CTA 1 texto"><input className={inputCls} value={str(slug, 'cta1_texto')} onChange={(e) => setField(slug, 'cta1_texto', e.target.value)} /></Field>
-            <Field label="CTA 1 link"><input className={inputCls} value={str(slug, 'cta1_link')} onChange={(e) => setField(slug, 'cta1_link', e.target.value)} /></Field>
-            <Field label="CTA 2 texto"><input className={inputCls} value={str(slug, 'cta2_texto')} onChange={(e) => setField(slug, 'cta2_texto', e.target.value)} /></Field>
-            <Field label="CTA 2 link"><input className={inputCls} value={str(slug, 'cta2_link')} onChange={(e) => setField(slug, 'cta2_link', e.target.value)} /></Field>
           </div>
         )
       default:

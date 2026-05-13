@@ -153,3 +153,9 @@ export async function reorderOperacionKursk2Block(
   revalidateAll()
   return { ok: true }
 }
+
+/*
+ * NOTA (fundador): tras deploy, limpiar fila legacy en Supabase SQL Editor si aplica:
+ *
+ * DELETE FROM operacionkursk2_blocks WHERE slug = 'cta_final';
+ */

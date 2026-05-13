@@ -11,7 +11,6 @@ export type OperacionKursk2Slug =
   | 'galeria'
   | 'manual'
   | 'airnation'
-  | 'cta_final'
 
 export const OK2_SLUGS: readonly OperacionKursk2Slug[] = [
   'hero',
@@ -25,7 +24,6 @@ export const OK2_SLUGS: readonly OperacionKursk2Slug[] = [
   'galeria',
   'manual',
   'airnation',
-  'cta_final',
 ] as const
 
 // Configs por slug
@@ -143,17 +141,6 @@ export type AirnationConfig = {
   descripcion: string
   cta_texto: string
   cta_link: string
-}
-
-export type CtaFinalConfig = {
-  linea1: string
-  linea2: string
-  linea3: string
-  cta_titulo: string
-  cta1_texto: string
-  cta1_link: string
-  cta2_texto: string
-  cta2_link: string
 }
 
 // Bloque genérico

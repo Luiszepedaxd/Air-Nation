@@ -10,7 +10,6 @@ import { SponsorsSection } from './SponsorsSection'
 import { GaleriaSection } from './GaleriaSection'
 import { ManualSection } from './ManualSection'
 import { AirnationSection } from './AirnationSection'
-import { CtaFinalSection } from './CtaFinalSection'
 
 import type {
   HeroConfig,
@@ -24,7 +23,6 @@ import type {
   GaleriaConfig,
   ManualConfig,
   AirnationConfig,
-  CtaFinalConfig,
 } from '../lib/types'
 
 export function BlockRenderer({ block }: { block: OperacionKursk2Block }) {
@@ -51,8 +49,6 @@ export function BlockRenderer({ block }: { block: OperacionKursk2Block }) {
       return <ManualSection config={block.config as ManualConfig} />
     case 'airnation':
       return <AirnationSection config={block.config as AirnationConfig} />
-    case 'cta_final':
-      return <CtaFinalSection config={block.config as CtaFinalConfig} />
     default:
       return null
   }
