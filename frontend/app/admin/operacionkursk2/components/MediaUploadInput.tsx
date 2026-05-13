@@ -1,10 +1,9 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { uploadVideo } from '@/lib/apiFetch'
-import { uploadImageToBucket } from '../actions'
+import { uploadFile, uploadVideo } from '@/lib/apiFetch'
 
-const ACCEPTED_IMAGE = ['image/jpeg', 'image/png', 'image/webp']
+const ACCEPTED_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/jfif', 'image/pjpeg', 'image/pjp']
 const ACCEPTED_VIDEO = ['video/mp4', 'video/quicktime', 'video/webm']
 const MAX_VIDEO_MB = 100
 const MAX_IMAGE_MB = 5
@@ -26,6 +25,7 @@ export function MediaUploadInput({
   slug,
   onChange,
 }: Props) {
+  void slug
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState('')
@@ -59,10 +59,8 @@ export function MediaUploadInput({
         if (!result?.video_url) throw new Error('Upload de video sin URL.')
         onChange(result.video_url, 'video')
       } else {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('slug', slug)
-        const url = await uploadImageToBucket(formData)
+        setProgress('Subiendo imagen…')
+        const url = await uploadFile(file)
         if (!url) throw new Error('Upload de imagen sin URL.')
         onChange(url, 'image')
       }

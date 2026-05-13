@@ -3,7 +3,6 @@
 import type { ReactNode } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
 import {
   updateBlockConfig,
@@ -11,6 +10,7 @@ import {
   reorderOperacionKursk2Block,
 } from './actions'
 import { MediaUploadInput } from './components/MediaUploadInput'
+import { ImageUploadInput } from './components/ImageUploadInput'
 import type { OperacionKursk2Slug } from '@/app/operacionkursk2/lib/types'
 import type { GaleriaImagen } from '@/app/operacionkursk2/lib/types'
 const jost = {
@@ -19,8 +19,6 @@ const jost = {
   textTransform: 'uppercase' as const,
 }
 const lato = { fontFamily: "'Lato', sans-serif" }
-
-const BUCKET = 'operacionkursk2'
 
 export type OK2Record = {
   id: string | null
@@ -51,114 +49,8 @@ const SECTIONS: SectionDef[] = [
   { slug: 'cta_final', label: 'CTA final', descripcion: 'Cierre y CTAs.' },
 ]
 
-function sanitizeFileName(name: string): string {
-  const base = name.replace(/^.*[/\\]/, '')
-  const cleaned = base.replace(/[^\w.\-]+/g, '_')
-  return cleaned.toLowerCase()
-}
-
-async function uploadToOk2Bucket(storageSlug: string, file: File): Promise<string> {
-  const safe = sanitizeFileName(file.name)
-  const path = `${storageSlug}/${Date.now()}-${safe}`
-  const { error } = await supabase.storage
-    .from(BUCKET)
-    .upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type || 'image/jpeg',
-    })
-  if (error) throw new Error(error.message || 'Error al subir la imagen.')
-  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return pub.publicUrl
-}
-
-function ImageUploadInput({
-  slug,
-  value,
-  onChange,
-}: {
-  slug: string
-  value: string
-  onChange: (url: string) => void
-}) {
-  const [uploading, setUploading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  async function handleFile(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setErr('Solo JPG, PNG o WebP')
-      return
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      setErr('Máx 8 MB')
-      return
-    }
-    setUploading(true)
-    setErr(null)
-    try {
-      let url: string
-      try {
-        url = await uploadToOk2Bucket(slug, file)
-      } catch {
-        url = await uploadFile(file)
-      }
-      onChange(url)
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Error al subir')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      {value && (
-        <div
-          className="relative overflow-hidden border border-[#EEEEEE]"
-          style={{ aspectRatio: '16/5' }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="" className="h-full w-full object-cover" />
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center bg-black/70 text-sm text-white hover:bg-black"
-          >
-            ×
-          </button>
-        </div>
-      )}
-      <label
-        className={`flex cursor-pointer items-center justify-center gap-2 border border-dashed px-4 py-2.5 text-[11px] transition-colors ${
-          uploading
-            ? 'border-[#CCCCCC] text-[#AAAAAA]'
-            : 'border-[#CCCCCC] bg-[#F9F9F9] text-[#666666] hover:border-[#CC4B37] hover:text-[#CC4B37]'
-        }`}
-        style={lato}
-      >
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={handleFile}
-          disabled={uploading}
-        />
-        {uploading ? 'Subiendo…' : value ? 'Cambiar imagen' : '+ Subir imagen'}
-      </label>
-      {err && (
-        <p className="text-[11px] text-[#CC4B37]" style={lato}>
-          {err}
-        </p>
-      )}
-    </div>
-  )
-}
-
 function MultiImageUploader({
-  slug,
+  slug: _slug,
   value,
   onChange,
 }: {
@@ -166,6 +58,7 @@ function MultiImageUploader({
   value: string[]
   onChange: (urls: string[]) => void
 }) {
+  void _slug
   const [uploading, setUploading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -175,15 +68,15 @@ function MultiImageUploader({
     if (files.length === 0) return
 
     const invalid = files.find(
-      (f) => !['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+      (f) => !f.type.startsWith('image/') || f.type === 'image/svg+xml'
     )
     if (invalid) {
-      setErr('Solo JPG, PNG o WebP')
+      setErr('Solo imágenes (JPG, PNG, WebP, JFIF, etc.)')
       return
     }
-    const tooBig = files.find((f) => f.size > 8 * 1024 * 1024)
+    const tooBig = files.find((f) => f.size > 5 * 1024 * 1024)
     if (tooBig) {
-      setErr('Cada imagen máx 8 MB')
+      setErr('Cada imagen máx 5 MB')
       return
     }
 
@@ -192,12 +85,7 @@ function MultiImageUploader({
     try {
       const urls: string[] = [...value]
       for (const file of files) {
-        let url: string
-        try {
-          url = await uploadToOk2Bucket(slug, file)
-        } catch {
-          url = await uploadFile(file)
-        }
+        const url = await uploadFile(file)
         urls.push(url)
       }
       onChange(urls)
@@ -275,7 +163,7 @@ function MultiImageUploader({
       >
         <input
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           multiple
           className="hidden"
           onChange={handleFiles}
