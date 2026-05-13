@@ -8,6 +8,7 @@ import { OperativoSection } from './OperativoSection'
 import { InscripcionSection } from './InscripcionSection'
 import { SponsorsSection } from './SponsorsSection'
 import { GaleriaSection } from './GaleriaSection'
+import { VideosSection } from './VideosSection'
 import { ManualSection } from './ManualSection'
 import { AirnationSection } from './AirnationSection'
 
@@ -21,6 +22,7 @@ import type {
   InscripcionConfig,
   SponsorsConfig,
   GaleriaConfig,
+  VideosConfig,
   ManualConfig,
   AirnationConfig,
 } from '../lib/types'
@@ -45,6 +47,8 @@ export function BlockRenderer({ block }: { block: OperacionKursk2Block }) {
       return <SponsorsSection config={block.config as SponsorsConfig} />
     case 'galeria':
       return <GaleriaSection config={block.config as GaleriaConfig} />
+    case 'videos':
+      return <VideosSection config={block.config as VideosConfig} />
     case 'manual':
       return <ManualSection config={block.config as ManualConfig} />
     case 'airnation':

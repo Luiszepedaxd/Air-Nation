@@ -9,6 +9,7 @@ export type OperacionKursk2Slug =
   | 'inscripcion'
   | 'sponsors'
   | 'galeria'
+  | 'videos'
   | 'manual'
   | 'airnation'
 
@@ -22,6 +23,7 @@ export const OK2_SLUGS: readonly OperacionKursk2Slug[] = [
   'inscripcion',
   'sponsors',
   'galeria',
+  'videos',
   'manual',
   'airnation',
 ] as const
@@ -127,6 +129,18 @@ export type GaleriaConfig = {
   eyebrow: string
   titulo: string
   imagenes: GaleriaImagen[]
+}
+
+export type VideoItem = {
+  url: string
+  poster?: string
+  titulo?: string
+}
+
+export type VideosConfig = {
+  eyebrow: string
+  titulo: string
+  videos: VideoItem[]
 }
 
 export type ManualConfig = {

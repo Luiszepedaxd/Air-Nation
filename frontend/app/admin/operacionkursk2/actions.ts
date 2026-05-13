@@ -158,4 +158,24 @@ export async function reorderOperacionKursk2Block(
  * NOTA (fundador): tras deploy, limpiar fila legacy en Supabase SQL Editor si aplica:
  *
  * DELETE FROM operacionkursk2_blocks WHERE slug = 'cta_final';
+ *
+ * ---------------------------------------------------------------------------
+ * NOTA: Ejecutar manualmente en Supabase SQL Editor después del deploy
+ * Inserta el nuevo bloque "videos" entre galería y manual (ajusta órdenes si tu BD difiere).
+ *
+ * -- Primero reordenamos bloques con orden >= 10 (manual, airnation, etc.):
+ * UPDATE operacionkursk2_blocks SET orden = orden + 1 WHERE orden >= 10;
+ *
+ * -- Después insertamos el nuevo bloque:
+ * INSERT INTO operacionkursk2_blocks (slug, config, activo, orden) VALUES (
+ *   'videos',
+ *   '{
+ *     "eyebrow": "AUDIOVISUAL",
+ *     "titulo": "VIDEOS",
+ *     "videos": []
+ *   }'::jsonb,
+ *   true,
+ *   10
+ * )
+ * ON CONFLICT (slug) DO NOTHING;
  */

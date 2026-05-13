@@ -11,8 +11,9 @@ import {
 } from './actions'
 import { MediaUploadInput } from './components/MediaUploadInput'
 import { ImageUploadInput } from './components/ImageUploadInput'
+import { VideoUploadInput } from './components/VideoUploadInput'
 import type { OperacionKursk2Slug } from '@/app/operacionkursk2/lib/types'
-import type { GaleriaImagen } from '@/app/operacionkursk2/lib/types'
+import type { GaleriaImagen, VideoItem } from '@/app/operacionkursk2/lib/types'
 const jost = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
@@ -44,6 +45,7 @@ const SECTIONS: SectionDef[] = [
   { slug: 'inscripcion', label: 'Inscripción', descripcion: 'Precios y CTAs.' },
   { slug: 'sponsors', label: 'Sponsors', descripcion: 'Logos en marquesina.' },
   { slug: 'galeria', label: 'Galería', descripcion: 'Masonry + lightbox.' },
+  { slug: 'videos', label: 'Videos', descripcion: 'Galería de videos MP4 del evento.' },
   { slug: 'manual', label: 'Manual de campo', descripcion: 'Lista de reglas.' },
   { slug: 'airnation', label: 'AirNation', descripcion: 'Presencia plataforma.' },
 ]
@@ -226,6 +228,27 @@ function SponsorAdminDetailsRow({
   )
 }
 
+function VideoAdminDetailsRow({
+  openByDefault,
+  summary,
+  children,
+}: {
+  openByDefault: boolean
+  summary: ReactNode
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLDetailsElement>(null)
+  useLayoutEffect(() => {
+    if (ref.current && openByDefault) ref.current.open = true
+  }, [openByDefault])
+  return (
+    <details ref={ref} data-videos-item className="border border-[#EEEEEE] bg-[#FAFAFA]">
+      {summary}
+      {children}
+    </details>
+  )
+}
+
 function validateConfig(slug: OperacionKursk2Slug, cfg: Record<string, unknown>): string | null {
   const chk = (val: unknown) => (typeof val === 'string' ? val : '')
 
@@ -255,6 +278,24 @@ function validateConfig(slug: OperacionKursk2Slug, cfg: Record<string, unknown>)
           const link = (row as { link?: string }).link
           if (typeof link === 'string' && link.trim() && !/^https?:\/\//i.test(link.trim())) {
             return 'Cada link de sponsor debe ser http(s) o vacío.'
+          }
+        }
+      }
+    }
+  }
+  if (slug === 'videos') {
+    const videos = cfg.videos
+    if (Array.isArray(videos)) {
+      for (const row of videos) {
+        if (row && typeof row === 'object' && !Array.isArray(row)) {
+          const o = row as { url?: string; poster?: string }
+          const u = typeof o.url === 'string' ? o.url : ''
+          const p = typeof o.poster === 'string' ? o.poster : ''
+          if (u.trim() && !/^https?:\/\//i.test(u.trim())) {
+            return 'Cada URL de video debe ser http(s) o vacía.'
+          }
+          if (p.trim() && !/^https?:\/\//i.test(p.trim())) {
+            return 'Cada poster debe ser URL http(s) o vacío.'
           }
         }
       }
@@ -304,6 +345,15 @@ function getThumb(slug: OperacionKursk2Slug, cfg: Record<string, unknown>): stri
   if (slug === 'facciones') {
     const r = cfg.rusa as { imagen_url?: string } | undefined
     return r?.imagen_url ?? ''
+  }
+  if (slug === 'videos') {
+    const vids = cfg.videos
+    if (Array.isArray(vids) && vids.length > 0) {
+      const v0 = vids[0] as { poster?: string; url?: string }
+      const poster = typeof v0.poster === 'string' ? v0.poster.trim() : ''
+      if (poster) return poster
+    }
+    return ''
   }
   return ''
 }
@@ -952,6 +1002,188 @@ export function OperacionKursk2AdminClient({
                 </div>
               ))}
             </div>
+          </div>
+        )
+      }
+      case 'videos': {
+        const raw = cfg(slug).videos
+        const vids = (Array.isArray(raw) ? raw : []) as unknown[]
+        const norm: VideoItem[] = vids.map((row) => {
+          if (row && typeof row === 'object' && !Array.isArray(row)) {
+            const o = row as { url?: string; poster?: string; titulo?: string }
+            return {
+              url: typeof o.url === 'string' ? o.url : '',
+              poster: typeof o.poster === 'string' ? o.poster : '',
+              titulo: typeof o.titulo === 'string' ? o.titulo : '',
+            }
+          }
+          return { url: '', poster: '', titulo: '' }
+        })
+        const setVideos = (next: VideoItem[]) => {
+          setField(slug, 'videos', next)
+        }
+        return (
+          <div className="flex flex-col gap-4">
+            <Field label="Eyebrow">
+              <input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} />
+            </Field>
+            <Field label="Título">
+              <input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} />
+            </Field>
+
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px]" style={jost}>
+                VIDEOS
+              </p>
+              <button
+                type="button"
+                className="border border-[#DDDDDD] bg-white px-3 py-2 text-[10px] tracking-[0.12em]"
+                style={jost}
+                onClick={() => setVideos([...norm, { url: '', poster: '', titulo: '' }])}
+              >
+                + Video
+              </button>
+            </div>
+
+            {norm.length > 2 ? (
+              <div className="mb-1 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.querySelectorAll('details[data-videos-item]').forEach((d) => d.removeAttribute('open'))
+                  }}
+                  className="text-[10px] uppercase tracking-[0.12em] text-[#666] hover:text-[#111]"
+                  style={jost}
+                >
+                  Colapsar todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    document.querySelectorAll('details[data-videos-item]').forEach((d) => d.setAttribute('open', ''))
+                  }}
+                  className="text-[10px] uppercase tracking-[0.12em] text-[#666] hover:text-[#111]"
+                  style={jost}
+                >
+                  Expandir todos
+                </button>
+              </div>
+            ) : null}
+
+            {norm.map((v, i) => {
+              const isLast = i === norm.length - 1
+              const isNewEmpty = !v.url && !v.poster && !v.titulo
+              const openByDefault = isLast && isNewEmpty
+              return (
+                <VideoAdminDetailsRow
+                  key={i}
+                  openByDefault={openByDefault}
+                  summary={
+                    <summary className="flex cursor-pointer list-none items-center gap-3 p-3 hover:bg-[#F4F4F4] [&::-webkit-details-marker]:hidden">
+                      <div className="flex h-12 w-20 shrink-0 items-center justify-center border border-[#EEEEEE] bg-white">
+                        {v.poster ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={v.poster} alt="" className="max-h-full max-w-full object-contain" />
+                        ) : v.url ? (
+                          <span className="text-[9px] text-[#999]" style={jost}>
+                            VIDEO
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-[#999]" style={jost}>
+                            —
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-[12px] text-[#111111]" style={jost}>
+                          {v.titulo?.trim() || `Video ${i + 1}`}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-[#999]" style={jost}>
+                          {v.url ? 'cargado' : 'pendiente'}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-[#999]" style={jost}>
+                        {i + 1} / {norm.length}
+                      </span>
+                    </summary>
+                  }
+                >
+                  <div className="border-t border-[#EEEEEE] p-3">
+                    <div className="mb-3 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={i === 0}
+                        onClick={() => {
+                          const n = [...norm]
+                          ;[n[i - 1], n[i]] = [n[i], n[i - 1]]
+                          setVideos(n)
+                        }}
+                        className="text-[10px] disabled:opacity-30"
+                        style={jost}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        disabled={i === norm.length - 1}
+                        onClick={() => {
+                          const n = [...norm]
+                          ;[n[i + 1], n[i]] = [n[i], n[i + 1]]
+                          setVideos(n)
+                        }}
+                        className="text-[10px] disabled:opacity-30"
+                        style={jost}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[10px] text-[#CC4B37]"
+                        style={jost}
+                        onClick={() => setVideos(norm.filter((_, j) => j !== i))}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+
+                    <Field label="Video MP4">
+                      <VideoUploadInput
+                        value={v.url}
+                        onChange={(url) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], url }
+                          setVideos(n)
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Poster (opcional)">
+                      <ImageUploadInput
+                        slug="videos"
+                        value={v.poster ?? ''}
+                        onChange={(url) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], poster: url }
+                          setVideos(n)
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Título (opcional)">
+                      <input
+                        className={inputCls}
+                        value={v.titulo ?? ''}
+                        onChange={(e) => {
+                          const n = [...norm]
+                          n[i] = { ...n[i], titulo: e.target.value }
+                          setVideos(n)
+                        }}
+                      />
+                    </Field>
+                  </div>
+                </VideoAdminDetailsRow>
+              )
+            })}
           </div>
         )
       }

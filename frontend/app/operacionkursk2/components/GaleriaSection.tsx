@@ -91,19 +91,56 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
             </p>
           </div>
         ) : (
-          <div
-            className="columns-1 gap-3 sm:columns-2 md:columns-3 md:gap-4 lg:columns-4"
-            style={{ columnFill: 'balance' }}
-          >
-            {imagenes.map((img, i) => (
-              <GalleryItem
-                key={`${img.url}-${i}`}
-                img={img}
-                index={i}
-                onClick={() => setLightboxIndex(i)}
-              />
-            ))}
-          </div>
+          <>
+            {/* Mobile: carrusel horizontal */}
+            <div className="md:hidden">
+              <div
+                className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+                {imagenes.map((img, i) => (
+                  <button
+                    key={`${img.url}-${i}`}
+                    type="button"
+                    onClick={() => setLightboxIndex(i)}
+                    className="relative h-[60vh] w-[80vw] shrink-0 snap-center overflow-hidden bg-[#1a1a1a]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={img.url}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <p
+                className="mt-2 text-center text-[0.55rem] tracking-[0.3em] text-[#999]"
+                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
+              >
+                {imagenes.length} FOTOS · DESLIZA
+              </p>
+            </div>
+
+            {/* Desktop: masonry CSS columns */}
+            <div className="hidden md:block">
+              <div
+                className="columns-2 gap-3 md:columns-3 md:gap-4 lg:columns-4"
+                style={{ columnFill: 'balance' }}
+              >
+                {imagenes.map((img, i) => (
+                  <GalleryItem
+                    key={`${img.url}-${i}`}
+                    img={img}
+                    index={i}
+                    onClick={() => setLightboxIndex(i)}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
 
