@@ -90,6 +90,8 @@ export type OperativoHito = {
   titulo: string
   descripcion: string
   nocturno: boolean
+  /** Opcional, ej. "ALFA-1", "BRAVO-2", "TODAS" */
+  unidad?: string
 }
 export type OperativoConfig = {
   eyebrow: string

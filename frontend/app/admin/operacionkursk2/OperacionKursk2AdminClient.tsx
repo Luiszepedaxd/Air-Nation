@@ -727,12 +727,14 @@ export function OperacionKursk2AdminClient({
           titulo: string
           descripcion: string
           nocturno: boolean
+          unidad?: string
         }[]
         const norm = hitos.map((h) => ({
           hora: typeof h.hora === 'string' ? h.hora : '',
           titulo: typeof h.titulo === 'string' ? h.titulo : '',
           descripcion: typeof h.descripcion === 'string' ? h.descripcion : '',
           nocturno: Boolean(h.nocturno),
+          unidad: typeof h.unidad === 'string' ? h.unidad : '',
         }))
         const setHitos = (next: typeof norm) => {
           setField(slug, 'hitos', next)
@@ -741,7 +743,7 @@ export function OperacionKursk2AdminClient({
           <div className="flex flex-col gap-4">
             <Field label="Eyebrow"><input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
             <Field label="Título"><input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
-            <button type="button" className="self-start border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setHitos([...norm, { hora: '', titulo: '', descripcion: '', nocturno: false }])}>+ Hito</button>
+            <button type="button" className="self-start border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setHitos([...norm, { hora: '', titulo: '', descripcion: '', nocturno: false, unidad: '' }])}>+ Hito</button>
             {norm.map((h, i) => (
               <div key={i} className="border border-[#EEEEEE] bg-white p-3">
                 <div className="mb-2 flex gap-2">
@@ -762,6 +764,18 @@ export function OperacionKursk2AdminClient({
                 <Field label="Descripción"><textarea rows={2} className={inputCls} value={h.descripcion} onChange={(e) => {
                   const n = [...norm]; n[i] = { ...n[i], descripcion: e.target.value }; setHitos(n)
                 }} /></Field>
+                <Field label="Unidad (opcional)">
+                  <input
+                    className={inputCls}
+                    placeholder="ALFA-1, BRAVO-2, TODAS..."
+                    value={h.unidad ?? ''}
+                    onChange={(e) => {
+                      const n = [...norm]
+                      n[i] = { ...n[i], unidad: e.target.value }
+                      setHitos(n)
+                    }}
+                  />
+                </Field>
                 <label className="flex items-center gap-2 text-[12px]" style={lato}>
                   <input type="checkbox" checked={h.nocturno} onChange={(e) => {
                     const n = [...norm]; n[i] = { ...n[i], nocturno: e.target.checked }; setHitos(n)
