@@ -6,6 +6,7 @@ import {
   createBoothEvent,
   toggleBoothEvent,
   deleteBoothEvent,
+  exportBoothEventCSV,
 } from './actions'
 
 const jost = {
@@ -40,6 +41,7 @@ export function BoothAdminClient({
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [exportingId, setExportingId] = useState<string | null>(null)
 
   const activo = eventos.find((e) => e.active) || null
 
@@ -96,6 +98,27 @@ export function BoothAdminClient({
       return
     }
     router.refresh()
+  }
+
+  async function handleExport(id: string) {
+    setError(null)
+    setExportingId(id)
+    const res = await exportBoothEventCSV(id)
+    setExportingId(null)
+    if ('error' in res) {
+      setError(res.error)
+      return
+    }
+    // Trigger descarga
+    const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = res.filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const boothUrl =
@@ -282,6 +305,22 @@ export function BoothAdminClient({
                             : 'translateX(4px)',
                         }}
                       />
+                    </button>
+
+                    {/* Exportar CSV */}
+                    <button
+                      type="button"
+                      onClick={() => handleExport(e.id)}
+                      disabled={isBusy || exportingId === e.id || e.count === 0}
+                      className="border border-[#DDDDDD] bg-white px-3 py-2 text-[10px] tracking-[0.12em] text-[#666666] hover:border-[#111111] hover:text-[#111111] disabled:cursor-not-allowed disabled:opacity-50"
+                      style={jost}
+                      title={
+                        e.count === 0
+                          ? 'No hay registros para exportar'
+                          : 'Descargar CSV con todos los registros de este evento'
+                      }
+                    >
+                      {exportingId === e.id ? '...' : '↓ CSV'}
                     </button>
 
                     {/* Eliminar */}
