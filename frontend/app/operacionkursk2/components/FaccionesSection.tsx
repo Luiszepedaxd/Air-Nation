@@ -317,7 +317,7 @@ function FactionMobileCard({
           src={data.imagen_url}
           alt={data.nombre || nombre}
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ filter: 'grayscale(0.3) brightness(0.7)' }}
+          style={{ filter: 'brightness(0.85)' }}
         />
       ) : (
         <div
@@ -330,16 +330,16 @@ function FactionMobileCard({
           }}
         />
       )}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/90" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
       <div className="relative z-10 flex min-h-[72vh] flex-col justify-end p-6">
         <p
-          className="text-[0.6rem] tracking-[0.4em] text-white/60"
+          className="text-[0.6rem] tracking-[0.4em] text-white/80"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
           FACCIÓN
         </p>
         <h3
-          className="mt-2 text-4xl leading-none"
+          className="mt-2 text-4xl leading-none text-white"
           style={{
             fontFamily: 'Jost, sans-serif',
             fontWeight: 900,
