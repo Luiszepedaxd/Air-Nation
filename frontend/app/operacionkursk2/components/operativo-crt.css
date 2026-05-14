@@ -1,0 +1,194 @@
+/* Pantalla CRT */
+.crt-screen {
+  position: relative;
+  background: #050805;
+  color: #4ade80;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-shadow: 0 0 4px rgba(74, 222, 128, 0.6), 0 0 12px rgba(74, 222, 128, 0.3);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Glow radial verde fosforescente desde el centro */
+.crt-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(74, 222, 128, 0.08) 0%,
+    rgba(74, 222, 128, 0.02) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Scanlines visibles permanentes */
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  z-index: 5;
+  mix-blend-mode: multiply;
+}
+
+/* Vignette curvatura CRT */
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  z-index: 6;
+}
+
+/* Scanline lenta que recorre la pantalla */
+.crt-sweep {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 80px;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(74, 222, 128, 0.06) 50%,
+    transparent 100%
+  );
+  animation: crt-sweep 10s linear infinite;
+}
+
+@keyframes crt-sweep {
+  0% {
+    top: -100px;
+  }
+  100% {
+    top: 100%;
+  }
+}
+
+/* Flicker random sutil */
+.crt-flicker {
+  animation: crt-flicker 8s infinite;
+}
+
+@keyframes crt-flicker {
+  0%,
+  95%,
+  100% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.96;
+  }
+  97% {
+    opacity: 1;
+  }
+  98% {
+    opacity: 0.94;
+  }
+}
+
+/* Tipos de texto */
+.crt-prompt {
+  color: #4ade80;
+  text-shadow: 0 0 4px rgba(74, 222, 128, 0.6), 0 0 12px rgba(74, 222, 128, 0.3);
+}
+
+.crt-dim {
+  color: #2d8a4e;
+  text-shadow: 0 0 4px rgba(45, 138, 78, 0.4);
+}
+
+.crt-cyan {
+  color: #67e8f9;
+  text-shadow: 0 0 4px rgba(103, 232, 249, 0.6), 0 0 12px rgba(103, 232, 249, 0.3);
+}
+
+.crt-amber {
+  color: #fbbf24;
+  text-shadow: 0 0 4px rgba(251, 191, 36, 0.6), 0 0 12px rgba(251, 191, 36, 0.3);
+}
+
+.crt-white {
+  color: #d1fae5;
+  text-shadow: 0 0 6px rgba(209, 250, 229, 0.8), 0 0 14px rgba(74, 222, 128, 0.4);
+}
+
+/* Cursor parpadeante */
+.crt-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  background: #4ade80;
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: crt-cursor-blink 1s steps(2) infinite;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.8);
+}
+
+@keyframes crt-cursor-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Entrada de log animada */
+.crt-line-enter {
+  opacity: 0;
+  animation: crt-line-enter 0.4s ease-out forwards;
+}
+
+@keyframes crt-line-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Glitch ocasional */
+.crt-glitch {
+  animation: crt-glitch 0.3s steps(2);
+}
+
+@keyframes crt-glitch {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-1px, -2px);
+  }
+  80% {
+    transform: translate(1px, 2px);
+  }
+}

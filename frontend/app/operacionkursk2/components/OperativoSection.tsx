@@ -1,324 +1,229 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
 import type { OperativoConfig, OperativoHito } from '../lib/types'
+import './operativo-crt.css'
 
 export function OperativoSection({ config }: { config: OperativoConfig }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'end start'],
-  })
-  const pathLength = useTransform(scrollYProgress, [0.1, 0.9], [0, 1])
-
+  const hitos = config.hitos ?? []
+  const [bootDone, setBootDone] = useState(false)
   const [timestamp, setTimestamp] = useState('')
   const [glitch, setGlitch] = useState(false)
+  const sectionRef = useRef<HTMLElement>(null)
+  const [inView, setInView] = useState(false)
 
   useEffect(() => {
-    const updateTime = () => {
+    if (!sectionRef.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) setInView(true)
+        })
+      },
+      { threshold: 0.2 }
+    )
+    observer.observe(sectionRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!inView) return
+    const t = setTimeout(() => setBootDone(true), 2200)
+    return () => clearTimeout(t)
+  }, [inView])
+
+  useEffect(() => {
+    const update = () => {
       const d = new Date()
       const hh = String(d.getUTCHours()).padStart(2, '0')
       const mm = String(d.getUTCMinutes()).padStart(2, '0')
       const ss = String(d.getUTCSeconds()).padStart(2, '0')
-      setTimestamp(`${hh}:${mm}:${ss} UTC`)
+      setTimestamp(`${hh}:${mm}:${ss}Z`)
     }
-    updateTime()
-    const id = setInterval(updateTime, 1000)
+    update()
+    const id = setInterval(update, 1000)
     return () => clearInterval(id)
   }, [])
 
   useEffect(() => {
-    const triggerGlitch = () => {
-      setGlitch(true)
-      setTimeout(() => setGlitch(false), 120)
-    }
     const id = setInterval(() => {
-      if (Math.random() > 0.4) triggerGlitch()
-    }, 6000)
+      if (Math.random() > 0.5) {
+        setGlitch(true)
+        setTimeout(() => setGlitch(false), 280)
+      }
+    }, 5500)
     return () => clearInterval(id)
   }, [])
 
-  const hitos = config.hitos ?? []
+  const objectivesPadded = String(hitos.length).padStart(2, '0')
 
   return (
     <section
+      ref={sectionRef}
       id="operativo"
       data-section="operativo"
-      className="relative w-full overflow-hidden bg-[#0d1117] py-16 text-white md:py-24"
+      className="relative w-full bg-black py-16 md:py-24"
     >
-      <style jsx global>{`
-        @keyframes ok2-radar {
-          0% {
-            transform: scale(0.6);
-            opacity: 0.8;
-          }
-          100% {
-            transform: scale(2.5);
-            opacity: 0;
-          }
-        }
-      `}</style>
-
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.04]"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.5) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-        }}
-      />
-
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#CC4B37]/30 to-transparent"
-        animate={{ top: ['0%', '100%'] }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: 'linear',
-          repeatType: 'loop',
-        }}
-      />
-
-      <div className="relative mx-auto max-w-5xl px-4 md:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 flex flex-col gap-3 border-b border-[#CC4B37]/30 pb-4 md:mb-16 md:flex-row md:items-center md:justify-between"
+      <div className="mx-auto mb-8 max-w-5xl px-4 md:mb-12 md:px-8">
+        <p
+          className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37] md:text-xs"
+          style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
-          <div className="flex items-center gap-3">
-            <span className="inline-block h-2 w-2 animate-pulse bg-[#CC4B37]" />
-            <p
-              className="text-[0.65rem] tracking-[0.3em] text-[#CC4B37] md:text-[0.7rem]"
-              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-            >
-              {config.eyebrow} · 04–05 JUL 2026 · STATUS: PENDING
-            </p>
-          </div>
-          <p
-            className={`text-[0.7rem] tabular-nums text-white/60 transition-transform md:text-xs ${
-              glitch ? 'translate-x-[2px]' : ''
-            }`}
-            style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              fontWeight: 500,
-            }}
-          >
-            T+ {timestamp}
-          </p>
-        </motion.div>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="mb-12 text-4xl leading-none md:mb-20 md:text-7xl lg:text-8xl"
+          {config.eyebrow || 'OPERATIVO'}
+        </p>
+        <h2
+          className="mt-3 text-4xl leading-none text-white sm:text-5xl md:text-7xl lg:text-8xl"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900, letterSpacing: '-0.02em' }}
         >
-          {config.titulo}
-        </motion.h2>
+          {config.titulo || '12+ HORAS DE COMBATE'}
+        </h2>
+      </div>
 
-        <div ref={ref} className="relative">
-          <div className="absolute left-[27px] top-0 h-full w-px bg-white/10 md:left-[91px]" />
+      <div className="mx-auto max-w-5xl px-4 md:px-8">
+        <div className="crt-screen crt-flicker relative min-h-[600px] p-5 text-[13px] leading-[1.7] md:min-h-[700px] md:p-10 md:text-[15px]">
+          <div className="crt-scanlines" />
+          <div className="crt-sweep" />
+          <div className="crt-vignette" />
 
-          <motion.div
-            aria-hidden
-            className="absolute left-[27px] top-0 w-px overflow-hidden md:left-[91px]"
-            style={{ height: '100%' }}
-          >
-            <motion.div
-              className="absolute left-0 h-24 w-px bg-gradient-to-b from-transparent via-[#CC4B37] to-transparent"
-              animate={{ top: ['-10%', '110%'] }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'linear',
-              }}
-            />
-          </motion.div>
+          <div className={`relative z-10 ${glitch ? 'crt-glitch' : ''}`}>
+            {inView ? (
+              <>
+                <BootLine delay={0} text="> BOOTING TACTICAL OPS TERMINAL v2.6..." />
+                <BootLine delay={250} text="> LOADING MISSION_PROFILE: KURSK-II" />
+                <BootLine delay={500} text="> AUTH: TOLOKS_CLUB_AIRSOFT [VERIFIED]" />
+                <BootLine delay={750} text="> SECTOR: MISNÉBALAM_07 [LOCKED]" />
+                <BootLine delay={1000} text="> WINDOW: 04-05 JUL 2026" />
+                <BootLine delay={1250} text={`> OBJECTIVES_LOADED: ${objectivesPadded}`} />
+                <BootLine delay={1500} text="> STATUS: PENDING_DEPLOYMENT" className="crt-amber" />
+                <BootLine delay={1900} text="> READY_" className="crt-cyan" />
 
-          <motion.div
-            className="absolute left-[27px] top-0 w-px origin-top bg-[#CC4B37] md:left-[91px]"
-            style={{ scaleY: pathLength, height: '100%' }}
-          />
+                {bootDone ? (
+                  <>
+                    <div className="crt-line-enter my-5 w-full border-t border-[#4ade80]/30 md:my-7" />
 
-          <div className="space-y-10 md:space-y-14">
-            {hitos.map((hito, i) => (
-              <HitoRow key={`${hito.hora}-${hito.titulo}-${i}`} hito={hito} index={i} />
-            ))}
+                    <div className="crt-line-enter mb-5 flex flex-col gap-1 md:mb-7 md:flex-row md:items-center md:justify-between">
+                      <span className="crt-dim text-[11px] md:text-[13px]">
+                        [ TIMESTAMP ] T+ {timestamp}
+                      </span>
+                      <span className="crt-dim text-[11px] md:text-[13px]">
+                        [ NODE ] OPS-MAIN
+                      </span>
+                    </div>
+
+                    <div className="crt-line-enter mb-3 md:mb-5">
+                      <span className="crt-prompt">&gt; LIST OBJECTIVES --all</span>
+                    </div>
+
+                    <div className="space-y-5 md:space-y-7">
+                      {hitos.map((h, i) => (
+                        <HitoLine key={`${h.hora}-${h.titulo}-${i}`} hito={h} index={i} />
+                      ))}
+                    </div>
+
+                    <div className="crt-line-enter mt-7 border-t border-[#4ade80]/30 pt-4 md:mt-10 md:pt-5">
+                      <p className="crt-dim text-[11px] md:text-[13px]">&gt; END_OF_TRANSMISSION</p>
+                      <p className="crt-prompt mt-1 text-[11px] md:text-[13px]">
+                        &gt; AWAITING_DEPLOYMENT
+                        <span className="crt-cursor" />
+                      </p>
+                    </div>
+                  </>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-12 flex flex-col gap-3 border-t border-[#CC4B37]/30 pt-4 md:mt-16 md:flex-row md:items-center md:justify-between"
+        <p
+          className="mt-4 text-center text-[10px] tracking-[0.3em] text-white/40 md:text-[11px]"
+          style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
-          <p
-            className="text-[0.65rem] tracking-[0.3em] text-white/60 md:text-[0.7rem]"
-            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
-          >
-            {String(hitos.length).padStart(2, '0')} / {String(hitos.length).padStart(2, '0')} OBJECTIVES
-          </p>
-          <p
-            className="text-[0.65rem] tracking-[0.3em] text-white/60 md:text-[0.7rem]"
-            style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            }}
-          >
-            MISNÉBALAM · SECTOR 7
-          </p>
-        </motion.div>
+          TERMINAL TÁCTICA · TRANSMISIÓN DIRECTA DESDE OPS-MAIN
+        </p>
       </div>
     </section>
   )
 }
 
-function HitoRow({ hito, index }: { hito: OperativoHito; index: number }) {
-  const rowRef = useRef<HTMLDivElement>(null)
+function BootLine({
+  delay,
+  text,
+  className = 'crt-prompt',
+}: {
+  delay: number
+  text: string
+  className?: string
+}) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay)
+    return () => clearTimeout(t)
+  }, [delay])
+
+  if (!visible) return null
+  return (
+    <div className="crt-line-enter">
+      <span className={`${className} text-[12px] md:text-[14px]`}>{text}</span>
+    </div>
+  )
+}
+
+function HitoLine({ hito, index }: { hito: OperativoHito; index: number }) {
   const [typed, setTyped] = useState('')
   const [started, setStarted] = useState(false)
-
-  const pulseColor = hito.nocturno ? '#4a8ec2' : '#CC4B37'
-
-  useEffect(() => {
-    if (!rowRef.current) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !started) {
-            setStarted(true)
-          }
-        })
-      },
-      { threshold: 0.5 }
-    )
-    observer.observe(rowRef.current)
-    return () => observer.disconnect()
-  }, [started])
+  const [appeared, setAppeared] = useState(false)
 
   useEffect(() => {
-    if (!started) return
+    const t = setTimeout(() => setAppeared(true), 200 + index * 250)
+    return () => clearTimeout(t)
+  }, [index])
+
+  useEffect(() => {
+    if (!appeared) return
+    setStarted(true)
     let i = 0
     const interval = setInterval(() => {
       i++
       setTyped(hito.titulo.slice(0, i))
       if (i >= hito.titulo.length) clearInterval(interval)
-    }, 25)
+    }, 30)
     return () => clearInterval(interval)
-  }, [started, hito.titulo])
+  }, [appeared, hito.titulo])
 
+  if (!appeared) return null
+
+  const accentClass = hito.nocturno ? 'crt-cyan' : 'crt-white'
+  const prefix = hito.nocturno ? '✦' : '●'
   const unidadLabel = hito.unidad?.trim()
 
   return (
-    <motion.div
-      ref={rowRef}
-      initial={{ opacity: 0, x: -20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.5, delay: index * 0.05 }}
-      className="relative grid grid-cols-[56px_1fr] items-start gap-3 md:grid-cols-[120px_1fr] md:gap-8"
-    >
-      <div className="relative">
-        <div className="relative flex h-12 items-center justify-center md:h-14">
-          {started ? (
-            <>
-              <span
-                className="absolute h-6 w-6 rounded-full opacity-0"
-                style={{
-                  border: `1px solid ${pulseColor}`,
-                  animation: 'ok2-radar 2.5s ease-out infinite',
-                }}
-              />
-              <span
-                className="absolute h-6 w-6 rounded-full opacity-0"
-                style={{
-                  border: `1px solid ${pulseColor}`,
-                  animation: 'ok2-radar 2.5s ease-out infinite 0.8s',
-                }}
-              />
-            </>
-          ) : null}
-          <span
-            className="relative z-10 h-3 w-3 rounded-full"
-            style={{
-              backgroundColor: pulseColor,
-              boxShadow: `0 0 12px ${pulseColor}`,
-            }}
-          />
-        </div>
-
-        <p
-          className="mt-2 text-base text-white tabular-nums md:text-3xl"
-          style={{
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontWeight: 700,
-          }}
-        >
-          {hito.hora}
-        </p>
-      </div>
-
-      <div className="pt-2 md:pt-4">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <h3
-            className="text-lg uppercase text-white md:text-2xl"
-            style={{
-              fontFamily: 'Jost, sans-serif',
-              fontWeight: 800,
-              letterSpacing: '0.02em',
-            }}
-          >
-            {typed}
-            {started && typed.length < hito.titulo.length ? (
-              <span
-                className="ml-0.5 inline-block h-4 w-[2px] animate-pulse align-middle md:h-6"
-                style={{ backgroundColor: pulseColor }}
-              />
-            ) : null}
-          </h3>
-          {unidadLabel ? (
-            <span
-              className="border border-white/20 bg-white/5 px-2 py-0.5 text-[0.55rem] tracking-[0.18em] text-white/70 md:text-[0.65rem]"
-              style={{
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                fontWeight: 600,
-              }}
-            >
-              [ {unidadLabel} ]
-            </span>
-          ) : null}
-        </div>
-
-        {hito.descripcion ? (
-          <p
-            className="mt-2 text-sm text-white/60 md:text-base"
-            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 400 }}
-          >
-            {hito.descripcion}
-          </p>
-        ) : null}
-
-        {hito.nocturno ? (
-          <p
-            className="mt-2 text-[0.55rem] uppercase tracking-[0.25em] md:text-[0.6rem]"
-            style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-              color: pulseColor,
-              fontWeight: 600,
-            }}
-          >
-            ● NIGHT OPS
-          </p>
+    <div className="crt-line-enter">
+      <div className="flex flex-wrap items-baseline gap-2 md:gap-4">
+        <span className={`${accentClass} font-bold`}>&gt;</span>
+        <span className={`${accentClass} text-[14px] font-bold md:text-[17px]`}>{hito.hora}</span>
+        <span className="crt-dim">::</span>
+        <span className={`${accentClass} text-[14px] font-bold uppercase md:text-[17px]`}>
+          {typed}
+          {started && typed.length < hito.titulo.length ? <span className="crt-cursor" /> : null}
+        </span>
+        {unidadLabel ? (
+          <span className="crt-amber text-[11px] md:text-[13px]">[ {unidadLabel} ]</span>
         ) : null}
       </div>
-    </motion.div>
+
+      {hito.descripcion ? (
+        <div className="ml-4 mt-1 md:ml-7">
+          <span className="crt-dim text-[12px] md:text-[14px]">└ {hito.descripcion}</span>
+        </div>
+      ) : null}
+
+      {hito.nocturno ? (
+        <div className="ml-4 mt-1 md:ml-7">
+          <span className="crt-cyan text-[10px] tracking-[0.2em] md:text-[11px]">
+            {prefix} NIGHT_OPS_PROTOCOL
+          </span>
+        </div>
+      ) : null}
+    </div>
   )
 }
