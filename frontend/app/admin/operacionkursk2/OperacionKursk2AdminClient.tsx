@@ -1,19 +1,32 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { uploadFile } from '@/lib/apiFetch'
 import {
-  updateBlockConfig,
-  toggleBlockActive,
-  reorderOperacionKursk2Block,
-} from './actions'
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { uploadFile } from '@/lib/apiFetch'
+import { updateBlockConfig, toggleBlockActive, reorderAllBlocks } from './actions'
 import { MediaUploadInput } from './components/MediaUploadInput'
 import { ImageUploadInput } from './components/ImageUploadInput'
 import { VideoUploadInput } from './components/VideoUploadInput'
 import type { OperacionKursk2Slug } from '@/app/operacionkursk2/lib/types'
 import type { GaleriaImagen, VideoItem } from '@/app/operacionkursk2/lib/types'
+import { OK2_SLUGS } from '@/app/operacionkursk2/lib/types'
 const jost = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
@@ -358,6 +371,44 @@ function getThumb(slug: OperacionKursk2Slug, cfg: Record<string, unknown>): stri
   return ''
 }
 
+type SortableHandleProps = Pick<ReturnType<typeof useSortable>, 'attributes' | 'listeners'>
+
+function SortableSection({
+  slug,
+  children,
+}: {
+  slug: OperacionKursk2Slug
+  children: (handleProps: SortableHandleProps) => React.ReactNode
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: slug })
+
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ attributes, listeners })}
+    </div>
+  )
+}
+
+function sectionFor(slug: OperacionKursk2Slug): SectionDef {
+  const def = SECTIONS.find((s) => s.slug === slug)
+  if (!def) throw new Error(`Section metadata missing: ${slug}`)
+  return def
+}
+
 export function OperacionKursk2AdminClient({
   initialBlocks,
 }: {
@@ -381,15 +432,6 @@ export function OperacionKursk2AdminClient({
     return map
   })
 
-  const [ordens, setOrdens] = useState<Record<OperacionKursk2Slug, number>>(() => {
-    const map = {} as Record<OperacionKursk2Slug, number>
-    SECTIONS.forEach((def, i) => {
-      const found = initialBlocks.find((b) => b.slug === def.slug)
-      map[def.slug] = found?.orden ?? i + 1
-    })
-    return map
-  })
-
   const [activos, setActivos] = useState<Record<OperacionKursk2Slug, boolean>>(() => {
     const map = {} as Record<OperacionKursk2Slug, boolean>
     for (const def of SECTIONS) {
@@ -399,8 +441,15 @@ export function OperacionKursk2AdminClient({
     return map
   })
 
+  const [orderedSlugs, setOrderedSlugs] = useState<OperacionKursk2Slug[]>(() => {
+    const fromBd = initialBlocks.map((b) => b.slug)
+    const missing = OK2_SLUGS.filter((s) => !fromBd.includes(s))
+    return [...fromBd, ...missing]
+  })
+
   const [toggling, setToggling] = useState<OperacionKursk2Slug | null>(null)
-  const [reordering, setReordering] = useState<OperacionKursk2Slug | null>(null)
+  const [reordering, setReordering] = useState(false)
+  const [reorderError, setReorderError] = useState<string | null>(null)
   const [expandido, setExpandido] = useState<OperacionKursk2Slug | null>(null)
   const [saving, setSaving] = useState<OperacionKursk2Slug | null>(null)
   const [saved, setSaved] = useState<OperacionKursk2Slug | null>(null)
@@ -488,24 +537,48 @@ export function OperacionKursk2AdminClient({
     setIds((prev) => ({ ...prev, [slug]: res.id }))
   }
 
-  async function handleReorder(slug: OperacionKursk2Slug, direction: 'up' | 'down') {
-    const currentId = ids[slug]
-    if (!currentId) {
-      setError('Guarda el bloque primero para poder reordenarlo.')
-      return
-    }
-    const blocks = SECTIONS.map((def) => {
-      const id = ids[def.slug]
-      return id ? { id, orden: ordens[def.slug] } : null
-    }).filter((x): x is { id: string; orden: number } => x !== null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
-    setReordering(slug)
-    setError(null)
-    const res = await reorderOperacionKursk2Block(currentId, direction, blocks)
-    setReordering(null)
-    if ('error' in res) {
-      setError(res.error)
-      return
+  async function handleDragEnd(event: DragEndEvent) {
+    if (reordering) return
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = orderedSlugs.indexOf(active.id as OperacionKursk2Slug)
+    const newIndex = orderedSlugs.indexOf(over.id as OperacionKursk2Slug)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    setReorderError(null)
+    const prevOrder = orderedSlugs
+    const newOrder = [...orderedSlugs]
+    const [moved] = newOrder.splice(oldIndex, 1)
+    newOrder.splice(newIndex, 0, moved)
+    setOrderedSlugs(newOrder)
+
+    setReordering(true)
+    setReorderError(null)
+    try {
+      const idsInOrder = newOrder.map((s) => ids[s]).filter((id): id is string => typeof id === 'string')
+      if (idsInOrder.length !== newOrder.length) {
+        throw new Error('Hay secciones sin guardar — guárdalas antes de reordenar.')
+      }
+      const res = await reorderAllBlocks(idsInOrder)
+      if ('error' in res) {
+        throw new Error(res.error)
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al reordenar'
+      setReorderError(msg)
+      setOrderedSlugs(prevOrder)
+    } finally {
+      setReordering(false)
     }
   }
 
@@ -1267,101 +1340,144 @@ export function OperacionKursk2AdminClient({
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
-        {SECTIONS.map((def, i) => {
-          const isOpen = expandido === def.slug
-          const isSaving = saving === def.slug
-          const isSaved = saved === def.slug
-          const isConfigured = ids[def.slug] !== null
-          const thumb = getThumb(def.slug, cfg(def.slug))
-          const tituloPreview = str(def.slug, 'titulo') || def.descripcion
+      {reordering ? (
+        <div className="mb-3 border border-[#CC4B37] bg-[#fff5f3] px-3 py-2 text-[11px] text-[#CC4B37]" style={jost}>
+          Guardando nuevo orden…
+        </div>
+      ) : null}
 
-          return (
-            <div key={def.slug} className={`border transition-colors ${isOpen ? 'border-[#CC4B37]' : 'border-[#EEEEEE]'}`}>
-              <button
-                type="button"
-                onClick={() => setExpandido(isOpen ? null : def.slug)}
-                className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#FAFAFA] ${!activos[def.slug] ? 'opacity-60' : ''}`}
-              >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#F4F4F4] text-[10px] text-[#666666]" style={jost}>{i + 1}</span>
-                {thumb ? (
-                  <div className="h-9 w-14 shrink-0 overflow-hidden border border-[#EEEEEE]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={thumb} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="flex h-9 w-14 shrink-0 items-center justify-center border border-dashed border-[#DDDDDD] bg-[#F7F7F7]">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#CCCCCC]" aria-hidden>
-                      <rect x="3" y="3" width="18" height="18" rx="1" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#111111]" style={jost}>{def.label}</p>
-                  <p className="truncate text-[11px] text-[#AAAAAA]" style={lato}>{tituloPreview}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  {isSaved && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-[#22C55E]" style={jost}>Guardado</span>
-                  )}
-                  {!isConfigured && (
-                    <span className="border border-[#DDDDDD] px-2 py-0.5 text-[9px] text-[#AAAAAA]" style={jost}>Sin configurar</span>
-                  )}
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (toggling !== def.slug) handleToggle(def.slug)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        if (toggling !== def.slug) handleToggle(def.slug)
-                      }
-                    }}
-                    className={`flex items-center gap-1.5 ${toggling === def.slug ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
-                  >
-                    <span className={`relative block h-5 w-9 transition-colors ${activos[def.slug] ? 'bg-[#22C55E]' : 'bg-[#DDDDDD]'}`} style={{ borderRadius: 10 }}>
-                      <span className="absolute top-0.5 block h-4 w-4 bg-white shadow transition-transform" style={{ borderRadius: '50%', transform: activos[def.slug] ? 'translateX(18px)' : 'translateX(2px)' }} />
-                    </span>
-                    <span className={`text-[9px] font-extrabold uppercase ${activos[def.slug] ? 'text-[#22C55E]' : 'text-[#AAAAAA]'}`} style={jost}>
-                      {toggling === def.slug ? '…' : activos[def.slug] ? 'ON' : 'OFF'}
-                    </span>
-                  </span>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden className={`text-[#999999] transition-transform ${isOpen ? 'rotate-180' : ''}`}>
-                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </div>
-              </button>
+      {reorderError ? (
+        <div className="mb-3 border border-[#CC4B37] bg-[#fff5f3] px-3 py-2 text-[11px] text-[#CC4B37]" style={jost}>
+          ⚠ {reorderError}
+        </div>
+      ) : null}
 
-              {isOpen && (
-                <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] p-5">
-                  <p className="mb-4 text-[11px] text-[#888888]" style={lato}>{def.descripcion}</p>
-                  {editorFor(def.slug)}
-                  <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[#EEEEEE] pt-4">
-                    <button type="button" onClick={() => handleSave(def.slug)} disabled={!!saving} className="flex items-center gap-2 bg-[#CC4B37] px-5 py-2.5 text-[11px] tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-60" style={jost}>
-                      {isSaving ? 'Guardando…' : 'Guardar'}
-                    </button>
-                    {isConfigured && (
-                      <>
-                        <button type="button" onClick={() => handleReorder(def.slug, 'up')} disabled={reordering === def.slug} className="flex items-center gap-1 border border-[#DDDDDD] bg-white px-3 py-2 text-[10px] text-[#666666]" style={jost}>↑ Subir</button>
-                        <button type="button" onClick={() => handleReorder(def.slug, 'down')} disabled={reordering === def.slug} className="flex items-center gap-1 border border-[#DDDDDD] bg-white px-3 py-2 text-[10px] text-[#666666]" style={jost}>↓ Bajar</button>
-                      </>
-                    )}
-                    <a href="/operacionkursk2" target="_blank" className="text-[11px] text-[#CC4B37] hover:underline" style={jost}>Ver landing →</a>
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={orderedSlugs} strategy={verticalListSortingStrategy}>
+          <div className="flex flex-col gap-2">
+            {orderedSlugs.map((slug, i) => {
+              const def = sectionFor(slug)
+              const isOpen = expandido === slug
+              const isSaving = saving === slug
+              const isSaved = saved === slug
+              const isConfigured = ids[slug] !== null
+              const thumb = getThumb(slug, cfg(slug))
+              const tituloPreview = str(slug, 'titulo') || def.descripcion
+
+              return (
+                <SortableSection key={slug} slug={slug}>
+                  {({ attributes, listeners }) => (
+                    <div className={`border transition-colors ${isOpen ? 'border-[#CC4B37]' : 'border-[#EEEEEE]'}`}>
+                      <div
+                        className={`flex w-full items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[#FAFAFA] ${!activos[slug] ? 'opacity-60' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          {...attributes}
+                          {...listeners}
+                          className="flex h-7 w-5 shrink-0 cursor-grab items-center justify-center text-[#999999] hover:text-[#CC4B37] active:cursor-grabbing"
+                          aria-label="Arrastrar para reordenar"
+                        >
+                          <svg width="10" height="14" viewBox="0 0 10 14" fill="none" aria-hidden>
+                            <circle cx="2" cy="2" r="1.2" fill="currentColor" />
+                            <circle cx="8" cy="2" r="1.2" fill="currentColor" />
+                            <circle cx="2" cy="7" r="1.2" fill="currentColor" />
+                            <circle cx="8" cy="7" r="1.2" fill="currentColor" />
+                            <circle cx="2" cy="12" r="1.2" fill="currentColor" />
+                            <circle cx="8" cy="12" r="1.2" fill="currentColor" />
+                          </svg>
+                        </button>
+
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#F4F4F4] text-[10px] text-[#666666]" style={jost}>
+                          {i + 1}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandido(isOpen ? null : slug)}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          {thumb ? (
+                            <div className="h-9 w-14 shrink-0 overflow-hidden border border-[#EEEEEE]">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={thumb} alt="" className="h-full w-full object-cover" />
+                            </div>
+                          ) : (
+                            <div className="flex h-9 w-14 shrink-0 items-center justify-center border border-dashed border-[#DDDDDD] bg-[#F7F7F7]">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#CCCCCC]" aria-hidden>
+                                <rect x="3" y="3" width="18" height="18" rx="1" stroke="currentColor" strokeWidth="1.5" />
+                              </svg>
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#111111]" style={jost}>{def.label}</p>
+                            <p className="truncate text-[11px] text-[#AAAAAA]" style={lato}>{tituloPreview}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-3">
+                            {isSaved && (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-[#22C55E]" style={jost}>Guardado</span>
+                            )}
+                            {!isConfigured && (
+                              <span className="border border-[#DDDDDD] px-2 py-0.5 text-[9px] text-[#AAAAAA]" style={jost}>Sin configurar</span>
+                            )}
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (toggling !== slug) handleToggle(slug)
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  if (toggling !== slug) handleToggle(slug)
+                                }
+                              }}
+                              className={`flex items-center gap-1.5 ${toggling === slug ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}
+                            >
+                              <span className={`relative block h-5 w-9 transition-colors ${activos[slug] ? 'bg-[#22C55E]' : 'bg-[#DDDDDD]'}`} style={{ borderRadius: 10 }}>
+                                <span className="absolute top-0.5 block h-4 w-4 bg-white shadow transition-transform" style={{ borderRadius: '50%', transform: activos[slug] ? 'translateX(18px)' : 'translateX(2px)' }} />
+                              </span>
+                              <span className={`text-[9px] font-extrabold uppercase ${activos[slug] ? 'text-[#22C55E]' : 'text-[#AAAAAA]'}`} style={jost}>
+                                {toggling === slug ? '…' : activos[slug] ? 'ON' : 'OFF'}
+                              </span>
+                            </span>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden className={`text-[#999999] transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+                              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                        </button>
+                      </div>
+
+                      {isOpen && (
+                        <div className="border-t border-[#EEEEEE] bg-[#FAFAFA] p-5">
+                          <p className="mb-4 text-[11px] text-[#888888]" style={lato}>{def.descripcion}</p>
+                          {editorFor(slug)}
+                          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[#EEEEEE] pt-4">
+                            <button type="button" onClick={() => handleSave(slug)} disabled={!!saving} className="flex items-center gap-2 bg-[#CC4B37] px-5 py-2.5 text-[11px] tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-60" style={jost}>
+                              {isSaving ? 'Guardando…' : 'Guardar'}
+                            </button>
+                            <a href="/operacionkursk2" target="_blank" className="text-[11px] text-[#CC4B37] hover:underline" style={jost}>Ver landing →</a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </SortableSection>
+              )
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <div className="mt-5 border border-[#EEEEEE] bg-[#F9F9F9] px-4 py-3">
         <p className="text-[11px] text-[#888888]" style={lato}>
-          <strong style={{ ...jost, fontSize: 10 }}>TIP:</strong> Guarda cada bloque por separado. Toggle OFF oculta en la landing pública.
+          <strong style={{ ...jost, fontSize: 10 }}>TIP:</strong> Guarda cada bloque por separado. Reordena con el asa a la izquierda. Toggle OFF oculta en la landing pública.
         </p>
       </div>
     </div>

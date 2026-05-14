@@ -38,20 +38,37 @@ export default async function AdminOperacionKursk2Page() {
     orden: unknown
   }[]
 
-  const initialBlocks: OK2Record[] = OK2_SLUGS.map((slug, i) => {
-    const found = rows.find((r) => r.slug === slug)
+  const allowedSlugs = new Set(OK2_SLUGS as readonly string[])
+  const orderedRows = rows.filter((r) => allowedSlugs.has(r.slug))
+
+  function rowToRecord(r: (typeof orderedRows)[number]): OK2Record {
+    const slug = r.slug as OperacionKursk2Slug
     const cfg =
-      found?.config && typeof found.config === 'object' && !Array.isArray(found.config)
-        ? (found.config as Record<string, unknown>)
+      r.config && typeof r.config === 'object' && !Array.isArray(r.config)
+        ? (r.config as Record<string, unknown>)
         : {}
     return {
-      id: found?.id ? String(found.id) : null,
-      slug: slug as OperacionKursk2Slug,
+      id: r.id ? String(r.id) : null,
+      slug,
       config: cfg,
-      activo: found ? Boolean(found.activo) : true,
-      orden: found ? Number(found.orden ?? i + 1) : i + 1,
+      activo: Boolean(r.activo),
+      orden: Number(r.orden ?? 0),
     }
-  })
+  }
+
+  const initialBlocks: OK2Record[] = orderedRows.map(rowToRecord)
+  const seen = new Set(initialBlocks.map((b) => b.slug))
+  let nextOrden = initialBlocks.length + 1
+  for (const slug of OK2_SLUGS) {
+    if (seen.has(slug)) continue
+    initialBlocks.push({
+      id: null,
+      slug,
+      config: {},
+      activo: true,
+      orden: nextOrden++,
+    })
+  }
 
   return (
     <div className="p-6">

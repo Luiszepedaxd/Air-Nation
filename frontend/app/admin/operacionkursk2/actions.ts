@@ -154,6 +154,39 @@ export async function reorderOperacionKursk2Block(
   return { ok: true }
 }
 
+export async function reorderAllBlocks(
+  orderedIds: string[]
+): Promise<{ ok: true } | { error: string }> {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return { error: 'No autorizado.' }
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    return { error: 'Lista de ids vacía.' }
+  }
+
+  const db = createAdminClient()
+
+  const { data: existing, error: fetchErr } = await db
+    .from('operacionkursk2_blocks')
+    .select('id')
+    .in('id', orderedIds)
+
+  if (fetchErr) return { error: fetchErr.message }
+  if (!existing || existing.length !== orderedIds.length) {
+    return { error: 'Algún bloque no existe en BD.' }
+  }
+
+  const updates = orderedIds.map((id, idx) =>
+    db.from('operacionkursk2_blocks').update({ orden: idx + 1 }).eq('id', id)
+  )
+
+  const results = await Promise.all(updates)
+  const firstError = results.find((r) => r.error)
+  if (firstError?.error) return { error: firstError.error.message }
+
+  revalidateAll()
+  return { ok: true }
+}
+
 /*
  * NOTA (fundador): tras deploy, limpiar fila legacy en Supabase SQL Editor si aplica:
  *
