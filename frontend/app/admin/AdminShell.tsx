@@ -273,6 +273,26 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: '/admin/booth',
+    label: 'Booth',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M3 9l9-6 9 6v11a1 1 0 01-1 1H4a1 1 0 01-1-1V9z"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9 21v-6h6v6"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
   SPONSORS_GROUP,
 ]
 
