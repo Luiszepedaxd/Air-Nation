@@ -3,9 +3,9 @@ export type OperacionKursk2Slug =
   | 'hero'
   | 'narrativa'
   | 'sede'
+  | 'operativo'
   | 'countdown'
   | 'facciones'
-  | 'operativo'
   | 'inscripcion'
   | 'sponsors'
   | 'galeria'
@@ -17,9 +17,9 @@ export const OK2_SLUGS: readonly OperacionKursk2Slug[] = [
   'hero',
   'narrativa',
   'sede',
+  'operativo',
   'countdown',
   'facciones',
-  'operativo',
   'inscripcion',
   'sponsors',
   'galeria',
