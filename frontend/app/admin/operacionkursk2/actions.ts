@@ -179,3 +179,23 @@ export async function reorderOperacionKursk2Block(
  * )
  * ON CONFLICT (slug) DO NOTHING;
  */
+
+/*
+ * ---------------------------------------------------------------------------
+ * Landing OK2 — reorden de bloques (fundador): ejecutar manualmente en
+ * Supabase SQL Editor. NO ejecutar desde Cursor.
+ *
+ * Reorden: Operativo pasa de orden 6 → orden 4 (después de Sede).
+ * Countdown pasa de 4 → 5. Facciones de 5 → 6. Resto se mantiene.
+ *
+ * UPDATE operacionkursk2_blocks SET orden = 100 WHERE slug = 'operativo';
+ * UPDATE operacionkursk2_blocks SET orden = 4 WHERE slug = 'operativo';
+ * UPDATE operacionkursk2_blocks SET orden = 5 WHERE slug = 'countdown';
+ * UPDATE operacionkursk2_blocks SET orden = 6 WHERE slug = 'facciones';
+ *
+ * -- Verificación final
+ * SELECT slug, orden FROM operacionkursk2_blocks ORDER BY orden ASC;
+ *
+ * Orden esperado: hero, narrativa, sede, operativo, countdown, facciones,
+ * inscripcion, sponsors, galeria, videos, manual, airnation
+ */
