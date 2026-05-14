@@ -13,16 +13,17 @@ export async function createBoothUser(input: {
 
   const admin = createAdminClient()
 
-  const { data: configRow, error: configErr } = await admin
-    .from('booth_config')
-    .select('active, event_name')
-    .eq('id', 1)
+  // Verificar que hay un evento activo (defensa en profundidad)
+  const { data: activeRow, error: configErr } = await admin
+    .from('booth_events')
+    .select('event_name')
+    .eq('active', true)
     .maybeSingle()
 
   if (configErr) return { error: 'No se pudo verificar booth.' }
 
-  const config = configRow as { active: boolean; event_name: string | null } | null
-  if (!config || !config.active || !config.event_name) {
+  const config = activeRow as { event_name: string | null } | null
+  if (!config || !config.event_name) {
     return { error: 'El modo booth está inactivo.' }
   }
 
