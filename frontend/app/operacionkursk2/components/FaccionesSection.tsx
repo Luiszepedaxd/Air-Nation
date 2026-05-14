@@ -45,7 +45,7 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
     <section
       id="facciones"
       data-section="facciones"
-      className="relative w-full overflow-hidden bg-black text-white"
+      className="relative w-full overflow-hidden bg-[#F5F3EF] text-[#111111]"
     >
       <div className="mx-auto max-w-7xl px-4 py-16 text-center md:px-8 md:py-24">
         <motion.p
@@ -63,7 +63,7 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="mt-4 text-4xl leading-none md:text-7xl lg:text-8xl"
+          className="mt-4 text-4xl leading-none text-[#111111] md:text-7xl lg:text-8xl"
           style={{
             fontFamily: 'Jost, sans-serif',
             fontWeight: 900,
@@ -74,34 +74,36 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
         </motion.h2>
       </div>
 
-      <div className="relative hidden h-[80vh] w-full md:block">
-        <FactionPanel
-          side="rusa"
-          data={rusa}
-          width={rusaWidth}
-          isActive={active === 'rusa'}
-          isInactive={active === 'ucraniana'}
-          onEnter={() => setActive('rusa')}
-          onLeave={() => setActive(null)}
-          align="left"
-        />
-        <FactionPanel
-          side="ucraniana"
-          data={ucraniana}
-          width={ucraWidth}
-          isActive={active === 'ucraniana'}
-          isInactive={active === 'rusa'}
-          onEnter={() => setActive('ucraniana')}
-          onLeave={() => setActive(null)}
-          align="right"
-        />
+      <div className="hidden w-full pt-4 md:block md:pt-6">
+        <div className="relative h-[80vh] w-full">
+          <FactionPanel
+            side="rusa"
+            data={rusa}
+            width={rusaWidth}
+            isActive={active === 'rusa'}
+            isInactive={active === 'ucraniana'}
+            onEnter={() => setActive('rusa')}
+            onLeave={() => setActive(null)}
+            align="left"
+          />
+          <FactionPanel
+            side="ucraniana"
+            data={ucraniana}
+            width={ucraWidth}
+            isActive={active === 'ucraniana'}
+            isInactive={active === 'rusa'}
+            onEnter={() => setActive('ucraniana')}
+            onLeave={() => setActive(null)}
+            align="right"
+          />
+        </div>
       </div>
 
       {/* Mobile: swipe horizontal con cards */}
       <div className="md:hidden">
         <div
           ref={mobileScrollRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto bg-transparent px-4 py-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
         >
           <div className="w-[calc(100vw-2rem)] shrink-0 snap-center">
@@ -112,7 +114,7 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-1.5 bg-black py-4">
+        <div className="flex items-center justify-center gap-1.5 bg-transparent py-4">
           <span
             className={`h-1 rounded-full transition-all ${
               mobileActive === 0 ? 'w-8 bg-[#CC4B37]' : 'w-4 bg-[#E5E0DA]'
@@ -129,7 +131,7 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
       {config.nota ? (
         <div className="mx-auto max-w-3xl px-4 pb-16 pt-8 text-center md:px-8 md:pb-24">
           <p
-            className="text-[0.7rem] italic text-white/50 md:text-xs"
+            className="text-[0.7rem] italic text-[#666] md:text-xs"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 400 }}
           >
             {config.nota}
@@ -178,7 +180,7 @@ function FactionPanel({
       onMouseLeave={onLeave}
       animate={{ width }}
       transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-      className={`absolute top-0 h-full cursor-pointer ${
+      className={`absolute top-0 h-full cursor-pointer text-white ${
         align === 'left' ? 'left-0' : 'right-0'
       }`}
       style={{ clipPath }}
@@ -308,7 +310,7 @@ function FactionMobileCard({
   const nombre = (data.nombre || 'FACCIÓN').replace(/^FACCIÓN\s+/i, '')
 
   return (
-    <div className="relative min-h-[72vh] w-full overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
+    <div className="relative min-h-[72vh] w-full overflow-hidden rounded-2xl border border-white/10 bg-transparent text-white shadow-2xl">
       {data.imagen_url ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
