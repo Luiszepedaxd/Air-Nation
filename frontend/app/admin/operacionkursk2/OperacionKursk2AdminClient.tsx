@@ -649,6 +649,14 @@ export function OperacionKursk2AdminClient({
         }
         return (
           <div className="flex flex-col gap-3">
+            <Field label="Eyebrow">
+              <input
+                className={inputCls}
+                placeholder="UN CONFLICTO. TRES TIEMPOS."
+                value={str(slug, 'eyebrow')}
+                onChange={(e) => setField(slug, 'eyebrow', e.target.value)}
+              />
+            </Field>
             <button
               type="button"
               className="self-start border border-[#DDDDDD] bg-white px-3 py-2 text-[10px] tracking-[0.12em]" style={jost}

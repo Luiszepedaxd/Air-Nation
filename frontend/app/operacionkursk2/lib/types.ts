@@ -48,6 +48,7 @@ export type HeroConfig = {
 }
 
 export type NarrativaConfig = {
+  eyebrow?: string
   bloques: Array<{ anio: string; texto: string }>
 }
 
