@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import {
+  Camera,
+  CameraDirection,
+  CameraResultType,
+  CameraSource,
+} from '@capacitor/camera'
+import { isNativeApp } from '@/lib/platform'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -93,6 +100,11 @@ function blobToBase64(blob: Blob): Promise<string> {
     reader.onerror = reject
     reader.readAsDataURL(blob)
   })
+}
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const res = await fetch(dataUrl)
+  return res.blob()
 }
 
 export function ActivarCredencialModal({
@@ -234,7 +246,82 @@ export function ActivarCredencialModal({
     }
   }
 
+  const startCameraNative = async (source: CameraSource) => {
+    setCameraError(null)
+    try {
+      // Pedir permisos explícitos. En Android dispara el popup del SO.
+      const perm = await Camera.checkPermissions()
+      const needsRequest =
+        (source === CameraSource.Camera && perm.camera !== 'granted') ||
+        (source === CameraSource.Photos && perm.photos !== 'granted')
+
+      if (needsRequest) {
+        const requested = await Camera.requestPermissions({
+          permissions: source === CameraSource.Camera ? ['camera'] : ['photos'],
+        })
+        const granted =
+          source === CameraSource.Camera
+            ? requested.camera === 'granted' || requested.camera === 'limited'
+            : requested.photos === 'granted' || requested.photos === 'limited'
+        if (!granted) {
+          setCameraError(
+            source === CameraSource.Camera
+              ? 'Necesitamos permiso para usar la cámara. Actívalo en Ajustes del sistema.'
+              : 'Necesitamos permiso para acceder a tus fotos. Actívalo en Ajustes del sistema.'
+          )
+          return
+        }
+      }
+
+      const photo = await Camera.getPhoto({
+        source,
+        resultType: CameraResultType.DataUrl,
+        quality: Math.round(JPEG_QUALITY * 100),
+        width: MAX_SIDE,
+        height: MAX_SIDE,
+        allowEditing: false,
+        correctOrientation: true,
+        // En cámara, frontal por defecto para selfie de credencial.
+        // En galería este campo se ignora.
+        direction: source === CameraSource.Camera ? CameraDirection.Front : undefined,
+        // Texto del prompt cuando Android pregunta cámara vs galería (no aplica
+        // porque forzamos source, pero queda por si Capacitor lo usa internamente).
+        promptLabelHeader: 'Foto de credencial',
+        promptLabelCancel: 'Cancelar',
+        promptLabelPhoto: 'Elegir de galería',
+        promptLabelPicture: 'Tomar foto',
+      })
+
+      if (!photo.dataUrl) {
+        setCameraError('No se pudo obtener la foto. Intenta de nuevo.')
+        return
+      }
+
+      const blob = await dataUrlToBlob(photo.dataUrl)
+      setPreviewBlob(blob)
+      setPreviewUrl(photo.dataUrl)
+      await validateCapturedBlob(blob)
+    } catch (err) {
+      // Capacitor lanza error si el usuario cancela. Distinguir cancelación de error real.
+      const msg = err instanceof Error ? err.message : ''
+      const canceled =
+        msg.toLowerCase().includes('cancel') ||
+        msg.toLowerCase().includes('user denied')
+      if (canceled) {
+        // Cancelación: no mostrar error, solo regresar al paso upload.
+        return
+      }
+      console.error('[camera native]', err)
+      setCameraError('No se pudo abrir la cámara. Sube una foto desde tu galería.')
+    }
+  }
+
   const startCamera = async () => {
+    if (isNativeApp()) {
+      await startCameraNative(CameraSource.Camera)
+      return
+    }
+    // === Flujo web/PWA: getUserMedia + óvalo guía (sin cambios) ===
     setCameraError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -566,7 +653,13 @@ export function ActivarCredencialModal({
 
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (isNativeApp()) {
+                  void startCameraNative(CameraSource.Photos)
+                } else {
+                  fileInputRef.current?.click()
+                }
+              }}
               style={jost}
               className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
             >

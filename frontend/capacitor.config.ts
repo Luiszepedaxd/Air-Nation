@@ -49,6 +49,15 @@ const config: CapacitorConfig = {
       backgroundColor: '#FFFFFF',
       overlaysWebView: false,
     },
+    Camera: {
+      // Strings que Android muestra en el popup de permisos del SO.
+      // iOS las tomará del Info.plist cuando se reactive el build iOS.
+      androidPermissionRationaleTitle: 'Acceso a la cámara',
+      androidPermissionRationaleMessage:
+        'AirNation necesita acceso a tu cámara para tomar tu foto de credencial.',
+      androidPermissionRationalePositiveButton: 'Permitir',
+      androidPermissionRationaleNegativeButton: 'Cancelar',
+    },
   },
 };
 
