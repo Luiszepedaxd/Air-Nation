@@ -546,9 +546,14 @@ export default function OnboardingPage() {
       e.target.value = "";
       if (!file) return;
       setAvatarError("");
+      console.log('[onboarding avatar input]', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      })
       const MIME_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
       if (!MIME_OK.has(file.type)) {
-        setAvatarError("Usa JPEG, PNG o WebP.");
+        setAvatarError(`DEBUG MIME: tipo "${file.type || 'vacío'}" no permitido. Nombre: ${file.name}`);
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
@@ -559,8 +564,11 @@ export default function OnboardingPage() {
       try {
         const url = await uploadFile(file);
         update({ avatar_url: url });
-      } catch {
-        setAvatarError("Error al subir la imagen.");
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
+        const fileInfo = `[${file.name || 'sin-nombre'}] type:${file.type || 'vacío'} size:${file.size}B`
+        console.error('[onboarding avatar upload]', errMsg, fileInfo, err)
+        setAvatarError(`DEBUG: ${errMsg} | ${fileInfo}`)
       } finally {
         setAvatarUploading(false);
       }
