@@ -3,22 +3,32 @@
 import { motion } from 'framer-motion'
 import type { HeroConfig } from '../lib/types'
 
-function SplitText({ text, delay = 0 }: { text: string; delay?: number }) {
+const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
+const ACCENT_YELLOW = '#F2C200'
+
+function WordSplit({ text, delay = 0 }: { text: string; delay?: number }) {
   const display = text.trim() || 'MONTAÑA DE NIEBLA'
-  const letters = display.split('')
+  const words = display.split(/\s+/).filter(Boolean)
+
   return (
-    <span aria-label={display} className="inline-block">
-      {letters.map((letter, i) => (
-        <motion.span
-          key={`${i}-${letter}`}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: delay + i * 0.04, ease: 'easeOut' }}
-          className="inline-block"
-          aria-hidden
-        >
-          {letter === ' ' ? '\u00A0' : letter}
-        </motion.span>
+    <span
+      aria-label={display}
+      className="inline-block max-w-full break-normal"
+      style={{ wordBreak: 'normal', overflowWrap: 'break-word' }}
+    >
+      {words.map((word, i) => (
+        <span key={`${i}-${word}`} className="inline-block whitespace-nowrap">
+          <motion.span
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: delay + i * 0.12, ease: 'easeOut' }}
+            className="inline-block"
+            aria-hidden
+          >
+            {word}
+          </motion.span>
+          {i < words.length - 1 ? <span aria-hidden>{'\u00A0'}</span> : null}
+        </span>
       ))}
     </span>
   )
@@ -83,11 +93,41 @@ export function HeroSection({ config }: { config: HeroConfig }) {
           {eyebrow}
         </motion.p>
 
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.28 }}
+          className="mb-6 mt-4 inline-flex items-center gap-3 md:mt-5"
+          style={{ fontFamily: MONO }}
+        >
+          <span className="h-px w-6" style={{ backgroundColor: ACCENT_YELLOW }} />
+          <span
+            className="text-[10px] tracking-[0.4em] md:text-xs"
+            style={{ color: ACCENT_YELLOW }}
+          >
+            SÉPTIMA EDICIÓN
+          </span>
+          <span className="h-px w-6" style={{ backgroundColor: ACCENT_YELLOW }} />
+        </motion.div>
+
+        <h1
+          className="mx-auto mt-2 w-full max-w-full px-4 font-black leading-[0.95] tracking-tight text-white"
+          style={{
+            fontFamily: 'Jost, sans-serif',
+            fontWeight: 900,
+            fontSize: 'clamp(2.5rem, 14vw, 9rem)',
+            wordBreak: 'normal',
+            overflowWrap: 'break-word',
+          }}
+        >
+          <WordSplit text={config.titulo ?? ''} delay={0.4} />
+        </h1>
+
         {simbolos.length > 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
+            transition={{ duration: 0.6, delay: 0.9 }}
             className="mt-6 flex flex-wrap items-center justify-center gap-3 md:gap-4"
           >
             {simbolos.map((sym, i) => (
@@ -95,7 +135,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
                 key={`${i}-${sym}`}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 + i * 0.12 }}
+                transition={{ duration: 0.5, delay: 1 + i * 0.12 }}
                 className="inline-flex h-10 w-10 items-center justify-center border border-white/20 bg-black/40 text-lg backdrop-blur-sm md:h-12 md:w-12 md:text-xl"
                 style={{ borderRadius: 2 }}
               >
@@ -104,13 +144,6 @@ export function HeroSection({ config }: { config: HeroConfig }) {
             ))}
           </motion.div>
         ) : null}
-
-        <h1
-          className="mt-4 text-4xl font-black leading-[0.9] tracking-tight text-white sm:text-5xl md:mt-6 md:text-8xl lg:text-[10rem]"
-          style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}
-        >
-          <SplitText text={config.titulo ?? ''} delay={0.4} />
-        </h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}

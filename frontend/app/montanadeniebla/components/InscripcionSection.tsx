@@ -237,8 +237,8 @@ export function InscripcionSection({
           ) : null}
           <a
             href={config.cta2_link?.trim() || '#facciones'}
-            className="inline-flex w-full max-w-sm items-center justify-center border border-[#111111] bg-transparent px-6 py-3.5 text-[0.7rem] uppercase tracking-[0.18em] text-[#111111] transition-colors hover:bg-[#111111] hover:text-white md:w-auto"
-            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700, borderRadius: 2 }}
+            className="inline-flex w-full max-w-sm items-center justify-center border-2 border-[#F2C200] bg-transparent px-6 py-3.5 text-[0.7rem] uppercase tracking-[0.18em] text-[#F2C200] transition-colors hover:bg-[#F2C200] hover:text-[#111111] md:w-auto"
+            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800, borderRadius: 2 }}
           >
             {config.cta2_texto?.trim() || 'VER FACCIONES'}
           </a>
