@@ -1,0 +1,68 @@
+import type { MontanaDeNieblaBlock } from '../lib/types'
+import { HeroSection } from './HeroSection'
+import { NarrativaSection } from './NarrativaSection'
+import { SedeSection } from './SedeSection'
+import { CountdownSection } from './CountdownSection'
+import { FaccionesSection } from './FaccionesSection'
+import { PuntosVictoriaSection } from './PuntosVictoriaSection'
+import { InscripcionSection } from './InscripcionSection'
+import { SponsorsSection } from './SponsorsSection'
+import { GaleriaSection } from './GaleriaSection'
+import { ManualSection } from './ManualSection'
+import { AirnationSection } from './AirnationSection'
+
+import type {
+  HeroConfig,
+  NarrativaConfig,
+  SedeConfig,
+  CountdownConfig,
+  FaccionesConfig,
+  PuntosVictoriaConfig,
+  InscripcionConfig,
+  SponsorsConfig,
+  GaleriaConfig,
+  ManualConfig,
+  AirnationConfig,
+} from '../lib/types'
+
+export function BlockRenderer({
+  block,
+  renderedAt,
+}: {
+  block: MontanaDeNieblaBlock
+  renderedAt: string
+}) {
+  switch (block.slug) {
+    case 'hero':
+      return <HeroSection config={(block.config as HeroConfig) ?? {}} />
+    case 'narrativa':
+      return <NarrativaSection config={(block.config as NarrativaConfig) ?? {}} />
+    case 'sede':
+      return <SedeSection config={(block.config as SedeConfig) ?? {}} />
+    case 'countdown':
+      return <CountdownSection config={(block.config as CountdownConfig) ?? {}} />
+    case 'facciones':
+      return <FaccionesSection config={(block.config as FaccionesConfig) ?? {}} />
+    case 'puntos_victoria':
+      return (
+        <PuntosVictoriaSection config={(block.config as PuntosVictoriaConfig) ?? {}} />
+      )
+    case 'inscripcion':
+      return (
+        <InscripcionSection
+          config={(block.config as InscripcionConfig) ?? {}}
+          renderedAt={renderedAt}
+        />
+      )
+    case 'sponsors':
+      return <SponsorsSection config={(block.config as SponsorsConfig) ?? {}} />
+    case 'galeria':
+      return <GaleriaSection config={(block.config as GaleriaConfig) ?? {}} />
+    case 'manual':
+      return <ManualSection config={(block.config as ManualConfig) ?? {}} />
+    case 'airnation':
+      return <AirnationSection config={(block.config as AirnationConfig) ?? {}} />
+    default:
+      return null
+  }
+}
