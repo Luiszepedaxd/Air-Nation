@@ -29,7 +29,7 @@ export function ManualSection({ config }: { config: ManualConfig }) {
   return (
     <section
       data-section="manual"
-      className="relative w-full overflow-hidden bg-[#EFE9D9] py-16 md:py-24"
+      className="relative w-full overflow-x-hidden bg-[#EFE9D9] py-16 md:py-24"
     >
       <div
         aria-hidden
@@ -102,51 +102,49 @@ export function ManualSection({ config }: { config: ManualConfig }) {
               </div>
             </motion.div>
 
-            <div className="relative z-10 -mx-2 overflow-x-auto px-2 md:-mx-4 md:px-4">
-              <div className="flex min-w-0 flex-nowrap gap-1 md:gap-1.5">
-                {tabs.map((tab, i) => {
-                  const isActive = i === activeIndex
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleTabClick(i)}
-                      className={`relative -mb-px flex shrink-0 flex-col items-start gap-0.5 border border-b-0 px-3 py-2 transition-all md:gap-1 md:px-5 md:py-2.5 ${
-                        isActive
-                          ? 'z-20 border-[#D4C9A8] bg-[#FAF5E8]'
-                          : 'border-[#D4C9A8]/50 bg-[#E5DCC4] hover:bg-[#EAE2CC]'
+            <div className="relative z-10 flex flex-wrap gap-1 px-2 md:gap-1.5 md:px-4">
+              {tabs.map((tab, i) => {
+                const isActive = i === activeIndex
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleTabClick(i)}
+                    className={`relative -mb-px flex max-w-full flex-col items-start gap-0.5 border border-b-0 px-2 py-1.5 text-left transition-all md:gap-1 md:px-5 md:py-2.5 ${
+                      isActive
+                        ? 'z-20 border-[#D4C9A8] bg-[#FAF5E8]'
+                        : 'border-[#D4C9A8]/50 bg-[#E5DCC4] hover:bg-[#EAE2CC]'
+                    }`}
+                    style={{
+                      borderTopLeftRadius: '4px',
+                      borderTopRightRadius: '4px',
+                    }}
+                  >
+                    <span
+                      className={`text-[7px] tracking-[0.18em] md:text-[9px] ${
+                        isActive ? 'text-[#CC4B37]' : 'text-[#8b7e57]'
                       }`}
                       style={{
-                        borderTopLeftRadius: '4px',
-                        borderTopRightRadius: '4px',
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                        fontWeight: 700,
                       }}
                     >
-                      <span
-                        className={`text-[8px] tracking-[0.18em] md:text-[9px] ${
-                          isActive ? 'text-[#CC4B37]' : 'text-[#8b7e57]'
-                        }`}
-                        style={{
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <span
-                        className={`text-[10px] uppercase tracking-[0.12em] md:text-[12px] ${
-                          isActive ? 'text-[#1a1a1a]' : 'text-[#8b7e57]'
-                        }`}
-                        style={{
-                          fontFamily: 'Jost, sans-serif',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {tab.nombre}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <span
+                      className={`break-words text-[9px] uppercase tracking-[0.08em] md:text-[12px] md:tracking-[0.12em] ${
+                        isActive ? 'text-[#1a1a1a]' : 'text-[#8b7e57]'
+                      }`}
+                      style={{
+                        fontFamily: 'Jost, sans-serif',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {tab.nombre}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
 
             <div className="relative bg-[#FAF5E8] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]">
