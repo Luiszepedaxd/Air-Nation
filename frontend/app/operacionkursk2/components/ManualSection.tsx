@@ -83,25 +83,6 @@ export function ManualSection({ config }: { config: ManualConfig }) {
             transition={{ duration: 0.8 }}
             className="relative"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, rotate: -18 }}
-              whileInView={{ opacity: 1, scale: 1, rotate: -12 }}
-              viewport={{ once: true }}
-              transition={{ type: 'spring', stiffness: 150, damping: 14, delay: 0.4 }}
-              className="absolute -top-4 right-2 z-20 md:-top-6 md:right-6"
-            >
-              <div
-                className="border-[3px] border-[#CC4B37] bg-[#FAF5E8]/95 px-3 py-1 md:border-4 md:px-4 md:py-1.5"
-                style={{
-                  fontFamily: 'Jost, sans-serif',
-                  fontWeight: 900,
-                  letterSpacing: '0.18em',
-                }}
-              >
-                <p className="text-[0.65rem] text-[#CC4B37] md:text-sm">CONFIDENCIAL</p>
-              </div>
-            </motion.div>
-
             <div className="relative z-10 flex flex-wrap gap-1 px-2 md:gap-1.5 md:px-4">
               {tabs.map((tab, i) => {
                 const isActive = i === activeIndex
@@ -160,16 +141,16 @@ export function ManualSection({ config }: { config: ManualConfig }) {
 
               <div
                 aria-hidden
-                className="pointer-events-none absolute bottom-0 left-[58px] top-0 w-px bg-[#CC4B37] md:left-[72px]"
+                className="pointer-events-none absolute bottom-0 left-[38px] top-0 w-px bg-[#CC4B37] md:left-[52px]"
               />
 
-              <div className="pointer-events-none absolute left-[14px] top-0 flex h-full flex-col justify-around md:left-[20px]">
-                <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-5 md:w-5" />
-                <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-5 md:w-5" />
-                <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-5 md:w-5" />
+              <div className="pointer-events-none absolute left-[10px] top-0 flex h-full flex-col justify-around md:left-[14px]">
+                <span className="block h-3 w-3 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-4 md:w-4" />
+                <span className="block h-3 w-3 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-4 md:w-4" />
+                <span className="block h-3 w-3 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-4 md:w-4" />
               </div>
 
-              <div className="relative flex items-start justify-between border-b border-[#D4C9A8]/50 px-6 py-4 pl-[80px] md:px-10 md:pl-[100px]">
+              <div className="relative flex items-start justify-between border-b border-[#D4C9A8]/50 px-5 py-4 pl-[52px] md:px-8 md:pl-[72px]">
                 <div>
                   <p
                     className="text-[10px] uppercase tracking-[0.15em] text-[#8b7e57] md:text-[12px]"
@@ -199,7 +180,7 @@ export function ManualSection({ config }: { config: ManualConfig }) {
                 </p>
               </div>
 
-              <div className="relative min-h-[300px] px-6 py-8 pl-[80px] md:px-10 md:py-10 md:pl-[100px]">
+              <div className="relative min-h-[300px] px-5 py-8 pl-[52px] md:px-8 md:py-10 md:pl-[72px]">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeIndex}
@@ -232,7 +213,7 @@ export function ManualSection({ config }: { config: ManualConfig }) {
                 </AnimatePresence>
               </div>
 
-              <div className="relative border-t border-[#D4C9A8]/50 px-6 py-3 pl-[80px] md:px-10 md:pl-[100px]">
+              <div className="relative border-t border-[#D4C9A8]/50 px-5 py-3 pl-[52px] md:px-8 md:pl-[72px]">
                 <p
                   className="text-[9px] uppercase tracking-[0.2em] text-[#8b7e57] md:text-[10px]"
                   style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
