@@ -1,16 +1,35 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
-import type { ManualConfig } from '../lib/types'
+import { motion, AnimatePresence } from 'framer-motion'
+import type { ManualConfig, ManualTab, ManualRegla } from '../lib/types'
 
 export function ManualSection({ config }: { config: ManualConfig }) {
-  const reglas = config.reglas ?? []
+  const tabs: ManualTab[] = (() => {
+    if (config.tabs && config.tabs.length > 0) return config.tabs
+    if (config.reglas && config.reglas.length > 0) {
+      return [
+        {
+          nombre: 'GENERAL',
+          reglas: config.reglas.map((r) => ({ tipo: 'texto' as const, contenido: r })),
+        },
+      ]
+    }
+    return []
+  })()
+
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [typedTabs, setTypedTabs] = useState<Set<number>>(new Set())
+
+  const handleTabClick = (index: number) => {
+    setTypedTabs((prev) => new Set(prev).add(activeIndex))
+    setActiveIndex(index)
+  }
 
   return (
     <section
       data-section="manual"
-      className="relative w-full overflow-hidden bg-[#EFE9D9] py-16 text-[#1a1a1a] md:py-24"
+      className="relative w-full overflow-hidden bg-[#EFE9D9] py-16 md:py-24"
     >
       <div
         aria-hidden
@@ -33,7 +52,7 @@ export function ManualSection({ config }: { config: ManualConfig }) {
             className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37] md:text-xs"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
           >
-            {config.eyebrow}
+            {config.eyebrow || 'MANUAL DE CAMPO'}
           </p>
           <h2
             className="mt-3 text-3xl leading-none text-[#1a1a1a] sm:text-4xl md:text-5xl lg:text-6xl"
@@ -43,120 +62,236 @@ export function ManualSection({ config }: { config: ManualConfig }) {
               letterSpacing: '-0.02em',
             }}
           >
-            {config.titulo}
+            {config.titulo || 'REGLAS BÁSICAS'}
           </h2>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="relative"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotate: -18 }}
-            whileInView={{ opacity: 1, scale: 1, rotate: -12 }}
-            viewport={{ once: true }}
-            transition={{ type: 'spring', stiffness: 150, damping: 14, delay: 0.4 }}
-            className="absolute -top-4 right-2 z-20 md:-top-6 md:right-6"
-          >
-            <div
-              className="border-[3px] border-[#CC4B37] bg-[#FAF5E8]/95 px-3 py-1 shadow-sm md:border-4 md:px-4 md:py-1.5"
-              style={{
-                fontFamily: 'Jost, sans-serif',
-                fontWeight: 900,
-                letterSpacing: '0.18em',
-              }}
+        {tabs.length === 0 ? (
+          <div className="border border-[#D4C9A8] bg-[#FAF5E8] py-16 text-center">
+            <p
+              className="text-sm uppercase tracking-[0.2em] text-[#8b7e57]"
+              style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
             >
-              <p className="text-[0.65rem] text-[#CC4B37] md:text-sm">CONFIDENCIAL</p>
+              Reglas pendientes de publicar
+            </p>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="relative"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, rotate: -18 }}
+              whileInView={{ opacity: 1, scale: 1, rotate: -12 }}
+              viewport={{ once: true }}
+              transition={{ type: 'spring', stiffness: 150, damping: 14, delay: 0.4 }}
+              className="absolute -top-4 right-2 z-20 md:-top-6 md:right-6"
+            >
+              <div
+                className="border-[3px] border-[#CC4B37] bg-[#FAF5E8]/95 px-3 py-1 md:border-4 md:px-4 md:py-1.5"
+                style={{
+                  fontFamily: 'Jost, sans-serif',
+                  fontWeight: 900,
+                  letterSpacing: '0.18em',
+                }}
+              >
+                <p className="text-[0.65rem] text-[#CC4B37] md:text-sm">CONFIDENCIAL</p>
+              </div>
+            </motion.div>
+
+            <div className="relative z-10 -mx-2 overflow-x-auto px-2 md:-mx-4 md:px-4">
+              <div className="flex min-w-0 flex-nowrap gap-1 md:gap-1.5">
+                {tabs.map((tab, i) => {
+                  const isActive = i === activeIndex
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleTabClick(i)}
+                      className={`relative -mb-px flex shrink-0 flex-col items-start gap-0.5 border border-b-0 px-3 py-2 transition-all md:gap-1 md:px-5 md:py-2.5 ${
+                        isActive
+                          ? 'z-20 border-[#D4C9A8] bg-[#FAF5E8]'
+                          : 'border-[#D4C9A8]/50 bg-[#E5DCC4] hover:bg-[#EAE2CC]'
+                      }`}
+                      style={{
+                        borderTopLeftRadius: '4px',
+                        borderTopRightRadius: '4px',
+                      }}
+                    >
+                      <span
+                        className={`text-[8px] tracking-[0.18em] md:text-[9px] ${
+                          isActive ? 'text-[#CC4B37]' : 'text-[#8b7e57]'
+                        }`}
+                        style={{
+                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <span
+                        className={`text-[10px] uppercase tracking-[0.12em] md:text-[12px] ${
+                          isActive ? 'text-[#1a1a1a]' : 'text-[#8b7e57]'
+                        }`}
+                        style={{
+                          fontFamily: 'Jost, sans-serif',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {tab.nombre}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="relative bg-[#FAF5E8] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage:
+                    'repeating-linear-gradient(to bottom, transparent 0px, transparent 39px, rgba(212,201,168,0.5) 39px, rgba(212,201,168,0.5) 40px)',
+                  backgroundPosition: '0 24px',
+                }}
+              />
+
+              <div
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-[58px] top-0 w-px bg-[#CC4B37] md:left-[72px]"
+              />
+
+              <div className="pointer-events-none absolute left-[14px] top-0 flex h-full flex-col justify-around md:left-[20px]">
+                <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-5 md:w-5" />
+                <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-5 md:w-5" />
+                <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] md:h-5 md:w-5" />
+              </div>
+
+              <div className="relative flex items-start justify-between border-b border-[#D4C9A8]/50 px-6 py-4 pl-[80px] md:px-10 md:pl-[100px]">
+                <div>
+                  <p
+                    className="text-[10px] uppercase tracking-[0.15em] text-[#8b7e57] md:text-[12px]"
+                    style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                  >
+                    SECCIÓN {String(activeIndex + 1).padStart(2, '0')} /{' '}
+                    {String(tabs.length).padStart(2, '0')}
+                  </p>
+                  {tabs[activeIndex]?.descripcion ? (
+                    <p
+                      className="mt-1 text-[11px] text-[#8b7e57] md:text-[13px]"
+                      style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                    >
+                      {tabs[activeIndex].descripcion}
+                    </p>
+                  ) : null}
+                </div>
+                <p
+                  className="text-right text-[9px] uppercase tracking-[0.15em] text-[#8b7e57] md:text-[10px]"
+                  style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                >
+                  DOC. KURSK-II
+                  <br />
+                  CLASIF. CONFIDENCIAL
+                  <br />
+                  ED. 2026
+                </p>
+              </div>
+
+              <div className="relative min-h-[300px] px-6 py-8 pl-[80px] md:px-10 md:py-10 md:pl-[100px]">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeIndex}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                  >
+                    <h3
+                      className="mb-6 text-2xl uppercase text-[#1a1a1a] md:text-3xl"
+                      style={{
+                        fontFamily: 'Jost, sans-serif',
+                        fontWeight: 900,
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      {tabs[activeIndex]?.nombre}
+                    </h3>
+                    <div className="space-y-3 md:space-y-4">
+                      {(tabs[activeIndex]?.reglas ?? []).map((regla, i) => (
+                        <ReglaRender
+                          key={`${activeIndex}-${i}`}
+                          regla={regla}
+                          numero={String(i + 1).padStart(2, '0')}
+                          shouldType={!typedTabs.has(activeIndex)}
+                        />
+                      ))}
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <div className="relative border-t border-[#D4C9A8]/50 px-6 py-3 pl-[80px] md:px-10 md:pl-[100px]">
+                <p
+                  className="text-[9px] uppercase tracking-[0.2em] text-[#8b7e57] md:text-[10px]"
+                  style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+                >
+                  Toloks Club Airsoft · XIII Aniversario · pág{' '}
+                  {String(activeIndex + 1).padStart(2, '0')} /{' '}
+                  {String(tabs.length).padStart(2, '0')}
+                </p>
+              </div>
             </div>
           </motion.div>
-
-          <div className="relative bg-[#FAF5E8] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)]">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                backgroundImage:
-                  'repeating-linear-gradient(to bottom, transparent 0px, transparent 39px, rgba(212,201,168,0.4) 39px, rgba(212,201,168,0.4) 40px)',
-                backgroundPosition: '0 24px',
-              }}
-            />
-
-            <div
-              aria-hidden
-              className="pointer-events-none absolute bottom-0 left-[58px] top-0 w-[2px] bg-[#CC4B37] md:left-[72px]"
-            />
-
-            <div className="pointer-events-none absolute left-[14px] top-0 flex h-full flex-col justify-around py-10 md:left-[20px] md:py-14">
-              <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] md:h-5 md:w-5" />
-              <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] md:h-5 md:w-5" />
-              <span className="block h-4 w-4 rounded-full border border-[#D4C9A8] bg-[#EFE9D9] shadow-[inset_0_1px_2px_rgba(0,0,0,0.08)] md:h-5 md:w-5" />
-            </div>
-
-            <div className="relative flex items-start justify-end border-b border-[#D4C9A8]/50 px-6 py-4 pl-[80px] md:px-10 md:pl-[100px]">
-              <p
-                className="text-right text-[9px] uppercase tracking-[0.15em] text-[#8b7e57] md:text-[10px]"
-                style={{
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                }}
-              >
-                DOC. KURSK-II
-                <br />
-                CLASIF. CONFIDENCIAL
-                <br />
-                ED. 2026
-              </p>
-            </div>
-
-            <div className="relative px-6 py-8 pl-[80px] md:px-10 md:py-10 md:pl-[100px]">
-              {reglas.length === 0 ? (
-                <p
-                  className="text-sm uppercase tracking-[0.2em] text-[#8b7e57] md:text-base"
-                  style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                  }}
-                >
-                  Reglas pendientes de publicar
-                </p>
-              ) : (
-                <div className="space-y-0 md:space-y-0">
-                  {reglas.map((regla, i) => (
-                    <ReglaRow
-                      key={`${i}-${regla.slice(0, 24)}`}
-                      numero={String(i + 1).padStart(2, '0')}
-                      texto={regla}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="relative border-t border-[#D4C9A8]/50 px-6 py-3 pl-[80px] md:px-10 md:pl-[100px]">
-              <p
-                className="text-[9px] uppercase tracking-[0.2em] text-[#8b7e57] md:text-[10px]"
-                style={{
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                }}
-              >
-                Toloks Club Airsoft · XIII Aniversario · pág 01 / 01
-              </p>
-            </div>
-          </div>
-        </motion.div>
+        )}
       </div>
     </section>
   )
 }
 
-function ReglaRow({ numero, texto }: { numero: string; texto: string }) {
+function ReglaRender({
+  regla,
+  numero,
+  shouldType,
+}: {
+  regla: ManualRegla
+  numero: string
+  shouldType: boolean
+}) {
+  if (regla.tipo === 'tabla') {
+    return <TablaRender contenido={regla.contenido} />
+  }
+  return <ReglaTexto numero={numero} texto={regla.contenido} shouldType={shouldType} />
+}
+
+function ReglaTexto({
+  numero,
+  texto,
+  shouldType,
+}: {
+  numero: string
+  texto: string
+  shouldType: boolean
+}) {
   const ref = useRef<HTMLDivElement>(null)
-  const [typed, setTyped] = useState('')
-  const [started, setStarted] = useState(false)
+  const [typed, setTyped] = useState(shouldType ? '' : texto)
+  const [started, setStarted] = useState(!shouldType)
 
   useEffect(() => {
-    if (!ref.current) return
+    if (!shouldType) {
+      setTyped(texto)
+      setStarted(true)
+      return
+    }
+    setTyped('')
+    setStarted(false)
+  }, [texto, shouldType])
+
+  useEffect(() => {
+    if (!shouldType || !ref.current) return
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -169,32 +304,27 @@ function ReglaRow({ numero, texto }: { numero: string; texto: string }) {
     )
     observer.observe(ref.current)
     return () => observer.disconnect()
-  }, [started])
+  }, [started, shouldType])
 
   useEffect(() => {
-    if (!started) return
-    if (!texto.length) {
-      setTyped('')
-      return
-    }
+    if (!shouldType || !started || !texto.length) return
     let i = 0
     const interval = window.setInterval(() => {
       i += 1
       setTyped(texto.slice(0, i))
-      if (i >= texto.length) window.clearInterval(interval)
-    }, 18)
-    return () => window.clearInterval(interval)
-  }, [started, texto])
-
-  const typing = started && typed.length < texto.length
+      if (i >= texto.length) clearInterval(interval)
+    }, 12)
+    return () => clearInterval(interval)
+  }, [started, texto, shouldType])
 
   return (
     <div
       ref={ref}
-      className="relative flex min-h-[40px] items-baseline gap-3 py-0.5 md:gap-4"
+      className="flex items-baseline gap-3 md:gap-4"
+      style={{ minHeight: '28px' }}
     >
       <span
-        className="shrink-0 text-base leading-[40px] text-[#CC4B37] md:text-lg"
+        className="shrink-0 text-base text-[#CC4B37] md:text-lg"
         style={{
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fontWeight: 700,
@@ -203,15 +333,13 @@ function ReglaRow({ numero, texto }: { numero: string; texto: string }) {
         {numero}
       </span>
       <span
-        className="shrink-0 select-none leading-[40px] text-[#D4C9A8]"
-        style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-        }}
+        className="shrink-0 select-none text-[#D4C9A8]"
+        style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
       >
         ····
       </span>
       <p
-        className="min-w-0 flex-1 text-sm leading-[40px] text-[#1a1a1a] md:text-base"
+        className="text-sm leading-relaxed text-[#1a1a1a] md:text-base"
         style={{
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           fontWeight: 500,
@@ -219,10 +347,64 @@ function ReglaRow({ numero, texto }: { numero: string; texto: string }) {
         }}
       >
         {typed}
-        {typing ? (
+        {shouldType && started && typed.length < texto.length ? (
           <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-[#CC4B37] align-middle" />
         ) : null}
       </p>
+    </div>
+  )
+}
+
+function TablaRender({ contenido }: { contenido: string }) {
+  const filas = contenido
+    .trim()
+    .split('\n')
+    .map((linea) => linea.split('|').map((c) => c.trim()))
+    .filter((f) => f.length > 0 && f.some((c) => c.length > 0))
+
+  if (filas.length === 0) return null
+
+  const header = filas[0]
+  const body = filas.slice(1)
+
+  return (
+    <div className="my-2 overflow-x-auto border border-[#D4C9A8] bg-[#FAF5E8]">
+      <table className="w-full text-[11px] md:text-[13px]">
+        <thead>
+          <tr className="border-b border-[#D4C9A8] bg-[#EFE9D9]">
+            {header.map((celda, i) => (
+              <th
+                key={i}
+                className="px-3 py-2 text-left uppercase tracking-[0.08em] text-[#CC4B37] md:px-4"
+                style={{
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  fontWeight: 700,
+                }}
+              >
+                {celda}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {body.map((fila, i) => (
+            <tr key={i} className={i % 2 === 0 ? 'bg-transparent' : 'bg-[#F4EDD8]/40'}>
+              {fila.map((celda, j) => (
+                <td
+                  key={j}
+                  className="border-t border-[#D4C9A8]/40 px-3 py-2 text-[#1a1a1a] md:px-4"
+                  style={{
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    fontWeight: 500,
+                  }}
+                >
+                  {celda}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

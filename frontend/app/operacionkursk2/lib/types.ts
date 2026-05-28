@@ -146,10 +146,23 @@ export type VideosConfig = {
   videos: VideoItem[]
 }
 
+export type ManualRegla = {
+  tipo: 'texto' | 'tabla'
+  contenido: string
+}
+
+export type ManualTab = {
+  nombre: string
+  descripcion?: string
+  reglas: ManualRegla[]
+}
+
 export type ManualConfig = {
-  eyebrow: string
-  titulo: string
-  reglas: string[]
+  eyebrow?: string
+  titulo?: string
+  tabs?: ManualTab[]
+  /** Legacy: si solo hay reglas sin tabs, el componente migra a tab "GENERAL" */
+  reglas?: string[]
 }
 
 export type AirnationConfig = {

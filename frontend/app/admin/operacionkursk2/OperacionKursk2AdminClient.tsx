@@ -25,7 +25,12 @@ import { MediaUploadInput } from './components/MediaUploadInput'
 import { ImageUploadInput } from './components/ImageUploadInput'
 import { VideoUploadInput } from './components/VideoUploadInput'
 import type { OperacionKursk2Slug } from '@/app/operacionkursk2/lib/types'
-import type { GaleriaImagen, VideoItem } from '@/app/operacionkursk2/lib/types'
+import type {
+  GaleriaImagen,
+  ManualConfig,
+  ManualTab,
+  VideoItem,
+} from '@/app/operacionkursk2/lib/types'
 import { OK2_SLUGS } from '@/app/operacionkursk2/lib/types'
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -59,7 +64,7 @@ const SECTIONS: SectionDef[] = [
   { slug: 'sponsors', label: 'Sponsors', descripcion: 'Logos en marquesina.' },
   { slug: 'galeria', label: 'Galería', descripcion: 'Masonry + lightbox.' },
   { slug: 'videos', label: 'Videos', descripcion: 'Galería de videos MP4 del evento.' },
-  { slug: 'manual', label: 'Manual de campo', descripcion: 'Lista de reglas.' },
+  { slug: 'manual', label: 'Manual de campo', descripcion: 'Expediente con tabs y reglas.' },
   { slug: 'airnation', label: 'AirNation', descripcion: 'Presencia plataforma.' },
 ]
 
@@ -328,6 +333,24 @@ function validateConfig(slug: OperacionKursk2Slug, cfg: Record<string, unknown>)
       return 'WhatsApp Ucrania debe ser URL http(s) o vacío.'
     }
   }
+  if (slug === 'manual') {
+    const tabs = cfg.tabs
+    const legacy = cfg.reglas
+    const hasLegacy = Array.isArray(legacy) && legacy.length > 0
+    if (!Array.isArray(tabs) || tabs.length === 0) {
+      if (!hasLegacy) return 'Debe haber al menos 1 tab.'
+      return null
+    }
+    for (const tab of tabs) {
+      if (!tab || typeof tab !== 'object' || Array.isArray(tab)) {
+        return 'Cada tab debe tener nombre.'
+      }
+      const nombre = (tab as { nombre?: string }).nombre
+      if (typeof nombre !== 'string' || !nombre.trim()) {
+        return 'Cada tab debe tener nombre.'
+      }
+    }
+  }
   return null
 }
 
@@ -501,6 +524,25 @@ export function OperacionKursk2AdminClient({
       }
       delete h.imagen_fondo_url
       out = h
+    }
+
+    if (slug === 'manual') {
+      const m = { ...(out as Record<string, unknown>) }
+      const tabs = m.tabs
+      const legacyReglas = Array.isArray(m.reglas) ? m.reglas : []
+      if ((!Array.isArray(tabs) || tabs.length === 0) && legacyReglas.length > 0) {
+        m.tabs = [
+          {
+            nombre: 'GENERAL',
+            reglas: legacyReglas.map((r) => ({
+              tipo: 'texto',
+              contenido: typeof r === 'string' ? r : String(r),
+            })),
+          },
+        ]
+      }
+      delete m.reglas
+      out = m
     }
 
     const errV = validateConfig(slug, out)
@@ -1283,33 +1325,291 @@ export function OperacionKursk2AdminClient({
         )
       }
       case 'manual': {
-        const reglas = Array.isArray(cfg(slug).reglas)
-          ? (cfg(slug).reglas as unknown[]).map((r) => (typeof r === 'string' ? r : ''))
-          : []
-        const setReglas = (next: string[]) => {
-          setField(slug, 'reglas', next)
+        const cfgManual = cfg(slug) as Partial<ManualConfig>
+        const tabs: ManualTab[] = Array.isArray(cfgManual.tabs) ? cfgManual.tabs : []
+        const legacyReglas = Array.isArray(cfgManual.reglas) ? cfgManual.reglas : []
+        const tabsToEdit: ManualTab[] =
+          tabs.length > 0
+            ? tabs
+            : legacyReglas.length > 0
+              ? [
+                  {
+                    nombre: 'GENERAL',
+                    reglas: legacyReglas.map((r) => ({
+                      tipo: 'texto' as const,
+                      contenido: String(r),
+                    })),
+                  },
+                ]
+              : []
+
+        const setTabs = (next: ManualTab[]) => {
+          setConfigs((prev) => ({
+            ...prev,
+            [slug]: { ...prev[slug], tabs: next, reglas: undefined },
+          }))
         }
+
         return (
           <div className="flex flex-col gap-4">
-            <Field label="Eyebrow"><input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
-            <Field label="Título"><input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
-            <button type="button" className="self-start border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setReglas([...reglas, ''])}>+ Regla</button>
-            {reglas.map((r, i) => (
-              <div key={i} className="flex flex-col gap-2 border border-[#EEEEEE] bg-white p-2">
-                <div className="flex gap-2">
-                  <button type="button" disabled={i === 0} className="text-[10px]" style={jost} onClick={() => {
-                    const n = [...reglas]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setReglas(n)
-                  }}>↑</button>
-                  <button type="button" disabled={i === reglas.length - 1} className="text-[10px]" style={jost} onClick={() => {
-                    const n = [...reglas]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; setReglas(n)
-                  }}>↓</button>
-                  <button type="button" className="text-[10px] text-[#CC4B37]" style={jost} onClick={() => setReglas(reglas.filter((_, j) => j !== i))}>Eliminar</button>
-                </div>
-                <textarea rows={3} className={inputCls} value={r} onChange={(e) => {
-                  const n = [...reglas]; n[i] = e.target.value; setReglas(n)
-                }} />
-              </div>
-            ))}
+            <Field label="Eyebrow">
+              <input
+                className={inputCls}
+                value={str(slug, 'eyebrow')}
+                onChange={(e) => setField(slug, 'eyebrow', e.target.value)}
+              />
+            </Field>
+            <Field label="Título">
+              <input
+                className={inputCls}
+                value={str(slug, 'titulo')}
+                onChange={(e) => setField(slug, 'titulo', e.target.value)}
+              />
+            </Field>
+
+            <div className="flex items-center justify-between">
+              <p className="text-[11px]" style={jost}>
+                SECCIONES / TABS
+              </p>
+              <button
+                type="button"
+                onClick={() => setTabs([...tabsToEdit, { nombre: '', reglas: [] }])}
+                className="border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]"
+                style={jost}
+              >
+                + Agregar tab
+              </button>
+            </div>
+
+            {tabsToEdit.map((tab, ti) => {
+              const isLast = ti === tabsToEdit.length - 1
+              const openByDefault = isLast && !tab.nombre && tab.reglas.length === 0
+
+              return (
+                <details
+                  key={ti}
+                  open={openByDefault}
+                  className="border border-[#EEEEEE] bg-[#FAFAFA]"
+                >
+                  <summary className="flex cursor-pointer items-center gap-3 p-3 hover:bg-[#F4F4F4]">
+                    <div className="flex flex-1 flex-col">
+                      <span className="text-[12px] text-[#111111]" style={jost}>
+                        {tab.nombre || `Tab ${ti + 1}`}
+                      </span>
+                      <span
+                        className="text-[10px] uppercase tracking-[0.12em] text-[#999]"
+                        style={jost}
+                      >
+                        {tab.reglas.length} {tab.reglas.length === 1 ? 'regla' : 'reglas'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-[#999]" style={jost}>
+                      {ti + 1} / {tabsToEdit.length}
+                    </span>
+                  </summary>
+
+                  <div className="border-t border-[#EEEEEE] p-3">
+                    <div className="mb-3 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={ti === 0}
+                        onClick={() => {
+                          const n = [...tabsToEdit]
+                          ;[n[ti - 1], n[ti]] = [n[ti], n[ti - 1]]
+                          setTabs(n)
+                        }}
+                        className="text-[10px] disabled:opacity-30"
+                        style={jost}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        disabled={ti === tabsToEdit.length - 1}
+                        onClick={() => {
+                          const n = [...tabsToEdit]
+                          ;[n[ti + 1], n[ti]] = [n[ti], n[ti + 1]]
+                          setTabs(n)
+                        }}
+                        className="text-[10px] disabled:opacity-30"
+                        style={jost}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTabs(tabsToEdit.filter((_, j) => j !== ti))}
+                        className="text-[10px] text-[#CC4B37]"
+                        style={jost}
+                      >
+                        Eliminar tab
+                      </button>
+                    </div>
+
+                    <Field label="Nombre">
+                      <input
+                        className={inputCls}
+                        placeholder="SEGURIDAD, ARMAMENTO, ESCUDOS..."
+                        value={tab.nombre}
+                        onChange={(e) => {
+                          const n = [...tabsToEdit]
+                          n[ti] = { ...n[ti], nombre: e.target.value }
+                          setTabs(n)
+                        }}
+                      />
+                    </Field>
+
+                    <Field label="Descripción (opcional)">
+                      <input
+                        className={inputCls}
+                        placeholder="Subtítulo dentro del tab"
+                        value={tab.descripcion ?? ''}
+                        onChange={(e) => {
+                          const n = [...tabsToEdit]
+                          n[ti] = { ...n[ti], descripcion: e.target.value }
+                          setTabs(n)
+                        }}
+                      />
+                    </Field>
+
+                    <div className="mt-3 flex items-center justify-between">
+                      <p
+                        className="text-[10px] uppercase tracking-[0.12em] text-[#666]"
+                        style={jost}
+                      >
+                        REGLAS
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="border border-[#DDDDDD] bg-white px-2 py-1 text-[10px]"
+                          style={jost}
+                          onClick={() => {
+                            const n = [...tabsToEdit]
+                            n[ti].reglas = [...n[ti].reglas, { tipo: 'texto', contenido: '' }]
+                            setTabs(n)
+                          }}
+                        >
+                          + Texto
+                        </button>
+                        <button
+                          type="button"
+                          className="border border-[#DDDDDD] bg-white px-2 py-1 text-[10px]"
+                          style={jost}
+                          onClick={() => {
+                            const n = [...tabsToEdit]
+                            n[ti].reglas = [
+                              ...n[ti].reglas,
+                              {
+                                tipo: 'tabla',
+                                contenido:
+                                  'Tipo | FPS | Julios | Distancia\nAsalto | 400 | 1.5 | 0m',
+                              },
+                            ]
+                            setTabs(n)
+                          }}
+                        >
+                          + Tabla
+                        </button>
+                      </div>
+                    </div>
+
+                    {tab.reglas.map((regla, ri) => (
+                      <div
+                        key={ri}
+                        className="mt-2 flex flex-col gap-2 border border-[#EEEEEE] bg-white p-2"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={ri === 0}
+                            onClick={() => {
+                              const n = [...tabsToEdit]
+                              const rr = [...n[ti].reglas]
+                              ;[rr[ri - 1], rr[ri]] = [rr[ri], rr[ri - 1]]
+                              n[ti].reglas = rr
+                              setTabs(n)
+                            }}
+                            className="text-[10px] disabled:opacity-30"
+                            style={jost}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={ri === tab.reglas.length - 1}
+                            onClick={() => {
+                              const n = [...tabsToEdit]
+                              const rr = [...n[ti].reglas]
+                              ;[rr[ri + 1], rr[ri]] = [rr[ri], rr[ri + 1]]
+                              n[ti].reglas = rr
+                              setTabs(n)
+                            }}
+                            className="text-[10px] disabled:opacity-30"
+                            style={jost}
+                          >
+                            ↓
+                          </button>
+                          <select
+                            className="border border-[#DDDDDD] bg-white px-2 py-1 text-[10px]"
+                            style={jost}
+                            value={regla.tipo}
+                            onChange={(e) => {
+                              const n = [...tabsToEdit]
+                              const tipo = e.target.value === 'tabla' ? 'tabla' : 'texto'
+                              n[ti].reglas[ri] = {
+                                tipo,
+                                contenido:
+                                  tipo === 'tabla' && regla.tipo !== 'tabla'
+                                    ? 'Columna1 | Columna2\nFila1 | Valor1'
+                                    : regla.contenido,
+                              }
+                              setTabs(n)
+                            }}
+                          >
+                            <option value="texto">Texto</option>
+                            <option value="tabla">Tabla</option>
+                          </select>
+                          <span
+                            className="text-[10px] uppercase tracking-[0.12em] text-[#999]"
+                            style={jost}
+                          >
+                            {regla.tipo === 'tabla' ? 'TABLA' : `REGLA ${ri + 1}`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const n = [...tabsToEdit]
+                              n[ti].reglas = n[ti].reglas.filter((_, j) => j !== ri)
+                              setTabs(n)
+                            }}
+                            className="ml-auto text-[10px] text-[#CC4B37]"
+                            style={jost}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                        <textarea
+                          className={inputCls}
+                          rows={regla.tipo === 'tabla' ? 5 : 2}
+                          placeholder={
+                            regla.tipo === 'tabla'
+                              ? 'Encabezado1 | Encabezado2\nFila1col1 | Fila1col2'
+                              : 'Escribe la regla...'
+                          }
+                          value={regla.contenido}
+                          onChange={(e) => {
+                            const n = [...tabsToEdit]
+                            n[ti].reglas[ri] = { ...n[ti].reglas[ri], contenido: e.target.value }
+                            setTabs(n)
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )
+            })}
           </div>
         )
       }
