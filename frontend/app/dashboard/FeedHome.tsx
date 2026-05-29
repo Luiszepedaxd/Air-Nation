@@ -1871,6 +1871,10 @@ function FeedTab({
   isAdmin: boolean
 }) {
   const [items, setItems] = useState<FeedItem[]>([])
+  const itemsRef = useRef<FeedItem[]>([])
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
   const [loading, setLoading] = useState(true)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -1880,14 +1884,17 @@ function FeedTab({
   const loadingMoreRef = useRef(false)
 
   const load = useCallback(async () => {
+      const isSilent = itemsRef.current.length > 0
       clearFeedSessionCache()
-      setItems([])
+      if (!isSilent) {
+        setItems([])
+        setLoading(true)
+      }
       setHasMore(true)
       setCursorPlayerPosts(null)
       setCursorTeamPosts(null)
       loadingMoreRef.current = false
       setLoadingMore(false)
-      setLoading(true)
       let blockedIds: Set<string> = new Set()
       if (currentUserId) {
         try {
@@ -2433,6 +2440,12 @@ function FeedTab({
           container.scrollTop = top
         }
       })
+      // Stale-while-revalidate: muestra cache inmediato Y dispara fetch fresco
+      // en background. itemsRef.current.length > 0 hará que load() sea silent.
+      itemsRef.current = cached.items
+      setTimeout(() => {
+        void load()
+      }, 0)
       return
     }
     void load()
