@@ -718,6 +718,12 @@ export function PostBox({
       }
       setPendingVideo(null)
       setExpanded(false)
+
+      // Notificar al FeedTab que recargue el feed inmediatamente
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('airnation:post-published'))
+      }
+
       onPublished()
     } catch (e) {
       console.error('[PostBox] handlePublish', e)
@@ -2471,6 +2477,14 @@ function FeedTab({
   }, [load])
 
   useEffect(() => {
+    const onPublished = () => {
+      void load()
+    }
+    window.addEventListener('airnation:post-published', onPublished)
+    return () => window.removeEventListener('airnation:post-published', onPublished)
+  }, [load])
+
+  useEffect(() => {
     if (loading) return
     const el = sentinelRef.current
     if (!el) return
@@ -3188,8 +3202,6 @@ export function FeedHome({
     router.replace(pathname + (query ? `?${query}` : ''), { scroll: false })
   }
 
-  const [feedKey, setFeedKey] = useState(0)
-
   return (
     <div>
       <div
@@ -3229,9 +3241,7 @@ export function FeedHome({
           userTeams={userTeams}
           userFields={userFields}
           onPublished={() => {
-            setTimeout(() => {
-              setFeedKey((prev) => prev + 1)
-            }, 1500)
+            /* El feed se recarga vía el evento 'airnation:post-published' */
           }}
         />
       )}
@@ -3239,7 +3249,6 @@ export function FeedHome({
       <div className="mt-4">
         {activeTab === 'feed' && (
           <FeedTab
-            key={feedKey}
             currentUserId={userId}
             currentUserAlias={userAlias}
             currentUserAvatar={userAvatar}
