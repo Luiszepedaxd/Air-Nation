@@ -554,7 +554,7 @@ export function CommentsSection({
       .from('post_comments')
       .select(`
         id, user_id, content, created_at, parent_id, reply_to_user_id,
-        users ( alias, nombre, avatar_url )
+        users!user_id ( alias, nombre, avatar_url )
       `, { count: 'exact' })
       .eq('post_type', postType)
       .eq('post_id', postId)
@@ -573,7 +573,7 @@ export function CommentsSection({
         .from('post_comments')
         .select(`
           id, user_id, content, created_at, parent_id, reply_to_user_id,
-          users ( alias, nombre, avatar_url )
+          users!user_id ( alias, nombre, avatar_url )
         `)
         .in('parent_id', rootIds)
         .order('created_at', { ascending: true })
@@ -695,7 +695,7 @@ export function CommentsSection({
         content: text.trim(),
         parent_id: null,
       })
-      .select(`id, user_id, content, created_at, parent_id, users(alias, nombre, avatar_url)`)
+      .select(`id, user_id, content, created_at, parent_id, users!user_id(alias, nombre, avatar_url)`)
       .single()
 
     if (!error && data) {
@@ -766,7 +766,7 @@ export function CommentsSection({
         parent_id: replyTarget.rootCommentId,
         reply_to_user_id: replyTarget.replyToUserId,
       })
-      .select(`id, user_id, content, created_at, parent_id, reply_to_user_id, users(alias, nombre, avatar_url)`)
+      .select(`id, user_id, content, created_at, parent_id, reply_to_user_id, users!user_id(alias, nombre, avatar_url)`)
       .single()
 
     if (!error && data) {
