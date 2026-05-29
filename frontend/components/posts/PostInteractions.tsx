@@ -38,11 +38,19 @@ type PostComment = {
   content: string
   created_at: string
   parent_id: string | null
+  reply_to_user_id: string | null
+  reply_to_user_alias: string | null
   user: { alias: string | null; nombre: string | null; avatar_url: string | null }
   likeCount: number
   likedByMe: boolean
   replies: PostComment[]
   repliesShown: number
+}
+
+type ReplyTarget = {
+  rootCommentId: string
+  replyToUserId: string
+  replyToUserAlias: string
 }
 
 export function HeartIcon({ filled, size = 18 }: { filled: boolean; size?: number }) {
@@ -533,7 +541,7 @@ export function CommentsSection({
   const [loadingMore, setLoadingMore] = useState(false)
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
-  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null)
   const [replyText, setReplyText] = useState('')
   const [replyPosting, setReplyPosting] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -545,7 +553,7 @@ export function CommentsSection({
     const { data: rootsData, count } = await supabase
       .from('post_comments')
       .select(`
-        id, user_id, content, created_at, parent_id,
+        id, user_id, content, created_at, parent_id, reply_to_user_id,
         users ( alias, nombre, avatar_url )
       `, { count: 'exact' })
       .eq('post_type', postType)
@@ -564,12 +572,34 @@ export function CommentsSection({
       const { data: rd } = await supabase
         .from('post_comments')
         .select(`
-          id, user_id, content, created_at, parent_id,
+          id, user_id, content, created_at, parent_id, reply_to_user_id,
           users ( alias, nombre, avatar_url )
         `)
         .in('parent_id', rootIds)
         .order('created_at', { ascending: true })
       repliesData = (rd ?? []) as Record<string, unknown>[]
+    }
+
+    const targetUserIds = Array.from(
+      new Set(
+        repliesData
+          .map(r => r.reply_to_user_id ? String(r.reply_to_user_id) : null)
+          .filter((x): x is string => !!x)
+      )
+    )
+
+    let aliasById: Record<string, string> = {}
+    if (targetUserIds.length > 0) {
+      const { data: targetUsers } = await supabase
+        .from('users')
+        .select('id, alias, nombre')
+        .in('id', targetUserIds)
+      for (const u of (targetUsers ?? []) as Record<string, unknown>[]) {
+        aliasById[String(u.id)] =
+          (u.alias ? String(u.alias) : null)
+          ?? (u.nombre ? String(u.nombre) : null)
+          ?? 'Jugador'
+      }
     }
 
     const allIds = [...rootIds, ...repliesData.map(r => String(r.id))]
@@ -601,12 +631,15 @@ export function CommentsSection({
     const buildComment = (r: Record<string, unknown>): PostComment => {
       const u = Array.isArray(r.users) ? r.users[0] : r.users
       const uo = (u ?? {}) as Record<string, unknown>
+      const rtuid = r.reply_to_user_id ? String(r.reply_to_user_id) : null
       return {
         id: String(r.id),
         user_id: String(r.user_id),
         content: String(r.content),
         created_at: String(r.created_at),
         parent_id: r.parent_id ? String(r.parent_id) : null,
+        reply_to_user_id: rtuid,
+        reply_to_user_alias: rtuid ? (aliasById[rtuid] ?? null) : null,
         user: {
           alias: uo.alias ? String(uo.alias) : null,
           nombre: uo.nombre ? String(uo.nombre) : null,
@@ -676,6 +709,8 @@ export function CommentsSection({
         content: String(r.content),
         created_at: String(r.created_at),
         parent_id: null,
+        reply_to_user_id: null,
+        reply_to_user_alias: null,
         user: {
           alias: uo.alias ? String(uo.alias) : null,
           nombre: uo.nombre ? String(uo.nombre) : null,
@@ -710,9 +745,15 @@ export function CommentsSection({
     setPosting(false)
   }
 
-  const handlePostReply = async (parentComment: PostComment) => {
-    if (!currentUserId || !replyText.trim() || replyPosting) return
+  const handlePostReply = async () => {
+    if (!currentUserId || !replyText.trim() || replyPosting || !replyTarget) return
     setReplyPosting(true)
+
+    const rootComment = comments.find(c => c.id === replyTarget.rootCommentId)
+    if (!rootComment) {
+      setReplyPosting(false)
+      return
+    }
 
     const trimmed = replyText.trim()
     const { data, error } = await supabase
@@ -722,9 +763,10 @@ export function CommentsSection({
         post_type: postType,
         post_id: postId,
         content: trimmed,
-        parent_id: parentComment.id,
+        parent_id: replyTarget.rootCommentId,
+        reply_to_user_id: replyTarget.replyToUserId,
       })
-      .select(`id, user_id, content, created_at, parent_id, users(alias, nombre, avatar_url)`)
+      .select(`id, user_id, content, created_at, parent_id, reply_to_user_id, users(alias, nombre, avatar_url)`)
       .single()
 
     if (!error && data) {
@@ -737,6 +779,8 @@ export function CommentsSection({
         content: String(r.content),
         created_at: String(r.created_at),
         parent_id: String(r.parent_id),
+        reply_to_user_id: replyTarget.replyToUserId,
+        reply_to_user_alias: replyTarget.replyToUserAlias,
         user: {
           alias: uo.alias ? String(uo.alias) : null,
           nombre: uo.nombre ? String(uo.nombre) : null,
@@ -749,27 +793,27 @@ export function CommentsSection({
       }
 
       setComments(prev => prev.map(c =>
-        c.id === parentComment.id
-          ? { ...c, replies: [...c.replies, newReply], repliesShown: c.replies.length + 1 }
+        c.id === replyTarget.rootCommentId
+          ? { ...c, replies: [...c.replies, newReply], repliesShown: Math.max(c.repliesShown, c.replies.length + 1) }
           : c
       ))
       setReplyText('')
-      setReplyingTo(null)
+      setReplyTarget(null)
 
-      if (parentComment.user_id !== currentUserId) {
+      if (replyTarget.replyToUserId !== currentUserId) {
         await supabase.from('user_notifications').insert({
-          recipient_id: parentComment.user_id,
+          recipient_id: replyTarget.replyToUserId,
           actor_id: currentUserId,
           type: 'reply_comment',
           post_type: postType,
           post_id: postId,
-          comment_id: parentComment.id,
+          comment_id: replyTarget.rootCommentId,
           href: postHref,
         })
         notifyNotifUpdated()
         void sendPushNotif(
-          parentComment.user_id,
-          'Nueva respuesta a tu comentario',
+          replyTarget.replyToUserId,
+          'Nueva respuesta',
           `${currentUserAlias ?? 'Alguien'}: ${trimmed.length > 50 ? trimmed.slice(0, 50) + '…' : trimmed}`,
           postHref
         )
@@ -918,47 +962,74 @@ export function CommentsSection({
                     <button
                       type="button"
                       onClick={() => {
-                        setReplyingTo(replyingTo === c.id ? null : c.id)
-                        setReplyText('')
+                        const isCurrentTarget = replyTarget?.rootCommentId === c.id && replyTarget?.replyToUserId === c.user_id
+                        if (isCurrentTarget) {
+                          setReplyTarget(null)
+                          setReplyText('')
+                        } else {
+                          setReplyTarget({
+                            rootCommentId: c.id,
+                            replyToUserId: c.user_id,
+                            replyToUserAlias: name,
+                          })
+                          setReplyText('')
+                        }
                       }}
                       style={lato}
                       className="text-[11px] text-[#666666] font-semibold hover:text-[#CC4B37]"
                     >
-                      {replyingTo === c.id ? 'Cancelar' : 'Responder'}
+                      {replyTarget?.rootCommentId === c.id && replyTarget?.replyToUserId === c.user_id ? 'Cancelar' : 'Responder'}
                     </button>
                   )}
                 </div>
 
-                {replyingTo === c.id && (
-                  <div className="flex gap-2 items-start mt-2">
-                    <div className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
-                      {currentUserAvatar
-                        ? <img src={currentUserAvatar} alt="" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#CC4B37] font-bold" style={jost}>
-                            {(currentUserAlias ?? 'U')[0].toUpperCase()}
-                          </div>
-                      }
-                    </div>
-                    <div className="flex-1 flex gap-2">
-                      <textarea
-                        value={replyText}
-                        onChange={e => setReplyText(e.target.value.slice(0, 500))}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handlePostReply(c) } }}
-                        placeholder={`Responder a ${name}…`}
-                        rows={1}
-                        autoFocus
-                        style={lato}
-                        className="flex-1 resize-none border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[13px] text-[#111111] placeholder:text-[#AAAAAA] focus:outline-none focus:border-[#CC4B37] rounded-[2px]"
-                      />
+                {replyTarget?.rootCommentId === c.id && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2 bg-[#F4F4F4] px-3 py-1.5 rounded-[2px]">
+                      <span style={lato} className="text-[11px] text-[#666666]">
+                        Respondiendo a <span className="font-semibold text-[#CC4B37]">@{replyTarget.replyToUserAlias}</span>
+                      </span>
                       <button
                         type="button"
-                        onClick={() => void handlePostReply(c)}
-                        disabled={!replyText.trim() || replyPosting}
-                        style={jost}
-                        className="shrink-0 bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-40"
+                        onClick={() => { setReplyTarget(null); setReplyText('') }}
+                        className="ml-auto text-[#999999] hover:text-[#CC4B37]"
+                        aria-label="Cancelar respuesta"
                       >
-                        {replyPosting ? '…' : 'OK'}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
                       </button>
+                    </div>
+                    <div className="flex gap-2 items-start">
+                      <div className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+                        {currentUserAvatar
+                          ? <img src={currentUserAvatar} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#CC4B37] font-bold" style={jost}>
+                              {(currentUserAlias ?? 'U')[0].toUpperCase()}
+                            </div>
+                        }
+                      </div>
+                      <div className="flex-1 flex gap-2">
+                        <textarea
+                          value={replyText}
+                          onChange={e => setReplyText(e.target.value.slice(0, 500))}
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handlePostReply() } }}
+                          placeholder={`Responder a ${replyTarget.replyToUserAlias}…`}
+                          rows={1}
+                          autoFocus
+                          style={lato}
+                          className="flex-1 resize-none border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[13px] text-[#111111] placeholder:text-[#AAAAAA] focus:outline-none focus:border-[#CC4B37] rounded-[2px]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => void handlePostReply()}
+                          disabled={!replyText.trim() || replyPosting}
+                          style={jost}
+                          className="shrink-0 bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-40"
+                        >
+                          {replyPosting ? '…' : 'OK'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -980,7 +1051,17 @@ export function CommentsSection({
                           <div className="flex-1 min-w-0">
                             <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
                               <p style={jost} className="text-[10px] font-extrabold uppercase text-[#111111]">{repName}</p>
-                              <p style={lato} className="text-[12px] text-[#111111] mt-0.5 break-words">{rep.content}</p>
+                              <p style={lato} className="text-[12px] text-[#111111] mt-0.5 break-words">
+                                {rep.reply_to_user_alias && rep.reply_to_user_id && rep.reply_to_user_id !== c.user_id && (
+                                  <Link
+                                    href={`/u/${rep.reply_to_user_id}`}
+                                    className="font-semibold text-[#CC4B37] hover:underline mr-1"
+                                  >
+                                    @{rep.reply_to_user_alias}
+                                  </Link>
+                                )}
+                                {rep.content}
+                              </p>
                             </div>
                             <div className="flex items-center gap-3 mt-1 ml-1">
                               <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(rep.created_at)}</p>
@@ -995,6 +1076,29 @@ export function CommentsSection({
                                   <span style={lato} className="text-[11px] text-[#999999]">{rep.likeCount}</span>
                                 )}
                               </button>
+                              {currentUserId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const isCurrentTarget = replyTarget?.rootCommentId === c.id && replyTarget?.replyToUserId === rep.user_id
+                                    if (isCurrentTarget) {
+                                      setReplyTarget(null)
+                                      setReplyText('')
+                                    } else {
+                                      setReplyTarget({
+                                        rootCommentId: c.id,
+                                        replyToUserId: rep.user_id,
+                                        replyToUserAlias: repName,
+                                      })
+                                      setReplyText('')
+                                    }
+                                  }}
+                                  style={lato}
+                                  className="text-[11px] text-[#666666] font-semibold hover:text-[#CC4B37]"
+                                >
+                                  {replyTarget?.rootCommentId === c.id && replyTarget?.replyToUserId === rep.user_id ? 'Cancelar' : 'Responder'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
