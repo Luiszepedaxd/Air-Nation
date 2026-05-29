@@ -386,6 +386,7 @@ export default async function EquipoPublicPage({
 
   let currentUserId: string | null = null
   let userTeamRole: 'founder' | 'admin' | null = null
+  let isAdmin = false
 
   try {
     const authSupabase = createDashboardSupabaseServerClient()
@@ -394,19 +395,27 @@ export default async function EquipoPublicPage({
     } = await authSupabase.auth.getUser()
     if (authUser) {
       currentUserId = authUser.id
-      const { data: memberRow } = await authSupabase
-        .from('team_members')
-        .select('rol_plataforma')
-        .eq('team_id', team.id)
-        .eq('user_id', authUser.id)
-        .eq('status', 'activo')
-        .maybeSingle()
+      const [{ data: memberRow }, { data: viewerRow }] = await Promise.all([
+        authSupabase
+          .from('team_members')
+          .select('rol_plataforma')
+          .eq('team_id', team.id)
+          .eq('user_id', authUser.id)
+          .eq('status', 'activo')
+          .maybeSingle(),
+        authSupabase
+          .from('users')
+          .select('app_role')
+          .eq('id', authUser.id)
+          .maybeSingle(),
+      ])
       if (
         memberRow?.rol_plataforma === 'founder' ||
         memberRow?.rol_plataforma === 'admin'
       ) {
         userTeamRole = memberRow.rol_plataforma as 'founder' | 'admin'
       }
+      isAdmin = viewerRow?.app_role === 'admin'
     }
   } catch {
     // usuario no autenticado, continuar como público
@@ -436,6 +445,7 @@ export default async function EquipoPublicPage({
         past={pastEvents}
         currentUserId={currentUserId}
         userTeamRole={userTeamRole}
+        isAdmin={isAdmin}
       />
     </div>
   )

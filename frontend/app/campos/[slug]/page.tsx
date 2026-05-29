@@ -210,14 +210,16 @@ export default async function CampoPublicPage({
 
   let solicitanteNombre: string | null = null
   let solicitanteAlias: string | null = null
+  let isAdmin = false
   if (authUser?.id) {
     const { data: perfil } = await supabaseAuth
       .from('users')
-      .select('nombre, alias')
+      .select('nombre, alias, app_role')
       .eq('id', authUser.id)
       .maybeSingle()
     solicitanteNombre = (perfil?.nombre as string | null) ?? null
     solicitanteAlias = (perfil?.alias as string | null) ?? null
+    isAdmin = perfil?.app_role === 'admin'
   }
 
   return (
@@ -272,6 +274,7 @@ export default async function CampoPublicPage({
         field={field}
         fieldSlug={params.slug}
         currentUserId={authUser?.id ?? null}
+        isAdmin={isAdmin}
         solicitanteNombre={solicitanteNombre}
         solicitanteAlias={solicitanteAlias}
         initialReviews={initialReviews}

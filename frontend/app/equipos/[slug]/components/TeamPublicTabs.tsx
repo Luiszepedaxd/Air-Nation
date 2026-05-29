@@ -139,6 +139,7 @@ export function TeamPublicTabs({
   past,
   currentUserId = null,
   userTeamRole = null,
+  isAdmin = false,
 }: {
   team: PublicTeam
   slug: string
@@ -149,6 +150,7 @@ export function TeamPublicTabs({
   past: TeamEventoPastRow[]
   currentUserId?: string | null
   userTeamRole?: 'founder' | 'admin' | null
+  isAdmin?: boolean
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -304,6 +306,7 @@ export function TeamPublicTabs({
             variant="tab"
             currentUserId={currentUserId}
             userTeamRole={userTeamRole}
+            isAdmin={isAdmin}
             teamSlug={slug}
             teamOwnerId={team.created_by ?? null}
           />

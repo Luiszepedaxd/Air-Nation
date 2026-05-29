@@ -3,6 +3,7 @@
 import type { TeamPostRow } from '../types'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
+import { adminDeleteTeamPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
 
@@ -53,6 +54,7 @@ export function TeamPosts({
   variant = 'section',
   currentUserId = null,
   userTeamRole = null,
+  isAdmin = false,
   teamSlug = '',
   teamOwnerId = null,
 }: {
@@ -60,6 +62,7 @@ export function TeamPosts({
   variant?: 'section' | 'tab'
   currentUserId?: string | null
   userTeamRole?: 'founder' | 'admin' | null
+  isAdmin?: boolean
   teamSlug?: string
   teamOwnerId?: string | null
 }) {
@@ -115,15 +118,22 @@ export function TeamPosts({
                 </time>
                 <ReportablePostMenu
                   canDelete={
-                    userTeamRole === 'founder' || userTeamRole === 'admin'
+                    userTeamRole === 'founder' || userTeamRole === 'admin' || isAdmin
                   }
                   onDelete={async () => {
-                    const { error } = await supabase
-                      .from('team_posts')
-                      .delete()
-                      .eq('id', post.id)
-                    if (!error) {
-                      window.location.reload()
+                    if (userTeamRole === 'founder' || userTeamRole === 'admin') {
+                      const { error } = await supabase
+                        .from('team_posts')
+                        .delete()
+                        .eq('id', post.id)
+                      if (!error) {
+                        window.location.reload()
+                      }
+                    } else if (isAdmin) {
+                      const res = await adminDeleteTeamPost(post.id)
+                      if ('ok' in res) {
+                        window.location.reload()
+                      }
                     }
                   }}
                   reporterId={reportReporterId}

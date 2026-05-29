@@ -12,6 +12,7 @@ import {
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
+import { adminDeletePlayerPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
 import type {
@@ -71,6 +72,7 @@ export function PlayerProfileClient({
   replicas,
   rolLabels,
   currentUserId,
+  isAdmin = false,
   showPostBox = false,
   currentUserAlias = null,
   currentUserAvatar = null,
@@ -81,6 +83,7 @@ export function PlayerProfileClient({
   replicas: PublicReplicaRow[]
   rolLabels: Record<string, string>
   currentUserId: string | null
+  isAdmin?: boolean
   showPostBox?: boolean
   currentUserAlias?: string | null
   currentUserAvatar?: string | null
@@ -184,6 +187,7 @@ export function PlayerProfileClient({
               posts={postsState}
               profileUserId={user.id}
               currentUserId={currentUserId}
+              isAdmin={isAdmin}
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}
               onPostRemoved={(postId) =>
@@ -209,6 +213,7 @@ function PostsPanel({
   posts,
   profileUserId,
   currentUserId,
+  isAdmin,
   currentUserAlias,
   currentUserAvatar,
   onPostRemoved,
@@ -216,6 +221,7 @@ function PostsPanel({
   posts: PlayerPostRow[]
   profileUserId: string
   currentUserId: string | null
+  isAdmin: boolean
   currentUserAlias: string | null
   currentUserAvatar: string | null
   onPostRemoved?: (postId: string) => void
@@ -254,16 +260,24 @@ function PostsPanel({
                 }).format(new Date(post.created_at))}
               </p>
               <ReportablePostMenu
-                canDelete={isOwner}
+                canDelete={isOwner || isAdmin}
                 onDelete={async () => {
-                  const { error } = await supabase
-                    .from('player_posts')
-                    .delete()
-                    .eq('id', post.id)
-                    .eq('user_id', profileUserId)
-                  if (!error) {
-                    onPostRemoved?.(post.id)
-                    void router.refresh()
+                  if (isOwner) {
+                    const { error } = await supabase
+                      .from('player_posts')
+                      .delete()
+                      .eq('id', post.id)
+                      .eq('user_id', profileUserId)
+                    if (!error) {
+                      onPostRemoved?.(post.id)
+                      void router.refresh()
+                    }
+                  } else if (isAdmin) {
+                    const res = await adminDeletePlayerPost(post.id)
+                    if ('ok' in res) {
+                      onPostRemoved?.(post.id)
+                      void router.refresh()
+                    }
                   }
                 }}
                 reporterId={!isOwner ? currentUserId : null}

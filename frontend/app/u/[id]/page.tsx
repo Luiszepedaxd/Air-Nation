@@ -262,6 +262,16 @@ export default async function PublicProfilePage({
     data: { user: currentUser },
   } = await supabaseServer.auth.getUser()
 
+  let isAdmin = false
+  if (currentUser) {
+    const { data: viewerRow } = await supabaseServer
+      .from('users')
+      .select('app_role')
+      .eq('id', currentUser.id)
+      .maybeSingle()
+    isAdmin = viewerRow?.app_role === 'admin'
+  }
+
   const supabasePublic = createPublicSupabaseClient()
 
   // Verificar bloqueo bidireccional
@@ -421,6 +431,7 @@ export default async function PublicProfilePage({
           replicas={replicas}
           rolLabels={ROL_LABELS}
           currentUserId={currentUser?.id ?? null}
+          isAdmin={isAdmin}
           showPostBox={currentUser?.id === user.id}
           currentUserAlias={currentUser?.user_metadata?.alias ?? null}
           currentUserAvatar={currentUser?.user_metadata?.avatar_url ?? null}

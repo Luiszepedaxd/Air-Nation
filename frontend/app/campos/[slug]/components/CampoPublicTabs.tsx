@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
+import { adminDeleteFieldPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { formatEventoFechaCorta } from '@/app/eventos/lib/format-evento-fecha'
 import {
@@ -165,6 +166,7 @@ export function CampoPublicTabs({
   field,
   fieldSlug,
   currentUserId,
+  isAdmin = false,
   solicitanteNombre,
   solicitanteAlias,
   initialReviews,
@@ -173,6 +175,7 @@ export function CampoPublicTabs({
   field: CampoDetailRow
   fieldSlug: string
   currentUserId: string | null
+  isAdmin?: boolean
   solicitanteNombre: string | null
   solicitanteAlias: string | null
   initialReviews: FieldReviewPublic[]
@@ -553,17 +556,26 @@ export function CampoPublicTabs({
                           {formatRelative(p.created_at)}
                         </p>
                         <ReportablePostMenu
-                          canDelete={isFieldOwner}
+                          canDelete={isFieldOwner || isAdmin}
                           onDelete={async () => {
-                            const { error } = await supabase
-                              .from('field_posts')
-                              .delete()
-                              .eq('id', p.id)
-                              .eq('field_id', field.id)
-                            if (!error) {
-                              setPublicaciones((prev) =>
-                                prev.filter((x) => x.id !== p.id)
-                              )
+                            if (isFieldOwner) {
+                              const { error } = await supabase
+                                .from('field_posts')
+                                .delete()
+                                .eq('id', p.id)
+                                .eq('field_id', field.id)
+                              if (!error) {
+                                setPublicaciones((prev) =>
+                                  prev.filter((x) => x.id !== p.id)
+                                )
+                              }
+                            } else if (isAdmin) {
+                              const res = await adminDeleteFieldPost(p.id)
+                              if ('ok' in res) {
+                                setPublicaciones((prev) =>
+                                  prev.filter((x) => x.id !== p.id)
+                                )
+                              }
                             }
                           }}
                           reporterId={

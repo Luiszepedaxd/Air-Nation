@@ -16,6 +16,11 @@ import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
+import {
+  adminDeletePlayerPost,
+  adminDeleteTeamPost,
+  adminDeleteFieldPost,
+} from '@/app/admin/feed/actions'
 import { supabase } from '@/lib/supabase'
 import { getBlockedUserIds } from '@/lib/user-blocks'
 import { uploadFile, uploadVideo } from '@/lib/apiFetch'
@@ -1059,12 +1064,13 @@ export function PostBox({
   )
 }
 
-function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole, onPostDeleted }: {
+function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole, isAdmin, onPostDeleted }: {
   item: Extract<FeedItem, { kind: 'team_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
   userTeamRole: 'founder' | 'admin' | null
+  isAdmin: boolean
   onPostDeleted: (id: string) => void
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
@@ -1088,14 +1094,19 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         </div>
         <div className="ml-auto">
           <ReportablePostMenu
-            canDelete={userTeamRole === 'founder' || userTeamRole === 'admin'}
+            canDelete={userTeamRole === 'founder' || userTeamRole === 'admin' || isAdmin}
             onDelete={async () => {
-              const { error } = await supabase
-                .from('team_posts')
-                .delete()
-                .eq('id', item.id)
-                .eq('team_id', item.team_id)
-              if (!error) onPostDeleted(item.id)
+              if (userTeamRole === 'founder' || userTeamRole === 'admin') {
+                const { error } = await supabase
+                  .from('team_posts')
+                  .delete()
+                  .eq('id', item.id)
+                  .eq('team_id', item.team_id)
+                if (!error) onPostDeleted(item.id)
+              } else if (isAdmin) {
+                const res = await adminDeleteTeamPost(item.id)
+                if ('ok' in res) onPostDeleted(item.id)
+              }
             }}
             reporterId={
               currentUserId &&
@@ -1130,27 +1141,17 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
   )
 }
 
-function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner, isAdmin }: {
+function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner, isAdmin, onPostDeleted }: {
   item: Extract<FeedItem, { kind: 'player_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
   isOwner: boolean
   isAdmin: boolean
+  onPostDeleted: (id: string) => void
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
-
-  const handleDelete = async () => {
-    const { error } = await supabase
-      .from('player_posts')
-      .delete()
-      .eq('id', item.id)
-      .eq('user_id', item.user_id)
-    if (!error) {
-      window.dispatchEvent(new Event('airnation:post-deleted'))
-    }
-  }
 
   const handlePin = async () => {
     await supabase
@@ -1199,8 +1200,20 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </span>
           </Link>
           <ReportablePostMenu
-            canDelete={isOwner}
-            onDelete={handleDelete}
+            canDelete={isOwner || isAdmin}
+            onDelete={async () => {
+              if (isOwner) {
+                const { error } = await supabase
+                  .from('player_posts')
+                  .delete()
+                  .eq('id', item.id)
+                  .eq('user_id', item.user_id)
+                if (!error) onPostDeleted(item.id)
+              } else if (isAdmin) {
+                const res = await adminDeletePlayerPost(item.id)
+                if ('ok' in res) onPostDeleted(item.id)
+              }
+            }}
             canPin={isAdmin}
             isPinned={false}
             onPin={handlePin}
@@ -1402,12 +1415,14 @@ function FieldPostCard({
   currentUserId,
   currentUserAlias,
   currentUserAvatar,
+  isAdmin,
   onPostDeleted,
 }: {
   item: Extract<FeedItem, { kind: 'field_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
+  isAdmin: boolean
   onPostDeleted: (id: string) => void
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
@@ -1447,13 +1462,18 @@ function FieldPostCard({
           </p>
         </div>
         <ReportablePostMenu
-          canDelete={currentUserId === item.created_by}
+          canDelete={currentUserId === item.created_by || isAdmin}
           onDelete={async () => {
-            const { error } = await supabase
-              .from('field_posts')
-              .delete()
-              .eq('id', item.id)
-            if (!error) onPostDeleted(item.id)
+            if (currentUserId === item.created_by) {
+              const { error } = await supabase
+                .from('field_posts')
+                .delete()
+                .eq('id', item.id)
+              if (!error) onPostDeleted(item.id)
+            } else if (isAdmin) {
+              const res = await adminDeleteFieldPost(item.id)
+              if ('ok' in res) onPostDeleted(item.id)
+            }
           }}
           reporterId={
             currentUserId && currentUserId !== item.created_by
@@ -1462,7 +1482,7 @@ function FieldPostCard({
           }
           targetType="post"
           targetId={item.id}
-          targetLabel={`Publicación en ${item.field.nombre}`}
+          targetLabel={`Publicación de ${item.field.nombre}`}
         />
       </div>
       {item.content?.trim() && (
@@ -2517,6 +2537,7 @@ function FeedTab({
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}
               userTeamRole={teamRole}
+              isAdmin={isAdmin}
               onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
             />
           )
@@ -2530,6 +2551,7 @@ function FeedTab({
             currentUserAvatar={currentUserAvatar}
             isOwner={currentUserId === item.user_id}
             isAdmin={isAdmin}
+            onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
           />
         )
         if (item.kind === 'field_post')
@@ -2540,6 +2562,7 @@ function FeedTab({
               currentUserId={currentUserId}
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}
+              isAdmin={isAdmin}
               onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
             />
           )
