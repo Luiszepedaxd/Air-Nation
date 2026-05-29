@@ -37,9 +37,12 @@ type PostComment = {
   user_id: string
   content: string
   created_at: string
+  parent_id: string | null
   user: { alias: string | null; nombre: string | null; avatar_url: string | null }
   likeCount: number
   likedByMe: boolean
+  replies: PostComment[]
+  repliesShown: number
 }
 
 export function HeartIcon({ filled, size = 18 }: { filled: boolean; size?: number }) {
@@ -504,6 +507,7 @@ export function PostActions({
   )
 }
 
+const REPLIES_PAGE_SIZE = 2
 const COMMENTS_PAGE_SIZE = 3
 
 export function CommentsSection({
@@ -529,55 +533,72 @@ export function CommentsSection({
   const [loadingMore, setLoadingMore] = useState(false)
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+  const [replyPosting, setReplyPosting] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const loadComments = async (pageNum: number, append = false) => {
     const from = 0
     const to = pageNum * COMMENTS_PAGE_SIZE - 1
 
-    const { data, count } = await supabase
+    const { data: rootsData, count } = await supabase
       .from('post_comments')
       .select(`
-        id, user_id, content, created_at,
+        id, user_id, content, created_at, parent_id,
         users ( alias, nombre, avatar_url )
       `, { count: 'exact' })
       .eq('post_type', postType)
       .eq('post_id', postId)
+      .is('parent_id', null)
       .order('created_at', { ascending: true })
       .range(from, to)
 
-    if (!data) return
+    if (!rootsData) return
 
-    const rows = data as Record<string, unknown>[]
+    const roots = rootsData as Record<string, unknown>[]
+    const rootIds = roots.map(r => String(r.id))
 
+    let repliesData: Record<string, unknown>[] = []
+    if (rootIds.length > 0) {
+      const { data: rd } = await supabase
+        .from('post_comments')
+        .select(`
+          id, user_id, content, created_at, parent_id,
+          users ( alias, nombre, avatar_url )
+        `)
+        .in('parent_id', rootIds)
+        .order('created_at', { ascending: true })
+      repliesData = (rd ?? []) as Record<string, unknown>[]
+    }
+
+    const allIds = [...rootIds, ...repliesData.map(r => String(r.id))]
     let likedIds: string[] = []
-    if (currentUserId && rows.length > 0) {
-      const ids = rows.map(r => String(r.id))
+    if (currentUserId && allIds.length > 0) {
       const { data: likedData } = await supabase
         .from('post_reactions')
         .select('post_id')
         .eq('post_type', 'comment')
         .eq('user_id', currentUserId)
-        .in('post_id', ids)
+        .in('post_id', allIds)
       likedIds = (likedData ?? []).map((x: Record<string, unknown>) => String(x.post_id))
     }
 
     let likeMap: Record<string, number> = {}
-    if (rows.length > 0) {
+    if (allIds.length > 0) {
       const { data: likeCounts } = await supabase
         .from('post_reactions')
         .select('post_id')
         .eq('post_type', 'comment')
-        .in('post_id', rows.map(r => String(r.id)))
+        .in('post_id', allIds)
 
-      likeMap = {}
       for (const lc of likeCounts ?? []) {
         const pid = String((lc as Record<string, unknown>).post_id)
         likeMap[pid] = (likeMap[pid] ?? 0) + 1
       }
     }
 
-    const parsed: PostComment[] = rows.map(r => {
+    const buildComment = (r: Record<string, unknown>): PostComment => {
       const u = Array.isArray(r.users) ? r.users[0] : r.users
       const uo = (u ?? {}) as Record<string, unknown>
       return {
@@ -585,6 +606,7 @@ export function CommentsSection({
         user_id: String(r.user_id),
         content: String(r.content),
         created_at: String(r.created_at),
+        parent_id: r.parent_id ? String(r.parent_id) : null,
         user: {
           alias: uo.alias ? String(uo.alias) : null,
           nombre: uo.nombre ? String(uo.nombre) : null,
@@ -592,7 +614,22 @@ export function CommentsSection({
         },
         likeCount: likeMap[String(r.id)] ?? 0,
         likedByMe: likedIds.includes(String(r.id)),
+        replies: [],
+        repliesShown: REPLIES_PAGE_SIZE,
       }
+    }
+
+    const repliesByParent: Record<string, PostComment[]> = {}
+    for (const r of repliesData) {
+      const pid = String(r.parent_id)
+      if (!repliesByParent[pid]) repliesByParent[pid] = []
+      repliesByParent[pid].push(buildComment(r))
+    }
+
+    const parsed: PostComment[] = roots.map(r => {
+      const c = buildComment(r)
+      c.replies = repliesByParent[c.id] ?? []
+      return c
     })
 
     setTotal(count ?? 0)
@@ -623,8 +660,9 @@ export function CommentsSection({
         post_type: postType,
         post_id: postId,
         content: text.trim(),
+        parent_id: null,
       })
-      .select(`id, user_id, content, created_at, users(alias, nombre, avatar_url)`)
+      .select(`id, user_id, content, created_at, parent_id, users(alias, nombre, avatar_url)`)
       .single()
 
     if (!error && data) {
@@ -637,6 +675,7 @@ export function CommentsSection({
         user_id: String(r.user_id),
         content: String(r.content),
         created_at: String(r.created_at),
+        parent_id: null,
         user: {
           alias: uo.alias ? String(uo.alias) : null,
           nombre: uo.nombre ? String(uo.nombre) : null,
@@ -644,6 +683,8 @@ export function CommentsSection({
         },
         likeCount: 0,
         likedByMe: false,
+        replies: [],
+        repliesShown: REPLIES_PAGE_SIZE,
       }
       setComments(prev => [...prev, newComment])
       setTotal(t => t + 1)
@@ -669,13 +710,94 @@ export function CommentsSection({
     setPosting(false)
   }
 
+  const handlePostReply = async (parentComment: PostComment) => {
+    if (!currentUserId || !replyText.trim() || replyPosting) return
+    setReplyPosting(true)
+
+    const trimmed = replyText.trim()
+    const { data, error } = await supabase
+      .from('post_comments')
+      .insert({
+        user_id: currentUserId,
+        post_type: postType,
+        post_id: postId,
+        content: trimmed,
+        parent_id: parentComment.id,
+      })
+      .select(`id, user_id, content, created_at, parent_id, users(alias, nombre, avatar_url)`)
+      .single()
+
+    if (!error && data) {
+      const r = data as Record<string, unknown>
+      const u = Array.isArray(r.users) ? r.users[0] : r.users
+      const uo = (u ?? {}) as Record<string, unknown>
+      const newReply: PostComment = {
+        id: String(r.id),
+        user_id: String(r.user_id),
+        content: String(r.content),
+        created_at: String(r.created_at),
+        parent_id: String(r.parent_id),
+        user: {
+          alias: uo.alias ? String(uo.alias) : null,
+          nombre: uo.nombre ? String(uo.nombre) : null,
+          avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
+        },
+        likeCount: 0,
+        likedByMe: false,
+        replies: [],
+        repliesShown: REPLIES_PAGE_SIZE,
+      }
+
+      setComments(prev => prev.map(c =>
+        c.id === parentComment.id
+          ? { ...c, replies: [...c.replies, newReply], repliesShown: c.replies.length + 1 }
+          : c
+      ))
+      setReplyText('')
+      setReplyingTo(null)
+
+      if (parentComment.user_id !== currentUserId) {
+        await supabase.from('user_notifications').insert({
+          recipient_id: parentComment.user_id,
+          actor_id: currentUserId,
+          type: 'reply_comment',
+          post_type: postType,
+          post_id: postId,
+          comment_id: parentComment.id,
+          href: postHref,
+        })
+        notifyNotifUpdated()
+        void sendPushNotif(
+          parentComment.user_id,
+          'Nueva respuesta a tu comentario',
+          `${currentUserAlias ?? 'Alguien'}: ${trimmed.length > 50 ? trimmed.slice(0, 50) + '…' : trimmed}`,
+          postHref
+        )
+      }
+    }
+    setReplyPosting(false)
+  }
+
   const handleLikeComment = async (commentId: string, likedByMe: boolean) => {
     if (!currentUserId) return
-    setComments(prev => prev.map(c =>
-      c.id === commentId
-        ? { ...c, likedByMe: !likedByMe, likeCount: likedByMe ? c.likeCount - 1 : c.likeCount + 1 }
-        : c
-    ))
+
+    setComments(prev => prev.map(c => {
+      if (c.id === commentId) {
+        return { ...c, likedByMe: !likedByMe, likeCount: likedByMe ? c.likeCount - 1 : c.likeCount + 1 }
+      }
+      if (c.replies.some(r => r.id === commentId)) {
+        return {
+          ...c,
+          replies: c.replies.map(r =>
+            r.id === commentId
+              ? { ...r, likedByMe: !likedByMe, likeCount: likedByMe ? r.likeCount - 1 : r.likeCount + 1 }
+              : r
+          ),
+        }
+      }
+      return c
+    }))
+
     if (likedByMe) {
       await supabase.from('post_reactions').delete()
         .eq('post_type', 'comment')
@@ -689,10 +811,15 @@ export function CommentsSection({
         reaction: 'fire',
       })
       if (!error) {
-        const comment = comments.find(c => c.id === commentId)
-        if (comment && comment.user_id !== currentUserId) {
+        let targetComment: PostComment | undefined
+        for (const c of comments) {
+          if (c.id === commentId) { targetComment = c; break }
+          const rep = c.replies.find(r => r.id === commentId)
+          if (rep) { targetComment = rep; break }
+        }
+        if (targetComment && targetComment.user_id !== currentUserId) {
           await supabase.from('user_notifications').insert({
-            recipient_id: comment.user_id,
+            recipient_id: targetComment.user_id,
             actor_id: currentUserId,
             type: 'like_comment',
             post_type: 'comment',
@@ -702,7 +829,7 @@ export function CommentsSection({
           })
           notifyNotifUpdated()
           void sendPushNotif(
-            comment.user_id,
+            targetComment.user_id,
             'Nueva reacción',
             `${currentUserAlias ?? 'Alguien'} reaccionó a tu comentario`,
             postHref
@@ -752,37 +879,142 @@ export function CommentsSection({
         </div>
       )}
 
-      {/* Lista comentarios — más recientes primero */}
+      {/* Lista comentarios raíz + replies */}
       {displayedComments.map(c => {
         const name = c.user.alias?.trim() || c.user.nombre?.trim() || 'Jugador'
+        const visibleReplies = c.replies.slice(0, c.repliesShown)
+        const hiddenReplies = c.replies.length - visibleReplies.length
+
         return (
-          <div key={c.id} className="flex gap-2">
-            <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
-              {c.user.avatar_url
-                ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" />
-                : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#CC4B37] font-bold" style={jost}>
-                    {name[0].toUpperCase()}
-                  </div>
-              }
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
-                <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">{name}</p>
-                <p style={lato} className="text-[13px] text-[#111111] mt-0.5 break-words">{c.content}</p>
+          <div key={c.id} className="space-y-2">
+            <div className="flex gap-2">
+              <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+                {c.user.avatar_url
+                  ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#CC4B37] font-bold" style={jost}>
+                      {name[0].toUpperCase()}
+                    </div>
+                }
               </div>
-              <div className="flex items-center gap-3 mt-1 ml-1">
-                <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(c.created_at)}</p>
-                <button
-                  type="button"
-                  onClick={() => void handleLikeComment(c.id, c.likedByMe)}
-                  disabled={!currentUserId}
-                  className="flex items-center gap-1 disabled:opacity-30"
-                >
-                  <HeartIcon filled={c.likedByMe} size={13} />
-                  {c.likeCount > 0 && (
-                    <span style={lato} className="text-[11px] text-[#999999]">{c.likeCount}</span>
+              <div className="flex-1 min-w-0">
+                <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
+                  <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">{name}</p>
+                  <p style={lato} className="text-[13px] text-[#111111] mt-0.5 break-words">{c.content}</p>
+                </div>
+                <div className="flex items-center gap-3 mt-1 ml-1">
+                  <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(c.created_at)}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleLikeComment(c.id, c.likedByMe)}
+                    disabled={!currentUserId}
+                    className="flex items-center gap-1 disabled:opacity-30"
+                  >
+                    <HeartIcon filled={c.likedByMe} size={13} />
+                    {c.likeCount > 0 && (
+                      <span style={lato} className="text-[11px] text-[#999999]">{c.likeCount}</span>
+                    )}
+                  </button>
+                  {currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyingTo(replyingTo === c.id ? null : c.id)
+                        setReplyText('')
+                      }}
+                      style={lato}
+                      className="text-[11px] text-[#666666] font-semibold hover:text-[#CC4B37]"
+                    >
+                      {replyingTo === c.id ? 'Cancelar' : 'Responder'}
+                    </button>
                   )}
-                </button>
+                </div>
+
+                {replyingTo === c.id && (
+                  <div className="flex gap-2 items-start mt-2">
+                    <div className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+                      {currentUserAvatar
+                        ? <img src={currentUserAvatar} alt="" className="w-full h-full object-cover" />
+                        : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#CC4B37] font-bold" style={jost}>
+                            {(currentUserAlias ?? 'U')[0].toUpperCase()}
+                          </div>
+                      }
+                    </div>
+                    <div className="flex-1 flex gap-2">
+                      <textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value.slice(0, 500))}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handlePostReply(c) } }}
+                        placeholder={`Responder a ${name}…`}
+                        rows={1}
+                        autoFocus
+                        style={lato}
+                        className="flex-1 resize-none border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-[13px] text-[#111111] placeholder:text-[#AAAAAA] focus:outline-none focus:border-[#CC4B37] rounded-[2px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void handlePostReply(c)}
+                        disabled={!replyText.trim() || replyPosting}
+                        style={jost}
+                        className="shrink-0 bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-40"
+                      >
+                        {replyPosting ? '…' : 'OK'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {visibleReplies.length > 0 && (
+                  <div className="mt-2 ml-4 space-y-2 border-l border-[#EEEEEE] pl-3">
+                    {visibleReplies.map(rep => {
+                      const repName = rep.user.alias?.trim() || rep.user.nombre?.trim() || 'Jugador'
+                      return (
+                        <div key={rep.id} className="flex gap-2">
+                          <div className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+                            {rep.user.avatar_url
+                              ? <img src={rep.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#CC4B37] font-bold" style={jost}>
+                                  {repName[0].toUpperCase()}
+                                </div>
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
+                              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#111111]">{repName}</p>
+                              <p style={lato} className="text-[12px] text-[#111111] mt-0.5 break-words">{rep.content}</p>
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 ml-1">
+                              <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(rep.created_at)}</p>
+                              <button
+                                type="button"
+                                onClick={() => void handleLikeComment(rep.id, rep.likedByMe)}
+                                disabled={!currentUserId}
+                                className="flex items-center gap-1 disabled:opacity-30"
+                              >
+                                <HeartIcon filled={rep.likedByMe} size={12} />
+                                {rep.likeCount > 0 && (
+                                  <span style={lato} className="text-[11px] text-[#999999]">{rep.likeCount}</span>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {hiddenReplies > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setComments(prev => prev.map(x =>
+                          x.id === c.id ? { ...x, repliesShown: x.replies.length } : x
+                        ))}
+                        style={lato}
+                        className="text-[11px] text-[#CC4B37] font-semibold"
+                      >
+                        Ver {hiddenReplies} respuesta{hiddenReplies > 1 ? 's' : ''} más
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

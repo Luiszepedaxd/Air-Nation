@@ -33,7 +33,7 @@ export async function markAllNotifsRead(
 
 export type UserNotifRow = {
   id: string
-  type: 'like_post' | 'comment_post' | 'like_comment' | 'transfer_request' | 'transfer_accepted' | 'transfer_rejected'
+  type: 'like_post' | 'comment_post' | 'like_comment' | 'reply_comment' | 'transfer_request' | 'transfer_accepted' | 'transfer_rejected'
   post_type: 'player' | 'team' | 'field' | 'comment' | null
   post_id: string | null
   comment_id: string | null
