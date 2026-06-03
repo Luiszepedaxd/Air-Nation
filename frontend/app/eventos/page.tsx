@@ -165,7 +165,7 @@ function EventosSeoList({ eventos }: { eventos: EventoCardRow[] }) {
   return (
     <section
       aria-label="Próximos eventos de airsoft en México"
-      className="mx-auto max-w-[1200px] px-4 pt-8 pb-4 md:px-6"
+      className="sr-only"
     >
       <h2
         className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#999999]"
