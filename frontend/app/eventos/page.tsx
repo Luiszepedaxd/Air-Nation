@@ -10,20 +10,29 @@ import { EventosFiltros } from './components/EventosFiltros'
 export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: 'Eventos de Airsoft en México 2026 — Calendario, fechas y boletos | AirNation',
+  title: 'Eventos de Airsoft en México 2026 — Calendario, fechas y boletos',
   description:
-    'Calendario oficial de eventos de airsoft en México 2026. Fechas, sedes, precios y boletos de los principales eventos milsim, torneos y partidas comunitarias. Wild West, Asalto a Guantánamo, Blood Money, Casta Vanguardia, Código Irene y más.',
+    'Calendario oficial de eventos de airsoft en México 2026. Operación Kursk II en Yucatán (julio), AMG Stage 01 CDMX (septiembre), Airsoft Tactical Games en Metepec (junio), Dominguera GDL (junio). Fechas, sedes y boletos.',
   keywords: [
     'eventos airsoft méxico',
     'eventos de airsoft en méxico',
     'calendario airsoft méxico 2026',
     'eventos airsoft 2026',
+    'proximos eventos airsoft mexico',
     'milsim méxico',
+    'speedsoft mexico',
     'torneos airsoft méxico',
     'partidas airsoft méxico',
     'eventos airsoft cdmx',
     'eventos airsoft guadalajara',
-    'eventos airsoft monterrey',
+    'eventos airsoft jalisco',
+    'eventos airsoft yucatan',
+    'eventos airsoft merida',
+    'eventos airsoft estado de mexico',
+    'operacion kursk airsoft yucatan',
+    'airsoft mexican games',
+    'airsoft tactical games mexico',
+    'dominguera airsoft guadalajara',
     'comunidad airsoft méxico',
     'boletos airsoft méxico',
   ],
@@ -33,7 +42,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Eventos de Airsoft en México 2026 | AirNation',
     description:
-      'Calendario oficial de eventos de airsoft en México. Fechas, sedes, precios y boletos. Milsim, torneos y partidas comunitarias.',
+      'Operación Kursk II Yucatán, AMG Stage CDMX, Airsoft Tactical Games Metepec y más. Calendario oficial con fechas, sedes y boletos.',
     url: 'https://www.airnation.online/eventos',
     type: 'website',
     images: [
