@@ -69,6 +69,17 @@ function normalizeFieldsEmbed(raw: unknown): {
   }
 }
 
+function formatFechaSnippet(fechaIso: string): string {
+  const d = new Date(fechaIso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Mexico_City',
+  })
+}
+
 async function fetchEventos(): Promise<EventoCardRow[]> {
   const supabase = createPublicSupabaseClient()
   const nowIso = new Date().toISOString()
@@ -138,6 +149,60 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       cupo_vendido_creador: (r.cupo_vendido_creador as number | null) ?? null,
     }
   })
+}
+
+function EventosSeoList({ eventos }: { eventos: EventoCardRow[] }) {
+  if (eventos.length === 0) return null
+  return (
+    <section
+      aria-label="Próximos eventos de airsoft en México"
+      className="mx-auto max-w-[1200px] px-4 pt-8 pb-4 md:px-6"
+    >
+      <h2
+        className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#999999]"
+        style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
+      >
+        PRÓXIMOS EVENTOS DE AIRSOFT EN MÉXICO 2026
+      </h2>
+      <ol className="divide-y divide-[#EEEEEE]">
+        {eventos.map((e) => {
+          const ciudad = e.ciudad?.trim() || e.sede_ciudad?.trim() || null
+          const lugar = [e.field_nombre?.trim() || null, ciudad]
+            .filter(Boolean)
+            .join(' · ')
+          return (
+            <li key={e.id}>
+              <a
+                href={`/eventos/${e.id}`}
+                className="-mx-2 flex items-baseline justify-between gap-4 px-2 py-3 transition-colors hover:bg-[#F9F9F9]"
+              >
+                <span
+                  className="text-[13px] font-bold leading-snug text-[#111111]"
+                  style={{ fontFamily: "'Jost', sans-serif" }}
+                >
+                  {e.title}
+                  {lugar ? (
+                    <span
+                      className="ml-2 font-normal text-[#666666]"
+                      style={{ fontFamily: "'Lato', sans-serif" }}
+                    >
+                      — {lugar}
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className="shrink-0 whitespace-nowrap text-[11px] text-[#999999]"
+                  style={{ fontFamily: "'Lato', sans-serif" }}
+                >
+                  {formatFechaSnippet(e.fecha)}
+                </span>
+              </a>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
+  )
 }
 
 export default async function EventosPage() {
@@ -287,6 +352,7 @@ export default async function EventosPage() {
         </div>
       </section>
 
+      <EventosSeoList eventos={eventos} />
       <EventosFiltros eventos={eventos} />
       <EventosPorQue />
       <EventosCTASecundario hasSession={!!session} />
