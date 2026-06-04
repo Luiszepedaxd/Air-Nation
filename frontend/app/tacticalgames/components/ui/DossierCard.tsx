@@ -10,6 +10,7 @@ import { TG_COLORS } from './theme'
 export function DossierCard({
   children,
   className = '',
+  padding = 'p-6 md:p-8',
   background = 'rgba(245,240,230,0.95)',
   foldColor = TG_COLORS.border,
   delay = 0,
@@ -17,6 +18,7 @@ export function DossierCard({
 }: {
   children: React.ReactNode
   className?: string
+  padding?: string
   background?: string
   foldColor?: string
   delay?: number
@@ -40,7 +42,7 @@ export function DossierCard({
     </>
   )
 
-  const cls = `relative overflow-hidden p-6 md:p-8 ${className}`
+  const cls = `relative overflow-hidden ${padding} ${className}`
   const style = {
     background,
     border: `1px solid ${TG_COLORS.border}`,

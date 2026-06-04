@@ -62,12 +62,16 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 md:px-8">
         <SectionLabel numero="07" nombre={titulo} className="mb-8" />
-        <h2
+        <motion.h2
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
           className="mb-10 text-3xl leading-tight md:text-5xl"
           style={{ fontFamily: TG_FONTS.header, color: TG_COLORS.text }}
         >
           {titulo}
-        </h2>
+        </motion.h2>
 
         {imagenes.length === 0 ? (
           <div

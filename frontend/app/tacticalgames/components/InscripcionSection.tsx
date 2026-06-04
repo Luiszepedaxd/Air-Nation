@@ -137,19 +137,27 @@ export function InscripcionSection({
       <div className="relative z-10 mx-auto max-w-6xl px-4 md:px-8">
         <SectionLabel numero="05" nombre={titulo} color="#A8B271" className="mb-10" />
 
-        <h2
+        <motion.h2
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
           className="text-3xl leading-tight md:text-5xl"
           style={{ fontFamily: TG_FONTS.header, color: '#fff' }}
         >
           {titulo}
-        </h2>
+        </motion.h2>
         {subtitulo ? (
-          <p
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
             className="mt-3 max-w-2xl text-base md:text-lg"
             style={{ fontFamily: TG_FONTS.body, color: 'rgba(255,255,255,0.7)' }}
           >
             {subtitulo}
-          </p>
+          </motion.p>
         ) : null}
 
         {ventanas.length === 0 ? (

@@ -25,24 +25,28 @@ export function BriefingSection({ config }: { config: BriefingConfig }) {
     <section
       id="briefing"
       data-section="briefing"
-      className="relative w-full overflow-hidden py-20 md:py-28"
+      className="relative w-full overflow-hidden py-16 md:py-28"
       style={{ backgroundColor: TG_COLORS.paper, color: TG_COLORS.text }}
     >
       <PaperTexture opacity={0.03} blend="multiply" />
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 md:px-8">
-        <SectionLabel numero="01" nombre={titulo} className="mb-10" />
+        <SectionLabel numero="01" nombre={titulo} className="mb-8" />
 
-        <DossierCard>
-          <h2
-            className="text-3xl leading-tight md:text-5xl"
+        <DossierCard padding="p-6 md:p-10">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-2xl leading-tight md:text-5xl"
             style={{ fontFamily: TG_FONTS.header, color: TG_COLORS.text }}
           >
             {titulo}
-          </h2>
+          </motion.h2>
 
           {parrafos.length > 0 ? (
-            <div className="mt-6 space-y-4">
+            <div className="mt-5 flex flex-col gap-4">
               {parrafos.map((p, i) => (
                 <motion.p
                   key={i}
@@ -50,7 +54,7 @@ export function BriefingSection({ config }: { config: BriefingConfig }) {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.08 }}
-                  className="text-base leading-relaxed md:text-lg"
+                  className="text-[0.95rem] leading-relaxed md:text-lg"
                   style={{ fontFamily: TG_FONTS.body, color: '#3A3A33' }}
                 >
                   {p}
@@ -59,7 +63,7 @@ export function BriefingSection({ config }: { config: BriefingConfig }) {
             </div>
           ) : (
             <p
-              className="mt-6 text-sm uppercase tracking-[0.2em]"
+              className="mt-5 text-sm uppercase tracking-[0.2em]"
               style={{ fontFamily: TG_FONTS.mono, color: '#9A9078' }}
             >
               Briefing en preparación
@@ -67,30 +71,30 @@ export function BriefingSection({ config }: { config: BriefingConfig }) {
           )}
 
           {highlights.length > 0 ? (
-            <div className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-6 grid grid-cols-2 gap-2 md:grid-cols-3">
               {highlights.map((h, i) => {
                 const { etiqueta, valor } = parseHighlight(h)
                 return (
                   <motion.div
                     key={i}
-                    initial={{ opacity: 0, x: -12 }}
-                    whileInView={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: i * 0.06 }}
-                    className="bg-white/60 px-4 py-3"
+                    transition={{ duration: 0.4, delay: i * 0.05 }}
+                    className="bg-white/60 px-3 py-2"
                     style={{ borderLeft: `3px solid ${TG_COLORS.olive}` }}
                   >
                     {etiqueta ? (
                       <span
-                        className="block text-[0.6rem] tracking-[0.2em]"
+                        className="block text-[0.6rem] tracking-[0.15em]"
                         style={{ fontFamily: TG_FONTS.mono, fontWeight: 700, color: TG_COLORS.olive }}
                       >
                         {etiqueta.toUpperCase()}
                       </span>
                     ) : null}
                     <span
-                      className="block text-sm md:text-base"
-                      style={{ fontFamily: TG_FONTS.mono, fontWeight: 400, color: TG_COLORS.text }}
+                      className="block text-[0.85rem] leading-snug"
+                      style={{ fontFamily: TG_FONTS.body, color: TG_COLORS.text }}
                     >
                       {valor}
                     </span>

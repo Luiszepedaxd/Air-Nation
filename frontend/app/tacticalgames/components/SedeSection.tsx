@@ -34,12 +34,16 @@ export function SedeSection({ config }: { config: SedeConfig }) {
       <div className="relative z-10 mx-auto max-w-7xl px-4 md:px-8">
         <SectionLabel numero="03" nombre={titulo} className="mb-10" />
 
-        <h2
+        <motion.h2
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
           className="mb-10 text-3xl leading-tight md:text-5xl"
           style={{ fontFamily: TG_FONTS.header, color: TG_COLORS.text }}
         >
           {titulo}
-        </h2>
+        </motion.h2>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:gap-10">
           <div className="md:col-span-7">
