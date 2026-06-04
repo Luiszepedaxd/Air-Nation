@@ -1,0 +1,5 @@
+/* Fuentes específicas de la landing /tacticalgames (estética dossier militar).
+   JetBrains Mono y Lato ya están disponibles globalmente; aquí solo se añade
+   Black Ops One para los títulos stencil. Scope local: este CSS solo se carga
+   en la ruta /tacticalgames. */
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=JetBrains+Mono:wght@400;700&display=swap');
