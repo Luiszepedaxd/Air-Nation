@@ -118,6 +118,8 @@ export type GaleriaConfig = {
   eyebrow: string
   titulo: string
   imagenes: GaleriaImagen[]
+  social_texto?: string
+  social_link?: string
 }
 
 export type AirnationConfig = {

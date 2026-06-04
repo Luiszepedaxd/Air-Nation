@@ -673,6 +673,8 @@ export function TacticalGamesAdminClient({ initialBlocks }: { initialBlocks: TGR
                 </div>
               ))}
             </div>
+            <Field label="Texto botón redes"><input className={inputCls} placeholder="SEGUIR EN INSTAGRAM" value={str(slug, 'social_texto')} onChange={(e) => setField(slug, 'social_texto', e.target.value)} /></Field>
+            <Field label="Link redes"><input className={inputCls} placeholder="https://www.instagram.com/airsofttacticalgamesmx" value={str(slug, 'social_link')} onChange={(e) => setField(slug, 'social_link', e.target.value)} /></Field>
           </div>
         )
       }

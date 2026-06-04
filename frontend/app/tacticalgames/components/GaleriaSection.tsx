@@ -23,6 +23,8 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
   const imagenes = (config.imagenes ?? []).filter((im) => im && typeof im.url === 'string' && im.url.trim())
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const titulo = config.titulo?.trim() || 'GALERÍA'
+  const socialLink = config.social_link?.trim() || ''
+  const socialTexto = config.social_texto?.trim() || 'SEGUIR EN INSTAGRAM'
 
   const close = useCallback(() => setLightboxIndex(null), [])
   const next = useCallback(() => {
@@ -82,7 +84,7 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
               className="text-[0.7rem] uppercase tracking-[0.3em]"
               style={{ fontFamily: TG_FONTS.mono, color: '#9A9078' }}
             >
-              Galería disponible después del evento
+              Próximamente — sigue la cobertura en nuestras redes
             </p>
           </div>
         ) : (
@@ -122,6 +124,44 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
             </div>
           </>
         )}
+
+        {socialLink ? (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="mt-10 flex justify-center"
+          >
+            <a
+              href={socialLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-3 px-6 py-3 transition-colors"
+              style={{ border: `1px solid ${TG_COLORS.olive}`, color: TG_COLORS.olive }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = TG_COLORS.olive
+                e.currentTarget.style.color = '#fff'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = TG_COLORS.olive
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="2" />
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="2" />
+                <circle cx="17.5" cy="6.5" r="1.3" fill="currentColor" />
+              </svg>
+              <span
+                className="text-[0.75rem] uppercase tracking-[0.18em]"
+                style={{ fontFamily: TG_FONTS.header, fontWeight: 700 }}
+              >
+                {socialTexto}
+              </span>
+            </a>
+          </motion.div>
+        ) : null}
       </div>
 
       <AnimatePresence>
