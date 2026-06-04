@@ -12,7 +12,7 @@ export const revalidate = 0
 export const metadata: Metadata = {
   title: 'Eventos de Airsoft en México 2026 — Calendario, fechas y boletos',
   description:
-    'Calendario oficial de eventos de airsoft en México 2026. Operación Kursk II en Yucatán (julio), AMG Stage 01 CDMX (septiembre), Airsoft Tactical Games en Metepec (junio), Dominguera GDL (junio). Fechas, sedes y boletos.',
+    'Calendario oficial de eventos de airsoft en México 2026. Milsim, speedsoft, torneos y eventos en todo el país. Un solo calendario, siempre al día. Sin buscar en sitios repetidos con el mismo contenido.',
   keywords: [
     'eventos airsoft méxico',
     'eventos de airsoft en méxico',
