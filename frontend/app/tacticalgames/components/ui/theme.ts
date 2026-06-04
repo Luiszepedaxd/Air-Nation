@@ -12,7 +12,16 @@ export const TG_COLORS = {
 } as const
 
 export const TG_FONTS = {
-  header: "'Black Ops One', cursive",
+  header: "'Jost', sans-serif",
   mono: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace",
   body: "'Lato', sans-serif",
 } as const
+
+/** Estilo estándar de títulos AirNation (Jost display). La identidad táctica
+ *  viene de colores, texturas, stamps y layout — NO de la tipografía. */
+export const TG_HEADER_STYLE = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800 as const,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '-0.01em',
+}

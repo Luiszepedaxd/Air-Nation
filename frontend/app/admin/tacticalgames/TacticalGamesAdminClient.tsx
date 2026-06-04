@@ -449,7 +449,7 @@ export function TacticalGamesAdminClient({ initialBlocks }: { initialBlocks: TGR
       case 'briefing':
         return (
           <div className="flex flex-col gap-4">
-            <Field label="Eyebrow"><input className={inputCls} placeholder="SECCIÓN 01" value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
+            <Field label="Eyebrow"><input className={inputCls} placeholder="BRIEFING" value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
             <Field label="Título"><input className={inputCls} placeholder="BRIEFING" value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
             <Field label="Párrafos">
               <StringListEditor slug={slug} field="parrafos" addLabel="+ Agregar párrafo" placeholder="Texto del párrafo…" multiline />
@@ -497,33 +497,63 @@ export function TacticalGamesAdminClient({ initialBlocks }: { initialBlocks: TGR
         )
       }
       case 'equipamiento': {
-        const items = (Array.isArray(cfg(slug).items) ? cfg(slug).items : []) as { nombre: string; obligatorio: boolean }[]
-        const norm = items.map((it) => ({
-          nombre: typeof it.nombre === 'string' ? it.nombre : '',
-          obligatorio: Boolean(it.obligatorio),
+        const tabsRaw = (Array.isArray(cfg(slug).tabs) ? cfg(slug).tabs : []) as { nombre: string; items: { nombre: string; obligatorio: boolean }[] }[]
+        const norm = tabsRaw.map((t) => ({
+          nombre: typeof t.nombre === 'string' ? t.nombre : '',
+          items: Array.isArray(t.items)
+            ? t.items.map((it) => ({ nombre: typeof it.nombre === 'string' ? it.nombre : '', obligatorio: Boolean(it.obligatorio) }))
+            : [],
         }))
-        const setItems = (next: typeof norm) => setField(slug, 'items', next)
+        const setTabs = (next: typeof norm) => setField(slug, 'tabs', next)
         return (
           <div className="flex flex-col gap-4">
-            <Field label="Eyebrow"><input className={inputCls} placeholder="SECCIÓN 04" value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
+            <Field label="Eyebrow"><input className={inputCls} placeholder="EQUIPAMIENTO" value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
             <Field label="Título"><input className={inputCls} placeholder="EQUIPAMIENTO" value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
             <Field label="Subtítulo"><input className={inputCls} value={str(slug, 'subtitulo')} onChange={(e) => setField(slug, 'subtitulo', e.target.value)} /></Field>
             <div className="flex items-center justify-between">
-              <p className="text-[11px]" style={jost}>ITEMS</p>
-              <button type="button" className="border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setItems([...norm, { nombre: '', obligatorio: true }])}>+ Item</button>
+              <p className="text-[11px]" style={jost}>CATEGORÍAS (TABS)</p>
+              <button type="button" className="border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setTabs([...norm, { nombre: '', items: [] }])}>+ Agregar categoría</button>
             </div>
-            {norm.map((it, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-2 border border-[#EEEEEE] bg-white p-2">
-                <button type="button" disabled={i === 0} className="text-[10px] disabled:opacity-30" style={jost} onClick={() => { const n = [...norm]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setItems(n) }}>↑</button>
-                <button type="button" disabled={i === norm.length - 1} className="text-[10px] disabled:opacity-30" style={jost} onClick={() => { const n = [...norm]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; setItems(n) }}>↓</button>
-                <input className={`${inputCls} min-w-[140px] flex-1`} placeholder="Nombre del item" value={it.nombre} onChange={(e) => { const n = [...norm]; n[i] = { ...n[i], nombre: e.target.value }; setItems(n) }} />
-                <label className="flex items-center gap-1.5 text-[11px]" style={lato}>
-                  <input type="checkbox" checked={it.obligatorio} onChange={(e) => { const n = [...norm]; n[i] = { ...n[i], obligatorio: e.target.checked }; setItems(n) }} />
-                  Obligatorio
-                </label>
-                <button type="button" className="text-[10px] text-[#CC4B37]" style={jost} onClick={() => setItems(norm.filter((_, j) => j !== i))}>×</button>
-              </div>
-            ))}
+            {norm.map((tab, ti) => {
+              const setItems = (items: typeof tab.items) => { const n = [...norm]; n[ti] = { ...n[ti], items }; setTabs(n) }
+              return (
+                <div key={ti} className="border border-[#EEEEEE] bg-white p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <button type="button" disabled={ti === 0} className="text-[10px] disabled:opacity-30" style={jost} onClick={() => { const n = [...norm]; [n[ti - 1], n[ti]] = [n[ti], n[ti - 1]]; setTabs(n) }}>↑</button>
+                    <button type="button" disabled={ti === norm.length - 1} className="text-[10px] disabled:opacity-30" style={jost} onClick={() => { const n = [...norm]; [n[ti + 1], n[ti]] = [n[ti], n[ti + 1]]; setTabs(n) }}>↓</button>
+                    <span className="text-[10px] text-[#999]" style={jost}>Categoría {ti + 1}</span>
+                    <button
+                      type="button"
+                      className="ml-auto text-[10px] text-[#CC4B37]"
+                      style={jost}
+                      onClick={() => {
+                        if (tab.items.length > 0 && !window.confirm(`Eliminar la categoría "${tab.nombre || ti + 1}" con ${tab.items.length} item(s)?`)) return
+                        setTabs(norm.filter((_, j) => j !== ti))
+                      }}
+                    >
+                      Eliminar categoría
+                    </button>
+                  </div>
+                  <Field label="Nombre de la categoría"><input className={inputCls} placeholder="RÉPLICAS Y MUNICIÓN" value={tab.nombre} onChange={(e) => { const n = [...norm]; n[ti] = { ...n[ti], nombre: e.target.value }; setTabs(n) }} /></Field>
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-[#666]" style={jost}>ITEMS</p>
+                    <button type="button" className="border border-[#DDDDDD] bg-white px-2 py-1 text-[10px]" style={jost} onClick={() => setItems([...tab.items, { nombre: '', obligatorio: true }])}>+ Item</button>
+                  </div>
+                  {tab.items.map((it, i) => (
+                    <div key={i} className="mt-2 flex flex-wrap items-center gap-2 border border-[#EEEEEE] bg-[#FAFAFA] p-2">
+                      <button type="button" disabled={i === 0} className="text-[10px] disabled:opacity-30" style={jost} onClick={() => { const n = [...tab.items]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setItems(n) }}>↑</button>
+                      <button type="button" disabled={i === tab.items.length - 1} className="text-[10px] disabled:opacity-30" style={jost} onClick={() => { const n = [...tab.items]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; setItems(n) }}>↓</button>
+                      <input className={`${inputCls} min-w-[140px] flex-1`} placeholder="Nombre del item" value={it.nombre} onChange={(e) => { const n = [...tab.items]; n[i] = { ...n[i], nombre: e.target.value }; setItems(n) }} />
+                      <label className="flex items-center gap-1.5 text-[11px]" style={lato}>
+                        <input type="checkbox" checked={it.obligatorio} onChange={(e) => { const n = [...tab.items]; n[i] = { ...n[i], obligatorio: e.target.checked }; setItems(n) }} />
+                        Obligatorio
+                      </label>
+                      <button type="button" className="text-[10px] text-[#CC4B37]" style={jost} onClick={() => setItems(tab.items.filter((_, j) => j !== i))}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
             <Field label="Nota BBS"><input className={inputCls} placeholder="BBS de 0.25 únicamente" value={str(slug, 'nota_bbs')} onChange={(e) => setField(slug, 'nota_bbs', e.target.value)} /></Field>
             <Field label="Nota extra"><textarea rows={2} className={inputCls} value={str(slug, 'nota_extra')} onChange={(e) => setField(slug, 'nota_extra', e.target.value)} /></Field>
           </div>
@@ -540,7 +570,7 @@ export function TacticalGamesAdminClient({ initialBlocks }: { initialBlocks: TGR
         const setVentanas = (next: typeof norm) => setField(slug, 'ventanas', next)
         return (
           <div className="flex flex-col gap-4">
-            <Field label="Eyebrow"><input className={inputCls} placeholder="SECCIÓN 05" value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
+            <Field label="Eyebrow"><input className={inputCls} placeholder="INSCRIPCIÓN" value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
             <Field label="Título"><input className={inputCls} placeholder="INSCRIPCIÓN" value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
             <Field label="Subtítulo"><input className={inputCls} value={str(slug, 'subtitulo')} onChange={(e) => setField(slug, 'subtitulo', e.target.value)} /></Field>
             <div className="flex items-center justify-between">

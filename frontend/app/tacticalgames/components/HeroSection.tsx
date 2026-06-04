@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import type { HeroConfig } from '../lib/types'
-import { TG_COLORS, TG_FONTS } from './ui/theme'
+import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { PaperTexture } from './ui/PaperTexture'
 import { StampBadge } from './ui/StampBadge'
 import { CornerBrackets } from './ui/CornerBrackets'
@@ -107,7 +107,8 @@ export function HeroSection({ config }: { config: HeroConfig }) {
           <h1
             className="mx-auto max-w-5xl leading-[0.95] text-white"
             style={{
-              fontFamily: TG_FONTS.header,
+              ...TG_HEADER_STYLE,
+              fontWeight: 900,
               fontSize: 'clamp(2rem, 9vw, 6rem)',
               wordBreak: 'normal',
               overflowWrap: 'break-word',

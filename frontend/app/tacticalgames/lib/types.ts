@@ -62,11 +62,16 @@ export type ItemEquipamiento = {
   obligatorio: boolean
 }
 
+export type EquipamientoTab = {
+  nombre: string
+  items: ItemEquipamiento[]
+}
+
 export type EquipamientoConfig = {
   eyebrow: string
   titulo: string
   subtitulo: string
-  items: ItemEquipamiento[]
+  tabs: EquipamientoTab[]
   nota_bbs: string
   nota_extra: string
 }

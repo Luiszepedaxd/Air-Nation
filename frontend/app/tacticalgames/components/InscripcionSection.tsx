@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import type { InscripcionConfig, VentanaPrecio } from '../lib/types'
 import { estadoVentana, formatoRangoCorto, type EstadoVentana } from '../lib/fechas'
-import { TG_COLORS, TG_FONTS } from './ui/theme'
+import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { SectionLabel } from './ui/SectionLabel'
 import { StampBadge } from './ui/StampBadge'
 
@@ -90,15 +90,15 @@ function VentanaCard({
         {formatoRangoCorto(ventana.fecha_desde, ventana.fecha_hasta)}
       </p>
       <p
-        className="mt-2 text-lg uppercase md:text-xl"
-        style={{ fontFamily: TG_FONTS.header, color: '#fff' }}
+        className="mt-2 text-lg md:text-xl"
+        style={{ ...TG_HEADER_STYLE, color: '#fff' }}
       >
         {ventana.label || 'Inscripción'}
       </p>
 
       <p
         className="mt-5 leading-none"
-        style={{ fontFamily: TG_FONTS.header, color: precioColor, fontSize: 'clamp(2.2rem, 8vw, 3.5rem)' }}
+        style={{ ...TG_HEADER_STYLE, color: precioColor, fontSize: 'clamp(2.2rem, 8vw, 3.5rem)' }}
       >
         ${ventana.precio > 0 ? ventana.precio.toLocaleString('es-MX') : '—'}
         <span className="ml-2 text-base text-white/50" style={{ fontFamily: TG_FONTS.mono }}>
@@ -135,7 +135,7 @@ export function InscripcionSection({
       style={{ backgroundColor: TG_COLORS.dark, color: '#fff' }}
     >
       <div className="relative z-10 mx-auto max-w-6xl px-4 md:px-8">
-        <SectionLabel numero="05" nombre={titulo} color="#A8B271" className="mb-10" />
+        <SectionLabel text={config.eyebrow?.trim() || 'INSCRIPCIÓN'} color="#A8B271" className="mb-10" />
 
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
@@ -143,7 +143,7 @@ export function InscripcionSection({
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="text-3xl leading-tight md:text-5xl"
-          style={{ fontFamily: TG_FONTS.header, color: '#fff' }}
+          style={{ ...TG_HEADER_STYLE, color: '#fff' }}
         >
           {titulo}
         </motion.h2>

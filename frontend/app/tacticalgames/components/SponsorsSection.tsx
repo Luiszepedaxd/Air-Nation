@@ -8,7 +8,6 @@ import { SectionLabel } from './ui/SectionLabel'
 export function SponsorsSection({ config }: { config: SponsorsConfig }) {
   const logos = (config.logos ?? []).filter((l) => l && (l.logo_url?.trim() || l.nombre?.trim()))
   const hasLogos = logos.length > 0
-  const titulo = config.titulo?.trim() || 'PATROCINADORES'
 
   const half = Math.ceil(logos.length / 2)
   const row1 = logos.slice(0, half)
@@ -30,7 +29,7 @@ export function SponsorsSection({ config }: { config: SponsorsConfig }) {
       <PaperTexture opacity={0.03} blend="multiply" />
 
       <div className="relative z-10 mx-auto mb-10 max-w-7xl px-4 md:mb-16 md:px-8">
-        <SectionLabel numero="06" nombre={titulo} />
+        <SectionLabel text={config.eyebrow?.trim() || 'PATROCINADORES'} />
       </div>
 
       {!hasLogos ? (

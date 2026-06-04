@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { SedeConfig } from '../lib/types'
-import { TG_COLORS, TG_FONTS } from './ui/theme'
+import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { PaperTexture } from './ui/PaperTexture'
 import { SectionLabel } from './ui/SectionLabel'
 import { DossierCard } from './ui/DossierCard'
@@ -32,7 +32,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
       <PaperTexture opacity={0.03} blend="multiply" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 md:px-8">
-        <SectionLabel numero="03" nombre={titulo} className="mb-10" />
+        <SectionLabel text={config.eyebrow?.trim() || 'LOCALIZACIÓN'} className="mb-10" />
 
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
@@ -40,7 +40,7 @@ export function SedeSection({ config }: { config: SedeConfig }) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
           className="mb-10 text-3xl leading-tight md:text-5xl"
-          style={{ fontFamily: TG_FONTS.header, color: TG_COLORS.text }}
+          style={{ ...TG_HEADER_STYLE, color: TG_COLORS.text }}
         >
           {titulo}
         </motion.h2>

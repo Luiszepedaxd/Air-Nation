@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import type { AirnationConfig } from '../lib/types'
-import { TG_COLORS, TG_FONTS } from './ui/theme'
+import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { SectionLabel } from './ui/SectionLabel'
 import { DossierCard } from './ui/DossierCard'
 
@@ -24,7 +24,7 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
       style={{ backgroundColor: TG_COLORS.dark, color: '#fff' }}
     >
       <div className="relative z-10 mx-auto max-w-3xl px-4 md:px-8">
-        <SectionLabel numero="08" nombre={titulo} color="#A8B271" className="mb-10" />
+        <SectionLabel text={config.eyebrow?.trim() || 'PLATAFORMA OFICIAL'} color="#A8B271" className="mb-10" />
 
         <DossierCard background="#23231F" delay={0.1}>
           <div className="text-center">
@@ -34,7 +34,7 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
               className="text-4xl leading-none md:text-6xl"
-              style={{ fontFamily: TG_FONTS.header }}
+              style={{ ...TG_HEADER_STYLE }}
             >
               <span className="text-white">AIR</span>
               <span style={{ color: TG_COLORS.red }}>NATION</span>

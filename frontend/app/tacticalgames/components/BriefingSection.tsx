@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import type { BriefingConfig } from '../lib/types'
-import { TG_COLORS, TG_FONTS } from './ui/theme'
+import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { PaperTexture } from './ui/PaperTexture'
 import { SectionLabel } from './ui/SectionLabel'
 import { DossierCard } from './ui/DossierCard'
@@ -31,7 +31,7 @@ export function BriefingSection({ config }: { config: BriefingConfig }) {
       <PaperTexture opacity={0.03} blend="multiply" />
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 md:px-8">
-        <SectionLabel numero="01" nombre={titulo} className="mb-8" />
+        <SectionLabel text={config.eyebrow?.trim() || 'BRIEFING'} className="mb-8" />
 
         <DossierCard padding="p-6 md:p-10">
           <motion.h2
@@ -40,7 +40,7 @@ export function BriefingSection({ config }: { config: BriefingConfig }) {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
             className="text-2xl leading-tight md:text-5xl"
-            style={{ fontFamily: TG_FONTS.header, color: TG_COLORS.text }}
+            style={{ ...TG_HEADER_STYLE, color: TG_COLORS.text }}
           >
             {titulo}
           </motion.h2>

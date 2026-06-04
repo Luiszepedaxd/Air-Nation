@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { CountdownConfig } from '../lib/types'
-import { TG_COLORS, TG_FONTS } from './ui/theme'
+import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { CornerBrackets } from './ui/CornerBrackets'
 
 function calcRemaining(targetIso: string) {
@@ -69,7 +69,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             className="mt-12 text-3xl md:text-5xl"
-            style={{ fontFamily: TG_FONTS.header, color: TG_COLORS.terminalGreen }}
+            style={{ ...TG_HEADER_STYLE, color: TG_COLORS.terminalGreen }}
           >
             OPERACIÓN EN CURSO
           </motion.h2>
