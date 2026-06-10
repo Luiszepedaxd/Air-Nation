@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { LandingNav } from './components/LandingNav'
 import { getVirus3Blocks } from './lib/get-blocks'
 import { BlockRenderer } from './components/BlockRenderer'
-import type { HeroConfig } from './lib/types'
+import type { HeroConfig, MusicaConfig } from './lib/types'
 
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
@@ -60,6 +60,10 @@ export default async function Virus3Page() {
   const heroConfig = heroBlock?.config as HeroConfig | undefined
   const heroImage = heroOgShareUrl(heroConfig)
 
+  const musicaBlock = blocks.find((b) => b.slug === 'musica')
+  const musicaConfig = musicaBlock?.config as MusicaConfig | undefined
+  const audioUrl = musicaConfig?.audio_url?.trim() || undefined
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -95,7 +99,7 @@ export default async function Virus3Page() {
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F5F3EF] text-[#111111]">
-      <LandingNav />
+      <LandingNav audioUrl={audioUrl} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

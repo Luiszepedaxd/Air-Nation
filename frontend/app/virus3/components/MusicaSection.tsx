@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import type { MusicaConfig } from '../lib/types'
 
 export function MusicaSection({ config }: { config: MusicaConfig }) {
+  const audioUrl = config.audio_url?.trim()
+
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -14,7 +16,6 @@ export function MusicaSection({ config }: { config: MusicaConfig }) {
   const eyebrow = config.eyebrow?.trim() || 'BANDA SONORA OFICIAL'
   const titulo = config.titulo?.trim() || 'TEMA OFICIAL'
   const artista = config.artista?.trim() || ''
-  const audioUrl = config.audio_url?.trim()
   const coverUrl = config.cover_url?.trim()
 
   useEffect(() => {
