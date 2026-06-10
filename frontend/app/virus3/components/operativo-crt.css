@@ -161,3 +161,26 @@
     width: 32px;
   }
 }
+
+/* Mobile: tablet más compacto */
+@media (max-width: 767px) {
+  .tablet-frame {
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .tablet-screen {
+    border-radius: 6px;
+  }
+
+  .tablet-camera {
+    top: 5px;
+    width: 5px;
+    height: 5px;
+  }
+
+  .tablet-led {
+    bottom: 7px;
+    width: 20px;
+  }
+}

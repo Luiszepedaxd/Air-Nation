@@ -52,9 +52,9 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
       ref={sectionRef}
       id="cronograma"
       data-section="cronograma"
-      className="relative w-full bg-[#0a0a0a] py-10 md:py-16"
+      className="relative w-full bg-[#0a0a0a] py-8 md:py-16"
     >
-      <div className="mx-auto mb-10 max-w-5xl px-4 md:mb-14 md:px-8">
+      <div className="mx-auto mb-6 max-w-5xl px-4 md:mb-12 md:px-8">
         <p
           className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37] md:text-xs"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
@@ -62,7 +62,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
           {eyebrow}
         </p>
         <h2
-          className="mt-3 text-3xl leading-none text-white sm:text-4xl md:text-6xl lg:text-7xl"
+          className="mt-2 text-2xl leading-none text-white sm:text-3xl md:text-6xl lg:text-7xl"
           style={{
             fontFamily: 'Jost, sans-serif',
             fontWeight: 900,
@@ -77,7 +77,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
         <div className="tablet-frame">
           <div className="tablet-camera" />
 
-          <div className="tablet-screen crt-screen p-4 text-[12px] leading-[1.7] md:p-8 md:text-[14px]">
+          <div className="tablet-screen crt-screen p-3 text-[10px] leading-[1.6] md:p-8 md:text-[14px]">
             <div className="crt-scanlines" />
             <div className="crt-vignette" />
 
@@ -117,7 +117,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
                         <span className="crt-prompt">&gt; LIST SCHEDULE --all</span>
                       </div>
 
-                      <div className="space-y-4 md:space-y-6">
+                      <div className="space-y-2 md:space-y-5">
                         {hitos.map((h, i) => (
                           <HitoLine key={`${h.hora}-${h.titulo}-${i}`} hito={h} index={i} />
                         ))}
@@ -199,12 +199,12 @@ function HitoLine({ hito, index }: { hito: CronogramaHito; index: number }) {
     <div className="crt-line-enter">
       <div className="flex flex-wrap items-baseline gap-2 md:gap-3">
         <span className={`${accent} font-bold`}>&gt;</span>
-        <span className={`${accent} text-[13px] font-bold md:text-[16px]`}>
+        <span className={`${accent} text-[11px] font-bold md:text-[16px]`}>
           {hito.hora}
         </span>
         <span className="crt-dim">::</span>
         <span
-          className={`${accent} text-[13px] font-bold uppercase md:text-[16px]`}
+          className={`${accent} text-[11px] font-bold uppercase md:text-[16px]`}
         >
           {typed}
           {started && typed.length < hito.titulo.length ? (
