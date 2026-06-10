@@ -70,7 +70,7 @@ export function MusicaSection({ config }: { config: MusicaConfig }) {
     <section
       id="musica"
       data-section="musica"
-      className="relative w-full bg-[#0d0d0d] py-16 text-white md:py-20"
+      className="relative w-full bg-[#0d0d0d] py-10 text-white md:py-14"
     >
       <div className="mx-auto max-w-2xl px-4 md:px-8">
         <motion.div
@@ -78,7 +78,7 @@ export function MusicaSection({ config }: { config: MusicaConfig }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mb-8 text-center"
+          className="mb-5 text-center"
         >
           <p
             className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37]"

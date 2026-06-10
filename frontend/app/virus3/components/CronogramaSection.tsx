@@ -52,7 +52,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
       ref={sectionRef}
       id="cronograma"
       data-section="cronograma"
-      className="relative w-full bg-[#0a0a0a] py-16 md:py-24"
+      className="relative w-full bg-[#0a0a0a] py-10 md:py-16"
     >
       <div className="mx-auto mb-10 max-w-5xl px-4 md:mb-14 md:px-8">
         <p
@@ -62,7 +62,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
           {eyebrow}
         </p>
         <h2
-          className="mt-3 text-4xl leading-none text-white sm:text-5xl md:text-7xl lg:text-8xl"
+          className="mt-3 text-3xl leading-none text-white sm:text-4xl md:text-6xl lg:text-7xl"
           style={{
             fontFamily: 'Jost, sans-serif',
             fontWeight: 900,
@@ -77,7 +77,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
         <div className="tablet-frame">
           <div className="tablet-camera" />
 
-          <div className="tablet-screen crt-screen min-h-[520px] p-4 text-[12px] leading-[1.7] md:min-h-[640px] md:p-8 md:text-[14px]">
+          <div className="tablet-screen crt-screen p-4 text-[12px] leading-[1.7] md:p-8 md:text-[14px]">
             <div className="crt-scanlines" />
             <div className="crt-vignette" />
 
