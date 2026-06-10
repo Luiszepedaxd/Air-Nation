@@ -11,23 +11,23 @@ export function AmenidadesSection({ config }: { config: AmenidadesConfig }) {
   return (
     <section
       data-section="amenidades"
-      className="relative w-full bg-[#111111] py-16 text-white md:py-24"
+      className="relative w-full bg-[#111111] py-10 text-white md:py-14"
     >
       <div className="mx-auto max-w-4xl px-4 md:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-10 text-center md:mb-14"
+          className="mb-8 text-center"
         >
           <p
-            className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37] md:text-xs"
+            className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37]"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
           >
             {eyebrow}
           </p>
           <h2
-            className="mt-3 text-3xl leading-none md:text-5xl"
+            className="mt-2 text-2xl leading-none md:text-4xl"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}
           >
             {titulo}
@@ -35,32 +35,29 @@ export function AmenidadesSection({ config }: { config: AmenidadesConfig }) {
         </motion.div>
 
         {items.length === 0 ? (
-          <p
-            className="text-center text-sm text-white/50"
-            style={{ fontFamily: 'Lato, sans-serif' }}
-          >
+          <p className="text-center text-sm text-white/50" style={{ fontFamily: 'Lato, sans-serif' }}>
             Lista de amenidades próximamente
           </p>
         ) : (
-          <ul className="flex flex-col gap-4">
+          <ul className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
             {items.map((item, i) => (
               <motion.li
                 key={`${i}-${item}`}
-                initial={{ opacity: 0, x: -12 }}
+                initial={{ opacity: 0, x: -8 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-start gap-3 border-b border-white/10 pb-4"
+                transition={{ delay: i * 0.04 }}
+                className="flex items-center gap-2"
               >
                 <span
-                  className="mt-0.5 shrink-0 text-lg text-[#CC4B37]"
+                  className="shrink-0 text-sm text-[#CC4B37]"
                   style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
                   aria-hidden
                 >
                   ✓
                 </span>
                 <span
-                  className="text-base text-white md:text-lg"
+                  className="text-sm text-white/80 md:text-base"
                   style={{ fontFamily: 'Lato, sans-serif' }}
                 >
                   {item.trim()}
