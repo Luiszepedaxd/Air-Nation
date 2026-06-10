@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { InscripcionConfig, VentanaInscripcion } from '../lib/types'
 
@@ -31,6 +31,24 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
   const eyebrow = config.eyebrow?.trim() || 'INSCRIPCIÓN'
   const titulo = config.titulo?.trim() || 'VENTANAS DE PRECIO'
   const [active, setActive] = useState(0)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
+  const SWIPE_THRESHOLD = 40
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    touchEndX.current = e.changedTouches[0].clientX
+    const delta = touchStartX.current - touchEndX.current
+    const total = ventanas.length
+    if (delta > SWIPE_THRESHOLD) {
+      setActive((prev) => Math.min(prev + 1, total - 1))
+    } else if (delta < -SWIPE_THRESHOLD) {
+      setActive((prev) => Math.max(prev - 1, 0))
+    }
+  }
 
   return (
     <section
@@ -82,7 +100,11 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
 
             {/* Mobile: una a la vez */}
             <div className="md:hidden">
-              <div className="relative overflow-hidden">
+              <div
+                className="relative overflow-hidden"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={active}

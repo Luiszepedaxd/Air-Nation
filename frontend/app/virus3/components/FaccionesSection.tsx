@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { FaccionesConfig, FaccionV3 } from '../lib/types'
 
@@ -9,6 +9,24 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
   const eyebrow = config.eyebrow?.trim() || 'ELIGE TU BANDO'
   const titulo = config.titulo?.trim() || 'FACCIONES'
   const [active, setActive] = useState(0)
+  const touchStartX = useRef<number>(0)
+  const touchEndX = useRef<number>(0)
+  const SWIPE_THRESHOLD = 40
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    touchEndX.current = e.changedTouches[0].clientX
+    const delta = touchStartX.current - touchEndX.current
+    const total = facciones.length
+    if (delta > SWIPE_THRESHOLD) {
+      setActive((prev) => Math.min(prev + 1, total - 1))
+    } else if (delta < -SWIPE_THRESHOLD) {
+      setActive((prev) => Math.max(prev - 1, 0))
+    }
+  }
 
   return (
     <section
@@ -58,7 +76,11 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
 
             {/* Mobile: una card a la vez */}
             <div className="md:hidden">
-              <div className="relative overflow-hidden">
+              <div
+                className="relative overflow-hidden"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={active}
