@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { InscripcionConfig, VentanaInscripcion } from '../lib/types'
 
 const ESTADO_LABELS: Record<VentanaInscripcion['estado'], string> = {
@@ -18,11 +18,11 @@ function estadoBadgeClass(estado: VentanaInscripcion['estado']) {
     case 'agotada':
       return 'bg-[#CC4B37]/15 text-[#CC4B37] border-[#CC4B37]/40'
     case 'proxima':
-      return 'bg-[#666666]/15 text-[#999999] border-[#666666]/40'
+      return 'bg-[#666]/15 text-[#999] border-[#666]/40'
     case 'finalizada':
-      return 'bg-[#666666]/15 text-[#999999] border-[#666666]/40 line-through'
+      return 'bg-[#666]/15 text-[#999] border-[#666]/40 line-through'
     default:
-      return 'bg-[#666666]/15 text-[#999999]'
+      return 'bg-[#666]/15 text-[#999]'
   }
 }
 
@@ -30,26 +30,7 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
   const ventanas = config.ventanas ?? []
   const eyebrow = config.eyebrow?.trim() || 'INSCRIPCIÓN'
   const titulo = config.titulo?.trim() || 'VENTANAS DE PRECIO'
-
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [showLeft, setShowLeft] = useState(false)
-  const [showRight, setShowRight] = useState(true)
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const update = () => {
-      setShowLeft(el.scrollLeft > 8)
-      setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8)
-    }
-    update()
-    el.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    return () => {
-      el.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [])
+  const [active, setActive] = useState(0)
 
   return (
     <section
@@ -76,59 +57,67 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
           >
             {titulo}
           </h2>
-          {config.nota?.trim() ? (
+          {config.nota?.trim() && (
             <p
               className="mx-auto mt-4 max-w-2xl text-sm text-[#666666] md:text-base"
               style={{ fontFamily: 'Lato, sans-serif' }}
             >
               {config.nota}
             </p>
-          ) : null}
+          )}
         </motion.div>
 
         {ventanas.length === 0 ? (
-          <p
-            className="text-center text-sm text-[#666666]"
-            style={{ fontFamily: 'Lato, sans-serif' }}
-          >
+          <p className="text-center text-sm text-[#666666]" style={{ fontFamily: 'Lato, sans-serif' }}>
             Ventanas de inscripción próximamente
           </p>
         ) : (
-          <div className="relative">
-            {/* Fade izquierdo */}
-            <div
-              className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-10 transition-opacity duration-300"
-              style={{
-                opacity: showLeft ? 0.85 : 0,
-                background: 'linear-gradient(to right, #F5F3EF 30%, transparent)',
-              }}
-            />
-            {/* Fade derecho */}
-            <div
-              className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-10 transition-opacity duration-300"
-              style={{
-                opacity: showRight ? 0.85 : 0,
-                background: 'linear-gradient(to left, #F5F3EF 30%, transparent)',
-              }}
-            />
-            {/* Scroll container */}
-            <div
-              ref={scrollRef}
-              className="virus3-scroll flex gap-5 overflow-x-auto px-4 pb-4 md:gap-6 md:px-6"
-              style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              <style>{`.virus3-scroll::-webkit-scrollbar { display: none; }`}</style>
+          <>
+            {/* Desktop: todas visibles en grid */}
+            <div className="hidden gap-6 md:grid md:grid-cols-2 lg:grid-cols-4">
               {ventanas.map((v, i) => (
-                <div
-                  key={`${v.nombre}-${i}`}
-                  className="shrink-0"
-                  style={{ width: 'clamp(280px, 80vw, 340px)', scrollSnapAlign: 'start' }}
-                >
-                  <VentanaCard ventana={v} index={i} />
-                </div>
+                <VentanaCard key={`${v.nombre}-${i}`} ventana={v} index={i} />
               ))}
             </div>
-          </div>
+
+            {/* Mobile: una a la vez */}
+            <div className="md:hidden">
+              <div className="relative overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={active}
+                    initial={{ opacity: 0, x: 40 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -40 }}
+                    transition={{ duration: 0.28 }}
+                  >
+                    <VentanaCard ventana={ventanas[active]} index={active} />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Dots */}
+              <div className="mt-6 flex items-center justify-center gap-2">
+                {ventanas.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActive(i)}
+                    aria-label={`Ventana ${i + 1}`}
+                    className="transition-all duration-200"
+                    style={{
+                      width: i === active ? 20 : 8,
+                      height: 8,
+                      borderRadius: 4,
+                      background: i === active ? '#CC4B37' : 'rgba(0,0,0,0.2)',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </section>
@@ -149,10 +138,7 @@ function VentanaCard({ ventana, index }: { ventana: VentanaInscripcion; index: n
       style={{ borderRadius: 2 }}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
-        <h3
-          className="text-lg leading-tight md:text-xl"
-          style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-        >
+        <h3 className="text-lg leading-tight md:text-xl" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}>
           {ventana.nombre?.trim() || 'Ventana'}
         </h3>
         <span
@@ -163,32 +149,22 @@ function VentanaCard({ ventana, index }: { ventana: VentanaInscripcion; index: n
         </span>
       </div>
 
-      {(ventana.fecha_inicio?.trim() || ventana.fecha_fin?.trim()) ? (
-        <p
-          className="mb-4 text-xs text-[#999999]"
-          style={{ fontFamily: 'Lato, sans-serif' }}
-        >
+      {(ventana.fecha_inicio?.trim() || ventana.fecha_fin?.trim()) && (
+        <p className="mb-4 text-xs text-[#999999]" style={{ fontFamily: 'Lato, sans-serif' }}>
           {ventana.fecha_inicio?.trim()}
           {ventana.fecha_inicio?.trim() && ventana.fecha_fin?.trim() ? ' — ' : ''}
           {ventana.fecha_fin?.trim()}
         </p>
-      ) : null}
+      )}
 
-      <p
-        className="mb-5 text-3xl text-[#111111] md:text-4xl"
-        style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}
-      >
+      <p className="mb-5 text-3xl text-[#111111] md:text-4xl" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
         {ventana.precio?.trim() || '—'}
       </p>
 
       {incluye.length > 0 ? (
         <ul className="mb-6 flex flex-1 flex-col gap-2">
           {incluye.map((item, j) => (
-            <li
-              key={j}
-              className="flex items-start gap-2 text-sm text-[#444444]"
-              style={{ fontFamily: 'Lato, sans-serif' }}
-            >
+            <li key={j} className="flex items-start gap-2 text-sm text-[#444444]" style={{ fontFamily: 'Lato, sans-serif' }}>
               <span className="mt-0.5 shrink-0 text-[#CC4B37]" aria-hidden>
                 ✓
               </span>
