@@ -3,15 +3,25 @@
 import { useState, useRef } from 'react'
 import { uploadVideo } from '@/lib/apiFetch'
 
-const ACCEPTED = ['video/mp4', 'video/quicktime', 'video/webm']
+const VIDEO_ACCEPTED = ['video/mp4', 'video/quicktime', 'video/webm']
+const AUDIO_ACCEPTED = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/mp4']
 const MAX_MB = 100
 
 type Props = {
   value: string
   onChange: (url: string) => void
+  accept?: string
 }
 
-export function VideoUploadInput({ value, onChange }: Props) {
+function isAudioMode(accept?: string) {
+  return accept?.includes('audio') ?? false
+}
+
+export function VideoUploadInput({ value, onChange, accept }: Props) {
+  const audioMode = isAudioMode(accept)
+  const accepted = audioMode ? AUDIO_ACCEPTED : VIDEO_ACCEPTED
+  const acceptAttr = accept ?? 'video/mp4,video/quicktime,video/webm'
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState('')
@@ -23,20 +33,24 @@ export function VideoUploadInput({ value, onChange }: Props) {
     setError(null)
 
     if (file.size === 0) {
-      setError('Video vacío o corrupto.')
+      setError(audioMode ? 'Audio vacío o corrupto.' : 'Video vacío o corrupto.')
       return
     }
     if (file.size > MAX_MB * 1024 * 1024) {
-      setError(`Video excede ${MAX_MB}MB`)
+      setError(`El archivo excede ${MAX_MB}MB`)
       return
     }
-    if (!ACCEPTED.includes(file.type)) {
-      setError('Formato no soportado. Usa MP4, MOV o WebM.')
+    if (!accepted.includes(file.type)) {
+      setError(
+        audioMode
+          ? 'Formato no soportado. Usa MP3 o WAV.'
+          : 'Formato no soportado. Usa MP4, MOV o WebM.'
+      )
       return
     }
 
     setBusy(true)
-    setProgress('Subiendo video a R2…')
+    setProgress(audioMode ? 'Subiendo audio a R2…' : 'Subiendo video a R2…')
     try {
       const result = await uploadVideo(file)
       if (!result?.video_url) throw new Error('Upload sin URL')
@@ -60,20 +74,24 @@ export function VideoUploadInput({ value, onChange }: Props) {
     <div className="block">
       {value ? (
         <div className="mb-2 border border-[#EEEEEE] bg-[#F4F4F4] p-2">
-          <video
-            src={value}
-            controls
-            muted
-            playsInline
-            className="block max-h-40 w-full bg-black object-contain"
-          />
+          {audioMode ? (
+            <audio src={value} controls className="block w-full" />
+          ) : (
+            <video
+              src={value}
+              controls
+              muted
+              playsInline
+              className="block max-h-40 w-full bg-black object-contain"
+            />
+          )}
           <button
             type="button"
             onClick={handleClear}
             className="mt-2 text-[10px] uppercase tracking-[0.12em] text-[#CC4B37] hover:underline"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
           >
-            × Quitar video
+            × Quitar {audioMode ? 'audio' : 'video'}
           </button>
         </div>
       ) : null}
@@ -81,14 +99,14 @@ export function VideoUploadInput({ value, onChange }: Props) {
       <input
         ref={fileInputRef}
         type="file"
-        accept="video/mp4,video/quicktime,video/webm"
+        accept={acceptAttr}
         onChange={handleFile}
         disabled={busy}
         className="block w-full text-[12px] text-[#666] file:mr-3 file:cursor-pointer file:border file:border-solid file:border-[#CC4B37] file:bg-white file:px-3 file:py-1.5 file:text-[10px] file:font-bold file:uppercase file:tracking-[0.12em] file:text-[#CC4B37] hover:file:bg-[#CC4B37] hover:file:text-white"
       />
 
       <p className="mt-1 text-[11px] text-[#999]">
-        MP4 / MOV / WebM · máx {MAX_MB}MB
+        {audioMode ? 'MP3 / WAV' : 'MP4 / MOV / WebM'} · máx {MAX_MB}MB
       </p>
 
       {progress ? (

@@ -60,6 +60,7 @@ const SECTIONS: SectionDef[] = [
   { slug: 'sponsors', label: 'Sponsors', descripcion: 'Logos por tier.' },
   { slug: 'galeria', label: 'Galería', descripcion: 'Imágenes del evento.' },
   { slug: 'videos', label: 'Videos', descripcion: 'Videos MP4.' },
+  { slug: 'musica', label: 'Música — Canción oficial', descripcion: 'Reproductor del tema oficial del evento.' },
   { slug: 'airnation', label: 'AirNation', descripcion: 'Bloque presencia AirNation.' },
 ]
 
@@ -1195,6 +1196,34 @@ export function Virus3AdminClient({
           </div>
         )
       }
+      case 'musica':
+        return (
+          <div className="flex flex-col gap-4">
+            <Field label="Eyebrow">
+              <input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} />
+            </Field>
+            <Field label="Título de la canción">
+              <input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} />
+            </Field>
+            <Field label="Artista">
+              <input className={inputCls} value={str(slug, 'artista')} onChange={(e) => setField(slug, 'artista', e.target.value)} />
+            </Field>
+            <Field label="Audio MP3 / WAV">
+              <VideoUploadInput
+                value={str(slug, 'audio_url')}
+                onChange={(url) => setField(slug, 'audio_url', url)}
+                accept="audio/*"
+              />
+            </Field>
+            <Field label="Cover art (opcional)">
+              <ImageUploadInput
+                slug="musica"
+                value={str(slug, 'cover_url')}
+                onChange={(url) => setField(slug, 'cover_url', url)}
+              />
+            </Field>
+          </div>
+        )
       case 'airnation':
         return (
           <div className="flex flex-col gap-4">

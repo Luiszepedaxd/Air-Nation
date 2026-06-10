@@ -5,7 +5,17 @@ const { requireAuth } = require("../middleware/requireAuth");
 
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const videoMimes = new Set(["video/mp4", "video/quicktime", "video/webm"]);
+const videoMimes = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/wave",
+  "audio/x-wav",
+  "audio/mp4",
+]);
 const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
 const VIDEO_MAX_DURATION_SEC = 30;
 
@@ -17,7 +27,9 @@ const uploadVideo = multer({
       cb(null, true);
     } else {
       cb(
-        new Error("Solo se permiten video/mp4, video/quicktime o video/webm")
+        new Error(
+          "Solo se permiten video/mp4, video/quicktime, video/webm o audio/mpeg, audio/wav"
+        )
       );
     }
   },

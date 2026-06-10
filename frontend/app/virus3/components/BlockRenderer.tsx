@@ -10,6 +10,7 @@ import { CronogramaSection } from './CronogramaSection'
 import { SponsorsSection } from './SponsorsSection'
 import { GaleriaSection } from './GaleriaSection'
 import { VideosSection } from './VideosSection'
+import { MusicaSection } from './MusicaSection'
 import { AirnationSection } from './AirnationSection'
 
 import type {
@@ -24,6 +25,7 @@ import type {
   SponsorsConfig,
   GaleriaConfig,
   VideosConfig,
+  MusicaConfig,
   AirnationConfig,
 } from '../lib/types'
 
@@ -58,6 +60,8 @@ export function BlockRenderer({
       return <GaleriaSection config={(block.config as GaleriaConfig) ?? {}} />
     case 'videos':
       return <VideosSection config={(block.config as VideosConfig) ?? {}} />
+    case 'musica':
+      return <MusicaSection config={(block.config as MusicaConfig) ?? {}} />
     case 'airnation':
       return <AirnationSection config={(block.config as AirnationConfig) ?? {}} />
     default:

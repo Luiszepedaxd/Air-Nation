@@ -10,6 +10,7 @@ export type Virus3Slug =
   | 'sponsors'
   | 'galeria'
   | 'videos'
+  | 'musica'
   | 'airnation'
 
 export const VIRUS3_SLUGS: readonly Virus3Slug[] = [
@@ -24,6 +25,7 @@ export const VIRUS3_SLUGS: readonly Virus3Slug[] = [
   'sponsors',
   'galeria',
   'videos',
+  'musica',
   'airnation',
 ] as const
 
@@ -144,6 +146,14 @@ export type VideosConfig = {
   eyebrow: string
   titulo: string
   videos: VideoItem[]
+}
+
+export type MusicaConfig = {
+  eyebrow: string
+  titulo: string
+  artista: string
+  audio_url: string
+  cover_url: string
 }
 
 export type AirnationConfig = {
