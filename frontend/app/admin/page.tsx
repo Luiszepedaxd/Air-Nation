@@ -141,6 +141,13 @@ export default function AdminHomePage() {
           >
             Landing Blood Money 2
           </Link>
+          <Link
+            href="/admin/virus3"
+            className="inline-flex bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90"
+            style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
+          >
+            Op. Virus 3
+          </Link>
         </div>
       </section>
     </div>

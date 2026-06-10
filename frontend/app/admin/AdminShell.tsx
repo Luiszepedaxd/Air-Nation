@@ -58,6 +58,7 @@ const SPONSORS_GROUP: NavGroup = {
     { href: '/admin/bloodmoney2', label: 'Blood Money 2' },
     { href: '/admin/operacionkursk2', label: 'Op. Kursk II' },
     { href: '/admin/montanadeniebla', label: 'Op. Montaña de Niebla' },
+    { href: '/admin/virus3', label: 'Op. Virus 3' },
     { href: '/admin/tacticalgames', label: 'Tactical Games' },
   ],
 }
