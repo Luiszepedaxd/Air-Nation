@@ -97,24 +97,24 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
           <div className="relative">
             {/* Fade izquierdo */}
             <div
-              className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-20 transition-opacity duration-300 md:w-32"
+              className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-10 transition-opacity duration-300"
               style={{
-                opacity: showLeft ? 1 : 0,
-                background: 'linear-gradient(to right, #F5F3EF, transparent)',
+                opacity: showLeft ? 0.85 : 0,
+                background: 'linear-gradient(to right, #F5F3EF 30%, transparent)',
               }}
             />
             {/* Fade derecho */}
             <div
-              className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-20 transition-opacity duration-300 md:w-32"
+              className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-10 transition-opacity duration-300"
               style={{
-                opacity: showRight ? 1 : 0,
-                background: 'linear-gradient(to left, #F5F3EF, transparent)',
+                opacity: showRight ? 0.85 : 0,
+                background: 'linear-gradient(to left, #F5F3EF 30%, transparent)',
               }}
             />
             {/* Scroll container */}
             <div
               ref={scrollRef}
-              className="virus3-scroll flex gap-5 overflow-x-auto pb-4 md:gap-6"
+              className="virus3-scroll flex gap-5 overflow-x-auto px-4 pb-4 md:gap-6 md:px-6"
               style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               <style>{`.virus3-scroll::-webkit-scrollbar { display: none; }`}</style>
