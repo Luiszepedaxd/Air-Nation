@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { FaccionesConfig, FaccionV3 } from '../lib/types'
 
@@ -7,6 +8,26 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
   const facciones = (config.facciones ?? []).filter((f) => f?.nombre?.trim())
   const eyebrow = config.eyebrow?.trim() || 'ELIGE TU BANDO'
   const titulo = config.titulo?.trim() || 'FACCIÓNES'
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [showLeft, setShowLeft] = useState(false)
+  const [showRight, setShowRight] = useState(true)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => {
+      setShowLeft(el.scrollLeft > 8)
+      setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8)
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [])
 
   return (
     <section
@@ -49,10 +70,40 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
             Facciones próximamente
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
-            {facciones.map((f, i) => (
-              <FaccionCard key={`${f.nombre}-${i}`} faccion={f} index={i} />
-            ))}
+          <div className="relative">
+            {/* Fade izquierdo */}
+            <div
+              className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-20 transition-opacity duration-300 md:w-32"
+              style={{
+                opacity: showLeft ? 1 : 0,
+                background: 'linear-gradient(to right, #0a0a0a, transparent)',
+              }}
+            />
+            {/* Fade derecho */}
+            <div
+              className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-20 transition-opacity duration-300 md:w-32"
+              style={{
+                opacity: showRight ? 1 : 0,
+                background: 'linear-gradient(to left, #0a0a0a, transparent)',
+              }}
+            />
+            {/* Scroll container */}
+            <div
+              ref={scrollRef}
+              className="virus3-scroll flex gap-5 overflow-x-auto pb-4 md:gap-6"
+              style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <style>{`.virus3-scroll::-webkit-scrollbar { display: none; }`}</style>
+              {facciones.map((f, i) => (
+                <div
+                  key={`${f.nombre}-${i}`}
+                  className="shrink-0"
+                  style={{ width: 'clamp(280px, 75vw, 360px)', scrollSnapAlign: 'start' }}
+                >
+                  <FaccionCard faccion={f} index={i} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -70,7 +121,7 @@ function FaccionCard({ faccion, index }: { faccion: FaccionV3; index: number }) 
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
-      className="overflow-hidden border border-[#2a2a2a] bg-[#1a1a1a]"
+      className="h-full overflow-hidden border border-[#2a2a2a] bg-[#1a1a1a]"
       style={{ borderRadius: 2 }}
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-black">

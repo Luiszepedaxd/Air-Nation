@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { InscripcionConfig, VentanaInscripcion } from '../lib/types'
 
@@ -29,6 +30,26 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
   const ventanas = config.ventanas ?? []
   const eyebrow = config.eyebrow?.trim() || 'INSCRIPCIÓN'
   const titulo = config.titulo?.trim() || 'VENTANAS DE PRECIO'
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [showLeft, setShowLeft] = useState(false)
+  const [showRight, setShowRight] = useState(true)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => {
+      setShowLeft(el.scrollLeft > 8)
+      setShowRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8)
+    }
+    update()
+    el.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [])
 
   return (
     <section
@@ -73,10 +94,40 @@ export function InscripcionSection({ config }: { config: InscripcionConfig }) {
             Ventanas de inscripción próximamente
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {ventanas.map((v, i) => (
-              <VentanaCard key={`${v.nombre}-${i}`} ventana={v} index={i} />
-            ))}
+          <div className="relative">
+            {/* Fade izquierdo */}
+            <div
+              className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-20 transition-opacity duration-300 md:w-32"
+              style={{
+                opacity: showLeft ? 1 : 0,
+                background: 'linear-gradient(to right, #F5F3EF, transparent)',
+              }}
+            />
+            {/* Fade derecho */}
+            <div
+              className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-20 transition-opacity duration-300 md:w-32"
+              style={{
+                opacity: showRight ? 1 : 0,
+                background: 'linear-gradient(to left, #F5F3EF, transparent)',
+              }}
+            />
+            {/* Scroll container */}
+            <div
+              ref={scrollRef}
+              className="virus3-scroll flex gap-5 overflow-x-auto pb-4 md:gap-6"
+              style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <style>{`.virus3-scroll::-webkit-scrollbar { display: none; }`}</style>
+              {ventanas.map((v, i) => (
+                <div
+                  key={`${v.nombre}-${i}`}
+                  className="shrink-0"
+                  style={{ width: 'clamp(280px, 80vw, 340px)', scrollSnapAlign: 'start' }}
+                >
+                  <VentanaCard ventana={v} index={i} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -94,7 +145,7 @@ function VentanaCard({ ventana, index }: { ventana: VentanaInscripcion; index: n
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.08 }}
-      className="flex flex-col border border-[#E5E0DA] bg-white p-6"
+      className="flex h-full flex-col border border-[#E5E0DA] bg-white p-6"
       style={{ borderRadius: 2 }}
     >
       <div className="mb-4 flex items-start justify-between gap-3">
