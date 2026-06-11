@@ -8,5 +8,10 @@ export function createPublicSupabaseClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder'
 
-  return createClient(url, anonKey)
+  return createClient(url, anonKey, {
+    global: {
+      fetch: (input, init) =>
+        fetch(input, { ...init, cache: 'no-store' }),
+    },
+  })
 }

@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const jost = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
@@ -34,21 +37,41 @@ type VerifyUserRow = {
   avatar_url: string | null
   member_number: string | number | null
   created_at: string
+  team_id: string | null
   teams: { nombre: string } | { nombre: string }[] | null
 }
 
 async function fetchVerifyUser(id: string): Promise<VerifyUserRow | null> {
   const supabase = createPublicSupabaseClient()
+
   const { data: row, error } = await supabase
     .from('users')
-    .select(
-      'id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at, teams(nombre)'
-    )
+    .select('id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at, team_id')
     .eq('id', id)
     .maybeSingle()
 
-  if (error || !row) return null
-  return row as VerifyUserRow
+  if (error) {
+    console.error('[verify] users query error:', {
+      id,
+      message: error.message,
+      code: error.code,
+      details: error.details,
+    })
+    return null
+  }
+  if (!row) return null
+
+  let teams: { nombre: string } | null = null
+  if ((row as any).team_id) {
+    const { data: team } = await supabase
+      .from('teams')
+      .select('nombre')
+      .eq('id', (row as any).team_id)
+      .maybeSingle()
+    if (team) teams = team
+  }
+
+  return { ...row, teams } as VerifyUserRow
 }
 
 function teamNombreFromRow(row: VerifyUserRow): string | null {
