@@ -35,6 +35,9 @@ type VerifyUserRow = {
   ciudad: string | null
   rol: string | null
   avatar_url: string | null
+  foto_credencial_url: string | null
+  credencial_nombre_completo: string | null
+  credencial_fecha_nacimiento: string | null
   member_number: string | number | null
   created_at: string
   team_id: string | null
@@ -46,7 +49,7 @@ async function fetchVerifyUser(id: string): Promise<VerifyUserRow | null> {
 
   const { data: row, error } = await supabase
     .from('users')
-    .select('id, nombre, alias, ciudad, rol, avatar_url, member_number, created_at, team_id')
+    .select('id, nombre, alias, ciudad, rol, avatar_url, foto_credencial_url, credencial_nombre_completo, credencial_fecha_nacimiento, member_number, created_at, team_id')
     .eq('id', id)
     .maybeSingle()
 
@@ -105,6 +108,18 @@ function formatDesde(iso: string) {
       'DIC',
     ]
     return `${meses[d.getMonth()]} ${d.getFullYear()}`
+  } catch {
+    return ''
+  }
+}
+
+function formatFechaNac(iso: string | null) {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso + 'T00:00:00')
+    const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${dd} · ${meses[d.getMonth()]} · ${d.getFullYear()}`
   } catch {
     return ''
   }
@@ -234,11 +249,19 @@ export default async function VerifyPlayerPage({
 
   const teamNombre = teamNombreFromRow(row)
   const aliasDisplay = row.alias?.trim() || row.nombre?.trim() || '—'
-  const nombreReal = row.nombre?.trim() || ''
-  const initial = (row.alias?.trim()?.[0] || row.nombre?.trim()?.[0] || '?').toUpperCase()
+  const nombreReal =
+    row.credencial_nombre_completo?.trim() || row.nombre?.trim() || ''
+  const photoSrc = row.foto_credencial_url || row.avatar_url
+  const initial = (
+    row.alias?.trim()?.[0] ||
+    row.credencial_nombre_completo?.trim()?.[0] ||
+    row.nombre?.trim()?.[0] ||
+    '?'
+  ).toUpperCase()
   const ciudadTrim = row.ciudad?.trim() || ''
   const memberDisplay = formatMemberNo(row.member_number)
   const desdeText = formatDesde(row.created_at)
+  const fechaNacFormatted = formatFechaNac(row.credencial_fecha_nacimiento)
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F4F4F4] px-6 py-6">
@@ -262,9 +285,9 @@ export default async function VerifyPlayerPage({
 
         <section className="mt-6 border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-6 py-6">
           <div className="h-[96px] w-[96px] overflow-hidden bg-[#F4F4F4]">
-            {row.avatar_url ? (
+            {photoSrc ? (
               <img
-                src={row.avatar_url}
+                src={photoSrc}
                 alt=""
                 width={96}
                 height={96}
@@ -336,6 +359,11 @@ export default async function VerifyPlayerPage({
           <p style={lato} className="mt-4 text-[12px] text-[#666666]">
             DESDE: {desdeText}
           </p>
+          {fechaNacFormatted ? (
+            <p style={lato} className="mt-2 text-[12px] text-[#666666]">
+              FECHA DE NACIMIENTO: {fechaNacFormatted}
+            </p>
+          ) : null}
         </section>
 
         <footer style={lato} className="mt-24 text-center text-[11px] leading-relaxed text-[#999999]">
