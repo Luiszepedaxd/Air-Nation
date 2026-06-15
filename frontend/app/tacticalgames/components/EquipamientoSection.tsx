@@ -6,7 +6,6 @@ import type { EquipamientoConfig, EquipamientoTab, ItemEquipamiento } from '../l
 import { TG_COLORS, TG_FONTS, TG_HEADER_STYLE } from './ui/theme'
 import { PaperTexture } from './ui/PaperTexture'
 import { SectionLabel } from './ui/SectionLabel'
-import { StampBadge } from './ui/StampBadge'
 
 function normalizeItems(raw: unknown): ItemEquipamiento[] {
   if (!Array.isArray(raw)) return []
@@ -135,12 +134,6 @@ export function EquipamientoSection({ config }: { config: EquipamientoConfig }) 
                 boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
               }}
             >
-              <div className="absolute right-4 top-3 z-10 md:right-6">
-                <StampBadge color={TG_COLORS.brass} rotate={-6}>
-                  VERIFICADO
-                </StampBadge>
-              </div>
-
               <div className="relative px-5 py-8 md:px-8 md:py-10">
                 <AnimatePresence mode="wait">
                   <motion.div
