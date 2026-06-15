@@ -56,7 +56,7 @@ function VentanaCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-60px' }}
       transition={{ duration: 0.55, delay: index * 0.08 }}
-      className="relative overflow-hidden p-6 md:p-7"
+      className="relative overflow-hidden p-4 md:p-5"
       style={{
         backgroundColor: '#23231F',
         border: `1px solid ${isActiva ? TG_COLORS.red : TG_COLORS.border}`,
@@ -72,36 +72,36 @@ function VentanaCard({
           width: 0,
           height: 0,
           borderStyle: 'solid',
-          borderWidth: '0 20px 20px 0',
+          borderWidth: '0 15px 15px 0',
           borderColor: `transparent ${TG_COLORS.border} transparent transparent`,
         }}
       />
 
-      <div className="mb-4">
-        <StampBadge color={stamp.color} rotate={-4} className="!text-[0.5rem] md:!text-[0.6rem]">
+      <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <StampBadge color={stamp.color} rotate={-4} className="!inline-flex !px-2 !py-0.5 !text-[10px]">
           {stamp.texto}
         </StampBadge>
+        <p
+          className="text-[0.55rem] tracking-[0.15em] text-white/50"
+          style={{ fontFamily: TG_FONTS.mono, fontWeight: 400 }}
+        >
+          {formatoRangoCorto(ventana.fecha_desde, ventana.fecha_hasta)}
+        </p>
       </div>
 
       <p
-        className="text-[0.6rem] tracking-[0.2em] text-white/50"
-        style={{ fontFamily: TG_FONTS.mono, fontWeight: 400 }}
-      >
-        {formatoRangoCorto(ventana.fecha_desde, ventana.fecha_hasta)}
-      </p>
-      <p
-        className="mt-2 text-lg md:text-xl"
-        style={{ ...TG_HEADER_STYLE, color: '#fff' }}
+        className="text-base md:text-lg"
+        style={{ fontFamily: TG_FONTS.header, fontWeight: 700, textTransform: 'uppercase', color: '#fff' }}
       >
         {ventana.label || 'Inscripción'}
       </p>
 
       <p
-        className="mt-5 leading-none"
-        style={{ ...TG_HEADER_STYLE, color: precioColor, fontSize: 'clamp(2.2rem, 8vw, 3.5rem)' }}
+        className="mt-2 leading-none"
+        style={{ ...TG_HEADER_STYLE, color: precioColor, fontSize: 'clamp(1.8rem, 5vw, 2.5rem)' }}
       >
         ${ventana.precio > 0 ? ventana.precio.toLocaleString('es-MX') : '—'}
-        <span className="ml-2 text-base text-white/50" style={{ fontFamily: TG_FONTS.mono }}>
+        <span className="ml-2 text-sm text-white/50" style={{ fontFamily: TG_FONTS.mono }}>
           MXN
         </span>
       </p>
@@ -131,44 +131,46 @@ export function InscripcionSection({
     <section
       id="inscripcion"
       data-section="inscripcion"
-      className="relative w-full overflow-hidden py-20 md:py-28"
+      className="relative w-full overflow-hidden py-8 md:py-12"
       style={{ backgroundColor: TG_COLORS.dark, color: '#fff' }}
     >
-      <div className="relative z-10 mx-auto max-w-6xl px-4 md:px-8">
-        <SectionLabel text={config.eyebrow?.trim() || 'INSCRIPCIÓN'} color="#A8B271" className="mb-10" />
+      <div className="relative z-10 mx-auto max-w-6xl space-y-6 px-4 md:px-8">
+        <div>
+          <SectionLabel text={config.eyebrow?.trim() || 'INSCRIPCIÓN'} color="#A8B271" className="mb-4" />
 
-        <motion.h2
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl leading-tight md:text-5xl"
-          style={{ ...TG_HEADER_STYLE, color: '#fff' }}
-        >
-          {titulo}
-        </motion.h2>
-        {subtitulo ? (
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
+          <motion.h2
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="mt-3 max-w-2xl text-base md:text-lg"
-            style={{ fontFamily: TG_FONTS.body, color: 'rgba(255,255,255,0.7)' }}
+            transition={{ duration: 0.6 }}
+            className="text-2xl leading-tight md:text-4xl"
+            style={{ ...TG_HEADER_STYLE, color: '#fff' }}
           >
-            {subtitulo}
-          </motion.p>
-        ) : null}
+            {titulo}
+          </motion.h2>
+          {subtitulo ? (
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="mt-2 max-w-2xl text-sm md:text-base"
+              style={{ fontFamily: TG_FONTS.body, color: 'rgba(255,255,255,0.7)' }}
+            >
+              {subtitulo}
+            </motion.p>
+          ) : null}
+        </div>
 
         {ventanas.length === 0 ? (
           <p
-            className="mt-12 text-sm uppercase tracking-[0.2em]"
+            className="text-sm uppercase tracking-[0.2em]"
             style={{ fontFamily: TG_FONTS.mono, color: 'rgba(255,255,255,0.5)' }}
           >
             Ventanas de precio próximamente
           </p>
         ) : (
-          <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {ventanas.map((v, i) => (
               <VentanaCard key={`${v.fecha_desde}-${i}`} ventana={v} estado={estados[i]} index={i} />
             ))}
@@ -177,7 +179,7 @@ export function InscripcionSection({
 
         {!hayActiva && ventanas.length > 0 ? (
           <p
-            className="mt-6 text-[0.65rem] tracking-[0.15em]"
+            className="text-[0.65rem] tracking-[0.15em]"
             style={{ fontFamily: TG_FONTS.mono, color: 'rgba(255,255,255,0.4)' }}
           >
             No hay ventana activa en este momento
@@ -185,14 +187,18 @@ export function InscripcionSection({
         ) : null}
 
         {incluye.length > 0 ? (
-          <div className="mt-14">
+          <div>
             <p
-              className="mb-4 text-[0.7rem] tracking-[0.25em]"
+              className="mb-2 text-[0.65rem] tracking-[0.25em]"
               style={{ fontFamily: TG_FONTS.mono, fontWeight: 700, color: TG_COLORS.brass }}
             >
               TU INSCRIPCIÓN INCLUYE
             </p>
-            <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <ul
+              className={`grid grid-cols-2 gap-x-3 gap-y-1.5 ${
+                incluye.length > 8 ? 'max-h-48 overflow-y-auto pr-1' : ''
+              }`}
+            >
               {incluye.map((item, i) => (
                 <motion.li
                   key={i}
@@ -200,15 +206,21 @@ export function InscripcionSection({
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: i * 0.05 }}
-                  className="flex items-start gap-3"
+                  className="flex items-start gap-1.5"
                 >
                   <span aria-hidden className="mt-0.5 shrink-0" style={{ color: TG_COLORS.olive }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 12l5 5L20 6" stroke="#A8B271" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M5 12l5 5L20 6"
+                        stroke="#A8B271"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </span>
                   <span
-                    className="text-sm md:text-base"
+                    className="text-[0.8rem] leading-snug"
                     style={{ fontFamily: TG_FONTS.body, color: 'rgba(255,255,255,0.85)' }}
                   >
                     {item}
@@ -221,19 +233,19 @@ export function InscripcionSection({
 
         {config.nota?.trim() ? (
           <p
-            className="mt-8 text-[0.7rem] leading-relaxed"
-            style={{ fontFamily: TG_FONTS.mono, color: 'rgba(255,255,255,0.5)' }}
+            className="line-clamp-3 text-[0.7rem] leading-snug"
+            style={{ fontFamily: TG_FONTS.mono, color: 'rgba(255,255,255,0.6)' }}
           >
             {config.nota}
           </p>
         ) : null}
 
-        <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
           {cta1Link ? (
             <a
               href={cta1Link}
               {...(isExternalHref(cta1Link) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              className="inline-flex w-full items-center justify-center px-7 py-3.5 text-[0.7rem] uppercase tracking-[0.2em] text-white transition-opacity hover:opacity-90 sm:w-auto"
+              className="inline-flex w-full items-center justify-center px-7 py-3 text-[0.7rem] uppercase tracking-[0.2em] text-white transition-opacity hover:opacity-90 sm:w-auto"
               style={{ fontFamily: TG_FONTS.mono, fontWeight: 700, backgroundColor: TG_COLORS.red }}
             >
               {config.cta1_texto?.trim() || 'INSCRIBIRME'}
@@ -243,7 +255,7 @@ export function InscripcionSection({
             <a
               href={cta2Link}
               {...(isExternalHref(cta2Link) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              className="inline-flex w-full items-center justify-center border-2 px-7 py-3.5 text-[0.7rem] uppercase tracking-[0.2em] transition-colors hover:bg-[#4A5328] hover:text-white sm:w-auto"
+              className="inline-flex w-full items-center justify-center border-2 px-7 py-3 text-[0.7rem] uppercase tracking-[0.2em] transition-colors hover:bg-[#4A5328] hover:text-white sm:w-auto"
               style={{ fontFamily: TG_FONTS.mono, fontWeight: 700, borderColor: TG_COLORS.olive, color: '#A8B271' }}
             >
               {config.cta2_texto?.trim() || 'MÁS INFO POR WHATSAPP'}
