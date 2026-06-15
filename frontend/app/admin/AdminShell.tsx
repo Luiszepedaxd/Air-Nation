@@ -114,6 +114,21 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: '/admin/mensajes',
+    label: 'Mensajes',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/videos',
     label: 'Videos',
     icon: (active) => (
