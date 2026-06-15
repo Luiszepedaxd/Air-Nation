@@ -138,7 +138,6 @@ export function EventoCard({
             </div>
           )}
           <div className="absolute left-2 top-2 z-20 flex flex-col items-start gap-1">
-            {esEventoPatrocinado(evento.url_externa) ? <PatrocinadoBadge /> : null}
             <span
               style={jost}
               className="inline-block bg-[#111111]/85 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
@@ -146,6 +145,11 @@ export function EventoCard({
               {tipoBadge(evento.tipo)}
             </span>
           </div>
+          {esEventoPatrocinado(evento.url_externa) ? (
+            <div className="absolute bottom-2 left-2 z-20">
+              <PatrocinadoBadge />
+            </div>
+          ) : null}
           <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1">
             {badge ? (
               <span

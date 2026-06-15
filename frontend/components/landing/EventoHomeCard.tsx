@@ -4,11 +4,6 @@ import Link from 'next/link'
 import { PatrocinadoBadge } from '@/components/eventos/PatrocinadoBadge'
 import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 
-const jost = {
-  fontFamily: "'Jost', sans-serif",
-  fontWeight: 800,
-} as const
-
 export type EventoHomeRow = {
   id: string
   title: string
@@ -119,17 +114,18 @@ export function EventoHomeCard({
               {badge.label}
             </span>
           ) : null}
-          {esEventoPatrocinado(evento.url_externa) ? (
-            <div className="absolute left-2 top-2 z-20">
-              <PatrocinadoBadge />
-            </div>
-          ) : dias > 0 ? (
+          {dias > 0 ? (
             <span
-              className="absolute left-3 top-3 z-10 inline-block bg-black/70 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
-              style={jost}
+              className="absolute left-3 top-3 z-10 inline-block bg-black/70 px-2.5 py-1 font-body text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm"
+              style={{ borderRadius: 2 }}
             >
               {dias === 1 ? 'Mañana' : `Faltan ${dias} días`}
             </span>
+          ) : null}
+          {esEventoPatrocinado(evento.url_externa) ? (
+            <div className="absolute bottom-2 left-2 z-20">
+              <PatrocinadoBadge />
+            </div>
           ) : null}
         </div>
 

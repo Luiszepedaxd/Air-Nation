@@ -1532,11 +1532,6 @@ function EventCard({
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
       <Link href={eventHref} className="block">
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-          {esEventoPatrocinado(item.url_externa) ? (
-            <div className="absolute left-2 top-2 z-20">
-              <PatrocinadoBadge />
-            </div>
-          ) : null}
           {imagenFinal
             ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />
             : <div className="w-full h-full flex items-center justify-center">
@@ -1548,6 +1543,11 @@ function EventCard({
           }
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-3">
+            {esEventoPatrocinado(item.url_externa) ? (
+              <div className="mb-1.5">
+                <PatrocinadoBadge />
+              </div>
+            ) : null}
             <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37]">
               {formatEventDate(item.fecha)}
             </p>
