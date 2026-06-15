@@ -22,6 +22,7 @@ import {
   adminDeleteFieldPost,
 } from '@/app/admin/feed/actions'
 import { supabase } from '@/lib/supabase'
+import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 import { getBlockedUserIds } from '@/lib/user-blocks'
 import { uploadFile, uploadVideo } from '@/lib/apiFetch'
 import { CropModal } from '@/components/posts/CropModal'
@@ -318,7 +319,7 @@ type FeedItem =
       post_owner_id: string | null
       field: { nombre: string; slug: string; foto_portada_url: string | null }
     }
-  | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
+  | { kind: 'event'; id: string; title: string; fecha: string; imagen_url: string | null; url_externa: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null; created_at: string }
   | { kind: 'new_team'; id: string; nombre: string; slug: string; ciudad: string | null; logo_url: string | null; foto_portada_url: string | null; created_at: string }
   | { kind: 'video'; id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
   | { kind: 'noticia'; id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
@@ -413,7 +414,7 @@ function touchFeedItemsTimestamp() {
   }
 }
 
-type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
+type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; url_externa: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
 type NoticiaItem = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
 type VideoItem = { id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
@@ -1525,10 +1526,19 @@ function EventCard({
 }) {
   const sub = [item.field_nombre, item.field_ciudad].filter(Boolean).join(' · ')
   const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
+  const eventHref = resolveEventHref(item.url_externa, item.id)
   return (
     <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
-      <Link href={`/eventos/${item.id}`} className="block">
+      <Link href={eventHref} className="block">
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+          {esEventoPatrocinado(item.url_externa) ? (
+            <span
+              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
+              className="absolute top-2 left-2 z-10 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+            >
+              AN
+            </span>
+          ) : null}
           {imagenFinal
             ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />
             : <div className="w-full h-full flex items-center justify-center">
@@ -1946,7 +1956,7 @@ function FeedTab({
           .order('created_at', { ascending: false })
           .limit(20),
         supabase.from('events')
-          .select('id, title, fecha, imagen_url, created_at, fields(nombre, ciudad, foto_portada_url)')
+          .select('id, title, fecha, imagen_url, url_externa, created_at, fields(nombre, ciudad, foto_portada_url)')
           .eq('published', true)
           .eq('status', 'publicado')
           .gte('fecha', new Date().toISOString())
@@ -2123,6 +2133,7 @@ function FeedTab({
           title: String(r.title ?? ''),
           fecha: String(r.fecha ?? ''),
           imagen_url: (r.imagen_url as string | null) ?? null,
+          url_externa: (r.url_externa as string | null) ?? null,
           field_foto: f ? (f as Record<string, unknown>).foto_portada_url as string | null : null,
           field_nombre: f ? String((f as Record<string, unknown>).nombre ?? '') || null : null,
           field_ciudad: f ? String((f as Record<string, unknown>).ciudad ?? '') || null : null,
@@ -2698,7 +2709,7 @@ function EventosTab({
     const load = async () => {
       const [eventsResult, myEventResult] = await Promise.all([
         supabase.from('events')
-          .select('id, title, fecha, imagen_url, fields(nombre, ciudad, foto_portada_url)')
+          .select('id, title, fecha, imagen_url, url_externa, fields(nombre, ciudad, foto_portada_url)')
           .eq('published', true)
           .eq('status', 'publicado')
           .gte('fecha', new Date().toISOString())
@@ -2722,6 +2733,7 @@ function EventosTab({
           title: String(r.title ?? ''),
           fecha: String(r.fecha ?? ''),
           imagen_url: (r.imagen_url as string | null) ?? null,
+          url_externa: (r.url_externa as string | null) ?? null,
           field_foto: f ? (f as Record<string, unknown>).foto_portada_url as string | null : null,
           field_nombre: f ? String((f as Record<string, unknown>).nombre ?? '') || null : null,
           field_ciudad: f ? String((f as Record<string, unknown>).ciudad ?? '') || null : null,
@@ -2746,9 +2758,10 @@ function EventosTab({
       {!hasOwnActiveEvent && <CrearEventoBanner />}
       {items.map(item => {
         const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
+        const eventHref = resolveEventHref(item.url_externa, item.id)
         return (
           <div key={item.id} className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
-            <Link href={`/eventos/${item.id}`} className="flex gap-3 p-3">
+            <Link href={eventHref} className="flex gap-3 p-3">
               <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
                 {imagenFinal
                   ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />

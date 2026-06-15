@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 
 export type EventoHomeRow = {
   id: string
@@ -8,6 +9,7 @@ export type EventoHomeRow = {
   fecha: string
   cupo: number
   imagen_url: string | null
+  url_externa: string | null
   field_foto: string | null
   field_nombre: string | null
   ciudad: string | null
@@ -93,9 +95,17 @@ export function EventoHomeCard({
     : ''
 
   return (
-    <Link href={`/eventos/${evento.id}`} className="group block h-full">
+    <Link href={resolveEventHref(evento.url_externa, evento.id)} className="group block h-full">
       <article className="relative flex h-full flex-col overflow-hidden border border-solid border-[#EEEEEE] bg-white transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#CC4B37] group-hover:shadow-[0_25px_50px_-15px_rgba(204,75,55,0.3)]">
         <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#111111] sm:h-auto sm:aspect-video">
+          {esEventoPatrocinado(evento.url_externa) ? (
+            <span
+              className="absolute top-2 left-2 z-10 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
+            >
+              AN
+            </span>
+          ) : null}
           <img
             src={imageUrl}
             alt=""

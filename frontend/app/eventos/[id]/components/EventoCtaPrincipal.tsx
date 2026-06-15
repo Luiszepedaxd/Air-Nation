@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { esLandingAirNation, resolveEventHref } from '@/lib/evento-links'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -8,32 +9,6 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-/**
- * Detecta si una URL apunta a un dominio AirNation (landing dedicada interna).
- * Acepta: airnation.online, www.airnation.online, http/https.
- */
-function esLandingAirNation(url: string): boolean {
-  try {
-    const u = new URL(url.trim())
-    return /(^|\.)airnation\.online$/i.test(u.hostname)
-  } catch {
-    return false
-  }
-}
-
-/**
- * Extrae el pathname de una URL AN para usar con <Link> (navegación interna SPA).
- * Si falla el parseo, devuelve la URL tal cual (fallback seguro).
- */
-function pathnameDe(url: string): string {
-  try {
-    const u = new URL(url.trim())
-    return u.pathname + u.search + u.hash
-  } catch {
-    return url.trim()
-  }
-}
-
 export function EventoCtaPrincipal({ urlExterna }: { urlExterna: string | null }) {
   const url = urlExterna?.trim()
   if (!url) return null
@@ -41,7 +16,7 @@ export function EventoCtaPrincipal({ urlExterna }: { urlExterna: string | null }
   const esAN = esLandingAirNation(url)
 
   if (esAN) {
-    const href = pathnameDe(url)
+    const href = resolveEventHref(url, '')
     return (
       <div className="border-b border-solid border-[#EEEEEE] px-4 py-5 md:px-6">
         <Link

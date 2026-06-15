@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 import { formatEventoFechaCorta, disciplinaLabel } from '../lib/format-evento-fecha'
 import { CalendarioPlaceholderIcon } from '../lib/calendar-placeholder'
 
@@ -24,6 +25,7 @@ export type EventoCardRow = {
   sede_nombre: string | null
   sede_ciudad: string | null
   cupo_vendido_creador: number | null
+  url_externa: string | null
 }
 
 function getOcupacionData(evento: EventoCardRow): {
@@ -119,10 +121,18 @@ export function EventoCard({
   return (
     <div className="group flex flex-col border border-solid border-[#EEEEEE] bg-[#FFFFFF] transition-colors hover:border-[#CCCCCC]">
       <Link
-        href={`/eventos/${evento.id}`}
+        href={resolveEventHref(evento.url_externa, evento.id)}
         className="flex flex-1 flex-col text-left"
       >
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+          {esEventoPatrocinado(evento.url_externa) ? (
+            <span
+              className="absolute top-2 left-2 z-10 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
+            >
+              AN
+            </span>
+          ) : null}
           {imagenFinal ? (
             <img
               src={imagenFinal}

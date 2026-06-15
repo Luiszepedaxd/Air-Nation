@@ -107,6 +107,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       sede_nombre,
       sede_ciudad,
       cupo_vendido_creador,
+      url_externa,
       fields ( nombre, slug, ciudad, foto_portada_url )
     `
     )
@@ -156,6 +157,7 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
       sede_nombre: (r.sede_nombre as string | null) ?? null,
       sede_ciudad: (r.sede_ciudad as string | null) ?? null,
       cupo_vendido_creador: (r.cupo_vendido_creador as number | null) ?? null,
+      url_externa: (r.url_externa as string | null) ?? null,
     }
   })
 }
