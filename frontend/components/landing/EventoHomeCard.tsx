@@ -1,7 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { PatrocinadoBadge } from '@/components/eventos/PatrocinadoBadge'
 import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
+
+const jost = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+} as const
 
 export type EventoHomeRow = {
   id: string
@@ -98,14 +104,6 @@ export function EventoHomeCard({
     <Link href={resolveEventHref(evento.url_externa, evento.id)} className="group block h-full">
       <article className="relative flex h-full flex-col overflow-hidden border border-solid border-[#EEEEEE] bg-white transition-all duration-300 group-hover:-translate-y-1 group-hover:border-[#CC4B37] group-hover:shadow-[0_25px_50px_-15px_rgba(204,75,55,0.3)]">
         <div className="relative h-40 w-full shrink-0 overflow-hidden bg-[#111111] sm:h-auto sm:aspect-video">
-          {esEventoPatrocinado(evento.url_externa) ? (
-            <span
-              className="absolute top-2 left-2 z-10 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
-              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
-            >
-              AN
-            </span>
-          ) : null}
           <img
             src={imageUrl}
             alt=""
@@ -121,10 +119,14 @@ export function EventoHomeCard({
               {badge.label}
             </span>
           ) : null}
-          {dias > 0 ? (
+          {esEventoPatrocinado(evento.url_externa) ? (
+            <div className="absolute left-2 top-2 z-20">
+              <PatrocinadoBadge />
+            </div>
+          ) : dias > 0 ? (
             <span
-              className="absolute left-3 top-3 z-10 inline-block bg-black/70 px-2.5 py-1 font-body text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm"
-              style={{ borderRadius: 2 }}
+              className="absolute left-3 top-3 z-10 inline-block bg-black/70 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+              style={jost}
             >
               {dias === 1 ? 'Mañana' : `Faltan ${dias} días`}
             </span>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PatrocinadoBadge } from '@/components/eventos/PatrocinadoBadge'
 import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 import { formatEventoFechaCorta, disciplinaLabel } from '../lib/format-evento-fecha'
 import { CalendarioPlaceholderIcon } from '../lib/calendar-placeholder'
@@ -125,14 +126,6 @@ export function EventoCard({
         className="flex flex-1 flex-col text-left"
       >
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
-          {esEventoPatrocinado(evento.url_externa) ? (
-            <span
-              className="absolute top-2 left-2 z-10 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
-              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
-            >
-              AN
-            </span>
-          ) : null}
           {imagenFinal ? (
             <img
               src={imagenFinal}
@@ -144,12 +137,15 @@ export function EventoCard({
               <CalendarioPlaceholderIcon size={48} />
             </div>
           )}
-          <span
-            style={jost}
-            className="absolute left-2 top-2 bg-[#111111]/85 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
-          >
-            {tipoBadge(evento.tipo)}
-          </span>
+          <div className="absolute left-2 top-2 z-20 flex flex-col items-start gap-1">
+            {esEventoPatrocinado(evento.url_externa) ? <PatrocinadoBadge /> : null}
+            <span
+              style={jost}
+              className="inline-block bg-[#111111]/85 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+            >
+              {tipoBadge(evento.tipo)}
+            </span>
+          </div>
           <div className="absolute right-2 top-2 z-10 flex flex-col items-end gap-1">
             {badge ? (
               <span

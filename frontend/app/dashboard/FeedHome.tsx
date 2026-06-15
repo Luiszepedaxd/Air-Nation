@@ -22,6 +22,7 @@ import {
   adminDeleteFieldPost,
 } from '@/app/admin/feed/actions'
 import { supabase } from '@/lib/supabase'
+import { PatrocinadoBadge } from '@/components/eventos/PatrocinadoBadge'
 import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 import { getBlockedUserIds } from '@/lib/user-blocks'
 import { uploadFile, uploadVideo } from '@/lib/apiFetch'
@@ -1532,12 +1533,9 @@ function EventCard({
       <Link href={eventHref} className="block">
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
           {esEventoPatrocinado(item.url_externa) ? (
-            <span
-              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
-              className="absolute top-2 left-2 z-10 bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
-            >
-              AN
-            </span>
+            <div className="absolute left-2 top-2 z-20">
+              <PatrocinadoBadge />
+            </div>
           ) : null}
           {imagenFinal
             ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />
