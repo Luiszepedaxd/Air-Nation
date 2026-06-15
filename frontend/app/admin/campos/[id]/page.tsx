@@ -296,6 +296,20 @@ export default async function AdminCampoDetallePage({
   const field = data as FieldRow
   const errMsg = searchParams.err
 
+  const [creatorProfile, creatorAuth] = field?.created_by
+    ? await Promise.all([
+        supabase
+          .from('users')
+          .select('nombre, alias')
+          .eq('id', field.created_by)
+          .maybeSingle()
+          .then((r) => r.data),
+        supabase.auth.admin
+          .getUserById(field.created_by)
+          .then((r) => r.data?.user ?? null),
+      ])
+    : [null, null]
+
   const { data: postsData } = await supabase
     .from('field_posts')
     .select('id, content, fotos_urls, created_at')
@@ -504,7 +518,33 @@ export default async function AdminCampoDetallePage({
         <section className="text-sm text-[#666666]">
           <p>Creado: {formatFecha(field.created_at)}</p>
           {field.created_by ? (
-            <p className="mt-1 break-all">Creado por (UUID): {field.created_by}</p>
+            <div className="mt-2 space-y-0.5">
+              {creatorProfile?.alias || creatorProfile?.nombre ? (
+                <p>
+                  <span className="font-semibold">Creador:</span>{' '}
+                  {creatorProfile.alias ?? creatorProfile.nombre}
+                  {creatorProfile.alias &&
+                  creatorProfile.nombre &&
+                  creatorProfile.alias !== creatorProfile.nombre
+                    ? ` (${creatorProfile.nombre})`
+                    : ''}
+                </p>
+              ) : null}
+              {creatorAuth?.email ? (
+                <p>
+                  <span className="font-semibold">Email:</span>{' '}
+                  <a
+                    href={`mailto:${creatorAuth.email}`}
+                    className="text-[#CC4B37] underline-offset-2 hover:underline"
+                  >
+                    {creatorAuth.email}
+                  </a>
+                </p>
+              ) : null}
+              <p className="break-all text-[#999999] text-xs">
+                UUID: {field.created_by}
+              </p>
+            </div>
           ) : null}
         </section>
       </div>
