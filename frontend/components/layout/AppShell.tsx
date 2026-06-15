@@ -27,7 +27,7 @@ export default async function AppShell({
         <BetaBanner />
         {children}
       </div>
-      <BottomNav />
+      {userId != null && userId !== '' ? <BottomNav /> : null}
       {userId != null && userId !== '' ? (
         <PushNotifManager userId={userId} />
       ) : null}

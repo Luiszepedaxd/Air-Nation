@@ -133,10 +133,25 @@ function AdminShieldIcon({ active }: { active: boolean }) {
 const perfilHref = '/dashboard/perfil'
 
 function isNavItemActive(pathname: string, href: string): boolean {
+  if (href === '/dashboard') {
+    return pathname === '/dashboard'
+  }
   if (href === '/campos') {
     return pathname === '/campos' || pathname.startsWith('/campos/')
   }
-  return pathname === href
+  if (href === '/dashboard/perfil') {
+    return (
+      pathname === '/dashboard/perfil' ||
+      pathname.startsWith('/u/')
+    )
+  }
+  if (href === '/dashboard/arsenal') {
+    return (
+      pathname === '/dashboard/arsenal' ||
+      pathname.startsWith('/replicas/')
+    )
+  }
+  return pathname === href || pathname.startsWith(href + '/')
 }
 
 function ProfileIconWithBadge({
