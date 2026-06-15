@@ -6,9 +6,9 @@ import { useEffect, useState } from 'react'
 import {
   clearFeedSessionCache,
   FeedInlineVideo,
-  parseContentWithMentions,
   PostBox,
 } from '@/app/dashboard/FeedHome'
+import { PostContent } from '@/components/feed/PostContent'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PhotoGrid } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
@@ -290,16 +290,12 @@ function PostsPanel({
               />
             </div>
             {post.content?.trim() ? (
-              <p
-                className="mb-3 text-[14px] leading-relaxed text-[#111111]"
-                style={{ fontFamily: "'Lato', sans-serif" }}
-              >
-                {parseContentWithMentions(
-                  post.content,
-                  post.mentions ?? null,
-                  post.mentionAliasById ?? null
-                )}
-              </p>
+              <PostContent
+                content={post.content}
+                mentionIds={post.mentions ?? null}
+                mentionAliasById={post.mentionAliasById ?? null}
+                className="mb-3"
+              />
             ) : null}
             {urls.length > 0 && <PhotoGrid urls={urls} />}
             {post.video_url ? (

@@ -27,6 +27,7 @@ import { uploadFile, uploadVideo } from '@/lib/apiFetch'
 import { CropModal } from '@/components/posts/CropModal'
 import { MentionInput } from '@/components/posts/MentionInput'
 import { VideoTrimmer } from '@/components/posts/VideoTrimmer'
+import { PostContent } from '@/components/feed/PostContent'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -1082,7 +1083,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4 min-w-0">
       <div className="flex items-center gap-3 mb-3">
         <Link href={`/equipos/${item.team.slug}`}>
           <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0">
@@ -1127,9 +1128,11 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         </div>
       </div>
       {item.content?.trim() && (
-        <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-          {parseContentWithMentions(item.content, item.mentioned_user_ids ?? null, null)}
-        </p>
+        <PostContent
+          content={item.content}
+          mentionIds={item.mentioned_user_ids ?? null}
+          className="mb-3"
+        />
       )}
       {fotos.length > 0 && <PhotoGrid urls={fotos} />}
       <PostActions
@@ -1172,7 +1175,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   }
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4 min-w-0">
       <div className="mb-3">
         <div className="flex items-center gap-3">
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
@@ -1235,13 +1238,12 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <>
           {item.content?.trim() && (
             <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
-              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-                {parseContentWithMentions(
-                  item.content,
-                  item.mentions ?? null,
-                  item.mentionAliasById ?? null
-                )}
-              </p>
+              <PostContent
+                content={item.content}
+                mentionIds={item.mentions ?? null}
+                mentionAliasById={item.mentionAliasById ?? null}
+                className="mb-3"
+              />
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
@@ -1256,13 +1258,12 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       ) : (
         <>
           {item.content?.trim() && (
-            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-              {parseContentWithMentions(
-                item.content,
-                item.mentions ?? null,
-                item.mentionAliasById ?? null
-              )}
-            </p>
+            <PostContent
+              content={item.content}
+              mentionIds={item.mentions ?? null}
+              mentionAliasById={item.mentionAliasById ?? null}
+              className="mb-3"
+            />
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
           {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
@@ -1302,7 +1303,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   }
 
   return (
-    <div className="border-2 border-[#CC4B37] bg-[#FFFFFF] p-4">
+    <div className="border-2 border-[#CC4B37] bg-[#FFFFFF] p-4 min-w-0">
       <div className="mb-2 flex items-center gap-1.5">
         <span
           style={jost}
@@ -1368,13 +1369,12 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         <>
           {item.content?.trim() && (
             <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
-              <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-                {parseContentWithMentions(
-                  item.content,
-                  item.mentions ?? null,
-                  item.mentionAliasById ?? null
-                )}
-              </p>
+              <PostContent
+                content={item.content}
+                mentionIds={item.mentions ?? null}
+                mentionAliasById={item.mentionAliasById ?? null}
+                className="mb-3"
+              />
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
@@ -1389,13 +1389,12 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       ) : (
         <>
           {item.content?.trim() && (
-            <p style={lato} className="text-[14px] text-[#111111] mb-3 leading-relaxed">
-              {parseContentWithMentions(
-                item.content,
-                item.mentions ?? null,
-                item.mentionAliasById ?? null
-              )}
-            </p>
+            <PostContent
+              content={item.content}
+              mentionIds={item.mentions ?? null}
+              mentionAliasById={item.mentionAliasById ?? null}
+              className="mb-3"
+            />
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
           {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
@@ -1434,7 +1433,7 @@ function FieldPostCard({
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const initial = (item.field.nombre.trim()[0] || '?').toUpperCase()
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4 min-w-0">
       <div className="mb-3 flex items-center gap-3">
         <Link href={`/campos/${item.field.slug}`}>
           <div className="h-9 w-9 shrink-0 overflow-hidden bg-[#F4F4F4]">
@@ -1492,12 +1491,10 @@ function FieldPostCard({
         />
       </div>
       {item.content?.trim() && (
-        <p
-          style={lato}
-          className="mb-3 text-[14px] leading-relaxed text-[#111111]"
-        >
-          {item.content}
-        </p>
+        <PostContent
+          content={item.content}
+          className="mb-3"
+        />
       )}
       {fotos.length > 0 && <PhotoGrid urls={fotos} />}
       <PostActions
@@ -2539,7 +2536,7 @@ function FeedTab({
   )
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 overflow-x-hidden">
       {items.map(item => {
         if (item.kind === 'pinned_post') return (
           <PinnedPostCard
