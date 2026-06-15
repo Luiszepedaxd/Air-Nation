@@ -2756,10 +2756,9 @@ function EventosTab({
       {!hasOwnActiveEvent && <CrearEventoBanner />}
       {items.map(item => {
         const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
-        const eventHref = resolveEventHref(item.url_externa, item.id)
         return (
           <div key={item.id} className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
-            <Link href={eventHref} className="flex gap-3 p-3">
+            <Link href={`/eventos/${item.id}`} className="flex gap-3 p-3">
               <div className="w-16 h-16 shrink-0 overflow-hidden bg-[#F4F4F4]">
                 {imagenFinal
                   ? <img loading="lazy" decoding="async" src={imagenFinal} alt="" className="w-full h-full object-cover" />
