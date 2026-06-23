@@ -43,8 +43,10 @@ function getOcupacionData(evento: EventoCardRow): {
 
 function getCardBadge(
   evento: EventoCardRow,
-  index: number
-): { label: string; variant: 'agotado' | 'pocos' | 'proximo' } | null {
+  index: number,
+  isPast?: boolean
+): { label: string; variant: 'agotado' | 'pocos' | 'proximo' | 'pasado' } | null {
+  if (isPast) return { label: 'PASADO', variant: 'pasado' }
   const { porcentaje, hayCupo } = getOcupacionData(evento)
   if (hayCupo && porcentaje >= 100) return { label: 'AGOTADO', variant: 'agotado' }
   if (hayCupo && porcentaje >= 80) return { label: 'POCOS LUGARES', variant: 'pocos' }
@@ -93,9 +95,11 @@ function cupoLine(evento: EventoCardRow): string {
 export function EventoCard({
   evento,
   index = 0,
+  isPast = false,
 }: {
   evento: EventoCardRow
   index?: number
+  isPast?: boolean
 }) {
   const fechaTxt = formatEventoFechaCorta(evento.fecha)
   const disc = disciplinaLabel(evento.disciplina)
@@ -110,12 +114,13 @@ export function EventoCard({
   const campoLinkSlug =
     slug && fieldNombre && sedeFinal === fieldNombre ? slug : null
 
-  const badge = getCardBadge(evento, index)
+  const badge = getCardBadge(evento, index, isPast)
   const variantStyles = badge
     ? {
         agotado: 'bg-[#666666] text-white',
         pocos: 'bg-[#CC4B37] text-white',
         proximo: 'bg-white text-[#111111]',
+        pasado: 'bg-[#444444] text-white',
       }[badge.variant]
     : ''
 

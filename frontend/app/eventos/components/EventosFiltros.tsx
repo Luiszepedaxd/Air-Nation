@@ -213,27 +213,46 @@ function FilterDropdown({
   )
 }
 
-export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
+export function EventosFiltros({
+  eventosProximos,
+  eventosPasados,
+}: {
+  eventosProximos: EventoCardRow[]
+  eventosPasados: EventoCardRow[]
+}) {
+  const [tabActivo, setTabActivo] = useState<'proximos' | 'pasados'>('proximos')
   const [mesActivo, setMesActivo] = useState<string | null>(null)
   const [ciudadActiva, setCiudadActiva] = useState<string | null>(null)
 
-  const mesesOptions = useMemo(() => getMesOptions(eventos), [eventos])
-  const ciudadesOptions = useMemo(() => getCiudadesOptions(eventos), [eventos])
+  const eventosActivos =
+    tabActivo === 'pasados' ? eventosPasados : eventosProximos
+
+  const mesesOptions = useMemo(() => getMesOptions(eventosActivos), [eventosActivos])
+  const ciudadesOptions = useMemo(
+    () => getCiudadesOptions(eventosActivos),
+    [eventosActivos]
+  )
 
   const showMes = mesesOptions.length >= 2
   const showCiudad = ciudadesOptions.length >= 2
   const showFiltrosBar = showMes || showCiudad
 
   const eventosFiltrados = useMemo(() => {
-    return eventos.filter(
+    return eventosActivos.filter(
       (e) =>
         eventoMatchesMes(e, mesActivo) && eventoMatchesCiudad(e, ciudadActiva)
     )
-  }, [eventos, mesActivo, ciudadActiva])
+  }, [eventosActivos, mesActivo, ciudadActiva])
 
   const hayFiltrosActivos = mesActivo !== null || ciudadActiva !== null
 
   const limpiarFiltros = () => {
+    setMesActivo(null)
+    setCiudadActiva(null)
+  }
+
+  const cambiarTab = (tab: 'proximos' | 'pasados') => {
+    setTabActivo(tab)
     setMesActivo(null)
     setCiudadActiva(null)
   }
@@ -243,8 +262,49 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
     : null
   const ciudadActivaLabel = ciudadActiva ?? null
 
+  const emptyMessage = hayFiltrosActivos
+    ? tabActivo === 'pasados'
+      ? 'No hay eventos pasados con estos filtros.'
+      : 'No hay eventos con estos filtros.'
+    : tabActivo === 'pasados'
+      ? 'Aún no hay eventos en el historial.'
+      : 'No hay eventos publicados por ahora.'
+
   return (
     <>
+      <div className="border-b border-solid border-[#EEEEEE] bg-[#FFFFFF]">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-6">
+          <nav
+            className="flex gap-8"
+            aria-label="Próximos y eventos pasados"
+          >
+            {(
+              [
+                ['proximos', `PRÓXIMOS (${eventosProximos.length})`],
+                ['pasados', `PASADOS (${eventosPasados.length})`],
+              ] as const
+            ).map(([id, label]) => {
+              const active = tabActivo === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => cambiarTab(id)}
+                  className={`border-b-2 py-3 text-[11px] uppercase tracking-[0.12em] transition-colors ${
+                    active
+                      ? 'border-[#CC4B37] font-extrabold text-[#111111]'
+                      : 'border-transparent font-semibold text-[#666666] hover:text-[#111111]'
+                  }`}
+                  style={{ ...jost, fontWeight: active ? 800 : 600 }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      </div>
+
       {showFiltrosBar ? (
         <div
           className="sticky top-0 z-30 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF]/95 backdrop-blur-sm"
@@ -304,9 +364,7 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
         {eventosFiltrados.length === 0 ? (
           <div className="py-12 text-center">
             <p className="text-sm text-[#666666]" style={lato}>
-              {hayFiltrosActivos
-                ? 'No hay eventos con estos filtros.'
-                : 'No hay eventos publicados por ahora.'}
+              {emptyMessage}
             </p>
             {hayFiltrosActivos ? (
               <button
@@ -322,7 +380,12 @@ export function EventosFiltros({ eventos }: { eventos: EventoCardRow[] }) {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {eventosFiltrados.map((e, idx) => (
-              <EventoCard key={e.id} evento={e} index={idx} />
+              <EventoCard
+                key={e.id}
+                evento={e}
+                index={idx}
+                isPast={tabActivo === 'pasados'}
+              />
             ))}
           </div>
         )}

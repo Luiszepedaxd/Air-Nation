@@ -162,6 +162,80 @@ async function fetchEventos(): Promise<EventoCardRow[]> {
   })
 }
 
+async function fetchEventosPasados(): Promise<EventoCardRow[]> {
+  const supabase = createPublicSupabaseClient()
+  const nowIso = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('events')
+    .select(
+      `
+      id,
+      title,
+      fecha,
+      cupo,
+      disciplina,
+      descripcion,
+      imagen_url,
+      tipo,
+      sede_nombre,
+      sede_ciudad,
+      cupo_vendido_creador,
+      url_externa,
+      fields ( nombre, slug, ciudad, foto_portada_url )
+    `
+    )
+    .eq('published', true)
+    .eq('status', 'publicado')
+    .lt('fecha', nowIso)
+    .order('fecha', { ascending: false })
+    .limit(50)
+
+  if (error) {
+    console.error('[eventos] past list:', error.message)
+    return []
+  }
+
+  const rows = (data ?? []) as Record<string, unknown>[]
+  const ids = rows.map((r) => String(r.id)).filter(Boolean)
+
+  const countMap = new Map<string, number>()
+  if (ids.length > 0) {
+    const { data: batch, error: batchErr } = await supabase.rpc(
+      'event_rsvp_counts_batch',
+      { p_event_ids: ids }
+    )
+    if (!batchErr && Array.isArray(batch)) {
+      for (const row of batch as { event_id: string; total: number }[]) {
+        if (row?.event_id != null) countMap.set(String(row.event_id), row.total)
+      }
+    }
+  }
+
+  return rows.map((r) => {
+    const f = normalizeFieldsEmbed(r.fields)
+    const id = String(r.id)
+    return {
+      id,
+      title: String(r.title ?? ''),
+      fecha: String(r.fecha ?? ''),
+      cupo: Number(r.cupo ?? 0),
+      disciplina: (r.disciplina as string | null) ?? null,
+      descripcion: (r.descripcion as string | null) ?? null,
+      imagen_url: (r.imagen_url as string | null) ?? null,
+      field_foto: f.foto_portada_url,
+      tipo: (r.tipo as string | null) ?? null,
+      field_nombre: f.nombre,
+      field_slug: f.slug,
+      ciudad: f.ciudad,
+      rsvp_count: countMap.get(id) ?? 0,
+      sede_nombre: (r.sede_nombre as string | null) ?? null,
+      sede_ciudad: (r.sede_ciudad as string | null) ?? null,
+      cupo_vendido_creador: (r.cupo_vendido_creador as number | null) ?? null,
+      url_externa: (r.url_externa as string | null) ?? null,
+    }
+  })
+}
+
 function EventosSeoList({ eventos }: { eventos: EventoCardRow[] }) {
   if (eventos.length === 0) return null
   return (
@@ -217,7 +291,10 @@ function EventosSeoList({ eventos }: { eventos: EventoCardRow[] }) {
 }
 
 export default async function EventosPage() {
-  const eventos = await fetchEventos()
+  const [eventos, eventosPasados] = await Promise.all([
+    fetchEventos(),
+    fetchEventosPasados(),
+  ])
   const userSb = createAdminSupabaseServerClient()
   const {
     data: { session },
@@ -364,7 +441,10 @@ export default async function EventosPage() {
       </section>
 
       <EventosSeoList eventos={eventos} />
-      <EventosFiltros eventos={eventos} />
+      <EventosFiltros
+        eventosProximos={eventos}
+        eventosPasados={eventosPasados}
+      />
       <EventosPorQue />
       <EventosCTASecundario hasSession={!!session} />
     </div>
