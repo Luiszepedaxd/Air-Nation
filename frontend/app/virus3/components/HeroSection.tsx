@@ -3,9 +3,6 @@
 import { motion } from 'framer-motion'
 import type { HeroConfig } from '../lib/types'
 
-const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
-const ACCENT_YELLOW = '#F2C200'
-
 function WordSplit({ text, delay = 0 }: { text: string; delay?: number }) {
   const display = text.trim() || 'MONTAÑA DE NIEBLA'
   const words = display.split(/\s+/).filter(Boolean)
@@ -92,25 +89,8 @@ export function HeroSection({ config }: { config: HeroConfig }) {
           {eyebrow}
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.28 }}
-          className="mb-6 mt-4 inline-flex items-center gap-3 md:mt-5"
-          style={{ fontFamily: MONO }}
-        >
-          <span className="h-px w-6" style={{ backgroundColor: ACCENT_YELLOW }} />
-          <span
-            className="text-[10px] tracking-[0.4em] md:text-xs"
-            style={{ color: ACCENT_YELLOW }}
-          >
-            SÉPTIMA EDICIÓN
-          </span>
-          <span className="h-px w-6" style={{ backgroundColor: ACCENT_YELLOW }} />
-        </motion.div>
-
         <h1
-          className="mx-auto mt-2 w-full max-w-full px-4 font-black leading-[0.95] tracking-tight text-white"
+          className="mx-auto mt-4 w-full max-w-full px-4 font-black leading-[0.95] tracking-tight text-white md:mt-5"
           style={{
             fontFamily: 'Jost, sans-serif',
             fontWeight: 900,
