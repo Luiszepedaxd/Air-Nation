@@ -55,7 +55,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
               loop
               playsInline
               className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
-              style={{ filter: 'grayscale(0.4) brightness(0.5) contrast(1.1)' }}
+              style={{ filter: 'grayscale(0.2) brightness(0.7) contrast(1.05)' }}
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
@@ -63,10 +63,10 @@ export function HeroSection({ config }: { config: HeroConfig }) {
               src={mediaUrl}
               alt=""
               className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
-              style={{ filter: 'grayscale(0.4) brightness(0.5) contrast(1.1)' }}
+              style={{ filter: 'grayscale(0.2) brightness(0.7) contrast(1.05)' }}
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/80" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/70" />
         </div>
       ) : (
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#1a1a1a] via-[#0a0a0a] to-black" />
