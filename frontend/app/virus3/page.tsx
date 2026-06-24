@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { LandingNav } from './components/LandingNav'
 import { getVirus3Blocks } from './lib/get-blocks'
 import { BlockRenderer } from './components/BlockRenderer'
@@ -64,6 +65,12 @@ export default async function Virus3Page() {
   const musicaConfig = musicaBlock?.config as MusicaConfig | undefined
   const audioUrl = musicaConfig?.audio_url?.trim() || undefined
 
+  const supabase = createDashboardSupabaseServerClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const hasSession = !!session
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -99,7 +106,7 @@ export default async function Virus3Page() {
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F5F3EF] text-[#111111]">
-      <LandingNav audioUrl={audioUrl} />
+      <LandingNav audioUrl={audioUrl} hasSession={hasSession} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

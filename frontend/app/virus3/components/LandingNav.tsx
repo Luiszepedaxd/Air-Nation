@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { href: '#cronograma', label: 'Cronograma' },
 ]
 
-export function LandingNav({ audioUrl }: { audioUrl?: string }) {
+export function LandingNav({ audioUrl, hasSession }: { audioUrl?: string; hasSession?: boolean }) {
   const [scrolled, setScrolled] = useState(false)
   const [playing, setPlaying] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
@@ -109,13 +109,23 @@ export function LandingNav({ audioUrl }: { audioUrl?: string }) {
               </button>
             )}
 
-            <Link
-              href="/register"
-              className="bg-[#CC4B37] px-3 py-2 text-[0.6rem] uppercase tracking-[0.15em] text-white transition-opacity hover:opacity-90 md:px-4 md:py-2.5 md:text-[0.65rem]"
-              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-            >
-              Crear cuenta
-            </Link>
+            {hasSession ? (
+              <Link
+                href="/dashboard"
+                className="bg-[#CC4B37] px-3 py-2 text-[0.6rem] uppercase tracking-[0.15em] text-white transition-opacity hover:opacity-90 md:px-4 md:py-2.5 md:text-[0.65rem]"
+                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+              >
+                Mi perfil
+              </Link>
+            ) : (
+              <Link
+                href="/register"
+                className="bg-[#CC4B37] px-3 py-2 text-[0.6rem] uppercase tracking-[0.15em] text-white transition-opacity hover:opacity-90 md:px-4 md:py-2.5 md:text-[0.65rem]"
+                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+              >
+                Crear cuenta
+              </Link>
+            )}
           </div>
         </div>
       </nav>
