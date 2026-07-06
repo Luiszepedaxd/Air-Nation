@@ -346,18 +346,16 @@ export function SponsorsAdminClient({
                   >
                     {i + 1}
                   </span>
-                  <div className="flex h-10 w-16 shrink-0 items-center justify-center border border-[#EEEEEE] bg-white">
+                  <div className="flex h-10 w-20 shrink-0 items-center justify-center">
                     {draft.logo_url ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={draft.logo_url}
-                        alt=""
-                        className="max-h-8 max-w-14 object-contain"
+                        alt={draft.nombre}
+                        className="h-10 w-20 object-contain"
                       />
                     ) : (
-                      <span className="text-[9px] text-[#CCCCCC]" style={jost}>
-                        S/L
-                      </span>
+                      <span className="text-xs text-[#AAAAAA]">Sin logo</span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">

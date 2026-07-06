@@ -239,11 +239,6 @@ type SponsorLogoEntry = {
   link: string
 }
 
-function sponsorLogoMatches(a: SponsorLogoEntry, b: SponsorLogoEntry): boolean {
-  if (a.logo_url.trim() && b.logo_url.trim() && a.logo_url === b.logo_url) return true
-  return a.nombre.trim() === b.nombre.trim() && a.link.trim() === b.link.trim()
-}
-
 function buildLogosFromCatalog(
   catalog: CatalogSponsor[],
   selectedIds: Set<string>
@@ -254,21 +249,19 @@ function buildLogosFromCatalog(
 }
 
 function selectedIdsFromLogos(
-  catalog: CatalogSponsor[],
-  logos: SponsorLogoEntry[]
+  logos: SponsorLogoEntry[],
+  catalog: CatalogSponsor[]
 ): Set<string> {
-  const ids = new Set<string>()
-  for (const item of catalog) {
-    const entry: SponsorLogoEntry = {
-      nombre: item.nombre,
-      logo_url: item.logo_url,
-      link: item.link,
-    }
-    if (logos.some((l) => sponsorLogoMatches(l, entry))) {
-      ids.add(item.id)
-    }
+  const selected = new Set<string>()
+  for (const logo of logos) {
+    const match = catalog.find(
+      (c) =>
+        (logo.logo_url && c.logo_url && c.logo_url.trim() === logo.logo_url.trim()) ||
+        (c.nombre.trim().toLowerCase() === logo.nombre.trim().toLowerCase())
+    )
+    if (match) selected.add(match.id)
   }
-  return ids
+  return selected
 }
 
 function SponsorsCatalogPicker({
@@ -304,7 +297,7 @@ function SponsorsCatalogPicker({
     }
   }, [])
 
-  const selectedIds = selectedIdsFromLogos(catalog, logos)
+  const selectedIds = selectedIdsFromLogos(logos, catalog)
 
   function toggleSponsor(id: string) {
     const next = new Set(selectedIds)
@@ -338,46 +331,35 @@ function SponsorsCatalogPicker({
           </p>
         ) : (
           <div className="flex flex-col gap-2">
-            {catalog.map((sponsor) => {
-              const checked = selectedIds.has(sponsor.id)
-              return (
-                <label
-                  key={sponsor.id}
-                  className={`flex cursor-pointer items-center gap-3 border px-3 py-3 transition-colors ${
-                    checked ? 'border-[#CC4B37] bg-[#FFF5F4]' : 'border-[#EEEEEE] bg-white hover:bg-[#FAFAFA]'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleSponsor(sponsor.id)}
-                    className="h-4 w-4 shrink-0 accent-[#CC4B37]"
+            {catalog.map((sponsor) => (
+              <label
+                key={sponsor.id}
+                className="flex cursor-pointer items-center gap-3 rounded border border-[#EEEEEE] p-3 hover:bg-[#F4F4F4]"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(sponsor.id)}
+                  onChange={() => toggleSponsor(sponsor.id)}
+                  className="h-4 w-4 accent-[#CC4B37]"
+                />
+                {sponsor.logo_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={sponsor.logo_url}
+                    alt={sponsor.nombre}
+                    className="h-8 w-16 object-contain"
                   />
-                  <div className="flex h-10 w-16 shrink-0 items-center justify-center border border-[#EEEEEE] bg-[#FAFAFA]">
-                    {sponsor.logo_url ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={sponsor.logo_url}
-                        alt=""
-                        className="max-h-8 max-w-14 object-contain"
-                      />
-                    ) : (
-                      <span className="text-[9px] text-[#CCCCCC]" style={jost}>
-                        S/L
-                      </span>
-                    )}
+                ) : (
+                  <div className="flex h-8 w-16 items-center justify-center bg-[#F4F4F4] text-[10px] text-[#AAAAAA]">
+                    Sin logo
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] text-[#111111]" style={jost}>
-                      {sponsor.nombre || 'Sin nombre'}
-                    </p>
-                    {sponsor.link ? (
-                      <p className="truncate text-[11px] text-[#999999]">{sponsor.link}</p>
-                    ) : null}
-                  </div>
-                </label>
-              )
-            })}
+                )}
+                <span className="text-sm text-[#111111]">{sponsor.nombre}</span>
+                {sponsor.link && (
+                  <span className="ml-auto text-[11px] text-[#AAAAAA]">{sponsor.link}</span>
+                )}
+              </label>
+            ))}
           </div>
         )}
 
