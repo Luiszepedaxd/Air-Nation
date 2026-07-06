@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties, ReactNode } from 'react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import {
   DndContext,
@@ -20,7 +20,12 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { uploadFile } from '@/lib/apiFetch'
-import { updateBlockConfig, toggleBlockActive, reorderAllBlocks } from './actions'
+import {
+  getSponsorsCatalog,
+  updateBlockConfig,
+  toggleBlockActive,
+  reorderAllBlocks,
+} from './actions'
 import { MediaUploadInput } from '@/app/admin/operacionkursk2/components/MediaUploadInput'
 import { ImageUploadInput } from '@/app/admin/operacionkursk2/components/ImageUploadInput'
 import type { Virus3Slug } from '@/app/virus3/lib/types'
@@ -57,7 +62,7 @@ const SECTIONS: SectionDef[] = [
   { slug: 'inscripcion', label: 'Inscripción', descripcion: 'Ventanas de precio escalonadas.' },
   { slug: 'amenidades', label: 'Amenidades', descripcion: 'Lista de servicios incluidos.' },
   { slug: 'cronograma', label: 'Cronograma', descripcion: 'Línea de tiempo del evento.' },
-  { slug: 'sponsors', label: 'Sponsors', descripcion: 'Logos por tier.' },
+  { slug: 'sponsors', label: 'Sponsors', descripcion: 'Selección desde catálogo global.' },
   { slug: 'galeria', label: 'Galería', descripcion: 'Imágenes del evento.' },
   { slug: 'videos', label: 'Videos', descripcion: 'Videos MP4.' },
   { slug: 'musica', label: 'Música — Canción oficial', descripcion: 'Reproductor del tema oficial del evento.' },
@@ -221,24 +226,168 @@ function httpUrlOk(v: string): boolean {
   return !t || /^https?:\/\//i.test(t)
 }
 
-function SponsorAdminDetailsRow({
-  openByDefault,
-  summary,
-  children,
+type CatalogSponsor = {
+  id: string
+  nombre: string
+  logo_url: string
+  link: string
+}
+
+type SponsorLogoEntry = {
+  nombre: string
+  logo_url: string
+  link: string
+}
+
+function sponsorLogoMatches(a: SponsorLogoEntry, b: SponsorLogoEntry): boolean {
+  if (a.logo_url.trim() && b.logo_url.trim() && a.logo_url === b.logo_url) return true
+  return a.nombre.trim() === b.nombre.trim() && a.link.trim() === b.link.trim()
+}
+
+function buildLogosFromCatalog(
+  catalog: CatalogSponsor[],
+  selectedIds: Set<string>
+): SponsorLogoEntry[] {
+  return catalog
+    .filter((s) => selectedIds.has(s.id))
+    .map((s) => ({ nombre: s.nombre, logo_url: s.logo_url, link: s.link }))
+}
+
+function selectedIdsFromLogos(
+  catalog: CatalogSponsor[],
+  logos: SponsorLogoEntry[]
+): Set<string> {
+  const ids = new Set<string>()
+  for (const item of catalog) {
+    const entry: SponsorLogoEntry = {
+      nombre: item.nombre,
+      logo_url: item.logo_url,
+      link: item.link,
+    }
+    if (logos.some((l) => sponsorLogoMatches(l, entry))) {
+      ids.add(item.id)
+    }
+  }
+  return ids
+}
+
+function SponsorsCatalogPicker({
+  logos,
+  eyebrow,
+  titulo,
+  onEyebrowChange,
+  onTituloChange,
+  onLogosChange,
+  inputCls,
 }: {
-  openByDefault: boolean
-  summary: ReactNode
-  children: ReactNode
+  logos: SponsorLogoEntry[]
+  eyebrow: string
+  titulo: string
+  onEyebrowChange: (value: string) => void
+  onTituloChange: (value: string) => void
+  onLogosChange: (logos: SponsorLogoEntry[]) => void
+  inputCls: string
 }) {
-  const ref = useRef<HTMLDetailsElement>(null)
-  useLayoutEffect(() => {
-    if (ref.current && openByDefault) ref.current.open = true
-  }, [openByDefault])
+  const [catalog, setCatalog] = useState<CatalogSponsor[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    getSponsorsCatalog().then((data) => {
+      if (!cancelled) {
+        setCatalog(data)
+        setLoading(false)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const selectedIds = selectedIdsFromLogos(catalog, logos)
+
+  function toggleSponsor(id: string) {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    onLogosChange(buildLogosFromCatalog(catalog, next))
+  }
+
   return (
-    <details ref={ref} data-sponsors-item className="border border-[#EEEEEE] bg-[#FAFAFA]">
-      {summary}
-      {children}
-    </details>
+    <div className="flex flex-col gap-4">
+      <Field label="Eyebrow">
+        <input className={inputCls} value={eyebrow} onChange={(e) => onEyebrowChange(e.target.value)} />
+      </Field>
+      <Field label="Título">
+        <input className={inputCls} value={titulo} onChange={(e) => onTituloChange(e.target.value)} />
+      </Field>
+
+      <div className="border-t border-[#EEEEEE] pt-4">
+        <p className="mb-3 text-[11px] text-[#888888]" style={lato}>
+          Selecciona sponsors del catálogo global. El orden en la landing sigue el orden del catálogo.
+        </p>
+
+        {loading ? (
+          <p className="text-[12px] text-[#999999]">Cargando catálogo…</p>
+        ) : catalog.length === 0 ? (
+          <p className="text-[12px] text-[#999999]">
+            Agrega sponsors desde{' '}
+            <a href="/admin/sponsors" className="text-[#CC4B37] underline">
+              /admin/sponsors
+            </a>
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {catalog.map((sponsor) => {
+              const checked = selectedIds.has(sponsor.id)
+              return (
+                <label
+                  key={sponsor.id}
+                  className={`flex cursor-pointer items-center gap-3 border px-3 py-3 transition-colors ${
+                    checked ? 'border-[#CC4B37] bg-[#FFF5F4]' : 'border-[#EEEEEE] bg-white hover:bg-[#FAFAFA]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleSponsor(sponsor.id)}
+                    className="h-4 w-4 shrink-0 accent-[#CC4B37]"
+                  />
+                  <div className="flex h-10 w-16 shrink-0 items-center justify-center border border-[#EEEEEE] bg-[#FAFAFA]">
+                    {sponsor.logo_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={sponsor.logo_url}
+                        alt=""
+                        className="max-h-8 max-w-14 object-contain"
+                      />
+                    ) : (
+                      <span className="text-[9px] text-[#CCCCCC]" style={jost}>
+                        S/L
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] text-[#111111]" style={jost}>
+                      {sponsor.nombre || 'Sin nombre'}
+                    </p>
+                    {sponsor.link ? (
+                      <p className="truncate text-[11px] text-[#999999]">{sponsor.link}</p>
+                    ) : null}
+                  </div>
+                </label>
+              )
+            })}
+          </div>
+        )}
+
+        {!loading && catalog.length > 0 && logos.length === 0 ? (
+          <p className="mt-3 text-[11px] text-[#AAAAAA]">
+            Ningún sponsor seleccionado para esta landing.
+          </p>
+        ) : null}
+      </div>
+    </div>
   )
 }
 
@@ -940,178 +1089,22 @@ export function Virus3AdminClient({
         )
       }
       case 'sponsors': {
-        const logos = (Array.isArray(cfg(slug).logos) ? cfg(slug).logos : []) as {
-          nombre: string
-          logo_url: string
-          link: string
-          tier: string
-        }[]
-        const norm = logos.map((l) => ({
+        const logos = (Array.isArray(cfg(slug).logos) ? cfg(slug).logos : []) as SponsorLogoEntry[]
+        const norm: SponsorLogoEntry[] = logos.map((l) => ({
           nombre: typeof l.nombre === 'string' ? l.nombre : '',
           logo_url: typeof l.logo_url === 'string' ? l.logo_url : '',
           link: typeof l.link === 'string' ? l.link : '',
-          tier: (['principal', 'aliado', 'patrocinador'].includes(l.tier) ? l.tier : 'patrocinador') as 'principal' | 'aliado' | 'patrocinador',
         }))
-        const setLogos = (next: typeof norm) => {
-          setField(slug, 'logos', next)
-        }
         return (
-          <div className="flex flex-col gap-4">
-            <Field label="Eyebrow"><input className={inputCls} value={str(slug, 'eyebrow')} onChange={(e) => setField(slug, 'eyebrow', e.target.value)} /></Field>
-            <Field label="Título"><input className={inputCls} value={str(slug, 'titulo')} onChange={(e) => setField(slug, 'titulo', e.target.value)} /></Field>
-            <button type="button" className="self-start border border-[#DDDDDD] bg-white px-3 py-2 text-[10px]" style={jost} onClick={() => setLogos([...norm, { nombre: '', logo_url: '', link: '', tier: 'patrocinador' }])}>+ Sponsor</button>
-            {norm.length > 2 ? (
-              <div className="mb-1 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const containers = document.querySelectorAll(`details[data-sponsors-item]`)
-                    containers.forEach((d) => d.removeAttribute('open'))
-                  }}
-                  className="text-[10px] uppercase tracking-[0.12em] text-[#666] hover:text-[#111]"
-                  style={jost}
-                >
-                  Colapsar todos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const containers = document.querySelectorAll(`details[data-sponsors-item]`)
-                    containers.forEach((d) => d.setAttribute('open', ''))
-                  }}
-                  className="text-[10px] uppercase tracking-[0.12em] text-[#666] hover:text-[#111]"
-                  style={jost}
-                >
-                  Expandir todos
-                </button>
-              </div>
-            ) : null}
-            {norm.map((l, i) => {
-              const labelName = l.nombre?.trim() || `Sponsor ${i + 1}`
-              const isLast = i === norm.length - 1
-              const isNewEmpty = !l.nombre && !l.logo_url && !l.link
-              const openByDefault = isLast && isNewEmpty
-              return (
-                <SponsorAdminDetailsRow
-                  key={i}
-                  openByDefault={openByDefault}
-                  summary={
-                    <summary className="flex cursor-pointer list-none items-center gap-3 p-3 hover:bg-[#F4F4F4] [&::-webkit-details-marker]:hidden">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-[#EEEEEE] bg-white">
-                        {l.logo_url ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={l.logo_url} alt="" className="max-h-7 max-w-7 object-contain" />
-                        ) : (
-                          <span className="text-[9px] text-[#999]" style={jost}>
-                            S/L
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate text-[12px] text-[#111111]" style={jost}>
-                          {labelName}
-                        </span>
-                        <span className="text-[10px] uppercase tracking-[0.12em] text-[#999]" style={jost}>
-                          {l.tier || 'patrocinador'}
-                        </span>
-                      </div>
-                      <span className="shrink-0 text-[10px] text-[#999]" style={jost}>
-                        {i + 1} / {norm.length}
-                      </span>
-                    </summary>
-                  }
-                >
-                  <div className="border-t border-[#EEEEEE] p-3">
-                    <div className="mb-3 flex gap-2">
-                      <button
-                        type="button"
-                        disabled={i === 0}
-                        onClick={() => {
-                          const n = [...norm]
-                          ;[n[i - 1], n[i]] = [n[i], n[i - 1]]
-                          setLogos(n)
-                        }}
-                        className="text-[10px] disabled:opacity-30"
-                        style={jost}
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        disabled={i === norm.length - 1}
-                        onClick={() => {
-                          const n = [...norm]
-                          ;[n[i + 1], n[i]] = [n[i], n[i + 1]]
-                          setLogos(n)
-                        }}
-                        className="text-[10px] disabled:opacity-30"
-                        style={jost}
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        className="text-[10px] text-[#CC4B37]"
-                        style={jost}
-                        onClick={() => setLogos(norm.filter((_, j) => j !== i))}
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-
-                    <Field label="Nombre">
-                      <input
-                        className={inputCls}
-                        value={l.nombre}
-                        onChange={(e) => {
-                          const n = [...norm]
-                          n[i] = { ...n[i], nombre: e.target.value }
-                          setLogos(n)
-                        }}
-                      />
-                    </Field>
-                    <Field label="Logo">
-                      <ImageUploadInput
-                        slug="sponsors"
-                        value={l.logo_url}
-                        onChange={(u) => {
-                          const n = [...norm]
-                          n[i] = { ...n[i], logo_url: u }
-                          setLogos(n)
-                        }}
-                      />
-                    </Field>
-                    <Field label="Link">
-                      <input
-                        className={inputCls}
-                        value={l.link}
-                        onChange={(e) => {
-                          const n = [...norm]
-                          n[i] = { ...n[i], link: e.target.value }
-                          setLogos(n)
-                        }}
-                      />
-                    </Field>
-                    <Field label="Tier">
-                      <select
-                        className={inputCls}
-                        value={l.tier}
-                        onChange={(e) => {
-                          const n = [...norm]
-                          n[i] = { ...n[i], tier: e.target.value as typeof l.tier }
-                          setLogos(n)
-                        }}
-                      >
-                        <option value="principal">principal</option>
-                        <option value="aliado">aliado</option>
-                        <option value="patrocinador">patrocinador</option>
-                      </select>
-                    </Field>
-                  </div>
-                </SponsorAdminDetailsRow>
-              )
-            })}
-          </div>
+          <SponsorsCatalogPicker
+            logos={norm}
+            eyebrow={str(slug, 'eyebrow')}
+            titulo={str(slug, 'titulo')}
+            onEyebrowChange={(v) => setField(slug, 'eyebrow', v)}
+            onTituloChange={(v) => setField(slug, 'titulo', v)}
+            onLogosChange={(next) => setField(slug, 'logos', next)}
+            inputCls={inputCls}
+          />
         )
       }
       case 'galeria': {

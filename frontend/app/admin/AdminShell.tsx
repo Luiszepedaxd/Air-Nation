@@ -55,6 +55,7 @@ const SPONSORS_GROUP: NavGroup = {
     </svg>
   ),
   items: [
+    { href: '/admin/sponsors', label: 'Catálogo' },
     { href: '/admin/bloodmoney2', label: 'Blood Money 2' },
     { href: '/admin/operacionkursk2', label: 'Op. Kursk II' },
     { href: '/admin/montanadeniebla', label: 'Op. Montaña de Niebla' },

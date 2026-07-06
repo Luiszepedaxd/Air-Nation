@@ -184,3 +184,27 @@ export async function reorderAllBlocks(
   revalidateAll()
   return { ok: true }
 }
+
+export async function getSponsorsCatalog() {
+  const adminId = await requireAppAdminUserId()
+  if (!adminId) return []
+
+  const db = createAdminClient()
+  const { data, error } = await db
+    .from('sponsors')
+    .select('id, nombre, logo_url, link')
+    .eq('activo', true)
+    .order('orden', { ascending: true })
+
+  if (error) {
+    console.error('[admin/virus3] getSponsorsCatalog:', error.message)
+    return []
+  }
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    nombre: String(row.nombre ?? ''),
+    logo_url: String(row.logo_url ?? ''),
+    link: String(row.link ?? ''),
+  }))
+}
