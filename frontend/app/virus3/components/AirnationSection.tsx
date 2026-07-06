@@ -60,17 +60,6 @@ export function AirnationSection({ config }: { config: AirnationConfig }) {
           </p>
         </motion.div>
 
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.4 }}
-          className="text-2xl leading-tight text-white md:text-4xl lg:text-5xl"
-          style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-        >
-          {titulo}
-        </motion.h2>
-
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
