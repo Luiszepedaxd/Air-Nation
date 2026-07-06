@@ -3,9 +3,19 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+/** Valida que el destino sea una ruta interna — previene open redirect */
+function isSafeInternalPath(path: string | null): path is string {
+  return (
+    typeof path === 'string' &&
+    path.startsWith('/') &&
+    !path.startsWith('//')
+  )
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const next = searchParams.get('next') // ruta post-login opcional (ej: /store/pedidos)
 
   if (code) {
     const cookieStore = cookies()
@@ -23,7 +33,9 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { cookies: cookieAdapter }
     )
+
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+
     if (!error) {
       const { data: { user } } = await supabase.auth.getUser()
 
@@ -34,15 +46,18 @@ export async function GET(request: NextRequest) {
           .eq('id', user.id)
           .single()
 
-        // Si no tiene alias → onboarding pendiente
+        // Sin alias → onboarding pendiente (usuario nuevo, cualquier provider)
         if (!profile?.alias) {
           return NextResponse.redirect(`${origin}/onboarding`)
         }
       }
 
-      return NextResponse.redirect(`${origin}/dashboard`)
+      // Respetar ?next= solo si es ruta interna válida
+      const destination = isSafeInternalPath(next) ? next : '/dashboard'
+      return NextResponse.redirect(`${origin}${destination}`)
     }
   }
 
+  // Código inválido o expirado
   return NextResponse.redirect(`${origin}/register?error=auth`)
 }

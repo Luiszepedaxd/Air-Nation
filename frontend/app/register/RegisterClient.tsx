@@ -4,6 +4,17 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.705 17.64 9.2z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+    </svg>
+  );
+}
+
 export default function RegisterClient({
   registerImageSrc,
 }: {
@@ -13,7 +24,23 @@ export default function RegisterClient({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) {
+      setError(error.message);
+      setGoogleLoading(false);
+    }
+  };
 
   const handleRegister = async () => {
     if (!email || !password) return;
@@ -99,6 +126,30 @@ export default function RegisterClient({
               </h1>
 
               <div className="flex flex-col gap-4">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={googleLoading || loading}
+                  className="flex w-full items-center justify-center gap-3 border border-[#DDDDDD] bg-white py-3.5 text-[0.75rem] font-bold uppercase tracking-[0.18em] text-[#111111] transition-colors hover:bg-[#F4F4F4] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {googleLoading ? (
+                    "Redirigiendo..."
+                  ) : (
+                    <>
+                      <GoogleIcon />
+                      Continuar con Google
+                    </>
+                  )}
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-[#EEEEEE]" />
+                  <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em] text-[#AAAAAA]">
+                    O
+                  </span>
+                  <div className="h-px flex-1 bg-[#EEEEEE]" />
+                </div>
+
                 <div>
                   <label className="mb-2 block text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#444444]">
                     Correo
@@ -144,7 +195,7 @@ export default function RegisterClient({
                 <button
                   type="button"
                   onClick={handleRegister}
-                  disabled={loading || !email || !password}
+                  disabled={loading || googleLoading || !email || !password}
                   className="mt-2 w-full bg-[#CC4B37] py-3.5 text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-colors hover:bg-[#D95540] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? "Creando cuenta..." : "Crear cuenta →"}
