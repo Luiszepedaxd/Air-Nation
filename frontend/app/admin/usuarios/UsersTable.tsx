@@ -24,6 +24,7 @@ export type User = {
   app_role: string | null
   member_number: string | number | null
   created_at: string | null
+  provider: string | null
 }
 
 type AppRole = 'player' | 'admin' | 'field_owner'
@@ -380,7 +381,25 @@ export default function UsersTable({
                       : (u.nombre ?? '—')}
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                    {u.alias ?? '—'}
+                    <div className="flex items-center gap-1.5">
+                      {u.alias ?? '—'}
+                      {u.provider === 'google' && (
+                        <span
+                          title="Registrado con Google"
+                          style={{
+                            ...jostHeading,
+                            fontSize: 9,
+                            padding: '2px 5px',
+                            borderRadius: 2,
+                            backgroundColor: '#4285F4',
+                            color: '#FFFFFF',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          G
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {u.ciudad ?? '—'}

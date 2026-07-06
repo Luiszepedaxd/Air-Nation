@@ -16,16 +16,27 @@ export default async function AdminUsuariosPage() {
     data: { user: sessionUser },
   } = await sessionClient.auth.getUser()
 
-  const { data, error } = await supabase
-    .from('users')
-    .select(
-      'id, nombre, alias, email, ciudad, rol, app_role, member_number, created_at'
-    )
-    .order('created_at', { ascending: false })
+  const [{ data, error }, { data: authData }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('id, nombre, alias, email, ciudad, rol, app_role, member_number, created_at')
+      .order('created_at', { ascending: false }),
+    supabase.auth.admin.listUsers({ perPage: 1000 }),
+  ])
+
+  // Mapa id → provider desde auth.users
+  const providerMap = new Map<string, string>()
+  for (const au of authData?.users ?? []) {
+    const provider = au.app_metadata?.provider ?? null
+    if (provider) providerMap.set(au.id, provider)
+  }
 
   const users: User[] =
     !error && data
-      ? (data as User[])
+      ? (data as Omit<User, 'provider'>[]).map((u) => ({
+          ...u,
+          provider: providerMap.get(u.id) ?? null,
+        }))
       : []
 
   return (
