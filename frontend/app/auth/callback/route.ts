@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next')
 
-  console.log('[auth/callback] code present:', !!code, '| origin:', origin)
-
   if (!code) {
     return NextResponse.redirect(new URL('/register?error=auth', origin))
   }
@@ -43,8 +41,6 @@ export async function GET(request: NextRequest) {
   )
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
-  console.log('[auth/callback] exchangeCodeForSession error:', error?.message ?? null)
-  console.log('[auth/callback] cookies to set:', cookiesToSet.map(c => c.name))
 
   let destination: string
 
@@ -52,7 +48,6 @@ export async function GET(request: NextRequest) {
     destination = '/register?error=auth'
   } else {
     const { data: { user } } = await supabase.auth.getUser()
-    console.log('[auth/callback] user id:', user?.id ?? null)
 
     if (user) {
       const { data: profile, error: profileError } = await supabase
@@ -60,8 +55,6 @@ export async function GET(request: NextRequest) {
         .select('alias')
         .eq('id', user.id)
         .single()
-
-      console.log('[auth/callback] profile alias:', profile?.alias ?? null, '| profileError:', profileError?.message ?? null)
 
       destination = !profile?.alias
         ? '/onboarding'
@@ -73,13 +66,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  console.log('[auth/callback] redirecting to:', destination)
-
   const response = NextResponse.redirect(new URL(destination, origin))
   cookiesToSet.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
   })
 
-  console.log('[auth/callback] response cookies set:', cookiesToSet.length)
   return response
 }
