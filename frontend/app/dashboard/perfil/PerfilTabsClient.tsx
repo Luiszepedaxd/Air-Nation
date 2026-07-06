@@ -376,6 +376,96 @@ function PerfilPwaInstallBlock() {
   )
 }
 
+function CuentaAccesoSection({ email }: { email: string | null }) {
+  const [provider, setProvider] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const p = data.user?.app_metadata?.provider ?? null
+      setProvider(p)
+    })
+  }, [])
+
+  const handleAddPassword = async () => {
+    if (!email) return
+    setSending(true)
+    setError('')
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    })
+    setSending(false)
+    if (error) {
+      setError(error.message)
+    } else {
+      setSent(true)
+    }
+  }
+
+  if (!provider) return null
+
+  const isGoogleOnly = provider === 'google'
+
+  return (
+    <section className="mt-8 border-t border-[#EEEEEE] pt-8">
+      <h2 style={{ ...jost, fontSize: 10, color: '#999999' }} className="mb-4">
+        ACCESO
+      </h2>
+      <div className="divide-y divide-[#EEEEEE] border border-[#EEEEEE] bg-[#FFFFFF]">
+        <div className="flex items-center justify-between gap-3 px-3 py-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="shrink-0 text-[22px] leading-none" aria-hidden>
+              {isGoogleOnly ? '🔵' : '📧'}
+            </span>
+            <div className="min-w-0">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                {isGoogleOnly ? 'Cuenta Google' : 'Email y contraseña'}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                {isGoogleOnly
+                  ? 'Entraste con tu cuenta de Google'
+                  : `Sesión con ${email ?? 'tu correo'}`}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {isGoogleOnly && (
+          <div className="px-3 py-4">
+            <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
+              Agrega una contraseña para poder iniciar sesión también con tu correo.
+            </p>
+            {sent ? (
+              <p className="text-[12px] font-semibold text-[#2E7D32]" style={lato}>
+                ✓ Revisa tu correo — te enviamos el link para crear tu contraseña.
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void handleAddPassword()}
+                  disabled={sending}
+                  style={jost}
+                  className="bg-[#111111] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] disabled:opacity-50"
+                >
+                  {sending ? 'ENVIANDO...' : 'AGREGAR CONTRASEÑA'}
+                </button>
+                {error && (
+                  <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>
+                    {error}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function PerfilTabsClient({
   user,
   teamNombre,
@@ -798,6 +888,7 @@ export function PerfilTabsClient({
               triggerPush={triggerPush}
               pushLoading={pushLoading}
             />
+            <CuentaAccesoSection email={user.email ?? null} />
             <div className="mt-8 max-w-[640px]">
               <BloqueadosSection userId={user.id} />
             </div>
