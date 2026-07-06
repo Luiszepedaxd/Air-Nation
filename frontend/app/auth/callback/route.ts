@@ -1,5 +1,4 @@
-import { createServerClient, type CookieMethodsServerDeprecated } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -15,49 +14,69 @@ function isSafeInternalPath(path: string | null): path is string {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') // ruta post-login opcional (ej: /store/pedidos)
+  const next = searchParams.get('next') // ruta post-login opcional
 
-  if (code) {
-    const cookieStore = cookies()
-    const cookieAdapter: CookieMethodsServerDeprecated = {
-      get: (name) => cookieStore.get(name)?.value,
-      set: (name, value, options) => {
-        cookieStore.set(name, value, options)
-      },
-      remove: (name, options) => {
-        cookieStore.set(name, '', options)
+  if (!code) {
+    return NextResponse.redirect(new URL('/register?error=auth', origin))
+  }
+
+  // Acumulamos las cookies que Supabase necesita escribir
+  const cookiesToSet: Array<{
+    name: string
+    value: string
+    options: Record<string, unknown>
+  }> = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(incoming) {
+          incoming.forEach((c) => cookiesToSet.push(c))
+        },
       },
     }
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: cookieAdapter }
-    )
+  )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+  const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-    if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
+  let destination: string
 
-      if (user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('alias')
-          .eq('id', user.id)
-          .single()
+  if (error) {
+    destination = '/register?error=auth'
+  } else {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-        // Sin alias → onboarding pendiente (usuario nuevo, cualquier provider)
-        if (!profile?.alias) {
-          return NextResponse.redirect(`${origin}/onboarding`)
-        }
-      }
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('alias')
+        .eq('id', user.id)
+        .single()
 
-      // Respetar ?next= solo si es ruta interna válida
-      const destination = isSafeInternalPath(next) ? next : '/dashboard'
-      return NextResponse.redirect(`${origin}${destination}`)
+      // Sin alias → onboarding (usuario nuevo, cualquier provider)
+      destination = !profile?.alias
+        ? '/onboarding'
+        : isSafeInternalPath(next)
+          ? next
+          : '/dashboard'
+    } else {
+      destination = isSafeInternalPath(next) ? next : '/dashboard'
     }
   }
 
-  // Código inválido o expirado
-  return NextResponse.redirect(`${origin}/register?error=auth`)
+  // Crear el redirect y transferir las cookies de sesión al response
+  const response = NextResponse.redirect(new URL(destination, origin))
+  cookiesToSet.forEach(({ name, value, options }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    response.cookies.set(name, value, options as any)
+  })
+
+  return response
 }
