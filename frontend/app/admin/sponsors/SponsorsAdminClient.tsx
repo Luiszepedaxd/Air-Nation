@@ -67,6 +67,16 @@ export function SponsorsAdminClient({
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   useEffect(() => {
     setRows(initialSponsors)
@@ -339,7 +349,18 @@ export function SponsorsAdminClient({
                 key={row.id}
                 className={`border border-[#EEEEEE] bg-white transition-opacity ${!draft.activo ? 'opacity-70' : ''}`}
               >
-                <div className="flex flex-wrap items-center gap-3 border-b border-[#EEEEEE] bg-[#FAFAFA] px-4 py-3">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="flex cursor-pointer flex-wrap items-center gap-3 bg-[#FAFAFA] p-3 hover:bg-[#F9F9F9]"
+                  onClick={() => toggleExpand(row.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      toggleExpand(row.id)
+                    }
+                  }}
+                >
                   <span
                     className="flex h-6 w-6 shrink-0 items-center justify-center bg-[#F4F4F4] text-[10px] text-[#666666]"
                     style={jost}
@@ -367,6 +388,7 @@ export function SponsorsAdminClient({
                         href={draft.link}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="truncate text-[11px] text-[#CC4B37] underline"
                       >
                         {draft.link}
@@ -378,7 +400,10 @@ export function SponsorsAdminClient({
                   <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => handleReorder(row.id, 'up')}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleReorder(row.id, 'up')
+                      }}
                       disabled={i === 0 || isReordering}
                       className="border border-[#DDDDDD] bg-white px-2 py-1 text-[10px] disabled:opacity-30"
                       style={jost}
@@ -388,7 +413,10 @@ export function SponsorsAdminClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleReorder(row.id, 'down')}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleReorder(row.id, 'down')
+                      }}
                       disabled={i === sorted.length - 1 || isReordering}
                       className="border border-[#DDDDDD] bg-white px-2 py-1 text-[10px] disabled:opacity-30"
                       style={jost}
@@ -398,7 +426,10 @@ export function SponsorsAdminClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleToggleActivo(row)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleToggleActivo(row)
+                      }}
                       disabled={isToggling}
                       className={`flex items-center gap-1.5 transition-opacity ${isToggling ? 'opacity-50' : ''}`}
                       title={draft.activo ? 'Activo' : 'Inactivo'}
@@ -424,7 +455,8 @@ export function SponsorsAdminClient({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         setDeleteError(null)
                         setDeleteTarget(row)
                       }}
@@ -434,51 +466,58 @@ export function SponsorsAdminClient({
                       Eliminar
                     </button>
                   </div>
+                  <span className="shrink-0 text-[#AAAAAA]">
+                    {expandedIds.has(row.id) ? '▲' : '▼'}
+                  </span>
                 </div>
 
-                <div className="grid gap-4 p-4 md:grid-cols-2">
-                  <Field label="Nombre">
-                    <input
-                      className={inputCls}
-                      value={draft.nombre}
-                      onChange={(e) => setDraftField(row.id, 'nombre', e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Link">
-                    <input
-                      className={inputCls}
-                      value={draft.link}
-                      onChange={(e) => setDraftField(row.id, 'link', e.target.value)}
-                      placeholder="https://..."
-                    />
-                  </Field>
-                  <div className="md:col-span-2">
-                    <Field label="Logo">
-                      <ImageUploadInput
-                        slug="sponsors-catalog"
-                        value={draft.logo_url}
-                        onChange={(url) => setDraftField(row.id, 'logo_url', url)}
-                      />
-                    </Field>
-                  </div>
-                </div>
+                {expandedIds.has(row.id) && (
+                  <>
+                    <div className="grid gap-4 border-t border-[#EEEEEE] p-4 md:grid-cols-2">
+                      <Field label="Nombre">
+                        <input
+                          className={inputCls}
+                          value={draft.nombre}
+                          onChange={(e) => setDraftField(row.id, 'nombre', e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Link">
+                        <input
+                          className={inputCls}
+                          value={draft.link}
+                          onChange={(e) => setDraftField(row.id, 'link', e.target.value)}
+                          placeholder="https://..."
+                        />
+                      </Field>
+                      <div className="md:col-span-2">
+                        <Field label="Logo">
+                          <ImageUploadInput
+                            slug="sponsors-catalog"
+                            value={draft.logo_url}
+                            onChange={(url) => setDraftField(row.id, 'logo_url', url)}
+                          />
+                        </Field>
+                      </div>
+                    </div>
 
-                <div className="flex flex-wrap items-center gap-3 border-t border-[#EEEEEE] px-4 py-3">
-                  <button
-                    type="button"
-                    onClick={() => handleSaveRow(row.id)}
-                    disabled={isSaving}
-                    className="bg-[#CC4B37] px-5 py-2 text-[11px] tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-60"
-                    style={jost}
-                  >
-                    {isSaving ? 'Guardando…' : 'Guardar'}
-                  </button>
-                  {isSaved && (
-                    <span className="text-[10px] font-bold text-[#22C55E]" style={jost}>
-                      Guardado
-                    </span>
-                  )}
-                </div>
+                    <div className="flex flex-wrap items-center gap-3 border-t border-[#EEEEEE] px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveRow(row.id)}
+                        disabled={isSaving}
+                        className="bg-[#CC4B37] px-5 py-2 text-[11px] tracking-[0.12em] text-white hover:opacity-90 disabled:opacity-60"
+                        style={jost}
+                      >
+                        {isSaving ? 'Guardando…' : 'Guardar'}
+                      </button>
+                      {isSaved && (
+                        <span className="text-[10px] font-bold text-[#22C55E]" style={jost}>
+                          Guardado
+                        </span>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             )
           })}
