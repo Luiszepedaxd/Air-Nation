@@ -19,6 +19,16 @@ module.exports = {
           "text-dim": "#444444",
           muted:      "#767676",
         },
+        arena: {
+          bg:      "#080C0A",
+          surface: "#0F1612",
+          border:  "#1C2A20",
+          green:   "#2ECC71",
+          orange:  "#F97316",
+          text:    "#E8F0EA",
+          muted:   "#7A9980",
+          red:     "#CC4B37",
+        },
       },
       fontFamily: {
         display: ["'Jost'",    "sans-serif"],
