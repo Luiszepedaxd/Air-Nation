@@ -9,8 +9,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.atomikapps.airnation
-        certificate: AirNation Distribution
-        provisioning_profile: AirNation AppStore Profile
       node: 20
       xcode: latest
       cocoapods: default
