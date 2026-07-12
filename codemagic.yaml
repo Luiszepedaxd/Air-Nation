@@ -28,6 +28,16 @@ workflows:
           cd frontend
           npx cap sync ios
 
+      - name: Set app icon
+        script: |
+          cd frontend
+          npm install @capacitor/assets --save-dev
+          mkdir -p assets
+          cp ../brand-assets/icon-1024.png assets/icon-only.png
+          cp ../brand-assets/splash-white-2732x2732.png assets/splash.png
+          cp ../brand-assets/splash-white-2732x2732.png assets/splash-dark.png
+          npx capacitor-assets generate --iconBackgroundColor '#FFFFFF' --iconBackgroundColorDark '#111111' --splashBackgroundColor '#FFFFFF' --splashBackgroundColorDark '#111111' --ios
+
       - name: Set iOS privacy descriptions
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'AirNation necesita acceso a tu galería para subir fotos de perfil, réplicas y publicaciones.'" frontend/ios/App/App/Info.plist
