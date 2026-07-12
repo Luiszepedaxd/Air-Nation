@@ -15,20 +15,24 @@ workflows:
     scripts:
       - name: Install dependencies
         script: |
+          cd frontend
           npm install
       - name: Add iOS platform
         script: |
+          cd frontend
           npx cap add ios
       - name: Sync Capacitor iOS
         script: |
+          cd frontend
           npx cap sync ios
       - name: Set version
         script: |
-          cd ios/App
+          cd frontend/ios/App
           agvtool new-marketing-version 1.0.0
           agvtool new-version -all 1
       - name: Build iOS
         script: |
+          cd frontend
           xcode-project use-profiles
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
@@ -38,6 +42,7 @@ workflows:
             archive
       - name: Export IPA
         script: |
+          cd frontend
           xcode-project build-ipa \
             --workspace ios/App/App.xcworkspace \
             --scheme App
