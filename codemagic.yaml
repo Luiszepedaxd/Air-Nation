@@ -28,6 +28,12 @@ workflows:
           cd frontend
           npx cap sync ios
 
+      - name: Set iOS privacy descriptions
+        script: |
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'AirNation necesita acceso a tu galería para subir fotos de perfil, réplicas y publicaciones.'" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'AirNation necesita acceso a tu cámara para tomar tu foto de credencial.'" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" frontend/ios/App/App/Info.plist
+
       - name: Set version
         script: |
           cd frontend/ios/App
