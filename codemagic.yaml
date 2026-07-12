@@ -45,7 +45,8 @@ workflows:
           cd frontend
           xcode-project build-ipa \
             --workspace ios/App/App.xcworkspace \
-            --scheme App
+            --scheme App \
+            --archive-path $CM_BUILD_DIR/App.xcarchive
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
