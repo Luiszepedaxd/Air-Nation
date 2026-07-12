@@ -32,21 +32,19 @@ workflows:
           agvtool new-version -all 1
       - name: Build iOS
         script: |
-          cd frontend
           xcode-project use-profiles
           xcodebuild \
-            -workspace ios/App/App.xcworkspace \
+            -workspace "$CM_BUILD_DIR/frontend/ios/App/App.xcworkspace" \
             -scheme App \
             -configuration Release \
-            -archivePath $CM_BUILD_DIR/App.xcarchive \
+            -archivePath "$CM_BUILD_DIR/App.xcarchive" \
             archive
       - name: Export IPA
         script: |
-          cd frontend
           xcode-project build-ipa \
-            --workspace ios/App/App.xcworkspace \
+            --workspace "$CM_BUILD_DIR/frontend/ios/App/App.xcworkspace" \
             --scheme App \
-            --archive-path $CM_BUILD_DIR/App.xcarchive
+            --archive-path "$CM_BUILD_DIR/App.xcarchive"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
