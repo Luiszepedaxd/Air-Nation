@@ -34,11 +34,15 @@ workflows:
           agvtool new-marketing-version 1.0.0
           agvtool new-version -all 1
 
+      - name: Verificar estructura iOS
+        script: |
+          ls -la frontend/ios/App/
+
       - name: Build iOS
         script: |
           xcode-project use-profiles
           xcodebuild \
-            -workspace frontend/ios/App/App.xcworkspace \
+            -project frontend/ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -archivePath $CM_BUILD_DIR/App.xcarchive \
@@ -49,7 +53,7 @@ workflows:
       - name: Export IPA
         script: |
           xcode-project build-ipa \
-            --workspace frontend/ios/App/App.xcworkspace \
+            --project frontend/ios/App/App.xcodeproj \
             --scheme App \
             --archive-path $CM_BUILD_DIR/App.xcarchive
 
