@@ -418,7 +418,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
   const handleLinkGoogle = async () => {
     setSending(true)
     setError('')
-    const { error } = await supabase.auth.linkIdentity({
+    const { data, error } = await supabase.auth.linkIdentity({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard/perfil?tab=configuracion')}`,
@@ -427,8 +427,16 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
     if (error) {
       setError(error.message)
       setSending(false)
+      return
     }
-    // Si no hay error el navegador redirige — el componente se desmonta solo
+    // linkIdentity devuelve la URL de Google — hay que redirigir manualmente
+    if (data?.url) {
+      window.location.href = data.url
+    } else {
+      // fallback: no hubo error ni url, probablemente ya estaba vinculado
+      setSent(true)
+      setSending(false)
+    }
   }
 
   if (!provider) return null
