@@ -376,6 +376,17 @@ function PerfilPwaInstallBlock() {
   )
 }
 
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.705 17.64 9.2z"/>
+      <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+      <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
+      <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+    </svg>
+  )
+}
+
 function CuentaAccesoSection({ email }: { email: string | null }) {
   const [provider, setProvider] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -404,9 +415,26 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
     }
   }
 
+  const handleLinkGoogle = async () => {
+    setSending(true)
+    setError('')
+    const { error } = await supabase.auth.linkIdentity({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard/perfil?tab=configuracion')}`,
+      },
+    })
+    if (error) {
+      setError(error.message)
+      setSending(false)
+    }
+    // Si no hay error el navegador redirige — el componente se desmonta solo
+  }
+
   if (!provider) return null
 
   const isGoogleOnly = provider === 'google'
+  const isEmailOnly = provider === 'email'
 
   return (
     <section className="mt-8 border-t border-[#EEEEEE] pt-8">
@@ -414,24 +442,25 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
         ACCESO
       </h2>
       <div className="divide-y divide-[#EEEEEE] border border-[#EEEEEE] bg-[#FFFFFF]">
-        <div className="flex items-center justify-between gap-3 px-3 py-4">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <span className="shrink-0 text-[22px] leading-none" aria-hidden>
-              {isGoogleOnly ? '🔵' : '📧'}
-            </span>
-            <div className="min-w-0">
-              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
-                {isGoogleOnly ? 'Cuenta Google' : 'Email y contraseña'}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
-                {isGoogleOnly
-                  ? 'Entraste con tu cuenta de Google'
-                  : `Sesión con ${email ?? 'tu correo'}`}
-              </p>
-            </div>
+
+        {/* Método actual */}
+        <div className="flex items-center gap-3 px-3 py-4">
+          <span className="shrink-0 text-[22px] leading-none" aria-hidden>
+            {isGoogleOnly ? '🔵' : '📧'}
+          </span>
+          <div className="min-w-0">
+            <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+              {isGoogleOnly ? 'Cuenta Google' : 'Email y contraseña'}
+            </p>
+            <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+              {isGoogleOnly
+                ? 'Entraste con tu cuenta de Google'
+                : `Sesión con ${email ?? 'tu correo'}`}
+            </p>
           </div>
         </div>
 
+        {/* Google-only: opción de agregar contraseña */}
         {isGoogleOnly && (
           <div className="px-3 py-4">
             <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
@@ -461,6 +490,39 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
             )}
           </div>
         )}
+
+        {/* Email-only: opción de vincular Google */}
+        {isEmailOnly && (
+          <div className="px-3 py-4">
+            <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
+              Vincula tu cuenta de Google para entrar más rápido sin escribir tu contraseña.
+            </p>
+            {sent ? (
+              <p className="text-[12px] font-semibold text-[#2E7D32]" style={lato}>
+                ✓ Google vinculado correctamente.
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void handleLinkGoogle()}
+                  disabled={sending}
+                  style={jost}
+                  className="flex items-center gap-2 border border-[#DDDDDD] bg-white px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#111111] disabled:opacity-50"
+                >
+                  <GoogleIcon />
+                  {sending ? 'REDIRIGIENDO...' : 'VINCULAR CON GOOGLE'}
+                </button>
+                {error && (
+                  <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>
+                    {error}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
       </div>
     </section>
   )
