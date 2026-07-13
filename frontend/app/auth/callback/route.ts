@@ -14,6 +14,15 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next')
+  const oauthError = searchParams.get('error')
+  const oauthErrorCode = searchParams.get('error_code')
+
+  // Supabase redirige aquí con ?error= cuando el OAuth falla (ej: identity_already_linked)
+  if (oauthError) {
+    const safeNext = isSafeInternalPath(next) ? next : '/dashboard/perfil?tab=configuracion'
+    const errorParam = `oauth_error=${encodeURIComponent(oauthErrorCode ?? oauthError)}`
+    return NextResponse.redirect(new URL(`${safeNext}&${errorParam}`, origin))
+  }
 
   if (!code) {
     return NextResponse.redirect(new URL('/register?error=auth', origin))

@@ -388,17 +388,32 @@ function GoogleIcon() {
 }
 
 function CuentaAccesoSection({ email }: { email: string | null }) {
-  const [provider, setProvider] = useState<string | null>(null)
+  const [identities, setIdentities] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const p = data.user?.app_metadata?.provider ?? null
-      setProvider(p)
+    // Leer ?oauth_error= de la URL para mostrar mensaje tras volver del callback
+    const params = new URLSearchParams(window.location.search)
+    const oauthError = params.get('oauth_error')
+    if (oauthError === 'identity_already_linked') {
+      setError('Esta cuenta de Google ya está vinculada a otro usuario de AirNation.')
+    } else if (oauthError) {
+      setError('No se pudo vincular Google. Intenta de nuevo.')
+    }
+
+    supabase.auth.getUserIdentities().then(({ data, error: idErr }) => {
+      if (!idErr && data?.identities) {
+        setIdentities(data.identities.map((i: { provider: string }) => i.provider))
+      }
+      setLoading(false)
     })
   }, [])
+
+  const hasGoogle = identities.includes('google')
+  const hasEmail = identities.includes('email')
 
   const handleAddPassword = async () => {
     if (!email) return
@@ -429,20 +444,15 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
       setSending(false)
       return
     }
-    // linkIdentity devuelve la URL de Google — hay que redirigir manualmente
     if (data?.url) {
       window.location.href = data.url
     } else {
-      // fallback: no hubo error ni url, probablemente ya estaba vinculado
       setSent(true)
       setSending(false)
     }
   }
 
-  if (!provider) return null
-
-  const isGoogleOnly = provider === 'google'
-  const isEmailOnly = provider === 'email'
+  if (loading) return null
 
   return (
     <section className="mt-8 border-t border-[#EEEEEE] pt-8">
@@ -451,25 +461,35 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
       </h2>
       <div className="divide-y divide-[#EEEEEE] border border-[#EEEEEE] bg-[#FFFFFF]">
 
-        {/* Método actual */}
-        <div className="flex items-center gap-3 px-3 py-4">
-          <span className="shrink-0 text-[22px] leading-none" aria-hidden>
-            {isGoogleOnly ? '🔵' : '📧'}
-          </span>
-          <div className="min-w-0">
-            <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
-              {isGoogleOnly ? 'Cuenta Google' : 'Email y contraseña'}
-            </p>
-            <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
-              {isGoogleOnly
-                ? 'Entraste con tu cuenta de Google'
-                : `Sesión con ${email ?? 'tu correo'}`}
-            </p>
+        {hasEmail && (
+          <div className="flex items-center gap-3 px-3 py-4">
+            <span className="shrink-0 text-[22px] leading-none" aria-hidden>📧</span>
+            <div className="min-w-0">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                Email y contraseña
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                {email ?? 'tu correo'}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Google-only: opción de agregar contraseña */}
-        {isGoogleOnly && (
+        {hasGoogle && (
+          <div className="flex items-center gap-3 px-3 py-4">
+            <span className="shrink-0 text-[22px] leading-none" aria-hidden>🔵</span>
+            <div className="min-w-0">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                Google vinculado
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                Puedes entrar con tu cuenta de Google
+              </p>
+            </div>
+          </div>
+        )}
+
+        {hasGoogle && !hasEmail && (
           <div className="px-3 py-4">
             <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
               Agrega una contraseña para poder iniciar sesión también con tu correo.
@@ -489,18 +509,13 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
                 >
                   {sending ? 'ENVIANDO...' : 'AGREGAR CONTRASEÑA'}
                 </button>
-                {error && (
-                  <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>
-                    {error}
-                  </p>
-                )}
+                {error && <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>{error}</p>}
               </>
             )}
           </div>
         )}
 
-        {/* Email-only: opción de vincular Google */}
-        {isEmailOnly && (
+        {hasEmail && !hasGoogle && (
           <div className="px-3 py-4">
             <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
               Vincula tu cuenta de Google para entrar más rápido sin escribir tu contraseña.
@@ -521,11 +536,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
                   <GoogleIcon />
                   {sending ? 'REDIRIGIENDO...' : 'VINCULAR CON GOOGLE'}
                 </button>
-                {error && (
-                  <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>
-                    {error}
-                  </p>
-                )}
+                {error && <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>{error}</p>}
               </>
             )}
           </div>
