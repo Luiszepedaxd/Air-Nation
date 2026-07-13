@@ -129,7 +129,6 @@ export function ActivarCredencialModal({
   const [rejectMsg, setRejectMsg] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -318,16 +317,11 @@ export function ActivarCredencialModal({
   }
 
   const startCamera = async () => {
-    if (isNativeApp() && getNativePlatform() === 'ios') {
-      // En iOS nativo, usar file input como el feed (Camera plugin falla).
-      fileInputRef.current?.click()
-      return
-    }
-    if (isNativeApp()) {
+    if (isNativeApp() && getNativePlatform() === 'android') {
       await startCameraNative(CameraSource.Camera)
       return
     }
-    // === Flujo web/PWA: getUserMedia + óvalo guía (sin cambios) ===
+    // iOS nativo + web/PWA: getUserMedia + óvalo guía
     setCameraError(null)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -504,7 +498,6 @@ export function ActivarCredencialModal({
     setCameraError(null)
     setStep('upload')
     setKeepExistingPhoto(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
     if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
@@ -639,18 +632,6 @@ export function ActivarCredencialModal({
             )}
 
             <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic"
-              capture="user"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) void handleFile(f)
-                e.target.value = ''
-              }}
-            />
-            <input
               ref={galleryInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp,image/heic"
@@ -674,13 +655,11 @@ export function ActivarCredencialModal({
             <button
               type="button"
               onClick={() => {
-                if (isNativeApp() && getNativePlatform() === 'ios') {
-                  galleryInputRef.current?.click()
-                } else if (isNativeApp()) {
+                if (isNativeApp() && getNativePlatform() === 'android') {
                   void startCameraNative(CameraSource.Photos)
-                } else {
-                  galleryInputRef.current?.click()
+                  return
                 }
+                galleryInputRef.current?.click()
               }}
               style={jost}
               className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] text-[11px] font-extrabold uppercase tracking-wide text-[#111111]"
