@@ -8,7 +8,7 @@ import {
   CameraResultType,
   CameraSource,
 } from '@capacitor/camera'
-import { isNativeApp } from '@/lib/platform'
+import { getNativePlatform, isNativeApp } from '@/lib/platform'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -130,6 +130,7 @@ export function ActivarCredencialModal({
   const [mounted, setMounted] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
@@ -317,6 +318,11 @@ export function ActivarCredencialModal({
   }
 
   const startCamera = async () => {
+    if (isNativeApp() && getNativePlatform() === 'ios') {
+      // En iOS nativo, usar file input como el feed (Camera plugin falla).
+      fileInputRef.current?.click()
+      return
+    }
     if (isNativeApp()) {
       await startCameraNative(CameraSource.Camera)
       return
@@ -499,6 +505,7 @@ export function ActivarCredencialModal({
     setStep('upload')
     setKeepExistingPhoto(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
+    if (galleryInputRef.current) galleryInputRef.current.value = ''
   }
 
   if (!mounted) return null
@@ -634,11 +641,24 @@ export function ActivarCredencialModal({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/jpeg,image/png,image/webp,image/heic"
+              capture="user"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 if (f) void handleFile(f)
+                e.target.value = ''
+              }}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) void handleFile(f)
+                e.target.value = ''
               }}
             />
 
@@ -654,10 +674,12 @@ export function ActivarCredencialModal({
             <button
               type="button"
               onClick={() => {
-                if (isNativeApp()) {
+                if (isNativeApp() && getNativePlatform() === 'ios') {
+                  galleryInputRef.current?.click()
+                } else if (isNativeApp()) {
                   void startCameraNative(CameraSource.Photos)
                 } else {
-                  fileInputRef.current?.click()
+                  galleryInputRef.current?.click()
                 }
               }}
               style={jost}
