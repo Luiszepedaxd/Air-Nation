@@ -1014,6 +1014,18 @@ export function PerfilTabsClient({
                 </Link>
               )}
               <PerfilPwaInstallBlock />
+              {/* Eliminar cuenta */}
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <Link
+                  href="/eliminar-cuenta"
+                  className="flex items-center justify-center w-full py-3 text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
+                >
+                  Eliminar mi cuenta
+                </Link>
+                <p className="text-xs text-gray-400 text-center mt-1">
+                  Esta acción es permanente y no se puede deshacer.
+                </p>
+              </div>
               <PerfilLogoutButton />
             </div>
           </div>
