@@ -19,7 +19,7 @@ export default function ForgotPasswordClient({
     setLoading(true);
     setError("");
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://airnation.online/reset-password",
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error) {
       setError(error.message);

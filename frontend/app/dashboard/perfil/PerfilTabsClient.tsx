@@ -422,7 +422,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
     setSending(true)
     setError('')
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}/reset-password`,
     })
     setSending(false)
     if (error) {
