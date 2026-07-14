@@ -63,8 +63,12 @@ export default function CapacitorBridge() {
 
         // Listener de deep link OAuth (airnation://auth/callback?code=...)
         urlHandler = await App.addListener('appUrlOpen', async ({ url }) => {
+          console.log('[OAuth] appUrlOpen disparado con URL:', url)
           try {
-            if (!url.includes('auth/callback')) return
+            if (!url.includes('auth/callback')) {
+              console.log('[OAuth] URL no contiene auth/callback, ignorando')
+              return
+            }
 
             // Cerrar el browser in-app
             try {

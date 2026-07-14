@@ -60,6 +60,7 @@ export default function LoginClient({
         }
 
         if (data?.url) {
+          console.log('[OAuth] URL generada por Supabase:', data.url)
           const { Browser } = await import('@capacitor/browser')
           await Browser.open({ url: data.url })
           // El listener appUrlOpen en CapacitorBridge maneja el regreso
