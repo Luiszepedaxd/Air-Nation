@@ -1,5 +1,6 @@
 'use client'
 
+import type { UserIdentity } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { PlayerHero } from '@/app/u/[id]/PlayerHero'
@@ -388,8 +389,7 @@ function GoogleIcon() {
 }
 
 function CuentaAccesoSection({ email }: { email: string | null }) {
-  type Identity = { provider: string; id: string; [key: string]: unknown }
-  const [identities, setIdentities] = useState<Identity[]>([])
+  const [identities, setIdentities] = useState<UserIdentity[]>([])
   const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
@@ -407,7 +407,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
 
     supabase.auth.getUserIdentities().then(({ data, error: idErr }) => {
       if (!idErr && data?.identities) {
-        setIdentities(data.identities as Identity[])
+        setIdentities(data.identities)
       }
       setLoading(false)
     })
@@ -458,13 +458,12 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
     if (!googleIdentity) return
     setSending(true)
     setError('')
-    const { error } = await supabase.auth.unlinkIdentity(googleIdentity as Parameters<typeof supabase.auth.unlinkIdentity>[0])
+    const { error } = await supabase.auth.unlinkIdentity(googleIdentity)
     if (error) {
       setError(error.message)
       setSending(false)
       return
     }
-    // Actualizar estado local quitando Google
     setIdentities(prev => prev.filter(i => i.provider !== 'google'))
     setSending(false)
   }
