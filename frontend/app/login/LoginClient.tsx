@@ -52,20 +52,91 @@ export default function LoginClient({
   const handleAppleSignIn = async () => {
     setGoogleLoading(true);
     setError("");
-    const redirect = searchParams.get("redirect");
-    const isSafeRedirect =
-      typeof redirect === "string" &&
-      redirect.startsWith("/") &&
-      !redirect.startsWith("//");
-    const redirectTo = isSafeRedirect
-      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`
-      : `${window.location.origin}/auth/callback`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: { redirectTo },
-    });
-    if (error) {
-      setError(error.message);
+
+    try {
+      const isNative =
+        typeof window !== "undefined" &&
+        (window as any).Capacitor?.isNativePlatform?.();
+      const platform =
+        typeof window !== "undefined" &&
+        (window as any).Capacitor?.getPlatform?.();
+
+      if (isNative && platform === "ios") {
+        if (!(window as any).AppleID) {
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src =
+              "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
+            script.onload = () => resolve();
+            script.onerror = () =>
+              reject(new Error("No se pudo cargar Apple Sign In"));
+            document.head.appendChild(script);
+          });
+        }
+
+        (window as any).AppleID.auth.init({
+          clientId: "com.atomikapps.airnation.web",
+          scope: "name email",
+          redirectURI: "https://www.airnation.online/auth/callback",
+          usePopup: true,
+        });
+
+        const response = await (window as any).AppleID.auth.signIn();
+        const idToken = response.authorization.id_token;
+
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: "apple",
+          token: idToken,
+        });
+
+        if (error) {
+          setError(error.message);
+          setGoogleLoading(false);
+          return;
+        }
+
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from("users")
+            .select("alias")
+            .eq("id", data.user.id)
+            .single();
+
+          const redirect = searchParams.get("redirect");
+          const isSafeRedirect =
+            typeof redirect === "string" &&
+            redirect.startsWith("/") &&
+            !redirect.startsWith("//");
+
+          if (!profile?.alias) {
+            window.location.href = "/onboarding";
+          } else if (isSafeRedirect) {
+            window.location.href = redirect;
+          } else {
+            window.location.href = "/dashboard";
+          }
+        }
+      } else {
+        const redirect = searchParams.get("redirect");
+        const isSafeRedirect =
+          typeof redirect === "string" &&
+          redirect.startsWith("/") &&
+          !redirect.startsWith("//");
+        const redirectTo = isSafeRedirect
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`
+          : `${window.location.origin}/auth/callback`;
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: "apple",
+          options: { redirectTo },
+        });
+        if (error) {
+          setError(error.message);
+          setGoogleLoading(false);
+        }
+      }
+    } catch (err: any) {
+      console.error("Apple Sign In error:", err);
+      setError(err?.message || "Error al iniciar sesión con Apple");
       setGoogleLoading(false);
     }
   };
