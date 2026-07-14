@@ -62,60 +62,26 @@ export default function LoginClient({
         (window as any).Capacitor?.getPlatform?.();
 
       if (isNative && platform === "ios") {
-        if (!(window as any).AppleID) {
-          await new Promise<void>((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src =
-              "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
-            script.onload = () => resolve();
-            script.onerror = () =>
-              reject(new Error("No se pudo cargar Apple Sign In"));
-            document.head.appendChild(script);
-          });
-        }
-
-        (window as any).AppleID.auth.init({
-          clientId: "com.atomikapps.airnation.web",
-          scope: "name email",
-          redirectURI: "https://www.airnation.online/auth/callback",
-          usePopup: true,
-        });
-
-        const response = await (window as any).AppleID.auth.signIn();
-        const idToken = response.authorization.id_token;
-
-        const { data, error } = await supabase.auth.signInWithIdToken({
+        const { data, error } = await supabase.auth.signInWithOAuth({
           provider: "apple",
-          token: idToken,
+          options: {
+            skipBrowserRedirect: true,
+          },
         });
+
+        console.log("Apple OAuth data:", JSON.stringify(data));
 
         if (error) {
+          console.error("Apple OAuth error:", error);
           setError(error.message);
           setGoogleLoading(false);
           return;
         }
 
-        if (data.user) {
-          const { data: profile } = await supabase
-            .from("users")
-            .select("alias")
-            .eq("id", data.user.id)
-            .single();
-
-          const redirect = searchParams.get("redirect");
-          const isSafeRedirect =
-            typeof redirect === "string" &&
-            redirect.startsWith("/") &&
-            !redirect.startsWith("//");
-
-          if (!profile?.alias) {
-            window.location.href = "/onboarding";
-          } else if (isSafeRedirect) {
-            window.location.href = redirect;
-          } else {
-            window.location.href = "/dashboard";
-          }
+        if (data?.url) {
+          window.location.href = data.url;
         }
+        return;
       } else {
         const redirect = searchParams.get("redirect");
         const isSafeRedirect =
