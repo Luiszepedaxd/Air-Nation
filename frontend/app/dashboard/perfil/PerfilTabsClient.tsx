@@ -388,7 +388,8 @@ function GoogleIcon() {
 }
 
 function CuentaAccesoSection({ email }: { email: string | null }) {
-  const [identities, setIdentities] = useState<string[]>([])
+  type Identity = { provider: string; id: string; [key: string]: unknown }
+  const [identities, setIdentities] = useState<Identity[]>([])
   const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
@@ -406,14 +407,15 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
 
     supabase.auth.getUserIdentities().then(({ data, error: idErr }) => {
       if (!idErr && data?.identities) {
-        setIdentities(data.identities.map((i: { provider: string }) => i.provider))
+        setIdentities(data.identities as Identity[])
       }
       setLoading(false)
     })
   }, [])
 
-  const hasGoogle = identities.includes('google')
-  const hasEmail = identities.includes('email')
+  const hasGoogle = identities.some(i => i.provider === 'google')
+  const hasEmail = identities.some(i => i.provider === 'email')
+  const googleIdentity = identities.find(i => i.provider === 'google')
 
   const handleAddPassword = async () => {
     if (!email) return
@@ -452,6 +454,21 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
     }
   }
 
+  const handleUnlinkGoogle = async () => {
+    if (!googleIdentity) return
+    setSending(true)
+    setError('')
+    const { error } = await supabase.auth.unlinkIdentity(googleIdentity as Parameters<typeof supabase.auth.unlinkIdentity>[0])
+    if (error) {
+      setError(error.message)
+      setSending(false)
+      return
+    }
+    // Actualizar estado local quitando Google
+    setIdentities(prev => prev.filter(i => i.provider !== 'google'))
+    setSending(false)
+  }
+
   if (loading) return null
 
   return (
@@ -476,16 +493,30 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
         )}
 
         {hasGoogle && (
-          <div className="flex items-center gap-3 px-3 py-4">
-            <span className="shrink-0 text-[22px] leading-none" aria-hidden>🔵</span>
-            <div className="min-w-0">
-              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
-                Google vinculado
-              </p>
-              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
-                Puedes entrar con tu cuenta de Google
-              </p>
+          <div className="flex items-center justify-between gap-3 px-3 py-4">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-[22px] leading-none" aria-hidden>🔵</span>
+              <div className="min-w-0">
+                <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                  Google vinculado
+                </p>
+                <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                  Puedes entrar con tu cuenta de Google
+                </p>
+              </div>
             </div>
+            {/* Solo mostrar desvincular si también tiene email/password */}
+            {hasEmail && (
+              <button
+                type="button"
+                onClick={() => void handleUnlinkGoogle()}
+                disabled={sending}
+                style={jost}
+                className="shrink-0 border border-[#EEEEEE] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[#999999] hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-50"
+              >
+                {sending ? '...' : 'DESVINCULAR'}
+              </button>
+            )}
           </div>
         )}
 
