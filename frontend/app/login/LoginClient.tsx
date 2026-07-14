@@ -28,84 +28,65 @@ export default function LoginClient({
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    setError("");
-    const redirect = searchParams.get("redirect");
-    const isSafeRedirect =
-      typeof redirect === "string" &&
-      redirect.startsWith("/") &&
-      !redirect.startsWith("//");
-    const redirectTo = isSafeRedirect
-      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`
-      : `${window.location.origin}/auth/callback`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    if (error) {
-      setError(error.message);
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setGoogleLoading(true);
-    setError("");
+  const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
+    setGoogleLoading(true)
+    setError('')
 
     try {
       const isNative =
-        typeof window !== "undefined" &&
-        (window as any).Capacitor?.isNativePlatform?.();
-      const platform =
-        typeof window !== "undefined" &&
-        (window as any).Capacitor?.getPlatform?.();
+        typeof window !== 'undefined' &&
+        (window as any).Capacitor?.isNativePlatform?.()
 
-      if (isNative && platform === "ios") {
+      const redirect = searchParams.get('redirect')
+      const isSafeRedirect =
+        typeof redirect === 'string' &&
+        redirect.startsWith('/') &&
+        !redirect.startsWith('//')
+
+      if (isNative) {
+        // App nativa: usar deep link scheme + browser in-app
         const { data, error } = await supabase.auth.signInWithOAuth({
-          provider: "apple",
+          provider,
           options: {
+            redirectTo: 'airnation://auth/callback',
             skipBrowserRedirect: true,
           },
-        });
-
-        console.log("Apple OAuth data:", JSON.stringify(data));
+        })
 
         if (error) {
-          console.error("Apple OAuth error:", error);
-          setError(error.message);
-          setGoogleLoading(false);
-          return;
+          setError(error.message)
+          setGoogleLoading(false)
+          return
         }
 
         if (data?.url) {
-          window.location.href = data.url;
+          const { Browser } = await import('@capacitor/browser')
+          await Browser.open({ url: data.url })
+          // El listener appUrlOpen en CapacitorBridge maneja el regreso
         }
-        return;
       } else {
-        const redirect = searchParams.get("redirect");
-        const isSafeRedirect =
-          typeof redirect === "string" &&
-          redirect.startsWith("/") &&
-          !redirect.startsWith("//");
+        // Web: flujo OAuth normal con redirect
         const redirectTo = isSafeRedirect
-          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}`
-          : `${window.location.origin}/auth/callback`;
+          ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect!)}`
+          : `${window.location.origin}/auth/callback`
         const { error } = await supabase.auth.signInWithOAuth({
-          provider: "apple",
+          provider,
           options: { redirectTo },
-        });
+        })
         if (error) {
-          setError(error.message);
-          setGoogleLoading(false);
+          setError(error.message)
+          setGoogleLoading(false)
         }
       }
     } catch (err: any) {
-      console.error("Apple Sign In error:", err);
-      setError(err?.message || "Error al iniciar sesión con Apple");
-      setGoogleLoading(false);
+      console.error(`${provider} Sign In error:`, err)
+      setError(err?.message || `Error al iniciar sesión con ${provider}`)
+      setGoogleLoading(false)
     }
-  };
+  }
+
+  const handleGoogleSignIn = () => handleOAuthSignIn('google')
+  const handleAppleSignIn = () => handleOAuthSignIn('apple')
 
   const handleLogin = async () => {
     if (!email || !password) return;
