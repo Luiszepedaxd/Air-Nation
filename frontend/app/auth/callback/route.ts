@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next')
   const oauthError = searchParams.get('error')
   const oauthErrorCode = searchParams.get('error_code')
-  const isNative = searchParams.get('native') === '1'
 
   // Supabase redirige aquí con ?error= cuando el OAuth falla (ej: identity_already_linked)
   if (oauthError) {
@@ -27,20 +26,6 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(new URL('/register?error=auth', origin))
-  }
-
-  if (isNative && code) {
-    const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Redirigiendo...</title></head>
-<body style="font-family:sans-serif;text-align:center;padding-top:40vh;">
-<p>Regresando a AirNation...</p>
-<script>
-  window.location.href = 'airnation://auth/callback?code=${encodeURIComponent(code)}';
-</script>
-</body></html>`
-    return new NextResponse(html, {
-      headers: { 'Content-Type': 'text/html' },
-    })
   }
 
   const cookiesToSet: Array<{

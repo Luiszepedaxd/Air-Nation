@@ -15,7 +15,6 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { isNativeApp } from '@/lib/platform'
-import { supabase } from '@/lib/supabase'
 
 const ROOT_ROUTES = new Set(['/', '/welcome', '/dashboard', '/login', '/register'])
 
@@ -27,7 +26,6 @@ export default function CapacitorBridge() {
     if (!isNativeApp()) return
 
     let backHandler: { remove: () => void } | null = null
-    let urlHandler: { remove: () => void } | null = null
 
     const init = async () => {
       try {
@@ -61,63 +59,6 @@ export default function CapacitorBridge() {
           }
         })
 
-        // Listener de deep link OAuth (airnation://auth/callback?code=...)
-        urlHandler = await App.addListener('appUrlOpen', async ({ url }) => {
-          alert('Deep link recibido: ' + url)
-          try {
-            if (!url.includes('auth/callback')) {
-              return
-            }
-
-            // Cerrar el browser in-app
-            try {
-              const { Browser } = await import('@capacitor/browser')
-              await Browser.close()
-            } catch {
-              /* ignore */
-            }
-
-            // Extraer el code del deep link
-            const urlObj = new URL(url)
-            const code = urlObj.searchParams.get('code')
-            const errorParam = urlObj.searchParams.get('error')
-
-            if (errorParam) {
-              console.error('[OAuth] error en deep link:', errorParam)
-              return
-            }
-
-            if (!code) {
-              console.error('[OAuth] no se encontró code en deep link')
-              return
-            }
-
-            // Intercambiar code por sesión
-            const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-            if (error) {
-              console.error('[OAuth] error exchangeCodeForSession:', error.message)
-              return
-            }
-
-            // Verificar perfil para decidir destino
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-              const { data: profile } = await supabase
-                .from('users')
-                .select('alias')
-                .eq('id', user.id)
-                .single()
-
-              const destination = !profile?.alias ? '/onboarding' : '/dashboard'
-              window.location.href = destination
-            } else {
-              window.location.href = '/dashboard'
-            }
-          } catch (err) {
-            console.error('[OAuth] error en appUrlOpen:', err)
-          }
-        })
       } catch (err) {
         console.warn('[CapacitorBridge] init error:', err)
       }
@@ -127,7 +68,6 @@ export default function CapacitorBridge() {
 
     return () => {
       backHandler?.remove()
-      urlHandler?.remove()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
