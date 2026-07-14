@@ -65,7 +65,7 @@ export default function LoginClient({
           return
         }
 
-        const { InAppBrowser } = await import('@capacitor/inappbrowser')
+        const { InAppBrowser, DefaultWebViewOptions } = await import('@capacitor/inappbrowser')
 
         // Listener que intercepta la navegación al callback
         const navListener = await InAppBrowser.addListener(
@@ -123,12 +123,13 @@ export default function LoginClient({
         await InAppBrowser.openInWebView({
           url: data.url,
           options: {
+            ...DefaultWebViewOptions,
             showURL: false,
             showToolbar: true,
+            closeButtonText: 'Cancelar',
             clearCache: true,
             clearSessionCache: true,
-            closeButtonText: 'Cancelar',
-          } as any,
+          },
         })
       } else {
         // Web: flujo OAuth normal
