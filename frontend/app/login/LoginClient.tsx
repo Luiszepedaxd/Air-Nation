@@ -44,11 +44,10 @@ export default function LoginClient({
         !redirect.startsWith('//')
 
       if (isNative) {
-        // App nativa: usar deep link scheme + browser in-app
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: 'airnation://auth/callback',
+            redirectTo: 'https://www.airnation.online/auth/callback?native=1',
             skipBrowserRedirect: true,
           },
         })
@@ -60,10 +59,8 @@ export default function LoginClient({
         }
 
         if (data?.url) {
-          alert('URL Supabase: ' + data.url)
           const { Browser } = await import('@capacitor/browser')
           await Browser.open({ url: data.url })
-          // El listener appUrlOpen en CapacitorBridge maneja el regreso
         }
       } else {
         // Web: flujo OAuth normal con redirect
