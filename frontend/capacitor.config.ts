@@ -23,6 +23,7 @@ const config: CapacitorConfig = {
   ios: {
     appendUserAgent: 'AirNationApp',
     backgroundColor: '#FFFFFF',
+    scheme: 'airnation',
   },
 
   plugins: {
