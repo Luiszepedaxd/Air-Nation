@@ -37,7 +37,54 @@ export default function RegisterClient({
         (window as any).Capacitor?.isNativePlatform?.()
 
       if (isNative) {
-        // App nativa: interceptar callback dentro del WebView
+        const { Capacitor } = await import('@capacitor/core')
+        const platform = Capacitor.getPlatform()
+
+        // ── Apple Sign In nativo (iOS) ──────────────────────────────
+        if (provider === 'apple' && platform === 'ios') {
+          const { SignInWithApple } = await import('@capacitor-community/apple-sign-in')
+
+          const result = await SignInWithApple.authorize({
+            clientId: 'com.atomikapps.airnation',
+            redirectURI: 'https://www.airnation.online/auth/callback',
+            scopes: 'email name',
+            state: crypto.randomUUID(),
+            nonce: crypto.randomUUID(),
+          })
+
+          const identityToken = result?.response?.identityToken
+          if (!identityToken) {
+            setError('No se recibió token de Apple')
+            setGoogleLoading(false)
+            return
+          }
+
+          const { error: signInError } = await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token: identityToken,
+          })
+
+          if (signInError) {
+            setError(signInError.message)
+            setGoogleLoading(false)
+            return
+          }
+
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('alias')
+              .eq('id', user.id)
+              .single()
+            window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
+          } else {
+            window.location.href = '/dashboard'
+          }
+          return
+        }
+
+        // ── Google (y Apple en Android) via InAppBrowser ────────────
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
@@ -46,83 +93,40 @@ export default function RegisterClient({
           },
         })
 
-        if (error) {
-          setError(error.message)
-          setGoogleLoading(false)
-          return
-        }
-
-        if (!data?.url) {
-          setError('No se pudo iniciar sesión')
+        if (error || !data?.url) {
+          setError(error?.message ?? 'No se pudo iniciar sesión')
           setGoogleLoading(false)
           return
         }
 
         const { InAppBrowser, DefaultWebViewOptions } = await import('@capacitor/inappbrowser')
 
-        // Listener que intercepta la navegación al callback
         const navListener = await InAppBrowser.addListener(
           'browserPageNavigationCompleted',
           async (event) => {
             const navUrl = event?.url ?? ''
-            // Detectar la URL de callback con el code
             if (navUrl.includes('/auth/callback') && navUrl.includes('code=')) {
               try {
                 const urlObj = new URL(navUrl)
                 const code = urlObj.searchParams.get('code')
-
-                // Cerrar el WebView
                 await InAppBrowser.close()
                 await navListener.remove()
-
-                if (!code) {
-                  setError('No se recibió código de autorización')
-                  setGoogleLoading(false)
-                  return
-                }
-
-                // Crear sesión
-                const { error: exchangeError } =
-                  await supabase.auth.exchangeCodeForSession(code)
-
-                if (exchangeError) {
-                  setError(exchangeError.message)
-                  setGoogleLoading(false)
-                  return
-                }
-
-                // Decidir destino
+                if (!code) { setError('No se recibió código'); setGoogleLoading(false); return }
+                const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+                if (exchangeError) { setError(exchangeError.message); setGoogleLoading(false); return }
                 const { data: { user } } = await supabase.auth.getUser()
                 if (user) {
-                  const { data: profile } = await supabase
-                    .from('users')
-                    .select('alias')
-                    .eq('id', user.id)
-                    .single()
+                  const { data: profile } = await supabase.from('users').select('alias').eq('id', user.id).single()
                   window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
-                } else {
-                  window.location.href = '/dashboard'
-                }
-              } catch (err: any) {
-                console.error('[OAuth] error procesando callback:', err)
-                setError('Error al completar el inicio de sesión')
-                setGoogleLoading(false)
-              }
+                } else { window.location.href = '/dashboard' }
+              } catch (err: any) { setError('Error al completar sesión'); setGoogleLoading(false) }
             }
           }
         )
 
-        // Abrir OAuth dentro del WebView
         await InAppBrowser.openInWebView({
           url: data.url,
-          options: {
-            ...DefaultWebViewOptions,
-            showURL: false,
-            showToolbar: true,
-            closeButtonText: 'Cancelar',
-            clearCache: true,
-            clearSessionCache: true,
-          },
+          options: { ...DefaultWebViewOptions, showURL: false, showToolbar: true, closeButtonText: 'Cancelar', clearCache: true, clearSessionCache: true },
         })
       } else {
         // Web: flujo OAuth normal
