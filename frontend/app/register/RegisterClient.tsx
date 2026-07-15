@@ -40,47 +40,63 @@ export default function RegisterClient({
         const { Capacitor } = await import('@capacitor/core')
         const platform = Capacitor.getPlatform()
 
-        // ── Apple Sign In nativo (iOS) ──────────────────────────────
+        // ── Apple Sign In (iOS) via SFSafariViewController + appUrlOpen ──
         if (provider === 'apple' && platform === 'ios') {
-          const { SignInWithApple } = await import('@capacitor-community/apple-sign-in')
+          const { App } = await import('@capacitor/app')
+          const { InAppBrowser } = await import('@capacitor/inappbrowser')
 
-          const result = await SignInWithApple.authorize({
-            clientId: 'com.atomikapps.airnation',
-            redirectURI: 'https://www.airnation.online/auth/callback',
-            scopes: 'email name',
-            state: crypto.randomUUID(),
-            nonce: crypto.randomUUID(),
-          })
-
-          const identityToken = result?.response?.identityToken
-          if (!identityToken) {
-            setError('No se recibió token de Apple')
-            setGoogleLoading(false)
-            return
-          }
-
-          const { error: signInError } = await supabase.auth.signInWithIdToken({
+          const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'apple',
-            token: identityToken,
+            options: {
+              redirectTo: 'airnation://auth/callback',
+              skipBrowserRedirect: true,
+            },
           })
 
-          if (signInError) {
-            setError(signInError.message)
+          if (error || !data?.url) {
+            setError(error?.message ?? 'No se pudo iniciar sesión con Apple')
             setGoogleLoading(false)
             return
           }
 
-          const { data: { user } } = await supabase.auth.getUser()
-          if (user) {
-            const { data: profile } = await supabase
-              .from('users')
-              .select('alias')
-              .eq('id', user.id)
-              .single()
-            window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
-          } else {
-            window.location.href = '/dashboard'
-          }
+          const urlListener = await App.addListener('appUrlOpen', async (event) => {
+            const url = event.url ?? ''
+            if (!url.startsWith('airnation://auth/callback')) return
+
+            await urlListener.remove()
+
+            try {
+              const urlObj = new URL(url)
+              const code = urlObj.searchParams.get('code')
+
+              if (!code) {
+                setError('No se recibió código de Apple')
+                setGoogleLoading(false)
+                return
+              }
+
+              const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+              if (exchangeError) {
+                setError(exchangeError.message)
+                setGoogleLoading(false)
+                return
+              }
+
+              const { data: { user } } = await supabase.auth.getUser()
+              if (user) {
+                const { data: profile } = await supabase
+                  .from('users').select('alias').eq('id', user.id).single()
+                window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
+              } else {
+                window.location.href = '/dashboard'
+              }
+            } catch {
+              setError('Error al completar sesión con Apple')
+              setGoogleLoading(false)
+            }
+          })
+
+          await InAppBrowser.openInSystemBrowser({ url: data.url })
           return
         }
 
