@@ -28,6 +28,29 @@ workflows:
           cd frontend
           npx cap sync ios
 
+      - name: Add custom URL scheme (airnation://)
+        script: |
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string airnation" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.atomikapps.airnation" frontend/ios/App/App/Info.plist
+
+      - name: Add Sign In with Apple entitlement
+        script: |
+          cat > frontend/ios/App/App/App.entitlements << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>com.apple.developer.applesignin</key>
+              <array>
+                  <string>Default</string>
+              </array>
+          </dict>
+          </plist>
+          EOF
+
       - name: Set app icon
         script: |
           cd frontend
