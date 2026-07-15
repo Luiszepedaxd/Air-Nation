@@ -44,74 +44,13 @@ export default function LoginClient({
         !redirect.startsWith('//')
 
       if (isNative) {
-        const { Capacitor } = await import('@capacitor/core')
-        const platform = Capacitor.getPlatform()
+        const { App } = await import('@capacitor/app')
+        const { InAppBrowser, DefaultSystemBrowserOptions } = await import('@capacitor/inappbrowser')
 
-        // ── Apple Sign In (iOS) via SFSafariViewController + appUrlOpen ──
-        if (provider === 'apple' && platform === 'ios') {
-          const { App } = await import('@capacitor/app')
-          const { InAppBrowser, DefaultSystemBrowserOptions } = await import('@capacitor/inappbrowser')
-
-          const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'apple',
-            options: {
-              redirectTo: 'airnation://auth/callback',
-              skipBrowserRedirect: true,
-            },
-          })
-
-          if (error || !data?.url) {
-            setError(error?.message ?? 'No se pudo iniciar sesión con Apple')
-            setGoogleLoading(false)
-            return
-          }
-
-          const urlListener = await App.addListener('appUrlOpen', async (event) => {
-            const url = event.url ?? ''
-            if (!url.startsWith('airnation://auth/callback')) return
-
-            await urlListener.remove()
-
-            try {
-              const urlObj = new URL(url)
-              const code = urlObj.searchParams.get('code')
-
-              if (!code) {
-                setError('No se recibió código de Apple')
-                setGoogleLoading(false)
-                return
-              }
-
-              const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-              if (exchangeError) {
-                setError(exchangeError.message)
-                setGoogleLoading(false)
-                return
-              }
-
-              const { data: { user } } = await supabase.auth.getUser()
-              if (user) {
-                const { data: profile } = await supabase
-                  .from('users').select('alias').eq('id', user.id).single()
-                window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
-              } else {
-                window.location.href = '/dashboard'
-              }
-            } catch {
-              setError('Error al completar sesión con Apple')
-              setGoogleLoading(false)
-            }
-          })
-
-          await InAppBrowser.openInSystemBrowser({ url: data.url, options: DefaultSystemBrowserOptions })
-          return
-        }
-
-        // ── Google (y Apple en Android) via InAppBrowser ────────────
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: 'https://www.airnation.online/auth/callback',
+            redirectTo: 'airnation://auth/callback',
             skipBrowserRedirect: true,
           },
         })
@@ -122,35 +61,48 @@ export default function LoginClient({
           return
         }
 
-        const { InAppBrowser, DefaultWebViewOptions } = await import('@capacitor/inappbrowser')
+        const urlListener = await App.addListener('appUrlOpen', async (event) => {
+          const url = event.url ?? ''
+          if (!url.startsWith('airnation://auth/callback')) return
 
-        const navListener = await InAppBrowser.addListener(
-          'browserPageNavigationCompleted',
-          async (event) => {
-            const navUrl = event?.url ?? ''
-            if (navUrl.includes('/auth/callback') && navUrl.includes('code=')) {
-              try {
-                const urlObj = new URL(navUrl)
-                const code = urlObj.searchParams.get('code')
-                await InAppBrowser.close()
-                await navListener.remove()
-                if (!code) { setError('No se recibió código'); setGoogleLoading(false); return }
-                const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-                if (exchangeError) { setError(exchangeError.message); setGoogleLoading(false); return }
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                  const { data: profile } = await supabase.from('users').select('alias').eq('id', user.id).single()
-                  window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
-                } else { window.location.href = '/dashboard' }
-              } catch (err: any) { setError('Error al completar sesión'); setGoogleLoading(false) }
+          await urlListener.remove()
+
+          try {
+            const urlObj = new URL(url)
+            const code = urlObj.searchParams.get('code')
+
+            if (!code) {
+              setError('No se recibió código de autorización')
+              setGoogleLoading(false)
+              return
             }
-          }
-        )
 
-        await InAppBrowser.openInWebView({
-          url: data.url,
-          options: { ...DefaultWebViewOptions, showURL: false, showToolbar: true, closeButtonText: 'Cancelar', clearCache: true, clearSessionCache: true },
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+            if (exchangeError) {
+              setError(exchangeError.message)
+              setGoogleLoading(false)
+              return
+            }
+
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+              const { data: profile } = await supabase
+                .from('users').select('alias').eq('id', user.id).single()
+              window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
+            } else {
+              window.location.href = '/dashboard'
+            }
+          } catch {
+            setError('Error al completar sesión')
+            setGoogleLoading(false)
+          }
         })
+
+        await InAppBrowser.openInSystemBrowser({
+          url: data.url,
+          options: DefaultSystemBrowserOptions,
+        })
+        return
       } else {
         // Web: flujo OAuth normal
         const redirectTo = isSafeRedirect
