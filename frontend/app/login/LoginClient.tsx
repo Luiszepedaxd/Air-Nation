@@ -48,7 +48,7 @@ export default function LoginClient({
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider,
           options: {
-            redirectTo: 'https://www.airnation.online/auth/callback',
+            redirectTo: 'https://www.airnation.online/auth/native-callback',
             skipBrowserRedirect: true,
           },
         })
@@ -73,7 +73,7 @@ export default function LoginClient({
           async (event) => {
             const navUrl = event?.url ?? ''
             // Detectar la URL de callback con el code
-            if (navUrl.includes('/auth/callback') && navUrl.includes('code=')) {
+            if (navUrl.includes('/auth/native-callback') && navUrl.includes('code=')) {
               try {
                 const urlObj = new URL(navUrl)
                 const code = urlObj.searchParams.get('code')
