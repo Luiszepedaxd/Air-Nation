@@ -43,7 +43,7 @@ export default function RegisterClient({
         // ── Apple Sign In (iOS) via SFSafariViewController + appUrlOpen ──
         if (provider === 'apple' && platform === 'ios') {
           const { App } = await import('@capacitor/app')
-          const { InAppBrowser } = await import('@capacitor/inappbrowser')
+          const { InAppBrowser, DefaultSystemBrowserOptions } = await import('@capacitor/inappbrowser')
 
           const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'apple',
@@ -96,10 +96,7 @@ export default function RegisterClient({
             }
           })
 
-          await InAppBrowser.openInSystemBrowser({
-            url: data.url,
-            options: { android: {}, iOS: {} },
-          })
+          await InAppBrowser.openInSystemBrowser({ url: data.url, options: DefaultSystemBrowserOptions })
           return
         }
 
