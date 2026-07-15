@@ -103,7 +103,10 @@ export default function LoginClient({
             }
           })
 
-          await InAppBrowser.openInSystemBrowser({ url: data.url, options: {} })
+          await InAppBrowser.openInSystemBrowser({
+            url: data.url,
+            options: { android: {}, iOS: {} },
+          })
           return
         }
 
