@@ -96,7 +96,7 @@ export default function RegisterClient({
             }
           })
 
-          await InAppBrowser.openInSystemBrowser({ url: data.url })
+          await InAppBrowser.openInSystemBrowser({ url: data.url, options: {} })
           return
         }
 
