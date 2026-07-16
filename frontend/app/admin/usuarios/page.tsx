@@ -24,10 +24,10 @@ export default async function AdminUsuariosPage() {
     supabase.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
-  // Mapa id → providers desde auth.users identities
+  // Mapa id → providers desde auth.users app_metadata
   const providersMap = new Map<string, string[]>()
   for (const au of authData?.users ?? []) {
-    const providers = (au.identities ?? []).map((id: { provider: string }) => id.provider)
+    const providers: string[] = au.app_metadata?.providers ?? []
     if (providers.length) providersMap.set(au.id, providers)
   }
 
