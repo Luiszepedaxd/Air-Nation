@@ -356,6 +356,14 @@ function PermisosSection({
   )
 }
 
+function AppleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+    </svg>
+  )
+}
+
 function GoogleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -393,8 +401,10 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
   }, [])
 
   const hasGoogle = identities.some(i => i.provider === 'google')
+  const hasApple = identities.some(i => i.provider === 'apple')
   const hasEmail = identities.some(i => i.provider === 'email')
   const googleIdentity = identities.find(i => i.provider === 'google')
+  const appleIdentity = identities.find(i => i.provider === 'apple')
 
   const handleAddPassword = async () => {
     if (!email) return
@@ -447,6 +457,42 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
     setSending(false)
   }
 
+  const handleLinkApple = async () => {
+    setSending(true)
+    setError('')
+    const { data, error } = await supabase.auth.linkIdentity({
+      provider: 'apple',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent('/dashboard/perfil?tab=configuracion')}`,
+      },
+    })
+    if (error) {
+      setError(error.message)
+      setSending(false)
+      return
+    }
+    if (data?.url) {
+      window.location.href = data.url
+    } else {
+      setSent(true)
+      setSending(false)
+    }
+  }
+
+  const handleUnlinkApple = async () => {
+    if (!appleIdentity) return
+    setSending(true)
+    setError('')
+    const { error } = await supabase.auth.unlinkIdentity(appleIdentity)
+    if (error) {
+      setError(error.message)
+      setSending(false)
+      return
+    }
+    setIdentities(prev => prev.filter(i => i.provider !== 'apple'))
+    setSending(false)
+  }
+
   if (loading) return null
 
   return (
@@ -495,6 +541,52 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
                 {sending ? '...' : 'DESVINCULAR'}
               </button>
             )}
+          </div>
+        )}
+
+        {hasApple && (
+          <div className="flex items-center justify-between gap-3 px-3 py-4">
+            <div className="flex items-center gap-3">
+              <span className="shrink-0 text-[22px] leading-none" aria-hidden>🍎</span>
+              <div className="min-w-0">
+                <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                  Apple vinculado
+                </p>
+                <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                  Puedes entrar con tu cuenta de Apple
+                </p>
+              </div>
+            </div>
+            {hasEmail && (
+              <button
+                type="button"
+                onClick={() => void handleUnlinkApple()}
+                disabled={sending}
+                style={jost}
+                className="shrink-0 border border-[#EEEEEE] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[#999999] hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-50"
+              >
+                {sending ? '...' : 'DESVINCULAR'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {!hasApple && hasEmail && (
+          <div className="px-3 py-4">
+            <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
+              Vincula tu cuenta de Apple para entrar más rápido sin escribir tu contraseña.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleLinkApple()}
+              disabled={sending}
+              style={jost}
+              className="flex items-center gap-2 border border-[#DDDDDD] bg-[#111111] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF] disabled:opacity-50"
+            >
+              <AppleIcon />
+              {sending ? 'REDIRIGIENDO...' : 'VINCULAR CON APPLE'}
+            </button>
+            {error && <p className="mt-2 text-[12px] text-[#CC4B37]" style={lato}>{error}</p>}
           </div>
         )}
 
