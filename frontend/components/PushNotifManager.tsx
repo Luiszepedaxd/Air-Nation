@@ -14,8 +14,6 @@ export function PushNotifManager({ userId }: { userId: string }) {
   useEffect(() => {
     if (subscribedRef.current) return
     if (typeof window === 'undefined') return
-    if (!('Notification' in window)) return
-    if (Notification.permission === 'denied') return
 
     subscribedRef.current = true
 
@@ -23,17 +21,31 @@ export function PushNotifManager({ userId }: { userId: string }) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) return
 
+      const { isNativeApp } = await import('@/lib/platform')
+
+      if (isNativeApp()) {
+        // App nativa: registrar FCM token
+        const { registerFcmToken } = await import('@/lib/fcm-client')
+        await registerFcmToken(session.access_token)
+        return
+      }
+
+      // PWA: web-push normal
+      if (!('Notification' in window)) return
+      if (Notification.permission === 'denied') return
+
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       const { subscribeToPush } = await import('@/lib/push-client')
-      await subscribeToPush(session.access_token)
+
+      if (isStandalone) {
+        await subscribeToPush(session.access_token)
+        return
+      }
+      const t = window.setTimeout(() => void subscribeToPush(session.access_token), 3000)
+      return () => window.clearTimeout(t)
     }
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (isStandalone) {
-      void run()
-      return
-    }
-    const t = window.setTimeout(() => void run(), 3000)
-    return () => window.clearTimeout(t)
+    void run()
   }, [])
 
   // ── Badge en ícono de la app ──────────────────────────────────────────────
