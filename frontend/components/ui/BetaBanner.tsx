@@ -4,13 +4,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import { api } from '@/lib/api'
-import { isNativeApp, isAndroidWeb } from '@/lib/platform'
+import { isNativeApp, isAndroidWeb, isIOSWeb } from '@/lib/platform'
 
 const STORAGE_KEY = 'airnation_beta_dismissed'
 const ANDROID_BANNER_KEY = 'airnation_android_play_dismissed'
 
 const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.atomikapps.airnation'
+
+const APP_STORE_URL = 'https://apps.apple.com/mx/app/airnation/id6790069177'
 
 const CATEGORIAS = [
   'General',
@@ -35,6 +37,7 @@ export default function BetaBanner() {
   const [hydrated, setHydrated] = useState(false)
   const [isNative, setIsNative] = useState(false)
   const [isAndroidWebPlatform, setIsAndroidWebPlatform] = useState(false)
+  const [isIOSWebPlatform, setIsIOSWebPlatform] = useState(false)
 
   const [storageReady, setStorageReady] = useState(false)
   const [sessionDismissed, setSessionDismissed] = useState(false)
@@ -54,6 +57,7 @@ export default function BetaBanner() {
   useEffect(() => {
     setIsNative(isNativeApp())
     setIsAndroidWebPlatform(isAndroidWeb())
+    setIsIOSWebPlatform(isIOSWeb())
     setHydrated(true)
   }, [])
 
@@ -217,7 +221,48 @@ export default function BetaBanner() {
     )
   }
 
-  // 3. Web iOS y desktop: banner Beta + feedback (comportamiento original con renombre).
+  // 2b. Web iOS (no nativa): banner "descarga la app de App Store".
+  if (isIOSWebPlatform) {
+    if (!storageReady || androidDismissed) return null
+    return (
+      <div
+        className="relative z-[40] w-full px-4 py-3 text-white"
+        style={{ backgroundColor: '#111111', padding: '12px 16px' }}
+      >
+        <button
+          type="button"
+          onClick={dismissAndroidBanner}
+          className="absolute right-4 top-3 text-white opacity-60 hover:opacity-100"
+          aria-label="Cerrar aviso"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+        <div className="pr-8">
+          <div className="flex flex-col gap-1 md:flex-row md:flex-wrap md:items-center md:gap-x-2">
+            <span className="block shrink-0 font-bold leading-snug" style={latoBody}>
+              AirNation ya está en App Store
+            </span>
+            <span className="block text-sm leading-snug text-white/95 md:inline md:text-sm" style={latoBody}>
+              Descarga la app oficial para la mejor experiencia.{' '}
+              <a
+                href={APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline underline decoration-white/50 underline-offset-2 hover:decoration-white"
+                style={latoBody}
+              >
+                Descargar →
+              </a>
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 3. Web desktop: banner Beta + feedback (comportamiento original con renombre).
   const showStrip = storageReady && (thanksPhase || !sessionDismissed)
 
   const modal =

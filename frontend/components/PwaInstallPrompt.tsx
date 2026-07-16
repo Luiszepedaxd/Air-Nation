@@ -271,6 +271,7 @@ export default function PwaInstallPrompt() {
 
   if (typeof window !== "undefined" && isNativeApp()) return null;
   if (typeof window !== "undefined" && isAndroidWeb()) return null;
+  if (typeof window !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent)) return null;
 
   if (!pathname?.startsWith("/dashboard")) return null;
 
