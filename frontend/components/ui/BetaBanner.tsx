@@ -165,9 +165,8 @@ export default function BetaBanner() {
     setThanksPhase(true)
   }
 
-  // 1. App nativa: no renderiza absolutamente nada.
+  // 1. Esperar hidratación client-side.
   if (!hydrated) return null
-  if (isNative) return null
 
   // 2. Web Android (no nativa): banner "descarga la app de Play Store".
   if (isAndroidWebPlatform) {
@@ -305,13 +304,13 @@ export default function BetaBanner() {
                 className="pr-10 text-[20px] leading-tight text-[#111111]"
                 style={jostHeading}
               >
-                ENVÍA TU FEEDBACK
+                ESCRÍBENOS
               </h2>
               <p
                 className="mt-2 text-[13px] leading-relaxed text-[#666666]"
                 style={latoBody}
               >
-                ¿Qué funciona bien? ¿Qué mejorarías? Todo nos ayuda a crecer.
+                Tu opinión llega directo a nuestro equipo. Cuéntanos lo que piensas — cada comentario importa.
               </p>
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
                 <div>
@@ -435,14 +434,13 @@ export default function BetaBanner() {
                     className="block shrink-0 font-bold leading-snug"
                     style={latoBody}
                   >
-                    AirNation está en Beta
+                    ¿Cómo va tu experiencia?
                   </span>
                   <span
                     className="block text-sm leading-snug text-white/95 md:inline md:text-sm"
                     style={latoBody}
                   >
-                    Estamos construyendo esto para la comunidad. Algunas funciones
-                    están en desarrollo — tu opinión nos ayuda a mejorar.{' '}
+                    Cuéntanos qué funciona y qué mejorarías. Nuestro equipo de Comunidad lee cada mensaje.{' '}
                     <button
                       type="button"
                       onClick={openModal}
@@ -460,7 +458,7 @@ export default function BetaBanner() {
               className="text-center text-sm font-medium text-white"
               style={latoBody}
             >
-              ¡Gracias por tu feedback!
+              ¡Gracias! Nuestro equipo lo leerá pronto.
             </p>
           )}
         </div>

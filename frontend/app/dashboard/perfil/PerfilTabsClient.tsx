@@ -11,7 +11,6 @@ import type {
   PublicUserProfile,
 } from '@/app/u/[id]/types'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
-import { usePwaInstall } from '@/components/PwaInstallPrompt'
 import { usePushNotifButton } from '@/components/PushNotifManager'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
 import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
@@ -354,26 +353,6 @@ function PermisosSection({
         </div>
       </div>
     </section>
-  )
-}
-
-function PerfilPwaInstallBlock() {
-  const { canInstall, triggerInstall } = usePwaInstall()
-  if (!canInstall) return null
-  return (
-    <div className="mt-6 border-t border-[#EEEEEE] pt-6">
-      <button
-        type="button"
-        onClick={() => void triggerInstall()}
-        className="flex w-full items-center justify-center gap-2 bg-[#111111] py-[14px] font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90"
-        style={{ borderRadius: 2 }}
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#FFFFFF" />
-        </svg>
-        INSTALAR AIRNATION
-      </button>
-    </div>
   )
 }
 
@@ -1013,7 +992,6 @@ export function PerfilTabsClient({
                   ADMINISTRACIÓN
                 </Link>
               )}
-              <PerfilPwaInstallBlock />
               {/* Eliminar cuenta */}
               <div className="mt-6 border-t border-gray-200 pt-6">
                 <Link
