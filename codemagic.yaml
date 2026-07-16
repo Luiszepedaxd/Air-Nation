@@ -36,7 +36,7 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string airnation" frontend/ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.atomikapps.airnation" frontend/ios/App/App/Info.plist
 
-      - name: Add Sign In with Apple entitlement
+      - name: Add iOS entitlements
         script: |
           cat > frontend/ios/App/App/App.entitlements << 'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -47,9 +47,15 @@ workflows:
               <array>
                   <string>Default</string>
               </array>
+              <key>aps-environment</key>
+              <string>production</string>
           </dict>
           </plist>
           EOF
+
+      - name: Inject GoogleService-Info.plist
+        script: |
+          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > frontend/ios/App/App/GoogleService-Info.plist
 
       - name: Set app icon
         script: |
@@ -106,3 +112,34 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: false
+
+  android-release:
+    name: AirNation Android Release
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 22
+      java: 17
+    scripts:
+      - name: Install dependencies
+        script: |
+          cd frontend
+          npm install
+
+      - name: Sync Capacitor Android
+        script: |
+          cd frontend
+          npm run build
+          npx cap sync android
+
+      - name: Inject google-services.json
+        script: |
+          echo $GOOGLE_SERVICES_JSON | base64 --decode > frontend/android/app/google-services.json
+
+      - name: Build Android
+        script: |
+          cd frontend/android
+          ./gradlew assembleRelease
+
+    artifacts:
+      - frontend/android/app/build/outputs/**/*.apk
