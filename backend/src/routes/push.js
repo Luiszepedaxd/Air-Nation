@@ -77,4 +77,45 @@ router.post('/notify', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Error al enviar push' })
   }
 })
+
+// POST /api/v1/push/fcm/register
+router.post('/fcm/register', requireAuth, async (req, res) => {
+  const { token, platform } = req.body
+  if (!token || !platform) {
+    return res.status(400).json({ error: 'Faltan token o platform' })
+  }
+  if (!['android', 'ios'].includes(platform)) {
+    return res.status(400).json({ error: 'Platform debe ser android o ios' })
+  }
+  const supabase = getServiceClient()
+  const { error } = await supabase
+    .from('fcm_tokens')
+    .upsert(
+      { user_id: req.userId, token, platform, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,token' }
+    )
+  if (error) {
+    console.error('[push/fcm/register]', error)
+    return res.status(500).json({ error: 'No se pudo registrar el token' })
+  }
+  res.json({ ok: true })
+})
+
+// DELETE /api/v1/push/fcm/unregister
+router.delete('/fcm/unregister', requireAuth, async (req, res) => {
+  const { token } = req.body
+  if (!token) return res.status(400).json({ error: 'Falta token' })
+  const supabase = getServiceClient()
+  const { error } = await supabase
+    .from('fcm_tokens')
+    .delete()
+    .eq('user_id', req.userId)
+    .eq('token', token)
+  if (error) {
+    console.error('[push/fcm/unregister]', error)
+    return res.status(500).json({ error: 'No se pudo eliminar el token' })
+  }
+  res.json({ ok: true })
+})
+
 module.exports = router
