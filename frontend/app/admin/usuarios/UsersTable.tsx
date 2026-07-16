@@ -24,7 +24,7 @@ export type User = {
   app_role: string | null
   member_number: string | number | null
   created_at: string | null
-  provider: string | null
+  providers: string[]
 }
 
 type AppRole = 'player' | 'admin' | 'field_owner'
@@ -346,6 +346,7 @@ export default function UsersTable({
                 [
                   'NOMBRE',
                   'ALIAS',
+                  'ACCESO',
                   'CIUDAD',
                   'ROL',
                   'APP ROLE',
@@ -381,24 +382,40 @@ export default function UsersTable({
                       : (u.nombre ?? '—')}
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                    <div className="flex items-center gap-1.5">
-                      {u.alias ?? '—'}
-                      {u.provider === 'google' && (
-                        <span
-                          title="Registrado con Google"
-                          style={{
-                            ...jostHeading,
-                            fontSize: 9,
-                            padding: '2px 5px',
-                            borderRadius: 2,
-                            backgroundColor: '#4285F4',
-                            color: '#FFFFFF',
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          G
-                        </span>
-                      )}
+                    {u.alias ?? '—'}
+                  </td>
+                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        title="Email y contraseña"
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                          u.providers.includes('email')
+                            ? 'bg-[#22C55E] text-white'
+                            : 'bg-[#EEEEEE] text-[#AAAAAA]'
+                        }`}
+                      >
+                        @
+                      </span>
+                      <span
+                        title="Google"
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                          u.providers.includes('google')
+                            ? 'bg-[#22C55E] text-white'
+                            : 'bg-[#EEEEEE] text-[#AAAAAA]'
+                        }`}
+                      >
+                        G
+                      </span>
+                      <span
+                        title="Apple"
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                          u.providers.includes('apple')
+                            ? 'bg-[#22C55E] text-white'
+                            : 'bg-[#EEEEEE] text-[#AAAAAA]'
+                        }`}
+                      >
+                        
+                      </span>
                     </div>
                   </td>
                   <td className="border border-solid border-[#EEEEEE] px-3 py-2">
@@ -491,7 +508,7 @@ export default function UsersTable({
                     }
                   >
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="border border-solid border-[#EEEEEE] px-3 py-3"
                     >
                       <UserTeamAssignSection userId={u.id} />
