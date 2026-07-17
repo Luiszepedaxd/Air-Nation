@@ -35,19 +35,31 @@ workflows:
       - name: Add Firebase via SPM
         script: |
           PKGSWIFT="frontend/ios/App/CapApp-SPM/Package.swift"
-          echo "--- Package.swift actual ---"
-          cat "$PKGSWIFT"
+          python3 << 'PYEOF'
+          import re
 
-          # Agregar FirebaseMessaging como dependencia SPM
-          sed -i '' 's|let package = Package(|let package = Package(|' "$PKGSWIFT"
+          with open("frontend/ios/App/CapApp-SPM/Package.swift", "r") as f:
+              content = f.read()
 
-          # Insertar URL de Firebase en dependencies
-          sed -i '' 's|dependencies: \[|dependencies: [\n        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "11.0.0"),|' "$PKGSWIFT"
+          # Agregar firebase-ios-sdk a dependencies del Package (no del target)
+          content = content.replace(
+              '.package(url: "https://github.com/ionic-team/capacitor-swift-pm.git"',
+              '.package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "11.0.0"),\n        .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git"'
+          )
 
-          # Insertar FirebaseMessaging en targets
-          sed -i '' 's|\.product(name: "Capacitor", package: "capacitor-swift-pm"),|.product(name: "Capacitor", package: "capacitor-swift-pm"),\n                .product(name: "FirebaseMessaging", package: "firebase-ios-sdk"),|' "$PKGSWIFT"
+          # Agregar FirebaseMessaging a dependencies del target
+          content = content.replace(
+              '.product(name: "Capacitor", package: "capacitor-swift-pm"),',
+              '.product(name: "Capacitor", package: "capacitor-swift-pm"),\n                .product(name: "FirebaseMessaging", package: "firebase-ios-sdk"),'
+          )
 
-          echo "--- Package.swift modificado ---"
+          with open("frontend/ios/App/CapApp-SPM/Package.swift", "w") as f:
+              f.write(content)
+
+          print("Package.swift modificado OK")
+          PYEOF
+
+          echo "--- Package.swift resultado ---"
           cat "$PKGSWIFT"
 
       - name: Add custom URL scheme (airnation://)
@@ -148,7 +160,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 10
+          agvtool new-version -all 11
 
       - name: Verificar estructura iOS
         script: |
