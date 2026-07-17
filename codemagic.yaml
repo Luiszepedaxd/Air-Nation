@@ -77,7 +77,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 1
+          agvtool new-version -all 2
 
       - name: Verificar estructura iOS
         script: |
