@@ -48,6 +48,9 @@
     <!-- Android 13+ (API 33+): permiso granular para galería -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
+    <!-- Android 13+ (API 33+): permiso para notificaciones push -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Hardware features: cámara opcional para no excluir devices sin cámara
          trasera del Play Store (tablets, etc). -->
     <uses-feature
