@@ -13,16 +13,10 @@ function getFirebaseApp() {
   }
   try {
     const admin = require('firebase-admin')
-    console.log('[push] firebase-admin keys:', Object.keys(admin))
-    console.log('[push] admin.credential:', typeof admin.credential)
     const serviceAccount = JSON.parse(raw)
-    console.log('[push] serviceAccount.project_id:', serviceAccount.project_id)
 
-    const credential = admin.credential || admin.default?.credential
-    const initializeApp = admin.initializeApp || admin.default?.initializeApp
-
-    firebaseApp = initializeApp({
-      credential: credential.cert(serviceAccount),
+    firebaseApp = admin.initializeApp({
+      credential: admin.cert(serviceAccount),
     })
     console.log('[push] Firebase Admin inicializado OK')
     return firebaseApp
@@ -52,9 +46,8 @@ async function sendFcmToUser(userId, payload) {
 
   if (error || !tokens || tokens.length === 0) return
 
-  const admin = require('firebase-admin')
-  const messagingFn = admin.messaging || admin.default?.messaging
-  const messaging = messagingFn(app)
+  const { getMessaging } = require('firebase-admin/messaging')
+  const messaging = getMessaging(app)
 
   console.log('[push:fcm] sending to', tokens.length, 'native devices for user', userId)
 
