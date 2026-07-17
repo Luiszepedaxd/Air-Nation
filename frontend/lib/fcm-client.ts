@@ -19,12 +19,8 @@ export async function registerFcmToken(authToken: string): Promise<boolean> {
       return false
     }
 
-    // Registrar con FCM/APNs
-    await PushNotifications.register()
-
-    alert('[FCM] Llamando register()...')
-
-    const token = await new Promise<string | null>((resolve) => {
+    // Registrar listeners ANTES de register() para evitar race condition
+    const tokenPromise = new Promise<string | null>((resolve) => {
       const timeout = setTimeout(() => {
         alert('[FCM] TIMEOUT - no llegó token en 10s')
         resolve(null)
@@ -42,6 +38,11 @@ export async function registerFcmToken(authToken: string): Promise<boolean> {
         resolve(null)
       })
     })
+
+    alert('[FCM] Llamando register()...')
+    await PushNotifications.register()
+
+    const token = await tokenPromise
 
     if (!token) {
       alert('[FCM] Sin token, abortando')
