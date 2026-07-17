@@ -10,6 +10,7 @@
  * 2. Ocultar el splash screen una vez que React montó (más confiable
  *    que confiar solo en launchAutoHide).
  * 3. Configurar StatusBar al arranque.
+ * 4. Escuchar deep links (confirmación de email, etc.) vía appUrlOpen.
  */
 
 import { useEffect } from 'react'
@@ -26,6 +27,7 @@ export default function CapacitorBridge() {
     if (!isNativeApp()) return
 
     let backHandler: { remove: () => void } | null = null
+    let urlHandler: { remove: () => void } | null = null
 
     const init = async () => {
       try {
@@ -59,6 +61,36 @@ export default function CapacitorBridge() {
           }
         })
 
+        // Deep link handler global (confirmación de email, etc.)
+        urlHandler = await App.addListener('appUrlOpen', async (event) => {
+          const url = event.url ?? ''
+          if (!url.startsWith('airnation://auth/callback')) return
+
+          try {
+            const urlObj = new URL(url)
+            const code = urlObj.searchParams.get('code')
+            if (!code) return
+
+            const { supabase } = await import('@/lib/supabase')
+            const { error } = await supabase.auth.exchangeCodeForSession(code)
+            if (error) {
+              console.error('[deeplink] exchange error:', error.message)
+              return
+            }
+
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+              const { data: profile } = await supabase
+                .from('users').select('alias').eq('id', user.id).single()
+              window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
+            } else {
+              window.location.href = '/dashboard'
+            }
+          } catch (err) {
+            console.error('[deeplink] error:', err)
+          }
+        })
+
       } catch (err) {
         console.warn('[CapacitorBridge] init error:', err)
       }
@@ -68,6 +100,7 @@ export default function CapacitorBridge() {
 
     return () => {
       backHandler?.remove()
+      urlHandler?.remove()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

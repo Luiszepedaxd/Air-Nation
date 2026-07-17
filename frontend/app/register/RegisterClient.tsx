@@ -127,7 +127,18 @@ export default function RegisterClient({
     }
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { Capacitor } = await import('@capacitor/core')
+    const isNativePlatform = Capacitor.isNativePlatform()
+
+    const emailRedirectTo = isNativePlatform
+      ? 'airnation://auth/callback'
+      : `${window.location.origin}/auth/callback`
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo },
+    });
     if (error) {
       setError(error.message);
       setLoading(false);
