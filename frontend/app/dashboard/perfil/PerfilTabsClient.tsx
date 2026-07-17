@@ -122,6 +122,13 @@ function IosToggle({
   )
 }
 
+type NativePushPerm = 'prompt' | 'granted' | 'denied'
+
+function normalizePushPerm(receive: string): NativePushPerm {
+  if (receive === 'granted' || receive === 'denied') return receive
+  return 'prompt'
+}
+
 function PermisosSection({
   userId,
   triggerPush,
@@ -136,6 +143,8 @@ function PermisosSection({
       ? Notification.permission
       : 'default'
   )
+  const [isNative, setIsNative] = useState(false)
+  const [nativePerm, setNativePerm] = useState<NativePushPerm>('prompt')
   const [locationGranted, setLocationGranted] = useState(false)
   const [geoDenied, setGeoDenied] = useState(false)
   const [locationLoading, setLocationLoading] = useState(false)
@@ -143,6 +152,22 @@ function PermisosSection({
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotifPerm(Notification.permission)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const { isNativeApp } = await import('@/lib/platform')
+      if (!isNativeApp()) return
+      if (cancelled) return
+      setIsNative(true)
+      const { PushNotifications } = await import('@capacitor/push-notifications')
+      const perm = await PushNotifications.checkPermissions()
+      if (!cancelled) setNativePerm(normalizePushPerm(perm.receive))
+    })()
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -243,6 +268,21 @@ function PermisosSection({
   }, [userId])
 
   const onNotifToggle = () => {
+    if (isNative) {
+      if (nativePerm === 'granted' || nativePerm === 'denied') return
+      void (async () => {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (!session?.access_token) return
+        const { registerFcmToken } = await import('@/lib/fcm-client')
+        const ok = await registerFcmToken(session.access_token)
+        const { PushNotifications } = await import('@capacitor/push-notifications')
+        const perm = await PushNotifications.checkPermissions()
+        setNativePerm(ok ? 'granted' : normalizePushPerm(perm.receive))
+      })()
+      return
+    }
     if (pushLoading || notifPerm === 'denied') return
     if (notifPerm === 'granted') return
     void (async () => {
@@ -290,10 +330,15 @@ function PermisosSection({
     )
   }
 
-  const notifOn = notifPerm === 'granted'
-  const notifDisabled = notifPerm === 'denied' || pushLoading
-  const notifSub =
-    notifPerm === 'denied'
+  const notifOn = isNative ? nativePerm === 'granted' : notifPerm === 'granted'
+  const notifDisabled = isNative
+    ? nativePerm === 'denied'
+    : notifPerm === 'denied' || pushLoading
+  const notifSub = isNative
+    ? nativePerm === 'denied'
+      ? 'Bloqueadas en Ajustes del dispositivo'
+      : 'Recibe alertas de mensajes y eventos'
+    : notifPerm === 'denied'
       ? 'Bloqueadas en tu navegador'
       : 'Recibe alertas de mensajes y eventos'
 
