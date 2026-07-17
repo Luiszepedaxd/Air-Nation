@@ -53,21 +53,6 @@ workflows:
           </plist>
           EOF
 
-      - name: Link entitlements in Xcode project
-        script: |
-          cd frontend/ios/App
-          /usr/libexec/PlistBuddy -c "Set :objects:$(xcodebuild -project App.xcodeproj -showBuildSettings 2>/dev/null | grep -m1 'PRODUCT_NAME' | awk '{print $3}'):buildSettings:CODE_SIGN_ENTITLEMENTS App/App.entitlements" App.xcodeproj/project.pbxproj 2>/dev/null || \
-          ruby -e "
-            f = 'App.xcodeproj/project.pbxproj'
-            content = File.read(f)
-            content = content.gsub(
-              /CODE_SIGN_STYLE = Manual;/,
-              'CODE_SIGN_ENTITLEMENTS = App/App.entitlements;\n\t\t\t\tCODE_SIGN_STYLE = Manual;'
-            )
-            File.write(f, content)
-            puts '[entitlements] linked App.entitlements in pbxproj'
-          "
-
       - name: Inject GoogleService-Info.plist
         script: |
           echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > frontend/ios/App/App/GoogleService-Info.plist
@@ -108,7 +93,8 @@ workflows:
             -archivePath $CM_BUILD_DIR/App.xcarchive \
             archive \
             CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=VXCWCHX93N
+            DEVELOPMENT_TEAM=VXCWCHX93N \
+            CODE_SIGN_ENTITLEMENTS=App/App.entitlements
 
       - name: Export IPA
         script: |
