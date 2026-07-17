@@ -32,22 +32,23 @@ workflows:
           echo "--- Podfile ---"
           cat ios/App/Podfile 2>/dev/null || echo "Podfile no existe"
 
-      - name: Add Firebase to Podfile
+      - name: Add Firebase via SPM
         script: |
-          PODFILE="frontend/ios/App/Podfile"
-          if [ ! -f "$PODFILE" ]; then
-            echo "ERROR: Podfile no encontrado en $PODFILE"
-            ls -la frontend/ios/ 2>/dev/null || echo "frontend/ios no existe"
-            exit 1
-          fi
-          sed -i '' 's/  capacitor_pods/  capacitor_pods\n  pod '"'"'FirebaseMessaging'"'"'/' "$PODFILE"
-          echo "Podfile modificado:"
-          cat "$PODFILE"
+          PKGSWIFT="frontend/ios/App/CapApp-SPM/Package.swift"
+          echo "--- Package.swift actual ---"
+          cat "$PKGSWIFT"
 
-      - name: Install iOS pods
-        script: |
-          cd frontend/ios/App
-          pod install
+          # Agregar FirebaseMessaging como dependencia SPM
+          sed -i '' 's|let package = Package(|let package = Package(|' "$PKGSWIFT"
+
+          # Insertar URL de Firebase en dependencies
+          sed -i '' 's|dependencies: \[|dependencies: [\n        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "11.0.0"),|' "$PKGSWIFT"
+
+          # Insertar FirebaseMessaging en targets
+          sed -i '' 's|\.product(name: "Capacitor", package: "capacitor-swift-pm"),|.product(name: "Capacitor", package: "capacitor-swift-pm"),\n                .product(name: "FirebaseMessaging", package: "firebase-ios-sdk"),|' "$PKGSWIFT"
+
+          echo "--- Package.swift modificado ---"
+          cat "$PKGSWIFT"
 
       - name: Add custom URL scheme (airnation://)
         script: |
@@ -147,7 +148,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 9
+          agvtool new-version -all 10
 
       - name: Verificar estructura iOS
         script: |
