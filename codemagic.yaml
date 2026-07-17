@@ -28,6 +28,23 @@ workflows:
           cd frontend
           npx cap sync ios
 
+      - name: Add Firebase to Podfile
+        script: |
+          sed -i '' 's/  capacitor_pods/  capacitor_pods\n  pod '"'"'FirebaseMessaging'"'"'/' frontend/ios/App/Podfile
+
+      - name: Install iOS pods
+        script: |
+          cd frontend/ios/App
+          pod install
+
+      - name: Add custom URL scheme (airnation://)
+        script: |
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string airnation" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.atomikapps.airnation" frontend/ios/App/App/Info.plist
+
       - name: Patch AppDelegate for Push Notifications
         script: |
           cat > frontend/ios/App/App/AppDelegate.swift << 'EOF'
@@ -77,23 +94,6 @@ workflows:
           }
           EOF
 
-      - name: Add Firebase to Podfile
-        script: |
-          sed -i '' 's/  capacitor_pods/  capacitor_pods\n  pod '"'"'FirebaseMessaging'"'"'/' frontend/ios/App/Podfile
-
-      - name: Install iOS pods
-        script: |
-          cd frontend/ios/App
-          pod install
-
-      - name: Add custom URL scheme (airnation://)
-        script: |
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" frontend/ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0 dict" frontend/ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" frontend/ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string airnation" frontend/ios/App/App/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.atomikapps.airnation" frontend/ios/App/App/Info.plist
-
       - name: Add iOS entitlements
         script: |
           cat > frontend/ios/App/App/App.entitlements << 'EOF'
@@ -135,7 +135,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 7
+          agvtool new-version -all 8
 
       - name: Verificar estructura iOS
         script: |
