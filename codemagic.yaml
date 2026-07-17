@@ -84,7 +84,16 @@ workflows:
               var window: UIWindow?
 
               func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-                  FirebaseApp.configure()
+
+                  let options = FirebaseOptions(
+                      googleAppID: "1:189913608017:ios:6c6354bbee5c5dee68ad70",
+                      gcmSenderID: "189913608017"
+                  )
+                  options.apiKey = "AIzaSyCq1l067hwnHdIPN0nADhh_2RXY5-ddwKg"
+                  options.projectID = "airnation-4b53a"
+                  options.bundleID = "com.atomikapps.airnation"
+                  FirebaseApp.configure(options: options)
+
                   return true
               }
 
@@ -136,10 +145,6 @@ workflows:
           </plist>
           EOF
 
-      - name: Inject GoogleService-Info.plist
-        script: |
-          echo $GOOGLE_SERVICE_INFO_PLIST | base64 --decode > frontend/ios/App/App/GoogleService-Info.plist
-
       - name: Set app icon
         script: |
           cd frontend
@@ -160,7 +165,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 11
+          agvtool new-version -all 12
 
       - name: Verificar estructura iOS
         script: |
