@@ -98,6 +98,33 @@ router.post('/fcm/register', requireAuth, async (req, res) => {
     console.error('[push/fcm/register]', error)
     return res.status(500).json({ error: 'No se pudo registrar el token' })
   }
+
+  // Eliminar web-push del mismo OS para evitar notificaciones duplicadas.
+  // El canal nativo (FCM) reemplaza al web-push en este dispositivo.
+  try {
+    const { data: webSubs } = await supabase
+      .from('push_subscriptions')
+      .select('id, user_agent')
+      .eq('user_id', req.userId)
+
+    if (webSubs && webSubs.length > 0) {
+      const matchesOS = (ua) => {
+        if (!ua) return false
+        if (platform === 'android') return /Android/i.test(ua)
+        if (platform === 'ios') return /iPhone|iPad|iPod/i.test(ua)
+        return false
+      }
+      const toDelete = webSubs.filter((s) => matchesOS(s.user_agent)).map((s) => s.id)
+      if (toDelete.length > 0) {
+        await supabase.from('push_subscriptions').delete().in('id', toDelete)
+        console.log(`[push/fcm/register] eliminadas ${toDelete.length} web-push subs de ${platform} para evitar duplicados`)
+      }
+    }
+  } catch (cleanupErr) {
+    console.error('[push/fcm/register] error limpiando web-push:', cleanupErr)
+    // No es fatal — el token FCM ya se registró
+  }
+
   res.json({ ok: true })
 })
 
