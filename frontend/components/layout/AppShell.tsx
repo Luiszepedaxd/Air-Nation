@@ -1,4 +1,5 @@
 import BottomNav from '@/components/dashboard/BottomNav'
+import { ForceUpdateGate } from '@/components/ForceUpdateGate'
 import { PushNotifManager } from '@/components/PushNotifManager'
 import BetaBanner from '@/components/ui/BetaBanner'
 import { createClient } from '@/lib/supabase/server'
@@ -31,6 +32,7 @@ export default async function AppShell({
       {userId != null && userId !== '' ? (
         <PushNotifManager userId={userId} />
       ) : null}
+      <ForceUpdateGate />
     </div>
   )
 }
