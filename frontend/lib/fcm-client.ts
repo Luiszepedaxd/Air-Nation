@@ -21,38 +21,27 @@ export async function registerFcmToken(authToken: string): Promise<boolean> {
 
     // Registrar listeners ANTES de register() para evitar race condition
     const tokenPromise = new Promise<string | null>((resolve) => {
-      const timeout = setTimeout(() => {
-        alert('[FCM] TIMEOUT - no llegó token en 10s')
-        resolve(null)
-      }, 10_000)
+      const timeout = setTimeout(() => resolve(null), 10_000)
 
       PushNotifications.addListener('registration', (t) => {
         clearTimeout(timeout)
-        alert('[FCM] Token recibido: ' + t.value?.slice(0, 40))
         resolve(t.value)
       })
 
-      PushNotifications.addListener('registrationError', (err) => {
+      PushNotifications.addListener('registrationError', () => {
         clearTimeout(timeout)
-        alert('[FCM] registrationError: ' + JSON.stringify(err))
         resolve(null)
       })
     })
 
-    alert('[FCM] Llamando register()...')
     await PushNotifications.register()
 
     const token = await tokenPromise
 
-    if (!token) {
-      alert('[FCM] Sin token, abortando')
-      return false
-    }
+    if (!token) return false
 
-    // Guardar en sessionStorage para no re-registrar cada vez
     try { sessionStorage.setItem('an_fcm_token', token) } catch { /* ignore */ }
 
-    // Registrar en backend
     const res = await fetch(`${API_URL}/push/fcm/register`, {
       method: 'POST',
       headers: {
@@ -61,8 +50,6 @@ export async function registerFcmToken(authToken: string): Promise<boolean> {
       },
       body: JSON.stringify({ token, platform }),
     })
-
-    alert('[FCM] Backend response: ' + res.status + ' ok=' + res.ok)
 
     return res.ok
   } catch (err) {
