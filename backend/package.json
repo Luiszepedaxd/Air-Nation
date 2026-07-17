@@ -1,6 +1,9 @@
 {
   "name": "airnation-backend",
   "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  },
   "description": "AirNation REST API — consumed by web and mobile clients",
   "main": "src/index.js",
   "scripts": {
