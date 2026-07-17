@@ -27,10 +27,22 @@ workflows:
         script: |
           cd frontend
           npx cap sync ios
+          echo "--- Contenido de ios/App ---"
+          ls -la ios/App/ 2>/dev/null || echo "ios/App no existe"
+          echo "--- Podfile ---"
+          cat ios/App/Podfile 2>/dev/null || echo "Podfile no existe"
 
       - name: Add Firebase to Podfile
         script: |
-          sed -i '' 's/  capacitor_pods/  capacitor_pods\n  pod '"'"'FirebaseMessaging'"'"'/' frontend/ios/App/Podfile
+          PODFILE="frontend/ios/App/Podfile"
+          if [ ! -f "$PODFILE" ]; then
+            echo "ERROR: Podfile no encontrado en $PODFILE"
+            ls -la frontend/ios/ 2>/dev/null || echo "frontend/ios no existe"
+            exit 1
+          fi
+          sed -i '' 's/  capacitor_pods/  capacitor_pods\n  pod '"'"'FirebaseMessaging'"'"'/' "$PODFILE"
+          echo "Podfile modificado:"
+          cat "$PODFILE"
 
       - name: Install iOS pods
         script: |
@@ -135,7 +147,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 8
+          agvtool new-version -all 9
 
       - name: Verificar estructura iOS
         script: |
