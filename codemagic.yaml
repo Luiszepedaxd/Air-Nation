@@ -76,8 +76,8 @@ workflows:
       - name: Set version
         script: |
           cd frontend/ios/App
-          agvtool new-marketing-version 1.0.0
-          agvtool new-version -all 7
+          agvtool new-marketing-version 1.0.1
+          agvtool new-version -all 1
 
       - name: Verificar estructura iOS
         script: |
