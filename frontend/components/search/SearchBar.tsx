@@ -106,6 +106,26 @@ export function SearchBar({ className = '' }: { className?: string }) {
     }
   }, [])
 
+  const logSearch = useCallback(async (q: string, resultsCount: number) => {
+    if (q.length < 2) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id ?? null
+      const params = new URLSearchParams({ q })
+      if (userId) params.set('user_id', userId)
+      params.set('results_count', String(resultsCount))
+      await fetch(`${API_URL}/search/log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: q,
+          user_id: userId,
+          results_count: resultsCount,
+        }),
+      })
+    } catch { /* silencioso */ }
+  }, [])
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -141,6 +161,10 @@ export function SearchBar({ className = '' }: { className?: string }) {
 
   const handleSelect = (category: keyof SearchResults, item: SearchResults[typeof category][number]) => {
     const href = getResultHref(category, item)
+    const total = results
+      ? Object.values(results).reduce((sum, arr) => sum + arr.length, 0)
+      : 0
+    void logSearch(query.trim(), total)
     setOpen(false)
     setQuery('')
     router.push(href)
@@ -172,6 +196,14 @@ export function SearchBar({ className = '' }: { className?: string }) {
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => { if (results && hasResults) setOpen(true) }}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && query.trim().length >= 2) {
+              const total = results
+                ? Object.values(results).reduce((sum, arr) => sum + arr.length, 0)
+                : 0
+              void logSearch(query.trim(), total)
+            }
+          }}
           placeholder="Buscar operadores, equipos, réplicas..."
           style={lato}
           className="flex-1 bg-transparent text-[13px] text-[#111111] placeholder:text-[#999999] outline-none min-w-0"

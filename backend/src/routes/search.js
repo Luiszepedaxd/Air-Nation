@@ -109,17 +109,29 @@ router.get('/', async (req, res) => {
       0
     )
 
-    // Registrar log sin bloquear respuesta
-    supabase
-      .from('search_logs')
-      .insert({ query: raw, user_id: userId, results_count: total })
-      .then(() => {})
-      .catch(() => {})
-
     return res.json({ results, total })
   } catch (err) {
     console.error('[search]', err)
     return res.status(500).json({ error: 'Error en búsqueda' })
+  }
+})
+
+router.post('/log', async (req, res) => {
+  try {
+    const { query, user_id, results_count } = req.body
+    if (!query || typeof query !== 'string' || query.trim().length < 2) {
+      return res.status(400).json({ error: 'query inválida' })
+    }
+    await supabase
+      .from('search_logs')
+      .insert({
+        query: query.trim().toLowerCase(),
+        user_id: user_id ?? null,
+        results_count: typeof results_count === 'number' ? results_count : 0,
+      })
+    return res.json({ ok: true })
+  } catch (err) {
+    return res.status(500).json({ error: 'Error al guardar log' })
   }
 })
 
