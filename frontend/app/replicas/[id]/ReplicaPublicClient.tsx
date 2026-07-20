@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { ArsenalIcon } from '@/app/dashboard/arsenal/ArsenalClient'
 import { PostActions } from '@/components/posts/PostInteractions'
 
@@ -46,7 +45,6 @@ export function ReplicaPublicClient({
   currentUserAvatar: string | null
 }) {
   const ownerName = owner.alias?.trim() || owner.nombre?.trim() || 'Jugador'
-  const router = useRouter()
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
@@ -54,20 +52,6 @@ export function ReplicaPublicClient({
 
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (window.history.length > 1) {
-                router.back()
-              } else {
-                router.push(`/u/${owner.id}`)
-              }
-            }}
-            className="text-[#999999] hover:text-[#111111]"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
           <h1 style={jost} className="flex-1 text-[18px] font-extrabold uppercase text-[#111111] line-clamp-1">
             {replica.nombre}
           </h1>

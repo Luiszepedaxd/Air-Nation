@@ -141,15 +141,6 @@ export function ListingDetailClient({
 
         {/* Header: volver + título + compartir */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-[#EEEEEE]">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="text-[#666666] hover:text-[#111111]"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
           <p style={jost} className="flex-1 text-[13px] font-extrabold uppercase text-[#111111] line-clamp-1">
             {listing.titulo}
           </p>

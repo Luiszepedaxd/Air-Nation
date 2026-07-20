@@ -176,11 +176,6 @@ export function ReplicaDetailClient({
 
         {/* Header */}
         <div className="mb-4 flex items-center gap-3">
-          <Link href="/dashboard/arsenal" className="text-[#999999] hover:text-[#111111]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
           <h1 style={jost} className="flex-1 text-[18px] font-extrabold uppercase text-[#111111] line-clamp-1">
             {replica.nombre}
           </h1>

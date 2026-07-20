@@ -458,17 +458,6 @@ export function AdminClient({
 
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pb-10 pt-6 md:px-6">
-      <div className="mb-6">
-        <Link
-          href={`/equipos/${encodeURIComponent(slug)}`}
-          className="inline-flex items-center gap-1 text-[13px] text-[#666666] transition-colors hover:text-[#111111]"
-          style={lato}
-        >
-          <span aria-hidden>←</span>
-          <span className="font-semibold text-[#111111]">{teamNombre}</span>
-        </Link>
-      </div>
-
       <h1
         style={jost}
         className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]"
