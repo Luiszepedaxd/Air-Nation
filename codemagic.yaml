@@ -32,83 +32,6 @@ workflows:
           echo "--- Podfile ---"
           cat ios/App/Podfile 2>/dev/null || echo "Podfile no existe"
 
-      - name: Copy bootstrap files to iOS bundle
-        script: |
-          mkdir -p frontend/ios/App/App/public
-          cp frontend/public/index.html frontend/ios/App/App/public/index.html
-          cp frontend/public/error.html frontend/ios/App/App/public/error.html
-          echo "--- Contenido de public/ ---"
-          ls -la frontend/ios/App/App/public/
-
-      - name: Patch iOS config para arranque local
-        script: |
-          python3 << 'PYEOF'
-          import json
-
-          path = "frontend/ios/App/App/capacitor.config.json"
-          with open(path, "r") as f:
-              cfg = json.load(f)
-
-          print("--- config antes ---")
-          print(json.dumps(cfg, indent=2))
-
-          # Quitar solo la url: iOS arranca desde public/index.html local.
-          server = cfg.get("server", {})
-          server.pop("url", None)
-          # Sin allowNavigation, Capacitor trata la navegacion al dominio como
-          # link externo y la abre en Safari/Chrome en vez del WebView.
-          server["allowNavigation"] = [
-              "www.airnation.online",
-              "airnation.online",
-              "*.supabase.co",
-          ]
-          cfg["server"] = server
-
-          with open(path, "w") as f:
-              json.dump(cfg, f, indent=2)
-
-          print("--- config después ---")
-          print(json.dumps(cfg, indent=2))
-          PYEOF
-
-      - name: Add public folder to Xcode target
-        script: |
-          python3 << 'PYEOF'
-          import re, uuid
-
-          pbxproj = "frontend/ios/App/App.xcodeproj/project.pbxproj"
-          with open(pbxproj, "r") as f:
-              content = f.read()
-
-          if "public in Resources" in content:
-              print("public folder ya está en el target, saltando")
-          else:
-              file_ref_id = uuid.uuid4().hex[:24].upper()
-              build_file_id = uuid.uuid4().hex[:24].upper()
-
-              file_ref = f'\t\t{file_ref_id} /* public */ = {{isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; }};\n'
-              content = content.replace(
-                  "/* End PBXFileReference section */",
-                  file_ref + "/* End PBXFileReference section */"
-              )
-
-              build_file = f'\t\t{build_file_id} /* public in Resources */ = {{isa = PBXBuildFile; fileRef = {file_ref_id} /* public */; }};\n'
-              content = content.replace(
-                  "/* End PBXBuildFile section */",
-                  build_file + "/* End PBXBuildFile section */"
-              )
-
-              m = re.search(r'(isa = PBXResourcesBuildPhase;.*?files = \()', content, re.DOTALL)
-              if m:
-                  content = content[:m.end()] + f'\n\t\t\t\t{build_file_id} /* public in Resources */,' + content[m.end():]
-                  print(f"public agregado al target (fileRef={file_ref_id})")
-              else:
-                  print("ADVERTENCIA: no se encontró PBXResourcesBuildPhase")
-
-              with open(pbxproj, "w") as f:
-                  f.write(content)
-          PYEOF
-
       - name: Add Firebase via SPM
         script: |
           PKGSWIFT="frontend/ios/App/CapApp-SPM/Package.swift"
@@ -246,7 +169,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.2
-          agvtool new-version -all 6
+          agvtool new-version -all 7
 
       - name: Verificar estructura iOS
         script: |

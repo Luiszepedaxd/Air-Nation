@@ -12,9 +12,6 @@ const config: CapacitorConfig = {
     url: 'https://www.airnation.online',
     cleartext: false,
     androidScheme: 'https',
-    // Página local que se muestra si el WebView no puede cargar server.url.
-    // Imprime el error para diagnóstico y ofrece reintentar.
-    errorPath: 'error.html',
   },
 
   // Suffix custom en User Agent. El middleware Next.js detecta 'AirNationApp'
@@ -30,12 +27,8 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      // Duración máxima de seguridad: si el JS nunca llama hide()
-      // (sin red, error de carga), el splash se va solo a los 15s.
-      launchShowDuration: 15000,
-      // El splash NO se auto-oculta: espera a que CapacitorBridge
-      // confirme que React montó. Evita pantalla blanca en primer arranque.
-      launchAutoHide: false,
+      launchShowDuration: 2000,
+      launchAutoHide: true,
       backgroundColor: '#FFFFFF',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
