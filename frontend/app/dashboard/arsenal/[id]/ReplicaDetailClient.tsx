@@ -48,6 +48,7 @@ export function ReplicaDetailClient({
   const [showTransferForm, setShowTransferForm] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showEdit, setShowEdit] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editError, setEditError] = useState('')
@@ -110,13 +111,33 @@ export function ReplicaDetailClient({
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowed.includes(file.type)) {
+      setError('Solo se permiten imágenes JPG, PNG o WebP.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('La imagen no debe pesar más de 10 MB.')
+      return
+    }
+
     setUploadingFoto(true)
+    setError(null)
     try {
       const url = await uploadFile(file)
-      await supabase.from('arsenal').update({ foto_url: url }).eq('id', replica.id)
+      const { error: dbError } = await supabase
+        .from('arsenal')
+        .update({ foto_url: url })
+        .eq('id', replica.id)
+      if (dbError) throw new Error(dbError.message)
       setReplica(r => ({ ...r, foto_url: url }))
-    } catch { /* noop */ }
-    finally { setUploadingFoto(false) }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido'
+      setError(`No se pudo subir la foto: ${msg}. Intenta de nuevo.`)
+    } finally {
+      setUploadingFoto(false)
+    }
   }
 
   const handleTransfer = async () => {
@@ -199,6 +220,15 @@ export function ReplicaDetailClient({
             </label>
           )}
         </div>
+
+        {error && (
+          <p
+            className="mt-2 text-[12px] text-[#CC4B37]"
+            style={{ fontFamily: "'Lato', sans-serif" }}
+          >
+            {error}
+          </p>
+        )}
 
         {/* Info */}
         <div className="mt-4 grid grid-cols-2 gap-3">

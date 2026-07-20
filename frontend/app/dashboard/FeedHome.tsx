@@ -546,6 +546,7 @@ export function PostBox({
   } | null>(null)
   const [showVideoTrimmer, setShowVideoTrimmer] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
   const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
   const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -646,7 +647,14 @@ export function PostBox({
     try {
       const urls: string[] = []
       for (const p of pendingPhotos) {
-        urls.push(await uploadFile(p.file))
+        try {
+          urls.push(await uploadFile(p.file))
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : 'Error desconocido'
+          setPublishError(`No se pudo subir una foto: ${msg}. Intenta de nuevo.`)
+          setPublishing(false)
+          return
+        }
       }
 
       let videoUrl: string | null = null
@@ -710,6 +718,7 @@ export function PostBox({
 
       setText('')
       setMentions([])
+      setPublishError(null)
       for (const p of pendingPhotos) URL.revokeObjectURL(p.preview)
       setPendingPhotos([])
       if (pendingVideo?.previewUrl) {
@@ -994,7 +1003,16 @@ export function PostBox({
             </svg>
           </button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col items-end gap-2">
+          {publishError && (
+            <p
+              className="text-[12px] text-[#CC4B37] px-3 pb-2"
+              style={{ fontFamily: "'Lato', sans-serif" }}
+            >
+              {publishError}
+            </p>
+          )}
+          <div className="flex gap-2">
           <button
             type="button"
             onClick={() => {
@@ -1023,6 +1041,7 @@ export function PostBox({
           >
             {publishing ? 'PUBLICANDO...' : 'PUBLICAR'}
           </button>
+          </div>
         </div>
       </div>
 
