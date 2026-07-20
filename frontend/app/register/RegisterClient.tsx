@@ -96,11 +96,8 @@ export default function RegisterClient({
     const { Capacitor } = await import('@capacitor/core')
     const isNativePlatform = Capacitor.isNativePlatform()
 
-    // Universal Link / App Link: abre la app directamente si está instalada,
-    // sin el diálogo de confirmación del navegador. Si la verificación del
-    // dominio falla, degrada a abrir la web (el usuario queda logueado ahí).
     const emailRedirectTo = isNativePlatform
-      ? 'https://www.airnation.online/auth/callback'
+      ? 'airnation://auth/callback'
       : `${window.location.origin}/auth/callback`
 
     const { error } = await supabase.auth.signUp({
