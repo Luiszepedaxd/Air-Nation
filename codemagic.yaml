@@ -32,12 +32,37 @@ workflows:
           echo "--- Podfile ---"
           cat ios/App/Podfile 2>/dev/null || echo "Podfile no existe"
 
-      - name: Copy error.html to iOS bundle
+      - name: Copy bootstrap files to iOS bundle
         script: |
           mkdir -p frontend/ios/App/App/public
+          cp frontend/public/index.html frontend/ios/App/App/public/index.html
           cp frontend/public/error.html frontend/ios/App/App/public/error.html
-          echo "--- Verificar copia ---"
+          echo "--- Contenido de public/ ---"
           ls -la frontend/ios/App/App/public/
+
+      - name: Patch iOS config para arranque local
+        script: |
+          python3 << 'PYEOF'
+          import json
+
+          path = "frontend/ios/App/App/capacitor.config.json"
+          with open(path, "r") as f:
+              cfg = json.load(f)
+
+          print("--- config antes ---")
+          print(json.dumps(cfg, indent=2))
+
+          # Quitar server.url para que iOS arranque desde public/index.html local.
+          # El bootstrap navega al sitio remoto desde JS con timeout y reintento.
+          if "server" in cfg:
+              del cfg["server"]
+
+          with open(path, "w") as f:
+              json.dump(cfg, f, indent=2)
+
+          print("--- config después ---")
+          print(json.dumps(cfg, indent=2))
+          PYEOF
 
       - name: Add public folder to Xcode target
         script: |
@@ -214,7 +239,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.2
-          agvtool new-version -all 2
+          agvtool new-version -all 3
 
       - name: Verificar estructura iOS
         script: |
