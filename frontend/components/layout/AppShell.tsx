@@ -1,5 +1,6 @@
 import BottomNav from '@/components/dashboard/BottomNav'
 import { ForceUpdateGate } from '@/components/ForceUpdateGate'
+import MobileHeader from '@/components/layout/MobileHeader'
 import { PushNotifManager } from '@/components/PushNotifManager'
 import BetaBanner from '@/components/ui/BetaBanner'
 import { createClient } from '@/lib/supabase/server'
@@ -17,6 +18,7 @@ export default async function AppShell({
 
   return (
     <div className="h-[100dvh] flex flex-col bg-[#F4F4F4]">
+      <MobileHeader />
       <div
         id="dashboard-scroll-root"
         className="flex-1 overflow-y-auto md:pb-0 md:pt-16"
