@@ -143,7 +143,6 @@ workflows:
               <string>production</string>
               <key>com.apple.developer.associated-domains</key>
               <array>
-                  <string>applinks:airnation.online</string>
                   <string>applinks:www.airnation.online</string>
               </array>
           </dict>
