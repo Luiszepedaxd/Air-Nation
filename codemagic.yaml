@@ -239,13 +239,13 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.2
-          agvtool new-version -all 4
+          agvtool new-version -all 5
 
       - name: Verificar estructura iOS
         script: |
           ls -la frontend/ios/App/App/
           cat frontend/ios/App/App/AppDelegate.swift
-          cat frontend/ios/App/capacitor.config.json 2>/dev/null || echo "no capacitor.config.json"
+          cat frontend/ios/App/App/capacitor.config.json 2>/dev/null || echo "no capacitor.config.json"
 
       - name: Build iOS
         script: |
