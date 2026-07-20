@@ -74,43 +74,20 @@
       document.getElementById('error').style.display = 'none';
       if (timer) clearTimeout(timer);
 
-      // Si en TIMEOUT_MS no navegamos, mostramos error en vez de colgarnos.
+      // Red de seguridad: si seguimos ejecutando JS aquí después del timeout,
+      // la navegación nunca completó (cuelgue del WebView). Reintentar una vez
+      // y luego mostrar error. La navegación de primer nivel NO usa CORS.
       timer = setTimeout(function () {
         if (attempt < 2) {
           go();
         } else {
-          showError('timeout de carga');
+          showError('la carga no completó en ' + (TIMEOUT_MS / 1000) + 's');
         }
       }, TIMEOUT_MS);
 
-      // Verificar alcance del servidor antes de navegar. Si responde,
-      // la navegación es segura; si no, atrapamos el fallo aquí.
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('HEAD', TARGET + '/?boot=' + Date.now(), true);
-        xhr.timeout = TIMEOUT_MS - 2000;
-        xhr.onload = function () {
-          clearTimeout(timer);
-          window.location.replace(TARGET);
-        };
-        xhr.onerror = function () {
-          clearTimeout(timer);
-          if (attempt < 2) { setTimeout(go, 800); }
-          else { showError('no se pudo alcanzar el servidor'); }
-        };
-        xhr.ontimeout = function () {
-          clearTimeout(timer);
-          if (attempt < 2) { setTimeout(go, 800); }
-          else { showError('timeout de red'); }
-        };
-        xhr.send();
-      } catch (e) {
-        clearTimeout(timer);
-        showError('excepción: ' + e);
-      }
+      window.location.replace(TARGET + '/?boot=' + Date.now());
     }
 
-    // Arrancar apenas el documento esté listo.
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', go);
     } else {
