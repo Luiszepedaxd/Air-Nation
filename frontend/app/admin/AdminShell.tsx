@@ -270,6 +270,31 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: '/admin/busquedas',
+    label: 'Búsquedas',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle
+          cx="11" cy="11" r="7"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+        />
+        <path
+          d="M21 21l-4.35-4.35"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+        <path
+          d="M8 11h6M11 8v6"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/mailings',
     label: 'Mailings',
     icon: (active) => (
