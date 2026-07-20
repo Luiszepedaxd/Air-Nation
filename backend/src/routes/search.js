@@ -32,7 +32,6 @@ router.get('/', async (req, res) => {
 
     const term = `%${raw}%`
 
-    // Queries en paralelo
     const [
       operadoresRes,
       equiposRes,
@@ -52,45 +51,45 @@ router.get('/', async (req, res) => {
       // Equipos
       supabase
         .from('teams')
-        .select('id, nombre, slug, avatar_url')
+        .select('id, nombre, slug, logo_url')
         .ilike('nombre', term)
         .limit(RESULTS_PER_CATEGORY),
 
-      // Campos
+      // Campos (tabla: fields)
       supabase
-        .from('campos')
-        .select('id, nombre, slug, ciudad, estado')
+        .from('fields')
+        .select('id, nombre, slug, ciudad, estado, foto_portada_url')
         .or(`nombre.ilike.${term},ciudad.ilike.${term}`)
         .limit(RESULTS_PER_CATEGORY),
 
-      // Marketplace listings activos
+      // Marketplace (tabla: marketplace)
       supabase
-        .from('marketplace_listings')
+        .from('marketplace')
         .select('id, titulo, precio, fotos_urls')
         .ilike('titulo', term)
         .eq('status', 'activo')
         .eq('vendido', false)
         .limit(RESULTS_PER_CATEGORY),
 
-      // Eventos
+      // Eventos (tabla: events, columna: title)
       supabase
         .from('events')
-        .select('id, titulo, fecha_inicio, slug')
-        .ilike('titulo', term)
+        .select('id, title, fecha, sede_ciudad')
+        .ilike('title', term)
         .limit(RESULTS_PER_CATEGORY),
 
-      // Blog
+      // Blog (tabla: posts, columna: title)
       supabase
-        .from('blog_posts')
-        .select('id, titulo, slug, published_at')
-        .ilike('titulo', term)
+        .from('posts')
+        .select('id, title, slug, cover_url')
+        .ilike('title', term)
         .eq('published', true)
         .limit(RESULTS_PER_CATEGORY),
 
-      // Arsenal (réplicas públicas)
+      // Arsenal/Réplicas (tabla: arsenal)
       supabase
-        .from('replicas')
-        .select('id, nombre, sistema, foto_url, owner_id')
+        .from('arsenal')
+        .select('id, nombre, sistema, foto_url, user_id')
         .ilike('nombre', term)
         .limit(RESULTS_PER_CATEGORY),
     ])
@@ -110,7 +109,7 @@ router.get('/', async (req, res) => {
       0
     )
 
-    // Registrar log (sin bloquear la respuesta)
+    // Registrar log sin bloquear respuesta
     supabase
       .from('search_logs')
       .insert({ query: raw, user_id: userId, results_count: total })
