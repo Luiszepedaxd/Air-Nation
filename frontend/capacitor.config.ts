@@ -27,18 +27,16 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      // Tiempo máximo del splash en milisegundos. Si la web carga antes,
-      // el splash se oculta antes (controlado desde JS).
-      launchShowDuration: 2000,
-      // No esperar a que JS llame manualmente a hide() — auto-hide al cargar.
-      launchAutoHide: true,
-      // Fondo blanco alineado con design system AirNation.
+      // Duración máxima de seguridad: si el JS nunca llama hide()
+      // (sin red, error de carga), el splash se va solo a los 15s.
+      launchShowDuration: 15000,
+      // El splash NO se auto-oculta: espera a que CapacitorBridge
+      // confirme que React montó. Evita pantalla blanca en primer arranque.
+      launchAutoHide: false,
       backgroundColor: '#FFFFFF',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
-      // Sin spinner — el splash es una pausa, no una pantalla de carga.
       showSpinner: false,
-      // No transición fade — corte limpio a la app.
       splashFullScreen: true,
       splashImmersive: false,
     },

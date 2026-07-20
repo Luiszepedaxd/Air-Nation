@@ -141,6 +141,11 @@ workflows:
               </array>
               <key>aps-environment</key>
               <string>production</string>
+              <key>com.apple.developer.associated-domains</key>
+              <array>
+                  <string>applinks:airnation.online</string>
+                  <string>applinks:www.airnation.online</string>
+              </array>
           </dict>
           </plist>
           EOF
@@ -164,8 +169,8 @@ workflows:
       - name: Set version
         script: |
           cd frontend/ios/App
-          agvtool new-marketing-version 1.0.1
-          agvtool new-version -all 12
+          agvtool new-marketing-version 1.0.2
+          agvtool new-version -all 1
 
       - name: Verificar estructura iOS
         script: |

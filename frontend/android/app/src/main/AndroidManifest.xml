@@ -24,6 +24,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="airnation" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="airnation.online" android:pathPrefix="/auth/callback" />
+                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/auth/callback" />
+                <data android:scheme="https" android:host="airnation.online" android:pathPrefix="/reset-password" />
+                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/reset-password" />
+            </intent-filter>
         </activity>
 
         <provider

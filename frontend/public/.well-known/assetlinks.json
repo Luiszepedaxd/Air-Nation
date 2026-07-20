@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.atomikapps.airnation",
+      "sha256_cert_fingerprints": [
+        "D2:B0:38:E2:98:B1:B1:E4:9F:92:55:CD:55:67:B3:A2:51:F4:0C:BB:8F:C4:BE:01:A5:9B:89:F5:80:19:96:5A",
+        "E4:E4:10:D1:9C:37:02:4D:71:99:1F:64:DF:CA:A7:A0:36:B2:13:7C:D0:70:07:74:5F:44:F0:51:51:CB:B9:66"
+      ]
+    }
+  }
+]

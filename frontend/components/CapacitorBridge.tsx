@@ -23,6 +23,23 @@ export default function CapacitorBridge() {
   const router = useRouter()
   const pathname = usePathname()
 
+  // Ocultar splash apenas React monta. Independiente del resto de la init
+  // para que no dependa de StatusBar ni de los listeners.
+  useEffect(() => {
+    if (!isNativeApp()) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const { SplashScreen } = await import('@capacitor/splash-screen')
+        if (cancelled) return
+        await SplashScreen.hide()
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   useEffect(() => {
     if (!isNativeApp()) return
 
@@ -32,7 +49,6 @@ export default function CapacitorBridge() {
     const init = async () => {
       try {
         const { App } = await import('@capacitor/app')
-        const { SplashScreen } = await import('@capacitor/splash-screen')
         const { StatusBar, Style } = await import('@capacitor/status-bar')
 
         // Configurar status bar
@@ -42,13 +58,6 @@ export default function CapacitorBridge() {
           await StatusBar.setOverlaysWebView({ overlay: false })
         } catch {
           /* algunos devices no soportan, ignorar */
-        }
-
-        // Ocultar splash una vez que la app está lista
-        try {
-          await SplashScreen.hide()
-        } catch {
-          /* ignore */
         }
 
         // Configurar back button Android
@@ -64,7 +73,10 @@ export default function CapacitorBridge() {
         // Deep link handler global (confirmación de email, etc.)
         urlHandler = await App.addListener('appUrlOpen', async (event) => {
           const url = event.url ?? ''
-          if (!url.startsWith('airnation://auth/callback')) return
+          const isCallback =
+            url.startsWith('airnation://auth/callback') ||
+            /^https:\/\/(www\.)?airnation\.online\/auth\/callback/.test(url)
+          if (!isCallback) return
 
           try {
             const urlObj = new URL(url)
