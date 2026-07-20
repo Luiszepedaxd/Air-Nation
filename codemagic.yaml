@@ -52,10 +52,17 @@ workflows:
           print("--- config antes ---")
           print(json.dumps(cfg, indent=2))
 
-          # Quitar server.url para que iOS arranque desde public/index.html local.
-          # El bootstrap navega al sitio remoto desde JS con timeout y reintento.
-          if "server" in cfg:
-              del cfg["server"]
+          # Quitar solo la url: iOS arranca desde public/index.html local.
+          server = cfg.get("server", {})
+          server.pop("url", None)
+          # Sin allowNavigation, Capacitor trata la navegacion al dominio como
+          # link externo y la abre en Safari/Chrome en vez del WebView.
+          server["allowNavigation"] = [
+              "www.airnation.online",
+              "airnation.online",
+              "*.supabase.co",
+          ]
+          cfg["server"] = server
 
           with open(path, "w") as f:
               json.dump(cfg, f, indent=2)
@@ -239,7 +246,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.2
-          agvtool new-version -all 5
+          agvtool new-version -all 6
 
       - name: Verificar estructura iOS
         script: |
