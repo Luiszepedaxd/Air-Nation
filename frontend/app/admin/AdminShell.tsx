@@ -474,7 +474,9 @@ export default function AdminShell({
             <span className="text-[#666666]"> ADMIN</span>
           </span>
         </div>
-        <SidebarNav onNavigate={() => setMobileOpen(false)} />
+        <div className="flex-1 overflow-y-auto">
+          <SidebarNav onNavigate={() => setMobileOpen(false)} />
+        </div>
       </aside>
 
       <div className="flex min-h-screen min-h-dvh flex-1 flex-col md:ml-[220px]">

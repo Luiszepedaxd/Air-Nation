@@ -11,6 +11,7 @@ import {
   NOTIF_UPDATED_EVENT,
 } from '@/lib/user-notifications'
 import { supabase } from '@/lib/supabase'
+import { SearchBar } from '@/components/search/SearchBar'
 
 const NAV_ITEMS = [
   {
@@ -327,6 +328,8 @@ export default function BottomNav() {
             AIR<span className="text-[#CC4B37]">NATION</span>
           </span>
         </Link>
+
+        <SearchBar className="w-64" />
 
         <div className="flex items-center gap-1">
           {NAV_ITEMS.map((item) => {

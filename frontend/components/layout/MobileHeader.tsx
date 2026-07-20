@@ -1,13 +1,13 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
+import { SearchBar } from '@/components/search/SearchBar'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
 const ROOT_ROUTES = new Set([
   '/',
   '/welcome',
-  '/dashboard',
   '/dashboard/perfil',
   '/dashboard/mensajes',
   '/dashboard/arsenal',
@@ -61,6 +61,16 @@ export default function MobileHeader() {
     } else {
       router.push('/dashboard')
     }
+  }
+
+  const isDashboardHome = pathname === '/dashboard'
+
+  if (isDashboardHome) {
+    return (
+      <header className="md:hidden flex items-center h-12 px-3 bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0">
+        <SearchBar className="flex-1" />
+      </header>
+    )
   }
 
   return (
