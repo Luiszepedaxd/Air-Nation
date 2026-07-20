@@ -67,14 +67,23 @@ export default function MobileHeader() {
 
   if (isDashboardHome) {
     return (
-      <header className="md:hidden flex items-center h-12 px-3 bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0">
-        <SearchBar className="flex-1" />
+      <header
+        className="md:hidden flex flex-col bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="flex items-center h-12 px-3">
+          <SearchBar className="flex-1" />
+        </div>
       </header>
     )
   }
 
   return (
-    <header className="md:hidden flex items-center h-12 px-2 bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0">
+    <header
+      className="md:hidden flex flex-col bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+    <div className="flex items-center h-12 px-2">
       <button
         onClick={handleBack}
         className="flex items-center gap-1.5 px-2 h-10 active:bg-[#F4F4F4] rounded-sm"
@@ -96,6 +105,7 @@ export default function MobileHeader() {
           {label}
         </span>
       </button>
+    </div>
     </header>
   )
 }
