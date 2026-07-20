@@ -45,7 +45,6 @@ export default function LoginClient({
         !redirect.startsWith('//')
 
       if (isNative) {
-        const { App } = await import('@capacitor/app')
         const { InAppBrowser, DefaultSystemBrowserOptions } = await import('@capacitor/inappbrowser')
 
         const { data, error } = await supabase.auth.signInWithOAuth({
@@ -53,6 +52,7 @@ export default function LoginClient({
           options: {
             redirectTo: 'airnation://auth/callback',
             skipBrowserRedirect: true,
+            ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
           },
         })
 
@@ -61,43 +61,6 @@ export default function LoginClient({
           setGoogleLoading(false)
           return
         }
-
-        const urlListener = await App.addListener('appUrlOpen', async (event) => {
-          const url = event.url ?? ''
-          if (!url.startsWith('airnation://auth/callback')) return
-
-          await urlListener.remove()
-
-          try {
-            const urlObj = new URL(url)
-            const code = urlObj.searchParams.get('code')
-
-            if (!code) {
-              setError('No se recibió código de autorización')
-              setGoogleLoading(false)
-              return
-            }
-
-            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-            if (exchangeError) {
-              setError(exchangeError.message)
-              setGoogleLoading(false)
-              return
-            }
-
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-              const { data: profile } = await supabase
-                .from('users').select('alias').eq('id', user.id).single()
-              window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
-            } else {
-              window.location.href = '/dashboard'
-            }
-          } catch {
-            setError('Error al completar sesión')
-            setGoogleLoading(false)
-          }
-        })
 
         await InAppBrowser.openInSystemBrowser({
           url: data.url,
@@ -111,7 +74,10 @@ export default function LoginClient({
           : `${window.location.origin}/auth/callback`
         const { error } = await supabase.auth.signInWithOAuth({
           provider,
-          options: { redirectTo },
+          options: {
+            redirectTo,
+            ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
+          },
         })
         if (error) {
           setError(error.message)
