@@ -12,6 +12,9 @@ const config: CapacitorConfig = {
     url: 'https://www.airnation.online',
     cleartext: false,
     androidScheme: 'https',
+    // Página local que se muestra si el WebView no puede cargar server.url.
+    // Imprime el error para diagnóstico y ofrece reintentar.
+    errorPath: 'error.html',
   },
 
   // Suffix custom en User Agent. El middleware Next.js detecta 'AirNationApp'
