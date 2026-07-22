@@ -157,15 +157,6 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/store"
-                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
-                  style={lato}
-                >
-                  AN Store
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/blog"
                   className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
                   style={lato}
