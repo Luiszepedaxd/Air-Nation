@@ -1,4 +1,5 @@
 import BottomNav from '@/components/dashboard/BottomNav'
+import { DarkModeInit } from '@/components/DarkModeInit'
 import { ForceUpdateGate } from '@/components/ForceUpdateGate'
 import MobileHeader from '@/components/layout/MobileHeader'
 import { PushNotifManager } from '@/components/PushNotifManager'
@@ -35,6 +36,7 @@ export default async function AppShell({
         <PushNotifManager userId={userId} />
       ) : null}
       <ForceUpdateGate />
+      <DarkModeInit />
     </div>
   )
 }

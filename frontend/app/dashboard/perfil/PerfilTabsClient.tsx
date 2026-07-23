@@ -13,6 +13,7 @@ import type {
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { usePushNotifButton } from '@/components/PushNotifManager'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
+import { isDarkModeEnabled, setDarkMode } from '@/lib/dark-mode'
 import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
 import type { JoinRequestRow } from '@/lib/pending-join-requests'
 import { supabase } from '@/lib/supabase'
@@ -148,11 +149,16 @@ function PermisosSection({
   const [locationGranted, setLocationGranted] = useState(false)
   const [geoDenied, setGeoDenied] = useState(false)
   const [locationLoading, setLocationLoading] = useState(false)
+  const [darkMode, setDarkModeState] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotifPerm(Notification.permission)
     }
+  }, [])
+
+  useEffect(() => {
+    setDarkModeState(isDarkModeEnabled())
   }, [])
 
   useEffect(() => {
@@ -330,6 +336,12 @@ function PermisosSection({
     )
   }
 
+  const onDarkModeToggle = () => {
+    const next = !darkMode
+    setDarkModeState(next)
+    void setDarkMode(next)
+  }
+
   const notifOn = isNative ? nativePerm === 'granted' : notifPerm === 'granted'
   const notifDisabled = isNative
     ? nativePerm === 'denied'
@@ -351,7 +363,7 @@ function PermisosSection({
   return (
     <section className="mt-8 border-t border-[#EEEEEE] pt-8">
       <h2 style={permisosLabelStyle} className="mb-4">
-        PERMISOS
+        PREFERENCIAS
       </h2>
       <div className="divide-y divide-[#EEEEEE] border border-[#EEEEEE] bg-[#FFFFFF]">
         <div className="flex items-center justify-between gap-3 px-3 py-4">
@@ -394,6 +406,26 @@ function PermisosSection({
             disabled={locDisabled}
             onToggle={onLocationToggle}
             ariaLabel="Ubicación"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 px-3 py-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="shrink-0 text-[22px] leading-none" aria-hidden>
+              🌙
+            </span>
+            <div className="min-w-0">
+              <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111]">
+                Modo oscuro
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[#666666]" style={lato}>
+                Tema oscuro en la app
+              </p>
+            </div>
+          </div>
+          <IosToggle
+            checked={darkMode}
+            onToggle={onDarkModeToggle}
+            ariaLabel="Modo oscuro"
           />
         </div>
       </div>

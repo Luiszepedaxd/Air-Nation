@@ -36,6 +36,7 @@
     "@tiptap/pm": "^3.22.1",
     "@tiptap/react": "^3.22.1",
     "@tiptap/starter-kit": "^3.22.1",
+    "darkreader": "^4.9.128",
     "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.3",
