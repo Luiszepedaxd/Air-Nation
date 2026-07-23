@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/lib/supabase'
 import { api } from '@/lib/api'
@@ -34,6 +35,7 @@ const inputClass =
   'w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[#111111] outline-none focus:border-[#CC4B37]'
 
 export default function BetaBanner() {
+  const pathname = usePathname()
   const [hydrated, setHydrated] = useState(false)
   const [isNative, setIsNative] = useState(false)
   const [isAndroidWebPlatform, setIsAndroidWebPlatform] = useState(false)
@@ -143,6 +145,23 @@ export default function BetaBanner() {
     return () => window.clearTimeout(t)
   }, [thanksPhase])
 
+  // Al navegar fuera del feed de home, el banner se descarta como si el
+  // usuario lo hubiera cerrado: no reaparece al volver a home durante esta
+  // sesión. sessionStorage se limpia al cerrar la app, así que en el
+  // siguiente arranque vuelve a mostrarse.
+  useEffect(() => {
+    if (!storageReady) return
+    if (pathname === '/dashboard') return
+    try {
+      sessionStorage.setItem(STORAGE_KEY, 'true')
+      sessionStorage.setItem(ANDROID_BANNER_KEY, 'true')
+    } catch {
+      /* ignore */
+    }
+    setSessionDismissed(true)
+    setAndroidDismissed(true)
+  }, [pathname, storageReady])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = mensaje.trim()
@@ -167,6 +186,12 @@ export default function BetaBanner() {
 
   // 1. Esperar hidratación client-side.
   if (!hydrated) return null
+
+  // El banner vive solo en el feed de home. La condición va aquí y no en
+  // AppShell porque el shell lo usan muchas secciones. Si el modal de
+  // feedback está abierto, se mantiene montado hasta cerrarlo aunque el
+  // usuario haya navegado fuera de home.
+  if (pathname !== '/dashboard' && !modalOpen) return null
 
   // 2. Web Android (no nativa): banner "descarga la app de Play Store".
   if (isAndroidWebPlatform) {
