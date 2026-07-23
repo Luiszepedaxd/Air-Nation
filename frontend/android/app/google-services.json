@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "189913608017",
+    "project_id": "airnation-4b53a",
+    "storage_bucket": "airnation-4b53a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189913608017:android:b852aaa44120b0ad68ad70",
+        "android_client_info": {
+          "package_name": "com.atomikapps.airnation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlRuentCc5qzcsXYx7O4Bt8bNSsJnziAQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
