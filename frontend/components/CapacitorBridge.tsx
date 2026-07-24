@@ -60,6 +60,19 @@ export default function CapacitorBridge() {
           /* algunos devices no soportan, ignorar */
         }
 
+        // viewportFit=cover solo en iOS para manejar el notch correctamente.
+        // Android lo maneja nativamente con overlaysWebView: false.
+        const { getNativePlatform } = await import('@/lib/platform')
+        if (getNativePlatform() === 'ios') {
+          const viewportMeta = document.querySelector('meta[name="viewport"]')
+          if (viewportMeta) {
+            const current = viewportMeta.getAttribute('content') ?? ''
+            if (!current.includes('viewport-fit')) {
+              viewportMeta.setAttribute('content', current + ', viewport-fit=cover')
+            }
+          }
+        }
+
         // Configurar back button Android
         backHandler = await App.addListener('backButton', ({ canGoBack }) => {
           const currentPath = window.location.pathname
