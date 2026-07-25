@@ -69,6 +69,10 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" frontend/ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string airnation" frontend/ios/App/App/Info.plist
           /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:0:CFBundleURLName string com.atomikapps.airnation" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1 dict" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes array" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLSchemes:0 string com.googleusercontent.apps.989269831755-hjj2nb26rlqc9g2nc54mlsqg8amvdnia" frontend/ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes:1:CFBundleURLName string com.googleusercontent.apps.google" frontend/ios/App/App/Info.plist
 
       - name: Patch AppDelegate for Push Notifications
         script: |
@@ -169,7 +173,7 @@ workflows:
         script: |
           cd frontend/ios/App
           agvtool new-marketing-version 1.0.2
-          agvtool new-version -all 7
+          agvtool new-version -all 8
 
       - name: Verificar estructura iOS
         script: |
