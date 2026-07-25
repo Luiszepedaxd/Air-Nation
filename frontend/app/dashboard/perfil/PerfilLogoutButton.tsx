@@ -1,7 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -13,7 +12,8 @@ export function PerfilLogoutButton() {
   const router = useRouter()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut({ scope: 'local' })
+    const { signOutEverywhere } = await import('@/lib/logout')
+    await signOutEverywhere()
     router.push('/login')
     router.refresh()
   }

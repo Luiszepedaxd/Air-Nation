@@ -306,7 +306,8 @@ export default function BottomNav() {
   }, [pathname])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut({ scope: 'local' })
+    const { signOutEverywhere } = await import('@/lib/logout')
+    await signOutEverywhere()
     router.push('/login')
     router.refresh()
   }
