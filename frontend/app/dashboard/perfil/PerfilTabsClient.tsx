@@ -482,6 +482,10 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
   const hasEmail = identities.some(i => i.provider === 'email')
   const googleIdentity = identities.find(i => i.provider === 'google')
   const appleIdentity = identities.find(i => i.provider === 'apple')
+  // Cuántos métodos de acceso tiene en total. Nunca se debe permitir
+  // desvincular el último — dejaría al usuario sin forma de entrar.
+  const identityCount = identities.length
+  const canUnlink = identityCount > 1
 
   const handleAddPassword = async () => {
     if (!email) return
@@ -606,8 +610,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
                 </p>
               </div>
             </div>
-            {/* Solo mostrar desvincular si también tiene email/password */}
-            {hasEmail && (
+            {canUnlink && (
               <button
                 type="button"
                 onClick={() => void handleUnlinkGoogle()}
@@ -634,7 +637,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
                 </p>
               </div>
             </div>
-            {hasEmail && (
+            {canUnlink && (
               <button
                 type="button"
                 onClick={() => void handleUnlinkApple()}
@@ -648,7 +651,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
           </div>
         )}
 
-        {!hasApple && hasEmail && (
+        {!hasApple && (
           <div className="px-3 py-4">
             <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
               Vincula tu cuenta de Apple para entrar más rápido sin escribir tu contraseña.
@@ -693,7 +696,7 @@ function CuentaAccesoSection({ email }: { email: string | null }) {
           </div>
         )}
 
-        {hasEmail && !hasGoogle && (
+        {!hasGoogle && (
           <div className="px-3 py-4">
             <p className="mb-3 text-[12px] leading-relaxed text-[#666666]" style={lato}>
               Vincula tu cuenta de Google para entrar más rápido sin escribir tu contraseña.
