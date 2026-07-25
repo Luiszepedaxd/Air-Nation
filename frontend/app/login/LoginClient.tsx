@@ -45,6 +45,43 @@ export default function LoginClient({
         !redirect.startsWith('//')
 
       if (isNative) {
+        // Google Sign-In nativo: selector de cuentas del dispositivo + idToken
+        if (provider === 'google') {
+          const { SocialLogin } = await import('@capgo/capacitor-social-login')
+          const res = await SocialLogin.login({
+            provider: 'google',
+            options: { scopes: ['email', 'profile'] },
+          })
+
+          const idToken = (res?.result as any)?.idToken
+          if (!idToken) {
+            setError('No se recibió token de Google')
+            setGoogleLoading(false)
+            return
+          }
+
+          const { error: signInError } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken,
+          })
+          if (signInError) {
+            setError(signInError.message)
+            setGoogleLoading(false)
+            return
+          }
+
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) {
+            const { data: profile } = await supabase
+              .from('users').select('alias').eq('id', user.id).single()
+            const dest = !profile?.alias ? '/onboarding' : (isSafeRedirect ? redirect! : '/dashboard')
+            window.location.href = dest
+          } else {
+            window.location.href = '/dashboard'
+          }
+          return
+        }
+
         const { InAppBrowser, DefaultSystemBrowserOptions } = await import('@capacitor/inappbrowser')
 
         const { data, error } = await supabase.auth.signInWithOAuth({
@@ -52,7 +89,6 @@ export default function LoginClient({
           options: {
             redirectTo: 'airnation://auth/callback',
             skipBrowserRedirect: true,
-            ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
           },
         })
 
