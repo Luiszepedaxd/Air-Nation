@@ -21,6 +21,7 @@ type OnboardingState = {
   nombre: string;
   alias: string;
   ciudad: string;
+  estado: string;
   rol:
     | "rifleman"
     | "sniper"
@@ -43,6 +44,7 @@ const DEFAULT_STATE: OnboardingState = {
   nombre: "",
   alias: "",
   ciudad: "",
+  estado: "",
   rol: "",
   team_id: null,
   team_nombre: "",
@@ -93,6 +95,7 @@ function parseStoredState(raw: string): OnboardingState | null {
       nombre: typeof p.nombre === "string" ? p.nombre : "",
       alias: typeof p.alias === "string" ? p.alias : "",
       ciudad: typeof p.ciudad === "string" ? p.ciudad : "",
+      estado: typeof p.estado === "string" ? p.estado : "",
       rol,
       team_id:
         p.team_id === null
@@ -511,6 +514,7 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           nombre: query,
           ciudad: state.ciudad,
+          estado: state.estado || null,
           created_by: userId,
           slug: generateTeamSlug(undefined, query),
         }),
@@ -533,7 +537,7 @@ export default function OnboardingPage() {
     } finally {
       setCreatingTeam(false);
     }
-  }, [userId, debouncedTeamQuery, state.ciudad, selectTeam]);
+  }, [userId, debouncedTeamQuery, state.ciudad, state.estado, selectTeam]);
 
   const onAliasChange = (v: string) => {
     if (v.length > 30) return;
@@ -718,21 +722,29 @@ export default function OnboardingPage() {
                   onPlaceChanged={() => {
                     const place = autocompleteRef.current?.getPlace();
                     if (!place?.address_components) return;
-                    const locality =
-                      place.address_components.find((c) =>
-                        c.types.includes("locality"),
-                      )?.long_name ||
-                      place.address_components.find((c) =>
-                        c.types.includes("administrative_area_level_2"),
-                      )?.long_name ||
-                      place.address_components.find((c) =>
-                        c.types.includes("administrative_area_level_1"),
-                      )?.long_name ||
+
+                    const getComponent = (type: string) =>
+                      place.address_components!.find((c) =>
+                        c.types.includes(type)
+                      )?.long_name?.trim() ?? "";
+
+                    const estadoLugar =
+                      getComponent("administrative_area_level_1") ||
+                      getComponent("administrative_area_level_2") ||
                       "";
-                    if (locality) {
-                      update({ ciudad: locality });
-                      setCiudadInput(locality);
-                    }
+
+                    const locality =
+                      getComponent("locality") ||
+                      getComponent("sublocality_level_1") ||
+                      getComponent("administrative_area_level_2") ||
+                      getComponent("administrative_area_level_1") ||
+                      "";
+
+                    update({
+                      ...(locality ? { ciudad: locality } : {}),
+                      estado: estadoLugar,
+                    });
+                    if (locality) setCiudadInput(locality);
                   }}
                   options={{
                     types: ["(cities)"],

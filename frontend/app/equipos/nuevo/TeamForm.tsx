@@ -59,7 +59,8 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     const n = nombre.trim();
     const c = ciudad.trim();
-    if (n.length < 2 || c.length < 2 || activeUploads > 0) {
+    const eSt = estado.trim();
+    if (n.length < 2 || c.length < 2 || eSt.length < 2 || activeUploads > 0) {
       e.preventDefault();
     }
   };
@@ -185,6 +186,11 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
           {ciudad && (
             <p className="mt-1 text-[11px] text-[#999999]">✓ {ciudad}</p>
           )}
+          {ciudadInput.trim() && !estado.trim() && (
+            <p className="mt-1 text-[11px] text-[#CC4B37]">
+              Selecciona tu ciudad de la lista de sugerencias para detectar el estado.
+            </p>
+          )}
         </div>
         <ImageUploadField
           label="LOGO DEL EQUIPO"
@@ -233,6 +239,7 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
         disabled={
           nombre.trim().length < 2 ||
           ciudad.trim().length < 2 ||
+          estado.trim().length < 2 ||
           activeUploads > 0
         }
       />

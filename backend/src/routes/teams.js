@@ -254,7 +254,7 @@ router.get("/:id", async (req, res) => {
  */
 router.post("/", async (req, res) => {
   try {
-    const { nombre, ciudad, created_by, slug: rawSlug } = req.body || {};
+    const { nombre, ciudad, estado, created_by, slug: rawSlug } = req.body || {};
     if (!nombre || !ciudad || !created_by) {
       return res.status(400).json({ error: "nombre, ciudad y created_by son requeridos" });
     }
@@ -268,6 +268,7 @@ router.post("/", async (req, res) => {
       .insert({
         nombre: nombreTrim,
         ciudad: String(ciudad).trim(),
+        estado: estado ? String(estado).trim() : null,
         created_by,
         slug: uniqueSlug,
         status: "activo",
