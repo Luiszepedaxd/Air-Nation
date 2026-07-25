@@ -7,6 +7,8 @@ const {
 
 const router = express.Router();
 
+const CITY_TEAM_SOFT_LIMIT = 10;
+
 /**
  * GET /api/v1/teams/search
  * @query {string} [q] - texto para filtrar por nombre (menos de 2 caracteres: sin búsqueda)
@@ -41,8 +43,13 @@ router.get("/search", async (req, res) => {
       return res.status(500).json({ error: countError.message });
     }
 
-    const allow_create = (count ?? 0) < 10;
-    res.json({ teams: teams || [], allow_create });
+    const cityTeamCount = count ?? 0;
+    res.json({
+      teams: teams || [],
+      allow_create: true,
+      city_team_count: cityTeamCount,
+      needs_confirm: cityTeamCount >= CITY_TEAM_SOFT_LIMIT,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -314,6 +321,56 @@ router.post("/", async (req, res) => {
     });
 
     res.status(201).json({ team });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * PATCH /api/v1/teams/:teamId/logo
+ * Actualiza el logo del equipo. Solo el founder activo puede hacerlo.
+ */
+router.patch("/:teamId/logo", async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const { logo_url, user_id } = req.body || {};
+
+    if (!UUID_RE.test(String(teamId))) {
+      return res.status(400).json({ error: "teamId inválido" });
+    }
+    if (!user_id || !logo_url) {
+      return res.status(400).json({ error: "user_id y logo_url son requeridos" });
+    }
+
+    const { data: member, error: memberErr } = await supabase
+      .from("team_members")
+      .select("id")
+      .eq("team_id", teamId)
+      .eq("user_id", user_id)
+      .eq("rol_plataforma", "founder")
+      .eq("status", "activo")
+      .maybeSingle();
+
+    if (memberErr) {
+      return res.status(500).json({ error: memberErr.message });
+    }
+    if (!member) {
+      return res.status(403).json({ error: "No autorizado" });
+    }
+
+    const { data: team, error } = await supabase
+      .from("teams")
+      .update({ logo_url: String(logo_url).trim() })
+      .eq("id", teamId)
+      .select("id, logo_url")
+      .single();
+
+    if (error) {
+      console.error("[PATCH /teams/:teamId/logo]", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ team });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
