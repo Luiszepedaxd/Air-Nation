@@ -116,6 +116,21 @@ export default function CapacitorBridge() {
           }
         })
 
+        // Inicializar Google Sign-In nativo (una sola vez al arrancar).
+        try {
+          const { SocialLogin } = await import('@capgo/capacitor-social-login')
+          await SocialLogin.initialize({
+            google: {
+              webClientId: '989269831755-2tb190g0r40lcr2vro0r7kloch4l4avl.apps.googleusercontent.com',
+              iOSClientId: '989269831755-hjj2nb26rlqc9g2nc54mlsqg8amvdnia.apps.googleusercontent.com',
+              iOSServerClientId: '989269831755-2tb190g0r40lcr2vro0r7kloch4l4avl.apps.googleusercontent.com',
+              mode: 'online',
+            },
+          })
+        } catch (e) {
+          console.error('[social-login] init error:', e)
+        }
+
       } catch (err) {
         console.warn('[CapacitorBridge] init error:', err)
       }
