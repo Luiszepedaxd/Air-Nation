@@ -276,7 +276,7 @@ export function MiCampoOwnerClient({
   }
 
   return (
-    <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pb-10 pt-6 md:px-6">
+    <main className="min-h-full min-w-[375px] bg-[#FFFFFF] px-4 pt-6 md:px-6">
       <h1
         style={jost}
         className="text-[22px] font-extrabold uppercase leading-tight text-[#111111] md:text-[26px]"
@@ -284,7 +284,10 @@ export function MiCampoOwnerClient({
         MI CAMPO
       </h1>
 
-      <div className="sticky top-0 z-40 -mx-4 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6 md:top-16">
+      {/* Tabs sticky contra #dashboard-scroll-root (AppShell.tsx).
+          NO agregar md:top-16 ni ningún offset: el md:pt-16 del scroll root
+          ya compensa el nav desktop fixed (h-16). Declararlo aquí lo duplica. */}
+      <div className="sticky top-0 z-40 -mx-4 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6">
         <ScrollableTabsNav>
           <button
             type="button"
