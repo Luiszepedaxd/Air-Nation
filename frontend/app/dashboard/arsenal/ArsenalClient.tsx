@@ -355,7 +355,7 @@ export function ArsenalList({
   }
 
   return (
-    <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
+    <main className="min-h-full min-w-[375px] bg-[#FFFFFF]">
       <div className="px-4 pt-6 md:px-6 max-w-[1200px] mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -548,8 +548,12 @@ export function ArsenalTabs({
   }
 
   return (
-    <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
-      {/* Tabs nav */}
+    <main className="min-h-full min-w-[375px] bg-[#FFFFFF]">
+      {/* Tabs nav — sticky contra #dashboard-scroll-root (AppShell.tsx).
+          NO agregar transform, filter, backdrop-filter, will-change,
+          contain ni overflow-hidden a este div ni a ninguno de sus
+          ancestros: rompen position:sticky.
+          NO usar min-h-screen en el <main>: genera scroll fantasma. */}
       <div className="sticky top-0 z-30 border-b border-[#EEEEEE] bg-[#FFFFFF]">
         <ScrollableTabsNav>
           {([
@@ -1500,7 +1504,7 @@ function ExplorarTab({ currentUserId }: { currentUserId: string | null }) {
   }
 
   return (
-    <div className="px-4">
+    <div>
       {/* Botón filtrar */}
       <div className="mb-4 flex items-center justify-end gap-2">
         {activeCount > 0 && (
