@@ -890,9 +890,9 @@ export function PerfilTabsClient({
   return (
     <main className="min-h-full min-w-[375px] bg-[#FFFFFF]">
       {/* Tabs sticky contra #dashboard-scroll-root (AppShell.tsx).
-          NO agregar md:top-16 ni ningún offset: el md:pt-16 del scroll root
-          ya compensa el nav desktop fixed (h-16). Declararlo aquí lo duplica
-          y las tabs caen a media portada. */}
+          NO agregar lg:top-16 ni ningún offset: el lg:pt-16 del scroll root
+          ya compensa el nav desktop fixed (h-16, entra en lg:).
+          Declararlo aquí lo duplica y las tabs caen a media portada. */}
       <div className="sticky top-0 z-40 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF]">
         <ScrollableTabsNav>
           {(
