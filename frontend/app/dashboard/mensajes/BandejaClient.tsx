@@ -349,7 +349,7 @@ export function BandejaClient({
   })
 
   return (
-    <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
+    <main className="min-h-full min-w-[375px] bg-[#FFFFFF]">
       <div className="max-w-[640px] mx-auto">
         <div className="px-4 pt-6 pb-4">
           <div className="flex items-center justify-between">
