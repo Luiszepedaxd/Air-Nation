@@ -280,7 +280,7 @@ export function ConversacionClient({
   }
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
+    <div className="fixed inset-x-0 top-0 bottom-0 lg:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">
         <Link href="/dashboard/mensajes" className="text-[#999999] hover:text-[#111111] mr-1">

@@ -208,7 +208,7 @@ export function GrupoConversacionClient({
   const initial = (groupName.trim()[0] || 'G').toUpperCase()
 
   return (
-    <div className="fixed inset-x-0 top-0 bottom-0 md:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
+    <div className="fixed inset-x-0 top-0 bottom-0 lg:top-16 flex flex-col bg-[#FFFFFF] z-10 overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#EEEEEE] px-4 py-3 shrink-0">

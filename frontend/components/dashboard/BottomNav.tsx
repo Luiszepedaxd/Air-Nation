@@ -317,7 +317,7 @@ export default function BottomNav() {
   return (
     <>
       {/* Desktop top nav */}
-      <nav className="hidden md:flex fixed top-0 inset-x-0 z-50 bg-white border-b border-[#EEEEEE] h-16 items-center justify-between px-8">
+      <nav className="hidden lg:flex fixed top-0 inset-x-0 z-50 bg-white border-b border-[#EEEEEE] h-16 items-center justify-between px-8">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           <span className="w-7 h-7 bg-[#CC4B37] flex items-center justify-center">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
@@ -388,7 +388,7 @@ export default function BottomNav() {
       </nav>
 
       {/* Bottom Nav — mobile (5 ítems: HOME, OPERADOR, MENSAJES, CAMPOS, ARSENAL) */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] md:hidden"
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] lg:hidden"
            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
         <div className="grid h-16 w-full grid-cols-5 items-center">
           {NAV_ITEMS_MOBILE.map((item) => {

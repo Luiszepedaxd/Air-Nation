@@ -68,7 +68,7 @@ export default function MobileHeader() {
   if (isDashboardHome) {
     return (
       <header
-        className="md:hidden flex flex-col bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0"
+        className="lg:hidden flex flex-col bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center h-12 px-3">
@@ -80,7 +80,7 @@ export default function MobileHeader() {
 
   return (
     <header
-      className="md:hidden flex flex-col bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0"
+      className="lg:hidden flex flex-col bg-[#FFFFFF] border-b border-[#EEEEEE] shrink-0"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
     <div className="flex items-center h-12 px-2">

@@ -22,7 +22,7 @@ export default async function AppShell({
       <MobileHeader />
       <div
         id="dashboard-scroll-root"
-        className="flex-1 overflow-y-auto md:pb-0 md:pt-16"
+        className="flex-1 overflow-y-auto lg:pb-0 lg:pt-16"
         style={{
           paddingBottom: 'max(calc(3.5rem + env(safe-area-inset-bottom)), calc(3.5rem + 12px))',
           overscrollBehavior: 'contain',
