@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 
@@ -116,6 +117,8 @@ export function PartidasTab() {
   const [joinResult, setJoinResult] = useState<string | null>(null)
 
   const [error, setError] = useState<string | null>(null)
+
+  const router = useRouter()
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -435,7 +438,7 @@ export function PartidasTab() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => console.log('administrar torneo', t.id)}
+                    onClick={() => router.push(`/dashboard/torneos/${t.id}`)}
                     style={jost}
                     className={`${btnPrimary} shrink-0 px-4 py-2 text-[10px]`}
                   >
@@ -493,7 +496,7 @@ export function PartidasTab() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => console.log('entrar torneo árbitro', t.id)}
+                      onClick={() => router.push(`/dashboard/torneos/${t.id}`)}
                       style={jost}
                       className={`${btnPrimary} shrink-0 px-4 py-2 text-[10px]`}
                     >
