@@ -189,6 +189,7 @@ export function PartidasTab() {
     }
   }
 
+  return (
     <div className="mx-auto max-w-[640px] pb-10">
       <h1 style={jost} className="text-[22px] font-extrabold uppercase text-[#111111]">
         PARTIDAS
