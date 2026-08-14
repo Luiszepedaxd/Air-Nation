@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 
@@ -130,6 +131,8 @@ export function TournamentAdminClient({
 
   const [scoreboard, setScoreboard] = useState<ScoreboardEntry[]>([])
   const [scoreRoundId, setScoreRoundId] = useState<string | null>(null)
+
+  const router = useRouter()
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // La duración por defecto solo se copia al form la primera vez, para no
@@ -403,6 +406,24 @@ export function TournamentAdminClient({
     }
   }
 
+  const handleDeleteTournament = async () => {
+    if (
+      !window.confirm(
+        `¿Eliminar "${tournament?.name}"? Se borrarán todos los datos. Esta acción no se puede deshacer.`
+      )
+    ) {
+      return
+    }
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) router.push('/dashboard/perfil?tab=partidas')
+    } catch {
+      /* silenciar */
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-[900px] p-6">
@@ -486,6 +507,16 @@ export function TournamentAdminClient({
             {tournament.rounds?.length || 0} rondas
           </span>
         </div>
+        {isCreator && (
+          <button
+            type="button"
+            onClick={() => void handleDeleteTournament()}
+            style={lato}
+            className="mt-2 block text-[11px] text-[#CC4B37] transition-colors hover:text-[#111111]"
+          >
+            Eliminar torneo
+          </button>
+        )}
       </div>
 
       {error && (

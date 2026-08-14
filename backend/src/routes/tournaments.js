@@ -226,6 +226,33 @@ router.get("/:id", requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /:id — Eliminar torneo completo
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+    if (!t) {
+      return res.status(403).json({ error: "Solo el creador puede eliminar el torneo" });
+    }
+
+    // Rondas, jugadores, árbitros, asignaciones y acciones caen por ON DELETE CASCADE.
+    const { error } = await supabase.from("tournaments").delete().eq("id", id);
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ═══════════════════════════════════════════════════════════
 // JUGADORES
 // ═══════════════════════════════════════════════════════════
