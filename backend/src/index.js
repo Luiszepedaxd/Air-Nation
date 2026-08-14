@@ -17,6 +17,7 @@ const pushRouter = require("./routes/push");
 const stripeRouter = require("./routes/stripe");
 const credencialesRouter = require("./routes/credenciales");
 const searchRouter = require('./routes/search')
+const tournamentsRouter = require("./routes/tournaments");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -69,6 +70,7 @@ app.use("/api/v1/push", pushRouter);
 app.use("/api/v1/stripe", stripeRouter);
 app.use("/api/v1/credencial", credencialesRouter);
 app.use('/api/v1/search', searchRouter)
+app.use("/api/v1/tournaments", tournamentsRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
