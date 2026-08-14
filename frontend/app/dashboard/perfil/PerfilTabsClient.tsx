@@ -37,6 +37,7 @@ import {
 } from './ProfileView'
 import { CredencialClient } from '@/components/credential/CredencialClient'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
+import { PartidasTab } from './PartidasTab'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -49,6 +50,7 @@ type TabId =
   | 'notificaciones'
   | 'credencial'
   | 'administrar'
+  | 'partidas'
   | 'configuracion'
 
 type SubTabAdmin = 'eventos' | 'equipos' | 'campos'
@@ -905,6 +907,7 @@ export function PerfilTabsClient({
               },
               { id: 'credencial' as TabId, label: 'CREDENCIAL' },
               { id: 'administrar' as TabId, label: 'ADMINISTRAR' },
+              { id: 'partidas' as TabId, label: 'PARTIDAS' },
               { id: 'configuracion' as TabId, label: 'CONFIGURACIÓN' },
             ] as { id: TabId; label: string; badge?: number }[]
           ).map(({ id, label, badge }) => (
@@ -1057,6 +1060,12 @@ export function PerfilTabsClient({
                 />
               )}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'partidas' && (
+          <div className="px-4 pt-4">
+            <PartidasTab />
           </div>
         )}
 
