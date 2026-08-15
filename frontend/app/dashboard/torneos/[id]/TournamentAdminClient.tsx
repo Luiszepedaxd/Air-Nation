@@ -605,6 +605,42 @@ export function TournamentAdminClient({
     (p) => !assignedPlayerIds.has(p.id)
   )
 
+  const handleAutoAssign = async () => {
+    if (!activeRoundId) return
+    const pairsToAssign = availableRefs
+      .slice(0, Math.min(availableRefs.length, availablePlayers.length))
+      .map((ref, i) => ({
+        referee_id: ref.id,
+        player_id: availablePlayers[i].id,
+      }))
+
+    if (pairsToAssign.length === 0) {
+      setError('No hay árbitros y jugadores disponibles para emparejar')
+      return
+    }
+
+    setAssigning(true)
+    setError(null)
+    try {
+      const res = await apiFetch(
+        `/tournaments/${tournamentId}/rounds/${activeRoundId}/assign/batch`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ pairs: pairsToAssign }),
+        }
+      )
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+      void loadAssignments(activeRoundId)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al auto-asignar')
+    } finally {
+      setAssigning(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-[900px] p-4 pb-16 md:p-6">
       {/* Header */}
@@ -1110,6 +1146,28 @@ export function TournamentAdminClient({
               >
                 LOBBY — {activeRound.name || `Ronda ${activeRound.round_number}`}
               </h2>
+              {availableRefs.length > 0 && availablePlayers.length > 0 && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => void handleAutoAssign()}
+                    disabled={assigning}
+                    style={jost}
+                    className={`${btnPrimary} w-full`}
+                  >
+                    {assigning
+                      ? 'ASIGNANDO...'
+                      : `⚡ AUTO-ASIGNAR (${Math.min(availableRefs.length, availablePlayers.length)} pares)`}
+                  </button>
+                  {availableRefs.length !== availablePlayers.length && (
+                    <p className="mt-1 text-center text-[11px] text-[#999999]" style={lato}>
+                      {availableRefs.length > availablePlayers.length
+                        ? `${availableRefs.length - availablePlayers.length} árbitro(s) quedarán sin jugador`
+                        : `${availablePlayers.length - availableRefs.length} jugador(es) quedarán sin árbitro`}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#CC4B37]">

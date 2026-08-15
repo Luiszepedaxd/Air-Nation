@@ -614,6 +614,55 @@ router.post("/:id/rounds/:roundId/assign", requireAuth, async (req, res) => {
   }
 });
 
+// POST /:id/rounds/:roundId/assign/batch — Asignar múltiples árbitro↔jugador
+// Body: { pairs: [{ referee_id, player_id }] }
+router.post("/:id/rounds/:roundId/assign/batch", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id, roundId } = req.params;
+    const { pairs } = req.body;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+    if (!t) return res.status(403).json({ error: "Solo el creador" });
+
+    if (!Array.isArray(pairs) || pairs.length === 0) {
+      return res.status(400).json({ error: "pairs array requerido" });
+    }
+
+    const rows = pairs
+      .filter((p) => p.referee_id && p.player_id)
+      .map((p) => ({
+        round_id: roundId,
+        referee_id: p.referee_id,
+        player_id: p.player_id,
+      }));
+
+    if (rows.length === 0) return res.status(400).json({ error: "No hay pares válidos" });
+
+    const { data, error } = await supabase
+      .from("tournament_assignments")
+      .insert(rows)
+      .select();
+
+    if (error) {
+      if (error.code === "23505") {
+        return res
+          .status(409)
+          .json({ error: "Uno o más árbitros/jugadores ya están asignados en esta ronda" });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // DELETE /:id/rounds/:roundId/assign/:assignmentId — Quitar asignación
 router.delete("/:id/rounds/:roundId/assign/:assignmentId", requireAuth, async (req, res) => {
   try {
