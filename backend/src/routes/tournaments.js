@@ -23,6 +23,178 @@ function findExcelColumn(row, candidates) {
   return null;
 }
 
+async function isAppAdmin(userId) {
+  const { data: user } = await supabase
+    .from("users")
+    .select("app_role")
+    .eq("id", userId)
+    .maybeSingle();
+  return user?.app_role === "admin";
+}
+
+function computeExportStats(playerList, actionList) {
+  const statsMap = {};
+  for (const p of playerList) {
+    statsMap[p.id] = {
+      Jugador: p.name,
+      Equipo: p.team_name || "",
+      Kills: 0,
+      Deaths: 0,
+      "First Kills": 0,
+      Objectives: 0,
+      "Key Actions": 0,
+      "Critical Actions": 0,
+      "K/D": 0,
+      "Performance Score": 0,
+      "Impact Score": 0,
+      "Total Score": 0,
+    };
+  }
+  for (const a of actionList) {
+    const s = statsMap[a.player_id];
+    if (!s) continue;
+    if (a.action_type === "kill") s.Kills++;
+    else if (a.action_type === "death") s.Deaths++;
+    else if (a.action_type === "first_kill") s["First Kills"]++;
+    else if (a.action_type === "objective") s.Objectives++;
+    else if (a.action_type === "key_action") s["Key Actions"]++;
+    else if (a.action_type === "critical_action") s["Critical Actions"]++;
+  }
+  return Object.values(statsMap)
+    .map((s) => {
+      s["K/D"] =
+        s.Deaths > 0 ? Math.round((s.Kills / s.Deaths) * 100) / 100 : s.Kills;
+      s["Performance Score"] =
+        s.Kills * 2 +
+        s["First Kills"] * 3 +
+        (s.Kills > 0 && s.Deaths === 0 ? 1 : 0) * 2 -
+        s.Deaths * 1;
+      s["Impact Score"] =
+        s["Key Actions"] * 5 + s["Critical Actions"] * 10 + s.Objectives * 3;
+      s["Total Score"] = s["Performance Score"] + s["Impact Score"];
+      return s;
+    })
+    .sort((a, b) => b["Total Score"] - a["Total Score"]);
+}
+
+async function buildTournamentExportBuffer(tournamentId) {
+  const { data: tournament } = await supabase
+    .from("tournaments")
+    .select("*")
+    .eq("id", tournamentId)
+    .single();
+
+  if (!tournament) return null;
+
+  const { data: rounds } = await supabase
+    .from("tournament_rounds")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .order("round_number");
+
+  const { data: players } = await supabase
+    .from("tournament_players")
+    .select("*")
+    .eq("tournament_id", tournamentId)
+    .order("created_at");
+
+  const roundIds = (rounds || []).map((r) => r.id);
+  let allActions = [];
+  if (roundIds.length > 0) {
+    const { data: acts } = await supabase
+      .from("tournament_actions")
+      .select("*")
+      .in("round_id", roundIds);
+    allActions = acts || [];
+  }
+
+  const wb = XLSX.utils.book_new();
+  const colWidths = [
+    { wch: 25 },
+    { wch: 20 },
+    { wch: 8 },
+    { wch: 8 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 8 },
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 14 },
+  ];
+
+  const usedSheetNames = new Set();
+
+  for (const round of rounds || []) {
+    const roundActions = allActions.filter((a) => a.round_id === round.id);
+    const stats = computeExportStats(players || [], roundActions);
+    const ws = XLSX.utils.json_to_sheet(stats);
+    ws["!cols"] = colWidths;
+
+    let sheetName = (round.name || `Ronda ${round.round_number}`).substring(0, 31);
+    if (usedSheetNames.has(sheetName)) {
+      sheetName = `${sheetName.substring(0, 28)}_${round.round_number}`;
+    }
+    usedSheetNames.add(sheetName);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  }
+
+  if ((rounds || []).length > 0) {
+    const allStats = computeExportStats(players || [], allActions);
+    const summaryData = allStats.map((s, i) => ({
+      "#": i + 1,
+      ...s,
+      Rondas: (rounds || []).length,
+    }));
+
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    wsSummary["!cols"] = [
+      { wch: 5 },
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 8 },
+      { wch: 8 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 8 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 8 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen General");
+  }
+
+  if (wb.SheetNames.length === 0) {
+    const ws = XLSX.utils.json_to_sheet([{ Mensaje: "Sin rondas registradas" }]);
+    XLSX.utils.book_append_sheet(wb, ws, "Info");
+  }
+
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+  const safeName = tournament.name
+    .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-_]/g, "")
+    .substring(0, 50)
+    .trim();
+
+  return { buffer, safeName };
+}
+
+function sendTournamentExcel(res, buffer, safeName) {
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${safeName}_scoreboard.xlsx"`
+  );
+  res.send(buffer);
+}
+
 // ═══════════════════════════════════════════════════════════
 // Rutas estáticas (antes de /:id)
 // ═══════════════════════════════════════════════════════════
@@ -151,6 +323,92 @@ router.get("/referee/assignment/:roundId", requireAuth, async (req, res) => {
       .maybeSingle();
 
     res.json({ round, referee, assignment: assignment || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN — requiere app_role: 'admin' en users table
+// ═══════════════════════════════════════════════════════════
+
+// GET /admin/all — Todos los torneos del sistema (solo admin)
+router.get("/admin/all", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+
+    if (!(await isAppAdmin(userId))) {
+      return res.status(403).json({ error: "Solo administradores" });
+    }
+
+    const { data, error } = await supabase
+      .from("tournaments")
+      .select(`
+        *,
+        users!tournaments_created_by_fkey(nombre, alias, email),
+        tournament_rounds(count),
+        tournament_players(count),
+        tournament_referees(count)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /admin/:id/export — Descargar Excel de cualquier torneo (solo admin)
+router.get("/admin/:id/export", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+
+    if (!(await isAppAdmin(userId))) {
+      return res.status(403).json({ error: "Solo administradores" });
+    }
+
+    const result = await buildTournamentExportBuffer(id);
+    if (!result) return res.status(404).json({ error: "Torneo no encontrado" });
+
+    sendTournamentExcel(res, result.buffer, result.safeName);
+  } catch (err) {
+    console.error("Admin export error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /admin/:id — Detalle completo de cualquier torneo (solo admin)
+router.get("/admin/:id", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+
+    if (!(await isAppAdmin(userId))) {
+      return res.status(403).json({ error: "Solo administradores" });
+    }
+
+    const { data: tournament, error } = await supabase
+      .from("tournaments")
+      .select("*, users!tournaments_created_by_fkey(nombre, alias, email)")
+      .eq("id", id)
+      .single();
+
+    if (error || !tournament) return res.status(404).json({ error: "Torneo no encontrado" });
+
+    const [roundsRes, playersRes, refereesRes] = await Promise.all([
+      supabase.from("tournament_rounds").select("*").eq("tournament_id", id).order("round_number"),
+      supabase.from("tournament_players").select("*").eq("tournament_id", id).order("created_at"),
+      supabase.from("tournament_referees").select("*").eq("tournament_id", id).order("created_at"),
+    ]);
+
+    res.json({
+      ...tournament,
+      rounds: roundsRes.data || [],
+      players: playersRes.data || [],
+      referees: refereesRes.data || [],
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -972,51 +1230,6 @@ router.get("/:id/rounds/:roundId/scoreboard", requireAuth, async (req, res) => {
   }
 });
 
-function computeExportStats(playerList, actionList) {
-  const statsMap = {};
-  for (const p of playerList) {
-    statsMap[p.id] = {
-      Jugador: p.name,
-      Equipo: p.team_name || "",
-      Kills: 0,
-      Deaths: 0,
-      "First Kills": 0,
-      Objectives: 0,
-      "Key Actions": 0,
-      "Critical Actions": 0,
-      "K/D": 0,
-      "Performance Score": 0,
-      "Impact Score": 0,
-      "Total Score": 0,
-    };
-  }
-  for (const a of actionList) {
-    const s = statsMap[a.player_id];
-    if (!s) continue;
-    if (a.action_type === "kill") s.Kills++;
-    else if (a.action_type === "death") s.Deaths++;
-    else if (a.action_type === "first_kill") s["First Kills"]++;
-    else if (a.action_type === "objective") s.Objectives++;
-    else if (a.action_type === "key_action") s["Key Actions"]++;
-    else if (a.action_type === "critical_action") s["Critical Actions"]++;
-  }
-  return Object.values(statsMap)
-    .map((s) => {
-      s["K/D"] =
-        s.Deaths > 0 ? Math.round((s.Kills / s.Deaths) * 100) / 100 : s.Kills;
-      s["Performance Score"] =
-        s.Kills * 2 +
-        s["First Kills"] * 3 +
-        (s.Kills > 0 && s.Deaths === 0 ? 1 : 0) * 2 -
-        s.Deaths * 1;
-      s["Impact Score"] =
-        s["Key Actions"] * 5 + s["Critical Actions"] * 10 + s.Objectives * 3;
-      s["Total Score"] = s["Performance Score"] + s["Impact Score"];
-      return s;
-    })
-    .sort((a, b) => b["Total Score"] - a["Total Score"]);
-}
-
 // GET /:id/export — Descargar Excel con todas las rondas y resumen
 router.get("/:id/export", requireAuth, async (req, res) => {
   try {
@@ -1025,7 +1238,7 @@ router.get("/:id/export", requireAuth, async (req, res) => {
 
     const { data: tournament } = await supabase
       .from("tournaments")
-      .select("*")
+      .select("created_by")
       .eq("id", id)
       .single();
 
@@ -1034,110 +1247,10 @@ router.get("/:id/export", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Solo el creador puede exportar" });
     }
 
-    const { data: rounds } = await supabase
-      .from("tournament_rounds")
-      .select("*")
-      .eq("tournament_id", id)
-      .order("round_number");
+    const result = await buildTournamentExportBuffer(id);
+    if (!result) return res.status(404).json({ error: "Torneo no encontrado" });
 
-    const { data: players } = await supabase
-      .from("tournament_players")
-      .select("*")
-      .eq("tournament_id", id)
-      .order("created_at");
-
-    const roundIds = (rounds || []).map((r) => r.id);
-    let allActions = [];
-    if (roundIds.length > 0) {
-      const { data: acts } = await supabase
-        .from("tournament_actions")
-        .select("*")
-        .in("round_id", roundIds);
-      allActions = acts || [];
-    }
-
-    const wb = XLSX.utils.book_new();
-    const colWidths = [
-      { wch: 25 },
-      { wch: 20 },
-      { wch: 8 },
-      { wch: 8 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 16 },
-      { wch: 8 },
-      { wch: 18 },
-      { wch: 14 },
-      { wch: 14 },
-    ];
-
-    const usedSheetNames = new Set();
-
-    for (const round of rounds || []) {
-      const roundActions = allActions.filter((a) => a.round_id === round.id);
-      const stats = computeExportStats(players || [], roundActions);
-      const ws = XLSX.utils.json_to_sheet(stats);
-      ws["!cols"] = colWidths;
-
-      let sheetName = (round.name || `Ronda ${round.round_number}`).substring(0, 31);
-      if (usedSheetNames.has(sheetName)) {
-        sheetName = `${sheetName.substring(0, 28)}_${round.round_number}`;
-      }
-      usedSheetNames.add(sheetName);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-    }
-
-    if ((rounds || []).length > 0) {
-      const allStats = computeExportStats(players || [], allActions);
-      const summaryData = allStats.map((s, i) => ({
-        "#": i + 1,
-        ...s,
-        Rondas: (rounds || []).length,
-      }));
-
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-      wsSummary["!cols"] = [
-        { wch: 5 },
-        { wch: 25 },
-        { wch: 20 },
-        { wch: 8 },
-        { wch: 8 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 14 },
-        { wch: 16 },
-        { wch: 8 },
-        { wch: 18 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 8 },
-      ];
-
-      XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen General");
-    }
-
-    if (wb.SheetNames.length === 0) {
-      const ws = XLSX.utils.json_to_sheet([{ Mensaje: "Sin rondas registradas" }]);
-      XLSX.utils.book_append_sheet(wb, ws, "Info");
-    }
-
-    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-
-    const safeName = tournament.name
-      .replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s-_]/g, "")
-      .substring(0, 50)
-      .trim();
-
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${safeName}_scoreboard.xlsx"`
-    );
-    res.send(buffer);
+    sendTournamentExcel(res, result.buffer, result.safeName);
   } catch (err) {
     console.error("Export error:", err);
     res.status(500).json({ error: err.message });

@@ -207,6 +207,20 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: '/admin/torneos',
+    label: 'Torneos',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/documentos',
     label: 'Documentos',
     icon: (active) => (
