@@ -259,12 +259,24 @@ export function TournamentAdminClient({
   // El árbitro no dispara ninguna acción aquí, así que necesita refrescar
   // para enterarse de que el productor ya inició una ronda.
   const isRefereeView = tournament ? !tournament.is_creator : false
+  const refereeActiveRoundId = isRefereeView
+    ? ((tournament?.rounds || []).find((r) => r.status === 'active')?.id ?? null)
+    : null
 
   useEffect(() => {
-    if (!isRefereeView) return
-    const poll = setInterval(() => void loadTournament(), 5000)
+    if (!isRefereeView || refereeActiveRoundId) return
+    const poll = setInterval(() => void loadTournament(), 3000)
     return () => clearInterval(poll)
-  }, [isRefereeView, loadTournament])
+  }, [isRefereeView, refereeActiveRoundId, loadTournament])
+
+  // En cuanto el productor inicia la ronda el árbitro entra directo al modo
+  // muñeca, sin tener que tocar nada.
+  useEffect(() => {
+    if (!refereeActiveRoundId) return
+    router.push(
+      `/dashboard/torneos/${tournamentId}/arbitro?roundId=${refereeActiveRoundId}`
+    )
+  }, [refereeActiveRoundId, tournamentId, router])
 
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return
@@ -478,9 +490,6 @@ export function TournamentAdminClient({
   const activeRound = tournament.rounds?.find((r) => r.id === activeRoundId)
   const myRefereeRecord = (tournament.referees || []).find(
     (r) => r.user_id === userId
-  )
-  const activeRoundsForReferee = (tournament.rounds || []).filter(
-    (r) => r.status === 'active'
   )
   const completedRoundsForReferee = (tournament.rounds || []).filter(
     (r) => r.status === 'completed'
@@ -1264,43 +1273,46 @@ export function TournamentAdminClient({
 
       {/* Vista para árbitro (no creador) */}
       {!isCreator && (
-        <div className="border border-[#EEEEEE] p-6 text-center">
-          <p className="text-[14px] text-[#666666]" style={lato}>
-            Estás en este torneo como árbitro.
+        <div className="flex flex-col items-center justify-center py-16">
+          <span className="text-[48px]" role="img" aria-label="Reloj de arena">
+            ⏳
+          </span>
+          <p
+            className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
+            style={jost}
+          >
+            ESPERANDO INICIO
+          </p>
+          <p className="mt-2 text-center text-[13px] text-[#666666]" style={lato}>
+            Cuando el productor inicie la ronda, entrarás automáticamente al modo de
+            arbitraje.
           </p>
           {myRefereeRecord && (
-            <p className="mt-2 font-mono text-[16px] font-bold tracking-widest text-[#111111]">
+            <p className="mt-3 font-mono text-[16px] font-bold tracking-widest text-[#111111]">
               {myRefereeRecord.code}
             </p>
           )}
-
-          {activeRoundsForReferee.length === 0 ? (
-            <p className="mt-2 text-[13px] text-[#999999]" style={lato}>
-              Esperando a que el productor inicie una ronda...
-            </p>
-          ) : (
-            <div className="mt-4 flex flex-col gap-2">
-              {activeRoundsForReferee.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/dashboard/torneos/${tournamentId}/arbitro?roundId=${r.id}`}
-                  style={jost}
-                  className="inline-flex min-h-[52px] w-full items-center justify-center bg-[#CC4B37] px-6 text-[14px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#111111]"
-                >
-                  ENTRAR A RONDA — {r.name || `Ronda ${r.round_number}`}
-                </Link>
-              ))}
-            </div>
-          )}
+          <div className="mt-6 flex items-center gap-2">
+            <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#CC4B37]" />
+            <span
+              className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
+              style={jost}
+            >
+              Conectado — escuchando
+            </span>
+          </div>
 
           {completedRoundsForReferee.length > 0 && (
-            <div className="mt-6">
-              <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#999999]">
+            <div className="mt-8 w-full max-w-[400px]">
+              <p
+                style={jost}
+                className="mb-2 text-center text-[10px] tracking-[0.12em] text-[#999999]"
+              >
                 RONDAS COMPLETADAS
               </p>
               <div className="flex flex-col gap-2">
                 {completedRoundsForReferee.map((r) => (
-                  <div key={r.id} className="border border-[#EEEEEE] px-4 py-3 text-left">
+                  <div key={r.id} className="border border-[#EEEEEE] px-4 py-3 text-center">
                     <span className="text-[13px] text-[#111111]" style={lato}>
                       {r.name || `Ronda ${r.round_number}`}
                     </span>

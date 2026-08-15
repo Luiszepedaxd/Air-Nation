@@ -48,6 +48,56 @@ function formatTimer(seconds: number) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+// ── Beeps con Web Audio API, sin archivos de audio ─────────
+// Un solo AudioContext compartido: los navegadores limitan cuántos puede abrir
+// un documento, y aquí se crean beeps en cada ronda.
+let sharedAudioContext: AudioContext | null = null
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  const Ctor =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof window.AudioContext })
+      .webkitAudioContext
+  if (!Ctor) return null
+  if (!sharedAudioContext) sharedAudioContext = new Ctor()
+  if (sharedAudioContext.state === 'suspended') void sharedAudioContext.resume()
+  return sharedAudioContext
+}
+
+function playBeep(frequency: number, duration: number, count = 1) {
+  try {
+    const ctx = getAudioContext()
+    if (!ctx) return
+
+    for (let i = 0; i < count; i++) {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = frequency
+      osc.type = 'square'
+
+      const startTime = ctx.currentTime + i * (duration + 0.1)
+      gain.gain.setValueAtTime(0.3, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration)
+
+      osc.start(startTime)
+      osc.stop(startTime + duration)
+    }
+  } catch {
+    /* audio no soportado o bloqueado */
+  }
+}
+
+function playStartSound() {
+  playBeep(880, 0.15, 3)
+}
+
+function playEndSound() {
+  playBeep(220, 0.5, 1)
+}
+
 export function WristModeClient({
   tournamentId,
   roundId,
@@ -76,6 +126,9 @@ export function WristModeClient({
   const [flash, setFlash] = useState<string | null>(null)
   const flashTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const startSoundPlayedRef = useRef(false)
+  const endSoundPlayedRef = useRef(false)
+
   useEffect(() => {
     actionsRef.current = actions
   }, [actions])
@@ -88,6 +141,8 @@ export function WristModeClient({
 
   useEffect(() => {
     let cancelled = false
+    startSoundPlayedRef.current = false
+    endSoundPlayedRef.current = false
     async function load() {
       try {
         const res = await apiFetch(`/tournaments/referee/assignment/${roundId}`)
@@ -121,7 +176,18 @@ export function WristModeClient({
     const endMs = new Date(roundStartedAt).getTime() + roundDuration * 1000
 
     const tick = () => {
-      setTimeLeft(Math.max(0, Math.ceil((endMs - Date.now()) / 1000)))
+      const remaining = Math.max(0, Math.ceil((endMs - Date.now()) / 1000))
+      setTimeLeft(remaining)
+      if (remaining <= 0 && !endSoundPlayedRef.current) {
+        endSoundPlayedRef.current = true
+        playEndSound()
+      }
+    }
+
+    // Entrar tarde a una ronda ya vencida no debe sonar como un arranque.
+    if (!startSoundPlayedRef.current && endMs - Date.now() > 0) {
+      startSoundPlayedRef.current = true
+      playStartSound()
     }
 
     tick()
@@ -275,6 +341,10 @@ export function WristModeClient({
 
   const buttonsDisabled =
     round?.status !== 'active' || (timeLeft !== null && timeLeft <= 0)
+
+  // Solo hay un first kill por ronda. Deshacer lo saca del array y vuelve a
+  // habilitar el botón.
+  const firstKillUsed = counts.first_kills >= 1
 
   if (loading) {
     return (
@@ -476,17 +546,35 @@ export function WristModeClient({
         <div className="flex h-[64px] gap-[6px] sm:h-[72px]">
           <button
             type="button"
-            disabled={buttonsDisabled}
+            disabled={buttonsDisabled || firstKillUsed}
             onClick={() => recordAction('first_kill')}
-            className={`flex flex-1 items-center justify-center border border-[#333333] transition-all active:scale-[0.96] disabled:opacity-30 ${
-              flash === 'first_kill' ? 'bg-[#333333]' : 'bg-[#1A1A1A]'
+            className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] disabled:opacity-30 ${
+              firstKillUsed
+                ? 'border-[#2E7D32] bg-[#1A2E1A]'
+                : flash === 'first_kill'
+                  ? 'border-[#333333] bg-[#333333]'
+                  : 'border-[#333333] bg-[#1A1A1A]'
             }`}
             style={{ ...jostFont, borderRadius: 4 }}
           >
-            <span className="text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] text-[#FFFFFF] sm:text-[12px]">
-              FIRST
-              <br />
-              KILL
+            <span
+              className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
+                firstKillUsed ? 'text-[#2E7D32]' : 'text-[#FFFFFF]'
+              }`}
+            >
+              {firstKillUsed ? (
+                <>
+                  ✓ FIRST
+                  <br />
+                  KILL
+                </>
+              ) : (
+                <>
+                  FIRST
+                  <br />
+                  KILL
+                </>
+              )}
             </span>
           </button>
           <button
