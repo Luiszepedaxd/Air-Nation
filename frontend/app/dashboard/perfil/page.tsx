@@ -438,7 +438,15 @@ export default async function PerfilPage({
       ownerPendingFieldRequests={ownerPendingFieldRequests}
       isAdmin={isAdmin}
       pendingJoinPending={pendingJoinPending}
-      initialTab={undefined}
+      initialTab={
+        (searchParams.tab as
+          | 'perfil'
+          | 'notificaciones'
+          | 'credencial'
+          | 'administrar'
+          | 'partidas'
+          | 'configuracion') || undefined
+      }
       campoRegistradoNotice={searchParams.campo_creado === '1'}
       credencialData={credencialData}
       posts={(postsData ?? []) as PlayerPostRow[]}

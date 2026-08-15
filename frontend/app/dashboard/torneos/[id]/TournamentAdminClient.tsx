@@ -242,6 +242,16 @@ export function TournamentAdminClient({
     }
   }, [])
 
+  // El árbitro no dispara ninguna acción aquí, así que necesita refrescar
+  // para enterarse de que el productor ya inició una ronda.
+  const isRefereeView = tournament ? !tournament.is_creator : false
+
+  useEffect(() => {
+    if (!isRefereeView) return
+    const poll = setInterval(() => void loadTournament(), 5000)
+    return () => clearInterval(poll)
+  }, [isRefereeView, loadTournament])
+
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return
     setAddingPlayer(true)
@@ -454,6 +464,12 @@ export function TournamentAdminClient({
   const activeRound = tournament.rounds?.find((r) => r.id === activeRoundId)
   const myRefereeRecord = (tournament.referees || []).find(
     (r) => r.user_id === userId
+  )
+  const activeRoundsForReferee = (tournament.rounds || []).filter(
+    (r) => r.status === 'active'
+  )
+  const completedRoundsForReferee = (tournament.rounds || []).filter(
+    (r) => r.status === 'completed'
   )
 
   const assignedRefIds = new Set(assignments.map((a) => a.referee_id))
@@ -1244,9 +1260,48 @@ export function TournamentAdminClient({
               {myRefereeRecord.code}
             </p>
           )}
-          <p className="mt-2 text-[13px] text-[#999999]" style={lato}>
-            Cuando el productor inicie una ronda, tu pantalla de arbitraje se activará.
-          </p>
+
+          {activeRoundsForReferee.length === 0 ? (
+            <p className="mt-2 text-[13px] text-[#999999]" style={lato}>
+              Esperando a que el productor inicie una ronda...
+            </p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-2">
+              {activeRoundsForReferee.map((r) => (
+                <Link
+                  key={r.id}
+                  href={`/dashboard/torneos/${tournamentId}/arbitro?roundId=${r.id}`}
+                  style={jost}
+                  className="inline-flex min-h-[52px] w-full items-center justify-center bg-[#CC4B37] px-6 text-[14px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#111111]"
+                >
+                  ENTRAR A RONDA — {r.name || `Ronda ${r.round_number}`}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {completedRoundsForReferee.length > 0 && (
+            <div className="mt-6">
+              <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#999999]">
+                RONDAS COMPLETADAS
+              </p>
+              <div className="flex flex-col gap-2">
+                {completedRoundsForReferee.map((r) => (
+                  <div key={r.id} className="border border-[#EEEEEE] px-4 py-3 text-left">
+                    <span className="text-[13px] text-[#111111]" style={lato}>
+                      {r.name || `Ronda ${r.round_number}`}
+                    </span>
+                    <span
+                      style={jost}
+                      className="ml-2 inline-block bg-[#111111] px-2 py-0.5 text-[9px] text-[#FFFFFF]"
+                    >
+                      TERMINADA
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
