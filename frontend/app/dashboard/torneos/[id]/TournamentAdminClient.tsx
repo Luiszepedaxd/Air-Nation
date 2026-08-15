@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
+import { DurationPicker } from '@/components/DurationPicker'
 
 type Tournament = {
   id: string
@@ -147,7 +148,9 @@ export function TournamentAdminClient({
       setTournament(data)
       if (!durationSeededRef.current) {
         durationSeededRef.current = true
-        setRoundDuration(data.default_round_duration_seconds)
+        // La rueda de rondas llega hasta 60 min, así que un default más largo
+        // se recorta para que el valor mostrado sea el que se envía.
+        setRoundDuration(Math.min(data.default_round_duration_seconds, 3600))
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error')
@@ -771,36 +774,29 @@ export function TournamentAdminClient({
             >
               CREAR RONDA
             </h2>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-3">
               <input
                 type="text"
                 value={roundName}
                 onChange={(e) => setRoundName(e.target.value)}
                 placeholder="Nombre (ej: Cobras vs Vipers)"
-                className={`${inputClass} flex-1`}
+                className={inputClass}
                 style={lato}
                 maxLength={100}
               />
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  value={roundDuration}
-                  onChange={(e) => setRoundDuration(Number(e.target.value) || 180)}
-                  min={30}
-                  max={3600}
-                  className={`${inputClass} w-[90px]`}
-                  style={lato}
-                />
-                <span className="text-[11px] text-[#999999]" style={lato}>
-                  seg
-                </span>
-              </div>
+              <DurationPicker
+                value={roundDuration}
+                onChange={setRoundDuration}
+                showHours={false}
+                maxMinutes={60}
+                label="DURACIÓN"
+              />
               <button
                 type="button"
                 onClick={() => void handleCreateRound()}
                 disabled={creatingRound}
                 style={jost}
-                className={`${btnPrimary} shrink-0`}
+                className={btnPrimary}
               >
                 {creatingRound ? '...' : 'CREAR'}
               </button>
