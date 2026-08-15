@@ -143,6 +143,42 @@ export function WristModeClient({
 
   const startSoundPlayedRef = useRef(false)
   const endSoundPlayedRef = useRef(false)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+
+  useEffect(() => {
+    let released = false
+
+    async function requestWakeLock() {
+      try {
+        if (!('wakeLock' in navigator)) return
+        wakeLockRef.current = await navigator.wakeLock.request('screen')
+        wakeLockRef.current.addEventListener('release', () => {
+          wakeLockRef.current = null
+          if (!released) void requestWakeLock()
+        })
+      } catch {
+        /* wake lock not supported or denied */
+      }
+    }
+
+    void requestWakeLock()
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !released) {
+        void requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      released = true
+      document.removeEventListener('visibilitychange', handleVisibility)
+      if (wakeLockRef.current) {
+        void wakeLockRef.current.release()
+        wakeLockRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     actionsRef.current = actions

@@ -641,6 +641,25 @@ export function TournamentAdminClient({
     }
   }
 
+  const handleExportExcel = async () => {
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/export`)
+      if (!res.ok) throw new Error('Error al exportar')
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${tournament?.name || 'torneo'}_scoreboard.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al exportar')
+    }
+  }
+
   return (
     <div className="mx-auto max-w-[900px] p-4 pb-16 md:p-6">
       {/* Header */}
@@ -1440,6 +1459,22 @@ export function TournamentAdminClient({
       {/* ═══════════════ TAB: SCOREBOARD ═══════════════ */}
       {subTab === 'scoreboard' && isCreator && (
         <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2
+              style={{ ...jost, fontSize: 11, letterSpacing: '0.12em' }}
+              className="text-[#999999]"
+            >
+              SCOREBOARD
+            </h2>
+            <button
+              type="button"
+              onClick={() => void handleExportExcel()}
+              style={jost}
+              className={`${btnPrimary} text-[10px]`}
+            >
+              📥 DESCARGAR EXCEL
+            </button>
+          </div>
           <div className="mb-4 flex flex-wrap gap-2">
             {(tournament.rounds || []).map((r) => (
               <button
