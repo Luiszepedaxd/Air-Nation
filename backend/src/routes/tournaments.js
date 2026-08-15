@@ -1007,6 +1007,19 @@ router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Solo el creador" });
     }
 
+    const { data: unconfirmed } = await supabase
+      .from("tournament_assignments")
+      .select("id")
+      .eq("round_id", roundId)
+      .is("sync_confirmed_at", null);
+
+    if (unconfirmed && unconfirmed.length > 0) {
+      return res.status(400).json({
+        error: `${unconfirmed.length} árbitro(s) no han confirmado sincronización`,
+        unconfirmed_count: unconfirmed.length,
+      });
+    }
+
     const { data, error } = await supabase
       .from("tournament_rounds")
       .update({ status: "completed", ended_at: new Date().toISOString() })
@@ -1019,6 +1032,106 @@ router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
     res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /:id/rounds/:roundId/confirm-sync — Árbitro confirma sync completo
+router.patch("/:id/rounds/:roundId/confirm-sync", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id, roundId } = req.params;
+
+    const { data: referee } = await supabase
+      .from("tournament_referees")
+      .select("id")
+      .eq("tournament_id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!referee) return res.status(403).json({ error: "No eres árbitro de este torneo" });
+
+    const { data: assignment } = await supabase
+      .from("tournament_assignments")
+      .select("id, sync_confirmed_at")
+      .eq("round_id", roundId)
+      .eq("referee_id", referee.id)
+      .maybeSingle();
+
+    if (!assignment) return res.status(404).json({ error: "No tienes asignación en esta ronda" });
+
+    if (assignment.sync_confirmed_at) {
+      return res.json({ already_confirmed: true, sync_confirmed_at: assignment.sync_confirmed_at });
+    }
+
+    const { data, error } = await supabase
+      .from("tournament_assignments")
+      .update({ sync_confirmed_at: new Date().toISOString() })
+      .eq("id", assignment.id)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /:id/rounds/:roundId/sync-status — Estado de sync de todos los árbitros
+router.get("/:id/rounds/:roundId/sync-status", requireAuth, async (req, res) => {
+  try {
+    const { roundId } = req.params;
+
+    const { data: assignments, error } = await supabase
+      .from("tournament_assignments")
+      .select(
+        "id, sync_confirmed_at, tournament_referees(id, name, code, user_id), tournament_players(id, name, team_name)"
+      )
+      .eq("round_id", roundId);
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const result = await Promise.all(
+      (assignments || []).map(async (a) => {
+        const ref = Array.isArray(a.tournament_referees)
+          ? a.tournament_referees[0]
+          : a.tournament_referees;
+        const player = Array.isArray(a.tournament_players)
+          ? a.tournament_players[0]
+          : a.tournament_players;
+
+        const { data: lastAction } = await supabase
+          .from("tournament_actions")
+          .select("synced_at")
+          .eq("assignment_id", a.id)
+          .order("synced_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const { count: totalActions } = await supabase
+          .from("tournament_actions")
+          .select("id", { count: "exact", head: true })
+          .eq("assignment_id", a.id);
+
+        return {
+          assignment_id: a.id,
+          referee_name: ref?.name || ref?.code || "?",
+          referee_code: ref?.code,
+          player_name: player?.name || "?",
+          player_team: player?.team_name,
+          sync_confirmed: !!a.sync_confirmed_at,
+          sync_confirmed_at: a.sync_confirmed_at,
+          last_sync: lastAction?.synced_at || null,
+          total_actions: totalActions ?? 0,
+        };
+      })
+    );
+
+    const allConfirmed = result.length > 0 && result.every((r) => r.sync_confirmed);
+
+    res.json({ assignments: result, all_confirmed: allConfirmed });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

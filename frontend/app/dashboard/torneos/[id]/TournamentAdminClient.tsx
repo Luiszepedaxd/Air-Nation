@@ -75,6 +75,18 @@ type ScoreboardEntry = {
   total_score: number
 }
 
+type SyncStatus = {
+  assignment_id: string
+  referee_name: string
+  referee_code: string
+  player_name: string
+  player_team: string | null
+  sync_confirmed: boolean
+  sync_confirmed_at: string | null
+  last_sync: string | null
+  total_actions: number
+}
+
 const jost = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
@@ -143,6 +155,10 @@ export function TournamentAdminClient({
   const [scoreboard, setScoreboard] = useState<ScoreboardEntry[]>([])
   const [scoreRoundId, setScoreRoundId] = useState<string | null>(null)
 
+  const [showSyncChecklist, setShowSyncChecklist] = useState(false)
+  const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([])
+  const [allSyncConfirmed, setAllSyncConfirmed] = useState(false)
+
   const router = useRouter()
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -203,6 +219,24 @@ export function TournamentAdminClient({
     },
     [tournamentId]
   )
+
+  const loadSyncStatus = useCallback(async (roundId: string) => {
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/rounds/${roundId}/sync-status`)
+      if (res.ok) {
+        const data = await res.json()
+        setSyncStatuses(data.assignments || [])
+        setAllSyncConfirmed(data.all_confirmed)
+      }
+    } catch { /* silenciar */ }
+  }, [tournamentId])
+
+  useEffect(() => {
+    if (!showSyncChecklist || !activeRoundId) return
+    void loadSyncStatus(activeRoundId)
+    const interval = setInterval(() => void loadSyncStatus(activeRoundId), 2000)
+    return () => clearInterval(interval)
+  }, [showSyncChecklist, activeRoundId, loadSyncStatus])
 
   const startTimer = useCallback((round: Round) => {
     if (!round.started_at) return
@@ -464,6 +498,9 @@ export function TournamentAdminClient({
     setActiveRoundId(roundId)
     setSelectedReferee(null)
     setSelectedPlayer(null)
+    setShowSyncChecklist(false)
+    setSyncStatuses([])
+    setAllSyncConfirmed(false)
     void loadAssignments(roundId)
   }
 
@@ -537,6 +574,9 @@ export function TournamentAdminClient({
         throw new Error(e.error)
       }
       setTimeLeft(null)
+      setShowSyncChecklist(false)
+      setSyncStatuses([])
+      setAllSyncConfirmed(false)
       void loadTournament()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error')
@@ -1421,14 +1461,94 @@ export function TournamentAdminClient({
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => void handleEndRound()}
-                style={jost}
-                className="mt-6 w-full border border-[#CC4B37] bg-transparent px-5 py-3 text-[11px] tracking-[0.12em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-[#FFFFFF]"
-              >
-                TERMINAR RONDA
-              </button>
+              {!showSyncChecklist ? (
+                <button
+                  type="button"
+                  onClick={() => setShowSyncChecklist(true)}
+                  style={jost}
+                  className="mt-6 w-full border border-[#CC4B37] bg-transparent px-5 py-3 text-[11px] tracking-[0.12em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-[#FFFFFF]"
+                >
+                  TERMINAR RONDA
+                </button>
+              ) : (
+                <div className="mt-6 border border-[#CC4B37] bg-[#1A1A1A] p-4">
+                  <p style={jost} className="mb-4 text-[12px] tracking-[0.15em] text-[#CC4B37]">
+                    CHECKLIST DE SINCRONIZACIÓN
+                  </p>
+                  <p className="mb-4 text-[11px] text-[#999999]" style={lato}>
+                    Cada árbitro debe confirmar desde su dispositivo que no tiene acciones pendientes.
+                  </p>
+
+                  {syncStatuses.length === 0 ? (
+                    <p className="text-[12px] text-[#666666]" style={lato}>Cargando...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {syncStatuses.map((s) => (
+                        <div
+                          key={s.assignment_id}
+                          className={`flex items-center justify-between border px-4 py-3 ${
+                            s.sync_confirmed
+                              ? 'border-[#2E7D32]/50 bg-[#2E7D32]/10'
+                              : 'border-[#333333] bg-[#111111]'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[13px] font-semibold text-[#FFFFFF]" style={lato}>
+                                {s.referee_name}
+                              </span>
+                              <span className="text-[11px] text-[#666666]">→</span>
+                              <span className="text-[13px] text-[#FFFFFF]" style={lato}>
+                                {s.player_name}
+                              </span>
+                              {s.player_team && (
+                                <span className="text-[10px] text-[#666666]" style={lato}>({s.player_team})</span>
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-center gap-3 text-[10px] text-[#666666]" style={lato}>
+                              <span>{s.total_actions} acciones</span>
+                              {s.last_sync && (
+                                <span>Último sync: {new Date(s.last_sync).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="ml-3 shrink-0">
+                            {s.sync_confirmed ? (
+                              <span className="text-[16px] text-[#2E7D32]">✓</span>
+                            ) : (
+                              <span className="inline-block h-[10px] w-[10px] animate-pulse rounded-full bg-[#F9A825]" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleEndRound()}
+                      disabled={!allSyncConfirmed}
+                      style={jost}
+                      className={`flex-1 px-5 py-3 text-[11px] tracking-[0.12em] transition-colors ${
+                        allSyncConfirmed
+                          ? 'bg-[#CC4B37] text-[#FFFFFF] hover:bg-[#111111]'
+                          : 'bg-[#333333] text-[#666666] cursor-not-allowed'
+                      }`}
+                    >
+                      {allSyncConfirmed ? '✓ CERRAR RONDA' : `ESPERANDO ${syncStatuses.filter(s => !s.sync_confirmed).length} ÁRBITRO(S)`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowSyncChecklist(false)}
+                      style={jost}
+                      className="border border-[#333333] px-4 py-3 text-[11px] tracking-[0.12em] text-[#666666] transition-colors hover:text-[#FFFFFF]"
+                    >
+                      CANCELAR
+                    </button>
+                  </div>
+                </div>
+              )}
             </section>
           )}
 

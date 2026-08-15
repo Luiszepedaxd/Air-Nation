@@ -141,6 +141,9 @@ export function WristModeClient({
   const [globalFirstKillTaken, setGlobalFirstKillTaken] = useState(false)
   const [firstKillPlayerName, setFirstKillPlayerName] = useState<string | null>(null)
 
+  const [syncConfirmed, setSyncConfirmed] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+
   const startSoundPlayedRef = useRef(false)
   const endSoundPlayedRef = useRef(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
@@ -292,6 +295,18 @@ export function WristModeClient({
       setSyncStatus('offline')
     }
   }, [tournamentId, roundId])
+
+  const handleConfirmSync = async () => {
+    setConfirming(true)
+    try {
+      const res = await apiFetch(
+        `/tournaments/${tournamentId}/rounds/${roundId}/confirm-sync`,
+        { method: 'PATCH' }
+      )
+      if (res.ok) setSyncConfirmed(true)
+    } catch { /* silenciar */ }
+    finally { setConfirming(false) }
+  }
 
   useEffect(() => {
     if (!roundStartedAt || roundStatus !== 'active' || !roundDuration) return
@@ -535,16 +550,13 @@ export function WristModeClient({
                 Sincronizando {actions.filter((a) => !a.synced).length} acciones...
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-[#666666]" style={latoFont}>
-              No cierres la app
-            </p>
           </div>
-        ) : (
+        ) : syncConfirmed ? (
           <div className="mt-4">
             <div className="flex items-center justify-center gap-2">
               <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
               <span className="text-[12px] text-[#2E7D32]" style={latoFont}>
-                ✓ Todo sincronizado
+                ✓ Confirmado
               </span>
             </div>
             <Link
@@ -554,6 +566,24 @@ export function WristModeClient({
             >
               ← Volver al torneo
             </Link>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <div className="flex items-center justify-center gap-2">
+              <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+              <span className="text-[12px] text-[#2E7D32]" style={latoFont}>
+                ✓ Todo sincronizado
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleConfirmSync()}
+              disabled={confirming}
+              className="mt-4 w-full bg-[#2E7D32] px-6 py-3 text-[13px] font-extrabold uppercase tracking-[0.15em] text-[#FFFFFF] transition-colors hover:bg-[#1B5E20] active:scale-[0.97] disabled:opacity-50"
+              style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
+            >
+              {confirming ? 'CONFIRMANDO...' : '✓ CONFIRMAR SYNC COMPLETO'}
+            </button>
           </div>
         )}
       </div>
@@ -853,6 +883,18 @@ export function WristModeClient({
                   No cierres la app. Esperando conexión...
                 </p>
               </div>
+            ) : syncConfirmed ? (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+                  <span
+                    className="text-[13px] font-semibold text-[#2E7D32]"
+                    style={latoFont}
+                  >
+                    ✓ Confirmado — esperando cierre de ronda
+                  </span>
+                </div>
+              </div>
             ) : (
               <div className="mt-6">
                 <div className="flex items-center justify-center gap-2">
@@ -864,13 +906,15 @@ export function WristModeClient({
                     ✓ Todo sincronizado
                   </span>
                 </div>
-                <Link
-                  href={`/dashboard/torneos/${tournamentId}`}
-                  className="mt-4 inline-block text-[12px] text-[#666666] underline"
-                  style={latoFont}
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmSync()}
+                  disabled={confirming}
+                  className="mt-4 w-full bg-[#2E7D32] px-6 py-3 text-[13px] font-extrabold uppercase tracking-[0.15em] text-[#FFFFFF] transition-colors hover:bg-[#1B5E20] active:scale-[0.97] disabled:opacity-50"
+                  style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
                 >
-                  ← Volver al torneo
-                </Link>
+                  {confirming ? 'CONFIRMANDO...' : '✓ CONFIRMAR SYNC COMPLETO'}
+                </button>
               </div>
             )}
           </div>
