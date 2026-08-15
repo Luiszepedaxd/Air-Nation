@@ -822,10 +822,30 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
     const validTypes = ["kill", "death", "first_kill", "objective", "key_action", "critical_action"];
     const now = new Date().toISOString();
 
+    const hasFirstKillIncoming = actions.some((a) => a.action_type === "first_kill");
+    let firstKillAlreadyExists = false;
+
+    if (hasFirstKillIncoming) {
+      const { data: existingFK } = await supabase
+        .from("tournament_actions")
+        .select("id")
+        .eq("round_id", roundId)
+        .eq("action_type", "first_kill")
+        .limit(1);
+
+      firstKillAlreadyExists = existingFK && existingFK.length > 0;
+    }
+
+    let firstKillSlotUsed = firstKillAlreadyExists;
+
     const rows = actions
       .filter((a) => validTypes.includes(a.action_type) && a.client_event_id && a.recorded_at)
       .filter((a) => {
         if (deadline && new Date(a.recorded_at) > deadline) return false;
+        if (a.action_type === "first_kill") {
+          if (firstKillSlotUsed) return false;
+          firstKillSlotUsed = true;
+        }
         return true;
       })
       .map((a) => ({
@@ -852,6 +872,31 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
     res.json({ inserted: data?.length || 0, skipped: actions.length - (data?.length || 0) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /:id/rounds/:roundId/first-kill — ¿Ya existe first kill en esta ronda?
+router.get("/:id/rounds/:roundId/first-kill", requireAuth, async (req, res) => {
+  try {
+    const { roundId } = req.params;
+
+    const { data, error } = await supabase
+      .from("tournament_actions")
+      .select("id, player_id, tournament_players(name, team_name)")
+      .eq("round_id", roundId)
+      .eq("action_type", "first_kill")
+      .limit(1)
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({
+      exists: !!data,
+      player_name: data?.tournament_players?.name || null,
+      team_name: data?.tournament_players?.team_name || null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
