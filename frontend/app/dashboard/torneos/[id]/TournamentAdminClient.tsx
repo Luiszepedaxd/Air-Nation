@@ -115,7 +115,8 @@ export function TournamentAdminClient({
   const [newPlayerName, setNewPlayerName] = useState('')
   const [newPlayerTeam, setNewPlayerTeam] = useState('')
   const [addingPlayer, setAddingPlayer] = useState(false)
-  const [refCount, setRefCount] = useState(1)
+  // String y no number para que el campo pueda quedar vacío mientras se escribe.
+  const [refCount, setRefCount] = useState('1')
   const [generatingRefs, setGeneratingRefs] = useState(false)
 
   const [roundName, setRoundName] = useState('')
@@ -298,7 +299,7 @@ export function TournamentAdminClient({
         `/tournaments/${tournamentId}/referees/generate`,
         {
           method: 'POST',
-          body: JSON.stringify({ count: refCount }),
+          body: JSON.stringify({ count: parseInt(refCount, 10) || 1 }),
         }
       )
       if (!res.ok) {
@@ -675,15 +676,21 @@ export function TournamentAdminClient({
                   Cantidad
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={refCount}
                   onChange={(e) =>
-                    setRefCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))
+                    setRefCount(e.target.value.replace(/[^0-9]/g, ''))
                   }
-                  min={1}
-                  max={50}
+                  onBlur={() => {
+                    const n = parseInt(refCount, 10)
+                    if (!n || n < 1) setRefCount('1')
+                    else if (n > 50) setRefCount('50')
+                  }}
+                  placeholder="1"
                   className={`${inputClass} w-[80px]`}
                   style={lato}
+                  maxLength={2}
                 />
               </div>
               <button
