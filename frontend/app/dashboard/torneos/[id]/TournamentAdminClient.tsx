@@ -260,7 +260,19 @@ export function TournamentAdminClient({
   // para enterarse de que el productor ya inició una ronda.
   const isRefereeView = tournament ? !tournament.is_creator : false
   const refereeActiveRoundId = isRefereeView
-    ? ((tournament?.rounds || []).find((r) => r.status === 'active')?.id ?? null)
+    ? (() => {
+        const activeRound = (tournament?.rounds || []).find(
+          (r) => r.status === 'active'
+        )
+        if (!activeRound) return null
+        if (activeRound.started_at) {
+          const endMs =
+            new Date(activeRound.started_at).getTime() +
+            activeRound.duration_seconds * 1000
+          if (Date.now() > endMs) return null
+        }
+        return activeRound.id
+      })()
     : null
 
   useEffect(() => {
@@ -272,11 +284,21 @@ export function TournamentAdminClient({
   // En cuanto el productor inicia la ronda el árbitro entra directo al modo
   // muñeca, sin tener que tocar nada.
   useEffect(() => {
-    if (!refereeActiveRoundId) return
+    if (!tournament || tournament.is_creator) return
+    const activeRound = tournament.rounds.find((r) => r.status === 'active')
+    if (!activeRound) return
+
+    // No redirigir si el tiempo de la ronda ya expiró
+    if (activeRound.started_at) {
+      const startedMs = new Date(activeRound.started_at).getTime()
+      const endMs = startedMs + activeRound.duration_seconds * 1000
+      if (Date.now() > endMs) return
+    }
+
     router.push(
-      `/dashboard/torneos/${tournamentId}/arbitro?roundId=${refereeActiveRoundId}`
+      `/dashboard/torneos/${tournamentId}/arbitro?roundId=${activeRound.id}`
     )
-  }, [refereeActiveRoundId, tournamentId, router])
+  }, [tournament, tournamentId, router])
 
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return
