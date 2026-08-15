@@ -42,6 +42,13 @@ type AssignmentInfo = {
 const jostFont = { fontFamily: "'Jost', sans-serif" } as const
 const latoFont = { fontFamily: "'Lato', sans-serif" } as const
 
+const safeAreaInsets = {
+  paddingTop: 'env(safe-area-inset-top)',
+  paddingBottom: 'env(safe-area-inset-bottom)',
+  paddingLeft: 'env(safe-area-inset-left)',
+  paddingRight: 'env(safe-area-inset-right)',
+} as const
+
 function formatTimer(seconds: number) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
@@ -464,7 +471,7 @@ export function WristModeClient({
 
   if (loading) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[#111111]">
+      <div className="flex h-[100dvh] items-center justify-center bg-[#111111]" style={safeAreaInsets}>
         <p className="text-[14px] text-[#999999]" style={latoFont}>
           Cargando...
         </p>
@@ -474,7 +481,7 @@ export function WristModeClient({
 
   if (error || !assignment) {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6">
+      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6" style={safeAreaInsets}>
         <p className="text-center text-[14px] text-[#CC4B37]" style={latoFont}>
           {error || 'Sin asignación en esta ronda'}
         </p>
@@ -493,7 +500,7 @@ export function WristModeClient({
 
   if (round && round.status === 'completed') {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6">
+      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6" style={safeAreaInsets}>
         <p
           className="text-[16px] font-extrabold uppercase tracking-[0.2em] text-[#FFFFFF]"
           style={jostFont}
@@ -562,7 +569,7 @@ export function WristModeClient({
 
   if (round?.status === 'setup') {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6">
+      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6" style={safeAreaInsets}>
         <p
           className="text-[14px] uppercase tracking-[0.2em] text-[#999999]"
           style={jostFont}
@@ -591,7 +598,7 @@ export function WristModeClient({
   return (
     <div
       className="fixed inset-0 z-[9999] select-none overflow-hidden bg-[#111111]"
-      style={{ touchAction: 'manipulation' }}
+      style={{ touchAction: 'manipulation', ...safeAreaInsets }}
     >
       {/* Barra superior: jugador + timer + sync */}
       <div className="flex h-[48px] items-center justify-between px-3">
@@ -799,7 +806,7 @@ export function WristModeClient({
 
       {/* Overlay de tiempo agotado */}
       {timeLeft !== null && timeLeft <= 0 && (
-        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95">
+        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95" style={safeAreaInsets}>
           <div className="text-center">
             <p
               className="text-[24px] font-extrabold uppercase tracking-[0.3em] text-[#CC4B37]"
