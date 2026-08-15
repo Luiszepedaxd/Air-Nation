@@ -89,6 +89,9 @@ const inputClass =
 const btnPrimary =
   'inline-flex min-h-[40px] items-center justify-center bg-[#111111] px-5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] disabled:opacity-50'
 
+const btnSecondary =
+  'inline-flex min-h-[40px] items-center justify-center border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-50'
+
 const btnDanger =
   'inline-flex min-h-[36px] items-center justify-center bg-[#CC4B37] px-4 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#111111] disabled:opacity-50'
 
@@ -117,7 +120,13 @@ export function TournamentAdminClient({
   const [addingPlayer, setAddingPlayer] = useState(false)
   // String y no number para que el campo pueda quedar vacío mientras se escribe.
   const [refCount, setRefCount] = useState('1')
+  const [refNames, setRefNames] = useState<string[]>([''])
   const [generatingRefs, setGeneratingRefs] = useState(false)
+  const [importingPlayers, setImportingPlayers] = useState(false)
+  const [importingRefs, setImportingRefs] = useState(false)
+  const [importResult, setImportResult] = useState<string | null>(null)
+  const playerFileRef = useRef<HTMLInputElement>(null)
+  const refereeFileRef = useRef<HTMLInputElement>(null)
 
   const [roundName, setRoundName] = useState('')
   const [roundDuration, setRoundDuration] = useState(0)
@@ -338,6 +347,7 @@ export function TournamentAdminClient({
 
   const handleGenerateRefs = async () => {
     setGeneratingRefs(true)
+    setError(null)
     try {
       const res = await apiFetch(
         `/tournaments/${tournamentId}/referees/generate`,
@@ -350,6 +360,75 @@ export function TournamentAdminClient({
         const e = await res.json()
         throw new Error(e.error)
       }
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setGeneratingRefs(false)
+    }
+  }
+
+  const handleImportPlayers = async (file: File) => {
+    setImportingPlayers(true)
+    setImportResult(null)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await apiFetch(`/tournaments/${tournamentId}/players/import`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al importar')
+      setImportResult(`${data.imported} jugadores importados`)
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al importar')
+    } finally {
+      setImportingPlayers(false)
+      if (playerFileRef.current) playerFileRef.current.value = ''
+    }
+  }
+
+  const handleImportReferees = async (file: File) => {
+    setImportingRefs(true)
+    setImportResult(null)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await apiFetch(`/tournaments/${tournamentId}/referees/import`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al importar')
+      setImportResult(`${data.imported} árbitros importados con código`)
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al importar')
+    } finally {
+      setImportingRefs(false)
+      if (refereeFileRef.current) refereeFileRef.current.value = ''
+    }
+  }
+
+  const handleGenerateRefsWithNames = async () => {
+    const validNames = refNames.filter((n) => n.trim())
+    if (validNames.length === 0) return
+    setGeneratingRefs(true)
+    setError(null)
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/referees/generate`, {
+        method: 'POST',
+        body: JSON.stringify({ names: validNames }),
+      })
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+      setRefNames([''])
       void loadTournament()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error')
@@ -662,6 +741,30 @@ export function TournamentAdminClient({
                 {addingPlayer ? '...' : 'AGREGAR'}
               </button>
             </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                ref={playerFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleImportPlayers(file)
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => playerFileRef.current?.click()}
+                disabled={importingPlayers}
+                style={jost}
+                className={`${btnSecondary} text-[10px]`}
+              >
+                {importingPlayers ? 'IMPORTANDO...' : '📄 IMPORTAR EXCEL'}
+              </button>
+              <span className="text-[11px] text-[#999999]" style={lato}>
+                Columnas: NOMBRE, EQUIPO (opcional)
+              </span>
+            </div>
             {(tournament.players || []).length > 0 && (
               <div className="mt-3 border border-[#EEEEEE]">
                 {tournament.players.map((p, i) => (
@@ -706,46 +809,136 @@ export function TournamentAdminClient({
               style={{ ...jost, fontSize: 11, letterSpacing: '0.12em' }}
               className="mb-3 text-[#999999]"
             >
-              CÓDIGOS DE ÁRBITRO ({tournament.referees?.length || 0})
+              ÁRBITROS ({tournament.referees?.length || 0})
             </h2>
-            <div className="flex items-end gap-2">
-              <div>
-                <label
-                  className="mb-1 block text-[10px] uppercase tracking-wide text-[#999999]"
-                  style={jost}
-                >
-                  Cantidad
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={refCount}
-                  onChange={(e) =>
-                    setRefCount(e.target.value.replace(/[^0-9]/g, ''))
-                  }
-                  onBlur={() => {
-                    const n = parseInt(refCount, 10)
-                    if (!n || n < 1) setRefCount('1')
-                    else if (n > 50) setRefCount('50')
-                  }}
-                  placeholder="1"
-                  className={`${inputClass} w-[80px]`}
+
+            <div className="border border-[#EEEEEE] p-4">
+              <p style={jost} className="mb-3 text-[10px] tracking-[0.12em] text-[#999999]">
+                AGREGAR POR NOMBRE
+              </p>
+              <div className="flex flex-col gap-2">
+                {refNames.map((name, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => {
+                        const updated = [...refNames]
+                        updated[idx] = e.target.value
+                        setRefNames(updated)
+                      }}
+                      placeholder={`Árbitro ${idx + 1}`}
+                      className={`${inputClass} flex-1`}
+                      style={lato}
+                      maxLength={80}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (idx === refNames.length - 1 && name.trim()) {
+                            setRefNames([...refNames, ''])
+                          }
+                        }
+                      }}
+                    />
+                    {refNames.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setRefNames(refNames.filter((_, i) => i !== idx))}
+                        className="text-[14px] text-[#CC4B37] hover:text-[#111111]"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setRefNames([...refNames, ''])}
+                  className="self-start text-[11px] text-[#666666] transition-colors hover:text-[#CC4B37]"
                   style={lato}
-                  maxLength={2}
-                />
+                >
+                  + Agregar otro
+                </button>
               </div>
+              <button
+                type="button"
+                onClick={() => void handleGenerateRefsWithNames()}
+                disabled={generatingRefs || refNames.every((n) => !n.trim())}
+                style={jost}
+                className={`${btnPrimary} mt-3 w-full`}
+              >
+                {generatingRefs
+                  ? 'GENERANDO...'
+                  : `GENERAR ${refNames.filter((n) => n.trim()).length || 0} CÓDIGOS`}
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <input
+                ref={refereeFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleImportReferees(file)
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => refereeFileRef.current?.click()}
+                disabled={importingRefs}
+                style={jost}
+                className={`${btnSecondary} text-[10px]`}
+              >
+                {importingRefs ? 'IMPORTANDO...' : '📄 IMPORTAR EXCEL'}
+              </button>
+              <span className="text-[11px] text-[#999999]" style={lato}>
+                Columna: NOMBRE DEL ÁRBITRO
+              </span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#F4F4F4] pt-3">
+              <span className="text-[11px] text-[#999999]" style={lato}>
+                O generar sin nombre:
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={refCount}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9]/g, '')
+                  setRefCount(raw)
+                }}
+                onBlur={() => {
+                  const n = parseInt(refCount, 10)
+                  if (!n || n < 1) setRefCount('1')
+                  else if (n > 50) setRefCount('50')
+                }}
+                placeholder="1"
+                className={`${inputClass} w-[60px] text-center`}
+                style={lato}
+                maxLength={2}
+              />
               <button
                 type="button"
                 onClick={() => void handleGenerateRefs()}
                 disabled={generatingRefs}
                 style={jost}
-                className={btnPrimary}
+                className={`${btnSecondary} text-[10px]`}
               >
-                {generatingRefs ? '...' : 'GENERAR CÓDIGOS'}
+                GENERAR
               </button>
             </div>
+
+            {importResult && (
+              <p className="mt-2 text-[12px] font-semibold text-[#2E7D32]" style={lato}>
+                ✓ {importResult}
+              </p>
+            )}
+
             {(tournament.referees || []).length > 0 && (
-              <div className="mt-3 border border-[#EEEEEE]">
+              <div className="mt-4 border border-[#EEEEEE]">
                 <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
                   <span
                     style={jost}
@@ -755,7 +948,7 @@ export function TournamentAdminClient({
                   </span>
                   <span
                     style={jost}
-                    className="col-span-4 text-[9px] tracking-widest text-[#999999]"
+                    className="col-span-5 text-[9px] tracking-widest text-[#999999]"
                   >
                     NOMBRE
                   </span>
@@ -767,9 +960,9 @@ export function TournamentAdminClient({
                   </span>
                   <span
                     style={jost}
-                    className="col-span-2 text-right text-[9px] tracking-widest text-[#999999]"
+                    className="col-span-1 text-right text-[9px] tracking-widest text-[#999999]"
                   >
-                    UNIDO
+                    ✓
                   </span>
                 </div>
                 {tournament.referees.map((r) => (
@@ -783,7 +976,7 @@ export function TournamentAdminClient({
                     >
                       {r.code}
                     </span>
-                    <span className="col-span-4 text-[12px] text-[#666666]" style={lato}>
+                    <span className="col-span-5 text-[12px] text-[#111111]" style={lato}>
                       {r.name || '—'}
                     </span>
                     <span className="col-span-3">
@@ -799,7 +992,7 @@ export function TournamentAdminClient({
                       </span>
                     </span>
                     <span
-                      className="col-span-2 text-right text-[11px] text-[#999999]"
+                      className="col-span-1 text-right text-[11px] text-[#999999]"
                       style={lato}
                     >
                       {r.joined_at ? '✓' : '—'}
