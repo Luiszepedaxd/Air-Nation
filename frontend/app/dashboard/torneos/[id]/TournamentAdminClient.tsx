@@ -246,6 +246,16 @@ export function TournamentAdminClient({
     }
   }, [])
 
+  // Los árbitros se unen desde otro dispositivo, así que SETUP se refresca solo
+  // para que aparezcan como CONECTADO sin recargar la página.
+  const isCreatorView = tournament?.is_creator ?? false
+
+  useEffect(() => {
+    if (!isCreatorView || subTab !== 'setup') return
+    const interval = setInterval(() => void loadTournament(), 5000)
+    return () => clearInterval(interval)
+  }, [isCreatorView, subTab, loadTournament])
+
   // El árbitro no dispara ninguna acción aquí, así que necesita refrescar
   // para enterarse de que el productor ya inició una ronda.
   const isRefereeView = tournament ? !tournament.is_creator : false
