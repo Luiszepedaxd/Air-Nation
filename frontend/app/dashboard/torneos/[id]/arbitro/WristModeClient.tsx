@@ -112,7 +112,19 @@ export function WristModeClient({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [actions, setActions] = useState<QueuedAction[]>([])
+  const [actions, setActions] = useState<QueuedAction[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const stored = localStorage.getItem(`tournament_actions_${roundId}`)
+      if (stored) {
+        const parsed = JSON.parse(stored) as QueuedAction[]
+        return Array.isArray(parsed) ? parsed : []
+      }
+    } catch {
+      /* ignore */
+    }
+    return []
+  })
   const actionsRef = useRef<QueuedAction[]>([])
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -126,11 +138,46 @@ export function WristModeClient({
   const [flash, setFlash] = useState<string | null>(null)
   const flashTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [globalFirstKillTaken, setGlobalFirstKillTaken] = useState(false)
+  const [firstKillPlayerName, setFirstKillPlayerName] = useState<string | null>(null)
+
   const startSoundPlayedRef = useRef(false)
   const endSoundPlayedRef = useRef(false)
 
   useEffect(() => {
     actionsRef.current = actions
+  }, [actions])
+
+  useEffect(() => {
+    try {
+      if (actions.length > 0) {
+        localStorage.setItem(`tournament_actions_${roundId}`, JSON.stringify(actions))
+      } else {
+        localStorage.removeItem(`tournament_actions_${roundId}`)
+      }
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [actions, roundId])
+
+  useEffect(() => {
+    if (actions.length > 0 && actions.every((a) => a.synced)) {
+      try {
+        localStorage.removeItem(`tournament_actions_${roundId}`)
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [actions, roundId])
+
+  useEffect(() => {
+    const hasPending = actions.some((a) => !a.synced)
+    if (!hasPending) return
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [actions])
 
   useEffect(() => {
@@ -169,37 +216,6 @@ export function WristModeClient({
   const roundStartedAt = round?.started_at
   const roundStatus = round?.status
   const roundDuration = round?.duration_seconds
-
-  useEffect(() => {
-    if (!roundStartedAt || roundStatus !== 'active' || !roundDuration) return
-
-    const endMs = new Date(roundStartedAt).getTime() + roundDuration * 1000
-
-    const tick = () => {
-      const remaining = Math.max(0, Math.ceil((endMs - Date.now()) / 1000))
-      setTimeLeft(remaining)
-      if (remaining <= 0 && !endSoundPlayedRef.current) {
-        endSoundPlayedRef.current = true
-        playEndSound()
-      }
-    }
-
-    // Entrar tarde a una ronda ya vencida no debe sonar como un arranque.
-    if (!startSoundPlayedRef.current && endMs - Date.now() > 0) {
-      startSoundPlayedRef.current = true
-      playStartSound()
-    }
-
-    tick()
-    timerRef.current = setInterval(tick, 250)
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-    }
-  }, [roundStartedAt, roundStatus, roundDuration])
 
   const syncActions = useCallback(async () => {
     const pending = actionsRef.current.filter((a) => !a.synced)
@@ -242,10 +258,50 @@ export function WristModeClient({
   }, [tournamentId, roundId])
 
   useEffect(() => {
-    syncRef.current = setInterval(() => void syncActions(), 3000)
+    if (!roundStartedAt || roundStatus !== 'active' || !roundDuration) return
+
+    const endMs = new Date(roundStartedAt).getTime() + roundDuration * 1000
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((endMs - Date.now()) / 1000))
+      setTimeLeft(remaining)
+      if (remaining <= 0 && !endSoundPlayedRef.current) {
+        endSoundPlayedRef.current = true
+        playEndSound()
+        void syncActions()
+      }
+    }
+
+    // Entrar tarde a una ronda ya vencida no debe sonar como un arranque.
+    if (!startSoundPlayedRef.current && endMs - Date.now() > 0) {
+      startSoundPlayedRef.current = true
+      playStartSound()
+    }
+
+    tick()
+    timerRef.current = setInterval(tick, 250)
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [roundStartedAt, roundStatus, roundDuration, syncActions])
+
+  useEffect(() => {
+    const hasPending = actionsRef.current.some((a) => !a.synced)
+    const timeExpired = timeLeft !== null && timeLeft <= 0
+    const interval = timeExpired && hasPending ? 1000 : 3000
+
+    syncRef.current = setInterval(() => void syncActions(), interval)
     return () => {
       if (syncRef.current) clearInterval(syncRef.current)
     }
+  }, [syncActions, timeLeft, actions])
+
+  useEffect(() => {
+    void syncActions()
   }, [syncActions])
 
   useEffect(() => {
@@ -268,10 +324,34 @@ export function WristModeClient({
     return () => clearInterval(poll)
   }, [roundId])
 
+  useEffect(() => {
+    if (round?.status !== 'active') return
+
+    const checkFirstKill = async () => {
+      try {
+        const res = await apiFetch(
+          `/tournaments/${tournamentId}/rounds/${roundId}/first-kill`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          setGlobalFirstKillTaken(data.exists)
+          if (data.exists) setFirstKillPlayerName(data.player_name)
+        }
+      } catch {
+        /* offline, ignore */
+      }
+    }
+
+    void checkFirstKill()
+    const interval = setInterval(() => void checkFirstKill(), 2000)
+    return () => clearInterval(interval)
+  }, [round?.status, tournamentId, roundId])
+
   const recordAction = useCallback(
     (type: ActionType) => {
       if (timeLeft !== null && timeLeft <= 0) return
       if (round?.status !== 'active') return
+      if (type === 'first_kill' && globalFirstKillTaken) return
 
       const action: QueuedAction = {
         action_type: type,
@@ -294,7 +374,7 @@ export function WristModeClient({
 
       void syncActions()
     },
-    [timeLeft, round?.status, userId, roundId, syncActions]
+    [timeLeft, round?.status, userId, roundId, syncActions, globalFirstKillTaken]
   )
 
   // Solo revierte en local: lo ya sincronizado se queda en el servidor.
@@ -342,8 +422,8 @@ export function WristModeClient({
   const buttonsDisabled =
     round?.status !== 'active' || (timeLeft !== null && timeLeft <= 0)
 
-  // Solo hay un first kill por ronda. Deshacer lo saca del array y vuelve a
-  // habilitar el botón.
+  // Solo hay un first kill por ronda (global). Deshacer lo local solo re-habilita
+  // si nadie más lo registró en el servidor.
   const firstKillUsed = counts.first_kills >= 1
 
   if (loading) {
@@ -411,18 +491,35 @@ export function WristModeClient({
         <p className="mt-4 text-[13px] text-[#999999]" style={latoFont}>
           {totalActions} acciones registradas
         </p>
-        {pendingCount > 0 && (
-          <p className="mt-2 text-[12px] text-[#F9A825]" style={latoFont}>
-            Sincronizando {pendingCount} acciones pendientes...
-          </p>
+        {actions.some((a) => !a.synced) ? (
+          <div className="mt-4">
+            <div className="flex items-center justify-center gap-2">
+              <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#F9A825]" />
+              <span className="text-[12px] text-[#F9A825]" style={latoFont}>
+                Sincronizando {actions.filter((a) => !a.synced).length} acciones...
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-[#666666]" style={latoFont}>
+              No cierres la app
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <div className="flex items-center justify-center gap-2">
+              <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+              <span className="text-[12px] text-[#2E7D32]" style={latoFont}>
+                ✓ Todo sincronizado
+              </span>
+            </div>
+            <Link
+              href={`/dashboard/torneos/${tournamentId}`}
+              className="mt-4 inline-block text-[12px] text-[#666666] underline"
+              style={latoFont}
+            >
+              ← Volver al torneo
+            </Link>
+          </div>
         )}
-        <Link
-          href={`/dashboard/torneos/${tournamentId}`}
-          className="mt-6 text-[12px] text-[#666666] underline"
-          style={latoFont}
-        >
-          ← Volver al torneo
-        </Link>
       </div>
     )
   }
@@ -546,20 +643,26 @@ export function WristModeClient({
         <div className="flex h-[64px] gap-[6px] sm:h-[72px]">
           <button
             type="button"
-            disabled={buttonsDisabled || firstKillUsed}
+            disabled={buttonsDisabled || firstKillUsed || globalFirstKillTaken}
             onClick={() => recordAction('first_kill')}
-            className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] disabled:opacity-30 ${
+            className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] ${
               firstKillUsed
                 ? 'border-[#2E7D32] bg-[#1A2E1A]'
-                : flash === 'first_kill'
-                  ? 'border-[#333333] bg-[#333333]'
-                  : 'border-[#333333] bg-[#1A1A1A]'
-            }`}
+                : globalFirstKillTaken
+                  ? 'border-[#333333] bg-[#1A1A1A] opacity-40'
+                  : flash === 'first_kill'
+                    ? 'border-[#333333] bg-[#333333]'
+                    : 'border-[#333333] bg-[#1A1A1A]'
+            } disabled:opacity-30`}
             style={{ ...jostFont, borderRadius: 4 }}
           >
             <span
               className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
-                firstKillUsed ? 'text-[#2E7D32]' : 'text-[#FFFFFF]'
+                firstKillUsed
+                  ? 'text-[#2E7D32]'
+                  : globalFirstKillTaken
+                    ? 'text-[#666666]'
+                    : 'text-[#FFFFFF]'
               }`}
             >
               {firstKillUsed ? (
@@ -567,6 +670,14 @@ export function WristModeClient({
                   ✓ FIRST
                   <br />
                   KILL
+                </>
+              ) : globalFirstKillTaken ? (
+                <>
+                  FIRST KILL
+                  <br />
+                  <span className="text-[8px] normal-case">
+                    {firstKillPlayerName || 'Tomado'}
+                  </span>
                 </>
               ) : (
                 <>
@@ -690,18 +801,42 @@ export function WristModeClient({
                 </p>
               </div>
             </div>
-            {pendingCount > 0 && (
-              <p className="mt-4 text-[12px] text-[#F9A825]" style={latoFont}>
-                Sincronizando {pendingCount} acciones...
-              </p>
+
+            {actions.some((a) => !a.synced) ? (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#F9A825]" />
+                  <span
+                    className="text-[13px] font-semibold text-[#F9A825]"
+                    style={latoFont}
+                  >
+                    Sincronizando {actions.filter((a) => !a.synced).length} acciones...
+                  </span>
+                </div>
+                <p className="mt-2 text-[11px] text-[#666666]" style={latoFont}>
+                  No cierres la app. Esperando conexión...
+                </p>
+              </div>
+            ) : (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+                  <span
+                    className="text-[13px] font-semibold text-[#2E7D32]"
+                    style={latoFont}
+                  >
+                    ✓ Todo sincronizado
+                  </span>
+                </div>
+                <Link
+                  href={`/dashboard/torneos/${tournamentId}`}
+                  className="mt-4 inline-block text-[12px] text-[#666666] underline"
+                  style={latoFont}
+                >
+                  ← Volver al torneo
+                </Link>
+              </div>
             )}
-            <Link
-              href={`/dashboard/torneos/${tournamentId}`}
-              className="mt-6 inline-block text-[12px] text-[#666666] underline"
-              style={latoFont}
-            >
-              ← Volver al torneo
-            </Link>
           </div>
         </div>
       )}
