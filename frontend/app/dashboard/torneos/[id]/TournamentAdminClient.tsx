@@ -629,12 +629,6 @@ export function TournamentAdminClient({
 
   const isCreator = tournament.is_creator
   const activeRound = tournament.rounds?.find((r) => r.id === activeRoundId)
-  const myRefereeRecord = (tournament.referees || []).find(
-    (r) => r.user_id === userId
-  )
-  const completedRoundsForReferee = (tournament.rounds || []).filter(
-    (r) => r.status === 'completed'
-  )
 
   const assignedRefIds = new Set(assignments.map((a) => a.referee_id))
   const assignedPlayerIds = new Set(assignments.map((a) => a.player_id))
@@ -1700,63 +1694,94 @@ export function TournamentAdminClient({
       )}
 
       {/* Vista para árbitro (no creador) */}
-      {!isCreator && (
-        <div className="flex flex-col items-center justify-center py-16">
-          <span className="text-[48px]" role="img" aria-label="Reloj de arena">
-            ⏳
-          </span>
-          <p
-            className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
-            style={jost}
-          >
-            ESPERANDO INICIO
-          </p>
-          <p className="mt-2 text-center text-[13px] text-[#666666]" style={lato}>
-            Cuando el productor inicie la ronda, entrarás automáticamente al modo de
-            arbitraje.
-          </p>
-          {myRefereeRecord && (
-            <p className="mt-3 font-mono text-[16px] font-bold tracking-widest text-[#111111]">
-              {myRefereeRecord.code}
-            </p>
-          )}
-          <div className="mt-6 flex items-center gap-2">
-            <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#CC4B37]" />
-            <span
-              className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
-              style={jost}
-            >
-              Conectado — escuchando
-            </span>
-          </div>
+      {!isCreator && (() => {
+        const activeRound = (tournament?.rounds || []).find(r => r.status === 'active')
+        const completedRounds = (tournament?.rounds || []).filter(r => r.status === 'completed')
 
-          {completedRoundsForReferee.length > 0 && (
-            <div className="mt-8 w-full max-w-[400px]">
-              <p
-                style={jost}
-                className="mb-2 text-center text-[10px] tracking-[0.12em] text-[#999999]"
-              >
-                RONDAS COMPLETADAS
-              </p>
-              <div className="flex flex-col gap-2">
-                {completedRoundsForReferee.map((r) => (
+        return (
+          <div className="flex flex-col items-center justify-center py-16">
+            {activeRound ? (
+              <>
+                <span className="text-[48px]">🎯</span>
+                <p
+                  className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
+                  style={{ fontFamily: "'Jost', sans-serif" }}
+                >
+                  RONDA EN CURSO
+                </p>
+                <p className="mt-2 text-center text-[13px] text-[#666666]" style={{ fontFamily: "'Lato', sans-serif" }}>
+                  {activeRound.name || `Ronda ${activeRound.round_number}`}
+                </p>
+
+                <Link
+                  href={`/dashboard/torneos/${tournamentId}/arbitro?roundId=${activeRound.id}`}
+                  className="mt-6 inline-flex w-full max-w-[400px] items-center justify-center bg-[#CC4B37] px-6 py-4 text-[14px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#111111] active:scale-[0.97]"
+                  style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
+                >
+                  🔴 ENTRAR AL MODO ARBITRAJE
+                </Link>
+
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#CC4B37]" />
+                  <span
+                    className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
+                    style={{ fontFamily: "'Jost', sans-serif" }}
+                  >
+                    Conectado
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-[48px]">⏳</span>
+                <p
+                  className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
+                  style={{ fontFamily: "'Jost', sans-serif" }}
+                >
+                  ESPERANDO INICIO
+                </p>
+                <p className="mt-2 text-center text-[13px] text-[#666666]" style={{ fontFamily: "'Lato', sans-serif" }}>
+                  Cuando el productor inicie la ronda, entrarás automáticamente al modo de arbitraje.
+                </p>
+                <div className="mt-6 flex items-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#CC4B37]" />
+                  <span
+                    className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
+                    style={{ fontFamily: "'Jost', sans-serif" }}
+                  >
+                    Conectado — escuchando
+                  </span>
+                </div>
+              </>
+            )}
+
+            {/* Rondas completadas */}
+            {completedRounds.length > 0 && (
+              <div className="mt-8 w-full max-w-[400px]">
+                <p
+                  className="mb-2 text-center text-[10px] tracking-[0.12em] text-[#999999]"
+                  style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' }}
+                >
+                  RONDAS COMPLETADAS
+                </p>
+                {completedRounds.map(r => (
                   <div key={r.id} className="border border-[#EEEEEE] px-4 py-3 text-center">
-                    <span className="text-[13px] text-[#111111]" style={lato}>
+                    <span className="text-[13px] text-[#111111]" style={{ fontFamily: "'Lato', sans-serif" }}>
                       {r.name || `Ronda ${r.round_number}`}
                     </span>
                     <span
-                      style={jost}
                       className="ml-2 inline-block bg-[#111111] px-2 py-0.5 text-[9px] text-[#FFFFFF]"
+                      style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' }}
                     >
                       TERMINADA
                     </span>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
