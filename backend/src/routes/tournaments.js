@@ -1,12 +1,26 @@
 const express = require("express");
 const crypto = require("crypto");
+const multer = require("multer");
+const XLSX = require("xlsx");
 const supabase = require("../lib/supabase");
 const { requireAuth } = require("../middleware/requireAuth");
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 function generateRefereeCode() {
   return crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
+function findExcelColumn(row, candidates) {
+  for (const key of Object.keys(row)) {
+    const k = key.toLowerCase().trim();
+    if (candidates.includes(k)) return row[key];
+  }
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -296,6 +310,54 @@ router.post("/:id/players/batch", requireAuth, async (req, res) => {
   }
 });
 
+// POST /:id/players/import — Importar jugadores desde Excel
+// Body: multipart/form-data con campo "file" (xlsx)
+// El Excel debe tener columnas: NOMBRE (obligatoria), EQUIPO (opcional)
+router.post("/:id/players/import", requireAuth, upload.single("file"), async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+    if (!t) return res.status(403).json({ error: "Solo el creador" });
+
+    if (!req.file) return res.status(400).json({ error: "Archivo requerido" });
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    const nameCandidates = ["nombre", "name", "jugador", "player", "nombre del jugador"];
+    const teamCandidates = ["equipo", "team", "team_name", "nombre del equipo"];
+
+    const rows = rawRows
+      .map((r) => ({
+        tournament_id: id,
+        name: (findExcelColumn(r, nameCandidates) || "").toString().trim(),
+        team_name: (findExcelColumn(r, teamCandidates) || "").toString().trim() || null,
+      }))
+      .filter((r) => r.name.length > 0 && r.name.length <= 80);
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        error:
+          "No se encontraron jugadores válidos en el archivo. Verifica que la primera columna se llame NOMBRE.",
+      });
+    }
+
+    const { data, error } = await supabase.from("tournament_players").insert(rows).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json({ imported: data.length, players: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /:id/players — Agregar jugador
 router.post("/:id/players", requireAuth, async (req, res) => {
   try {
@@ -370,12 +432,14 @@ router.delete("/:id/players/:playerId", requireAuth, async (req, res) => {
 // ÁRBITROS
 // ═══════════════════════════════════════════════════════════
 
-// POST /:id/referees/generate — Generar N códigos de árbitro
+// POST /:id/referees/generate — Generar códigos de árbitro (con nombres opcionales)
+// Body: { count: number, names?: string[] }
+// Si names viene, count se ignora y se usa names.length
 router.post("/:id/referees/generate", requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
     const { id } = req.params;
-    const { count } = req.body;
+    const { count, names } = req.body;
 
     const { data: t } = await supabase
       .from("tournaments")
@@ -383,21 +447,83 @@ router.post("/:id/referees/generate", requireAuth, async (req, res) => {
       .eq("id", id)
       .eq("created_by", userId)
       .maybeSingle();
-    if (!t) {
-      return res.status(403).json({ error: "Solo el creador" });
+    if (!t) return res.status(403).json({ error: "Solo el creador" });
+
+    let rows = [];
+    if (Array.isArray(names) && names.length > 0) {
+      rows = names
+        .filter((n) => typeof n === "string" && n.trim())
+        .slice(0, 50)
+        .map((n) => ({
+          tournament_id: id,
+          code: generateRefereeCode(),
+          name: n.trim(),
+        }));
+    } else {
+      const n = Math.min(Math.max(parseInt(count, 10) || 1, 1), 50);
+      for (let i = 0; i < n; i++) {
+        rows.push({ tournament_id: id, code: generateRefereeCode() });
+      }
     }
 
-    const n = Math.min(Math.max(parseInt(count, 10) || 1, 1), 50);
-    const rows = [];
-    for (let i = 0; i < n; i++) {
-      rows.push({ tournament_id: id, code: generateRefereeCode() });
+    if (rows.length === 0) return res.status(400).json({ error: "No hay datos válidos" });
+
+    const { data, error } = await supabase.from("tournament_referees").insert(rows).select();
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /:id/referees/import — Importar árbitros desde Excel (genera código por cada uno)
+router.post("/:id/referees/import", requireAuth, upload.single("file"), async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+    if (!t) return res.status(403).json({ error: "Solo el creador" });
+
+    if (!req.file) return res.status(400).json({ error: "Archivo requerido" });
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    const nameCandidates = [
+      "nombre",
+      "name",
+      "arbitro",
+      "árbitro",
+      "referee",
+      "nombre del árbitro",
+      "nombre del arbitro",
+    ];
+
+    const rows = rawRows
+      .map((r) => {
+        const name = (findExcelColumn(r, nameCandidates) || "").toString().trim();
+        return name ? { tournament_id: id, code: generateRefereeCode(), name } : null;
+      })
+      .filter(Boolean)
+      .slice(0, 50);
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        error:
+          "No se encontraron árbitros válidos. Verifica que la columna se llame NOMBRE DEL ÁRBITRO.",
+      });
     }
 
     const { data, error } = await supabase.from("tournament_referees").insert(rows).select();
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    res.status(201).json(data);
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json({ imported: data.length, referees: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
