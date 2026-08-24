@@ -14,6 +14,9 @@ type Tournament = {
   default_round_duration_seconds: number
   created_by: string
   created_at: string
+  finalized_at: string | null
+  public_results: boolean
+  public_slug: string | null
   is_creator: boolean
   rounds: Round[]
   players: Player[]
@@ -164,6 +167,11 @@ export function TournamentAdminClient({
   const [showVoidModal, setShowVoidModal] = useState(false)
   const [voidReason, setVoidReason] = useState('')
   const [voiding, setVoiding] = useState(false)
+
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false)
+  const [publishResults, setPublishResults] = useState(true)
+  const [finalizing, setFinalizing] = useState(false)
+  const [togglingPublish, setTogglingPublish] = useState(false)
 
   const router = useRouter()
 
@@ -616,6 +624,46 @@ export function TournamentAdminClient({
     }
   }
 
+  const handleFinalize = async () => {
+    setFinalizing(true)
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/finalize`, {
+        method: 'PATCH',
+        body: JSON.stringify({ publish: publishResults }),
+      })
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+      setShowFinalizeModal(false)
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al finalizar')
+    } finally {
+      setFinalizing(false)
+    }
+  }
+
+  const handleTogglePublish = async () => {
+    if (!tournament) return
+    setTogglingPublish(true)
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/publish`, {
+        method: 'PATCH',
+        body: JSON.stringify({ publish: !tournament.public_results }),
+      })
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error')
+    } finally {
+      setTogglingPublish(false)
+    }
+  }
+
   const handleDeleteTournament = async () => {
     if (
       !window.confirm(
@@ -758,10 +806,14 @@ export function TournamentAdminClient({
                 ? 'bg-[#2E7D32] text-[#FFFFFF]'
                 : tournament.status === 'completed'
                   ? 'bg-[#111111] text-[#FFFFFF]'
-                  : 'bg-[#F4F4F4] text-[#666666]'
+                  : tournament.status === 'finalized'
+                    ? 'bg-[#111111] text-[#FFFFFF]'
+                    : 'bg-[#F4F4F4] text-[#666666]'
             }`}
           >
-            {tournament.status.toUpperCase()}
+            {tournament.status === 'finalized'
+              ? 'FINALIZADO'
+              : tournament.status.toUpperCase()}
           </span>
           <span className="text-[11px] text-[#999999]" style={lato}>
             {tournament.players?.length || 0} jugadores ·{' '}
@@ -1809,6 +1861,127 @@ export function TournamentAdminClient({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Finalizar torneo */}
+      {isCreator && tournament.status !== 'finalized' && (
+        <div className="mt-10 border-t border-[#EEEEEE] pt-6">
+          {!showFinalizeModal ? (
+            <button
+              type="button"
+              onClick={() => setShowFinalizeModal(true)}
+              style={jost}
+              className={`${btnPrimary} w-full`}
+            >
+              FINALIZAR TORNEO
+            </button>
+          ) : (
+            <div className="border-2 border-[#111111] p-5">
+              <p style={jost} className="mb-2 text-[14px] tracking-[0.12em] text-[#111111]">
+                FINALIZAR TORNEO
+              </p>
+              <p className="mb-4 text-[13px] text-[#666666]" style={lato}>
+                Al finalizar no podrás crear más rondas, agregar jugadores ni modificar resultados. Los datos quedan congelados.
+              </p>
+
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={publishResults}
+                  onChange={(e) => setPublishResults(e.target.checked)}
+                  className="h-5 w-5 accent-[#CC4B37]"
+                />
+                <div>
+                  <p className="text-[13px] font-semibold text-[#111111]" style={lato}>
+                    Publicar resultados
+                  </p>
+                  <p className="text-[11px] text-[#999999]" style={lato}>
+                    Se genera una URL pública con el podio y tabla de posiciones. Puedes despublicar después.
+                  </p>
+                </div>
+              </label>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleFinalize()}
+                  disabled={finalizing}
+                  style={jost}
+                  className={`${btnPrimary} flex-1`}
+                >
+                  {finalizing ? 'FINALIZANDO...' : 'CONFIRMAR'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowFinalizeModal(false)}
+                  style={jost}
+                  className={`${btnSecondary} flex-1`}
+                >
+                  CANCELAR
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Torneo finalizado — estado y controles */}
+      {isCreator && tournament.status === 'finalized' && (
+        <div className="mt-10 border-t border-[#EEEEEE] pt-6">
+          <div className="border border-[#111111] bg-[#111111] p-5 text-[#FFFFFF]">
+            <p style={jost} className="text-[13px] tracking-[0.15em]">
+              TORNEO FINALIZADO
+            </p>
+            {tournament.finalized_at && (
+              <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
+                {new Date(tournament.finalized_at).toLocaleString('es-MX')}
+              </p>
+            )}
+
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[13px] font-semibold" style={lato}>
+                    Resultados {tournament.public_results ? 'publicados' : 'privados'}
+                  </p>
+                  {tournament.public_results && tournament.public_slug && (
+                    <p className="mt-1 text-[11px] text-[#CC4B37]" style={lato}>
+                      airnation.online/torneos/{tournament.public_slug}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleTogglePublish()}
+                  disabled={togglingPublish}
+                  style={jost}
+                  className={`border px-4 py-2 text-[10px] tracking-[0.12em] transition-colors ${
+                    tournament.public_results
+                      ? 'border-[#CC4B37] text-[#CC4B37] hover:bg-[#CC4B37] hover:text-[#FFFFFF]'
+                      : 'border-[#2E7D32] text-[#2E7D32] hover:bg-[#2E7D32] hover:text-[#FFFFFF]'
+                  }`}
+                >
+                  {togglingPublish ? '...' : tournament.public_results ? 'DESPUBLICAR' : 'PUBLICAR'}
+                </button>
+              </div>
+
+              {tournament.public_results && tournament.public_slug && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = `${window.location.origin}/torneos/${tournament.public_slug}`
+                    void navigator.clipboard.writeText(url)
+                    setError(null)
+                  }}
+                  className="w-full border border-[#333333] px-4 py-2.5 text-[11px] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:border-[#CC4B37]"
+                  style={jost}
+                >
+                  📋 COPIAR URL DE RESULTADOS
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

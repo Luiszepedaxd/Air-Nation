@@ -21,6 +21,9 @@ type TournamentDetail = {
   game_type: string
   status: string
   created_at: string
+  public_results?: boolean
+  public_slug?: string | null
+  finalized_at?: string | null
   users?: { nombre?: string; alias?: string; email?: string } | null
   rounds: Round[]
   players: Player[]
@@ -82,6 +85,17 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
     } catch { /* silenciar */ }
   }
 
+  const handleTogglePublish = async () => {
+    if (!tournament) return
+    try {
+      const res = await apiFetch(`/tournaments/${tournament.id}/publish`, {
+        method: 'PATCH',
+        body: JSON.stringify({ publish: !tournament.public_results }),
+      })
+      if (res.ok) void load()
+    } catch { /* silenciar */ }
+  }
+
   if (loading) {
     return <div className="h-64 animate-pulse bg-[#F4F4F4]" />
   }
@@ -126,14 +140,26 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
             {tournament.players.length} jugadores · {tournament.referees.length} árbitros · {tournament.rounds.length} rondas
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleExport()}
-          style={jost}
-          className="inline-flex bg-[#111111] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#FFFFFF] hover:bg-[#CC4B37]"
-        >
-          📥 DESCARGAR EXCEL
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleExport()}
+            style={jost}
+            className="inline-flex bg-[#111111] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#FFFFFF] hover:bg-[#CC4B37]"
+          >
+            📥 DESCARGAR EXCEL
+          </button>
+          {tournament.public_results && (
+            <button
+              type="button"
+              onClick={() => void handleTogglePublish()}
+              style={jost}
+              className="inline-flex border border-[#CC4B37] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#CC4B37] hover:bg-[#CC4B37] hover:text-[#FFFFFF]"
+            >
+              DESPUBLICAR
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Jugadores */}

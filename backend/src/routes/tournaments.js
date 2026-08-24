@@ -15,6 +15,19 @@ function generateRefereeCode() {
   return crypto.randomBytes(3).toString("hex").toUpperCase();
 }
 
+function generateSlug(name) {
+  const base = name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .substring(0, 50);
+  const suffix = crypto.randomBytes(3).toString("hex");
+  return `${base}-${suffix}`;
+}
+
 function findExcelColumn(row, candidates) {
   for (const key of Object.keys(row)) {
     const k = key.toLowerCase().trim();
@@ -201,6 +214,128 @@ function sendTournamentExcel(res, buffer, safeName) {
 // ═══════════════════════════════════════════════════════════
 // Rutas estáticas (antes de /:id)
 // ═══════════════════════════════════════════════════════════
+
+// GET /public/:slug — Resultados públicos (sin autenticación)
+router.get("/public/:slug", async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const { data: tournament, error } = await supabase
+      .from("tournaments")
+      .select("*")
+      .eq("public_slug", slug)
+      .eq("public_results", true)
+      .maybeSingle();
+
+    if (error || !tournament) {
+      return res.status(404).json({ error: "Torneo no encontrado o no publicado" });
+    }
+
+    const { data: creator } = await supabase
+      .from("users")
+      .select("nombre, alias")
+      .eq("id", tournament.created_by)
+      .maybeSingle();
+
+    const { data: rounds } = await supabase
+      .from("tournament_rounds")
+      .select("*")
+      .eq("tournament_id", tournament.id)
+      .neq("status", "voided")
+      .order("round_number");
+
+    const { data: players } = await supabase
+      .from("tournament_players")
+      .select("*")
+      .eq("tournament_id", tournament.id)
+      .order("created_at");
+
+    const roundIds = (rounds || []).map((r) => r.id);
+    let allActions = [];
+    if (roundIds.length > 0) {
+      const { data: acts } = await supabase
+        .from("tournament_actions")
+        .select("*")
+        .in("round_id", roundIds);
+      allActions = acts || [];
+    }
+
+    function computeStats(playerList, actionList) {
+      const statsMap = {};
+      for (const p of playerList) {
+        statsMap[p.id] = {
+          player_id: p.id,
+          name: p.name,
+          team_name: p.team_name,
+          kills: 0,
+          deaths: 0,
+          first_kills: 0,
+          objectives: 0,
+          key_actions: 0,
+          critical_actions: 0,
+        };
+      }
+      for (const a of actionList) {
+        const s = statsMap[a.player_id];
+        if (!s) continue;
+        if (a.action_type === "kill") s.kills++;
+        else if (a.action_type === "death") s.deaths++;
+        else if (a.action_type === "first_kill") s.first_kills++;
+        else if (a.action_type === "objective") s.objectives++;
+        else if (a.action_type === "key_action") s.key_actions++;
+        else if (a.action_type === "critical_action") s.critical_actions++;
+      }
+      return Object.values(statsMap)
+        .map((s) => {
+          const kd =
+            s.deaths > 0 ? Math.round((s.kills / s.deaths) * 100) / 100 : s.kills;
+          const performance =
+            s.kills * 2 +
+            s.first_kills * 3 +
+            (s.kills > 0 && s.deaths === 0 ? 1 : 0) * 2 -
+            s.deaths * 1;
+          const impact = s.key_actions * 5 + s.critical_actions * 10 + s.objectives * 3;
+          return {
+            ...s,
+            kd,
+            performance_score: performance,
+            impact_score: impact,
+            total_score: performance + impact,
+          };
+        })
+        .sort((a, b) => b.total_score - a.total_score);
+    }
+
+    const roundScoreboards = (rounds || []).map((r) => {
+      const roundActions = allActions.filter((a) => a.round_id === r.id);
+      return {
+        round_id: r.id,
+        round_number: r.round_number,
+        name: r.name,
+        scoreboard: computeStats(players || [], roundActions),
+      };
+    });
+
+    const generalScoreboard = computeStats(players || [], allActions);
+
+    res.json({
+      tournament: {
+        name: tournament.name,
+        game_type: tournament.game_type,
+        status: tournament.status,
+        finalized_at: tournament.finalized_at,
+        created_at: tournament.created_at,
+      },
+      creator_name: creator?.nombre || creator?.alias || null,
+      total_players: (players || []).length,
+      total_rounds: (rounds || []).length,
+      general_scoreboard: generalScoreboard,
+      round_scoreboards: roundScoreboards,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // POST /join — Árbitro se une con código
 router.post("/join", requireAuth, async (req, res) => {
@@ -1080,6 +1215,106 @@ router.patch("/:id/rounds/:roundId/void", requireAuth, async (req, res) => {
       .from("tournament_rounds")
       .update(updatePayload)
       .eq("id", roundId)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /:id/finalize — Finalizar torneo
+router.patch("/:id/finalize", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+    const { publish } = req.body;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id, name, status")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+
+    if (!t) return res.status(403).json({ error: "Solo el creador puede finalizar" });
+    if (t.status === "finalized") {
+      return res.status(400).json({ error: "El torneo ya está finalizado" });
+    }
+
+    const { data: activeRounds } = await supabase
+      .from("tournament_rounds")
+      .select("id")
+      .eq("tournament_id", id)
+      .eq("status", "active");
+
+    if (activeRounds && activeRounds.length > 0) {
+      return res.status(400).json({
+        error: "No puedes finalizar con rondas activas. Termina o anula las rondas pendientes.",
+      });
+    }
+
+    const updateData = {
+      status: "finalized",
+      finalized_at: new Date().toISOString(),
+      public_results: !!publish,
+    };
+
+    if (publish) {
+      updateData.public_slug = generateSlug(t.name);
+    }
+
+    const { data, error } = await supabase
+      .from("tournaments")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /:id/publish — Toggle publicar/despublicar resultados
+router.patch("/:id/publish", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id } = req.params;
+    const { publish } = req.body;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id, name, status, created_by, public_slug")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!t) return res.status(404).json({ error: "Torneo no encontrado" });
+
+    const isCreator = t.created_by === userId;
+    const { data: adminUser } = await supabase
+      .from("users")
+      .select("app_role")
+      .eq("id", userId)
+      .maybeSingle();
+    const isAdmin = adminUser?.app_role === "admin";
+
+    if (!isCreator && !isAdmin) return res.status(403).json({ error: "Sin permiso" });
+
+    const updateData = { public_results: !!publish };
+
+    if (publish && !t.public_slug) {
+      updateData.public_slug = generateSlug(t.name);
+    }
+
+    const { data, error } = await supabase
+      .from("tournaments")
+      .update(updateData)
+      .eq("id", id)
       .select()
       .single();
 
