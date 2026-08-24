@@ -339,6 +339,18 @@ type FeedItem =
       nuevo_usado: string
       created_at: string
     }
+  | {
+      kind: 'tournament_result'
+      id: string
+      name: string
+      game_type: 'speedsoft' | 'tactical_arena'
+      public_slug: string
+      finalized_at: string
+      created_at: string
+      creator_name: string | null
+      total_players: number
+      top3: { name: string; team_name: string | null; score: number }[]
+    }
 
 const FEED_SCROLL_Y_KEY = 'feed_scroll_y'
 const FEED_ITEMS_CACHE_KEY = 'feed_items_cache'
@@ -1696,6 +1708,74 @@ function FieldPostCard({
   )
 }
 
+function TournamentResultCard({
+  item,
+  currentUserId,
+  currentUserAlias,
+  currentUserAvatar,
+}: {
+  item: Extract<FeedItem, { kind: 'tournament_result' }>
+  currentUserId: string | null
+  currentUserAlias: string | null
+  currentUserAvatar: string | null
+}) {
+  const gameLabel = item.game_type === 'speedsoft' ? 'SPEEDSOFT' : 'TACTICAL ARENA'
+  const fecha = (() => {
+    try {
+      return new Intl.DateTimeFormat('es-MX', {
+        day: 'numeric', month: 'short', year: 'numeric',
+      }).format(new Date(item.finalized_at))
+    } catch { return '' }
+  })()
+
+  return (
+    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+      <Link href={`/torneos/${item.public_slug}`} className="block">
+        <div className="relative w-full overflow-hidden bg-[#111111] px-5 py-6">
+          <div className="flex items-center gap-3">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M8 2h8v1H8V2Z" fill="#CC4B37" />
+              <path d="M6 3h12v2.5c0 3.59-2.69 6.5-6 6.5S6 9.09 6 5.5V3Z" stroke="#FFFFFF" strokeWidth="1.5" />
+              <path d="M6 5H4a2 2 0 0 0-2 2v1a3 3 0 0 0 3 3h1" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M18 5h2a2 2 0 0 1 2 2v1a3 3 0 0 1-3 3h-1" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M12 12v3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M8 21h8" stroke="#CC4B37" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M10 15h4l1 6H9l1-6Z" stroke="#FFFFFF" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+            <div className="min-w-0 flex-1">
+              <p style={jost} className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#CC4B37]">
+                RESULTADOS — {gameLabel}
+              </p>
+              <h3 style={jost} className="mt-1 text-[16px] font-extrabold uppercase leading-snug text-[#FFFFFF] line-clamp-2">
+                {item.name}
+              </h3>
+              <p style={lato} className="mt-1 text-[11px] text-[#FFFFFF]/60">
+                {fecha}
+              </p>
+            </div>
+            <p style={jost} className="shrink-0 text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#CC4B37]">
+              VER →
+            </p>
+          </div>
+        </div>
+      </Link>
+      <div className="px-3">
+        <PostActions
+          postType="event"
+          postId={item.id}
+          postOwnerId={null}
+          currentUserId={currentUserId}
+          currentUserAlias={currentUserAlias}
+          currentUserAvatar={currentUserAvatar}
+          shareUrl={`/torneos/${item.public_slug}`}
+          shareTitle={`Resultados: ${item.name}`}
+          postHref={`/torneos/${item.public_slug}`}
+        />
+      </div>
+    </div>
+  )
+}
+
 function EventCard({
   item,
   currentUserId,
@@ -2120,6 +2200,7 @@ function FeedTab({
         videosRes,
         noticiasRes,
         marketplaceListingsRes,
+        tournamentsRes,
       ] = await Promise.all([
         supabase.from('team_posts')
           .select('id, team_id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
@@ -2179,6 +2260,14 @@ function FeedTab({
           .eq('vendido', false)
           .order('created_at', { ascending: false })
           .limit(6),
+        supabase
+          .from('tournaments')
+          .select('id, name, game_type, public_slug, finalized_at, created_at, created_by, public_results')
+          .eq('public_results', true)
+          .eq('status', 'finalized')
+          .not('public_slug', 'is', null)
+          .order('finalized_at', { ascending: false })
+          .limit(5),
       ])
 
       if (pinnedPlayerPostRes.error) {
@@ -2393,6 +2482,22 @@ function FeedTab({
           vendido: Boolean(r.vendido),
           nuevo_usado: String(r.nuevo_usado ?? 'usado'),
           created_at: String(r.created_at ?? ''),
+        })
+      }
+
+      for (const row of tournamentsRes.data ?? []) {
+        const t = row as Record<string, unknown>
+        feedItems.push({
+          kind: 'tournament_result',
+          id: String(t.id),
+          name: String(t.name ?? ''),
+          game_type: (t.game_type as 'speedsoft' | 'tactical_arena') || 'speedsoft',
+          public_slug: String(t.public_slug ?? ''),
+          finalized_at: String(t.finalized_at ?? t.created_at),
+          created_at: String(t.finalized_at ?? t.created_at),
+          creator_name: null,
+          total_players: 0,
+          top3: [],
         })
       }
 
@@ -2945,6 +3050,16 @@ function FeedTab({
           )
         if (item.kind === 'marketplace_listing')
           return <MarketplaceFeedCard key={`ml-${item.id}`} item={item} />
+        if (item.kind === 'tournament_result')
+          return (
+            <TournamentResultCard
+              key={`tr-${item.id}`}
+              item={item}
+              currentUserId={currentUserId}
+              currentUserAlias={currentUserAlias}
+              currentUserAvatar={currentUserAvatar}
+            />
+          )
         return null
       })}
       <div ref={sentinelRef} className="h-1 w-full shrink-0" aria-hidden />
