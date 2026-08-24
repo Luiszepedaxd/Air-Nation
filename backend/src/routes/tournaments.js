@@ -126,7 +126,7 @@ async function buildTournamentExportBuffer(tournamentId) {
 
   const usedSheetNames = new Set();
 
-  for (const round of rounds || []) {
+  for (const round of (rounds || []).filter((r) => r.status !== "voided")) {
     const roundActions = allActions.filter((a) => a.round_id === round.id);
     const stats = computeExportStats(players || [], roundActions);
     const ws = XLSX.utils.json_to_sheet(stats);
@@ -140,12 +140,15 @@ async function buildTournamentExportBuffer(tournamentId) {
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
-  if ((rounds || []).length > 0) {
-    const allStats = computeExportStats(players || [], allActions);
+  const validRounds = (rounds || []).filter((r) => r.status !== "voided");
+  if (validRounds.length > 0) {
+    const validRoundIds = new Set(validRounds.map((r) => r.id));
+    const validActions = allActions.filter((a) => validRoundIds.has(a.round_id));
+    const allStats = computeExportStats(players || [], validActions);
     const summaryData = allStats.map((s, i) => ({
       "#": i + 1,
       ...s,
-      Rondas: (rounds || []).length,
+      Rondas: validRounds.length,
     }));
 
     const wsSummary = XLSX.utils.json_to_sheet(summaryData);
@@ -1031,6 +1034,56 @@ router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
     if (error) {
       return res.status(500).json({ error: error.message });
     }
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /:id/rounds/:roundId/void — Anular ronda (invalida resultados)
+router.patch("/:id/rounds/:roundId/void", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id, roundId } = req.params;
+    const { reason } = req.body;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+    if (!t) return res.status(403).json({ error: "Solo el creador puede anular rondas" });
+
+    if (!reason || !reason.trim()) return res.status(400).json({ error: "Motivo de anulación requerido" });
+
+    const { data: round } = await supabase
+      .from("tournament_rounds")
+      .select("id, status")
+      .eq("id", roundId)
+      .eq("tournament_id", id)
+      .maybeSingle();
+
+    if (!round) return res.status(404).json({ error: "Ronda no encontrada" });
+    if (round.status === "voided") return res.status(400).json({ error: "Esta ronda ya fue anulada" });
+
+    const updatePayload = {
+      status: "voided",
+      voided_reason: reason.trim(),
+      voided_at: new Date().toISOString(),
+    };
+    if (round.status === "active") {
+      updatePayload.ended_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from("tournament_rounds")
+      .update(updatePayload)
+      .eq("id", roundId)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

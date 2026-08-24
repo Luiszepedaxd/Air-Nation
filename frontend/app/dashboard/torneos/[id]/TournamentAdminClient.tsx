@@ -45,9 +45,11 @@ type Round = {
   round_number: number
   name: string | null
   duration_seconds: number
-  status: 'setup' | 'active' | 'completed'
+  status: 'setup' | 'active' | 'completed' | 'voided'
   started_at: string | null
   ended_at: string | null
+  voided_reason: string | null
+  voided_at: string | null
   created_at: string
 }
 
@@ -158,6 +160,10 @@ export function TournamentAdminClient({
   const [showSyncChecklist, setShowSyncChecklist] = useState(false)
   const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([])
   const [allSyncConfirmed, setAllSyncConfirmed] = useState(false)
+
+  const [showVoidModal, setShowVoidModal] = useState(false)
+  const [voidReason, setVoidReason] = useState('')
+  const [voiding, setVoiding] = useState(false)
 
   const router = useRouter()
 
@@ -580,6 +586,33 @@ export function TournamentAdminClient({
       void loadTournament()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error')
+    }
+  }
+
+  const handleVoidRound = async () => {
+    if (!activeRoundId || !voidReason.trim()) return
+    setVoiding(true)
+    try {
+      const res = await apiFetch(
+        `/tournaments/${tournamentId}/rounds/${activeRoundId}/void`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ reason: voidReason.trim() }),
+        }
+      )
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+      setShowVoidModal(false)
+      setVoidReason('')
+      setTimeLeft(null)
+      setShowSyncChecklist(false)
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al anular')
+    } finally {
+      setVoiding(false)
     }
   }
 
@@ -1175,14 +1208,18 @@ export function TournamentAdminClient({
                           ? 'bg-[#2E7D32] text-[#FFFFFF]'
                           : r.status === 'completed'
                             ? 'bg-[#111111] text-[#FFFFFF]'
-                            : 'bg-[#F4F4F4] text-[#666666]'
+                            : r.status === 'voided'
+                              ? 'bg-[#CC4B37] text-[#FFFFFF]'
+                              : 'bg-[#F4F4F4] text-[#666666]'
                       }`}
                     >
                       {r.status === 'active'
                         ? 'EN VIVO'
                         : r.status === 'completed'
                           ? 'TERMINADA'
-                          : 'SETUP'}
+                          : r.status === 'voided'
+                            ? 'ANULADA'
+                            : 'SETUP'}
                     </span>
                   </button>
                 ))}
@@ -1455,6 +1492,17 @@ export function TournamentAdminClient({
                 </div>
               )}
 
+              {!showVoidModal && !showSyncChecklist && (
+                <button
+                  type="button"
+                  onClick={() => setShowVoidModal(true)}
+                  style={jost}
+                  className="mt-4 w-full border border-[#CC4B37]/30 bg-transparent px-5 py-2 text-[10px] tracking-[0.12em] text-[#CC4B37]/60 transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
+                >
+                  ANULAR RONDA
+                </button>
+              )}
+
               {!showSyncChecklist ? (
                 <button
                   type="button"
@@ -1565,7 +1613,73 @@ export function TournamentAdminClient({
               >
                 VER SCOREBOARD
               </button>
+              <button
+                type="button"
+                onClick={() => setShowVoidModal(true)}
+                style={jost}
+                className="mt-2 text-[10px] tracking-[0.12em] text-[#CC4B37]/60 transition-colors hover:text-[#CC4B37]"
+              >
+                ANULAR RONDA
+              </button>
             </section>
+          )}
+
+          {activeRound && activeRound.status === 'voided' && (
+            <section className="border border-[#CC4B37]/30 bg-[#CC4B37]/5 p-4">
+              <p style={jost} className="text-[11px] tracking-[0.12em] text-[#CC4B37]">
+                RONDA ANULADA
+              </p>
+              <p className="mt-2 text-[13px] text-[#111111]" style={lato}>
+                {activeRound.voided_reason || 'Sin motivo especificado'}
+              </p>
+              <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
+                {activeRound.voided_at
+                  ? `Anulada: ${new Date(activeRound.voided_at).toLocaleString('es-MX')}`
+                  : ''}
+              </p>
+            </section>
+          )}
+
+          {showVoidModal && activeRound && activeRound.status !== 'voided' && (
+            <div className="mt-4 border-2 border-[#CC4B37] bg-[#FFFFFF] p-5">
+              <p style={jost} className="mb-1 text-[13px] tracking-[0.12em] text-[#CC4B37]">
+                ANULAR RONDA
+              </p>
+              <p className="mb-4 text-[12px] text-[#666666]" style={lato}>
+                Los resultados de esta ronda quedarán invalidados y no se incluirán en el ranking. Esta acción no se puede deshacer.
+              </p>
+              <label className="mb-1 block text-[11px] uppercase tracking-wide text-[#999999]" style={jost}>
+                Motivo de anulación
+              </label>
+              <textarea
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                placeholder="Ej: Falla en réplica de jugador, reclamo por contacto fuera de zona, error de árbitro..."
+                className={`${inputClass} min-h-[80px] resize-y`}
+                style={lato}
+                maxLength={500}
+                autoFocus
+              />
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void handleVoidRound()}
+                  disabled={voiding || !voidReason.trim()}
+                  style={jost}
+                  className={`${btnDanger} flex-1`}
+                >
+                  {voiding ? 'ANULANDO...' : 'CONFIRMAR ANULACIÓN'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowVoidModal(false); setVoidReason('') }}
+                  style={jost}
+                  className={`${btnSecondary} flex-1`}
+                >
+                  CANCELAR
+                </button>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -1595,17 +1709,22 @@ export function TournamentAdminClient({
                 key={r.id}
                 type="button"
                 onClick={() => {
+                  if (r.status === 'voided') return
                   setScoreRoundId(r.id)
                   void loadScoreboard(r.id)
                 }}
+                disabled={r.status === 'voided'}
                 style={jost}
                 className={`border px-4 py-2 text-[10px] tracking-[0.12em] transition-colors ${
-                  scoreRoundId === r.id
-                    ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                    : 'border-[#EEEEEE] text-[#666666] hover:border-[#CC4B37]'
+                  r.status === 'voided'
+                    ? 'border-[#CC4B37]/30 text-[#CC4B37]/50 line-through cursor-not-allowed'
+                    : scoreRoundId === r.id
+                      ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
+                      : 'border-[#EEEEEE] text-[#666666] hover:border-[#CC4B37]'
                 }`}
               >
                 {r.name || `Ronda ${r.round_number}`}
+                {r.status === 'voided' && ' (ANULADA)'}
               </button>
             ))}
           </div>
