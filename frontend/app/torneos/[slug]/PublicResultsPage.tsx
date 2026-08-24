@@ -19,6 +19,8 @@ type ScoreEntry = {
 
 type RoundScoreboard = {
   round_id: string; round_number: number; name: string | null
+  status?: string
+  voided_reason?: string | null
   scoreboard: ScoreEntry[]
 }
 
@@ -223,25 +225,50 @@ export function PublicResultsPage({ slug }: { slug: string }) {
           >
             GENERAL
           </button>
-          {round_scoreboards.map(r => (
-            <button
-              key={r.round_id}
-              type="button"
-              onClick={() => setSelectedRound(r.round_id)}
-              style={jost}
-              className={`border px-4 py-2 text-[10px] tracking-[0.12em] transition-colors ${
-                selectedRound === r.round_id
-                  ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
-                  : 'border-[#EEEEEE] text-[#666666] hover:border-[#111111]'
-              }`}
-            >
-              {r.name || `RONDA ${r.round_number}`}
-            </button>
-          ))}
+          {round_scoreboards.map(r => {
+            const isVoided = r.status === 'voided'
+            return (
+              <button
+                key={r.round_id}
+                type="button"
+                onClick={() => setSelectedRound(r.round_id)}
+                style={jost}
+                className={`border px-4 py-2 text-[10px] tracking-[0.12em] transition-colors ${
+                  isVoided
+                    ? selectedRound === r.round_id
+                      ? 'border-[#CC4B37] bg-[#CC4B37]/10 text-[#CC4B37]'
+                      : 'border-[#EEEEEE] text-[#CC4B37]/50'
+                    : selectedRound === r.round_id
+                      ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                      : 'border-[#EEEEEE] text-[#666666] hover:border-[#111111]'
+                }`}
+              >
+                {r.name || `RONDA ${r.round_number}`}
+                {isVoided && ' (ANULADA)'}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       {/* ── Tabla de resultados ─────────────────── */}
+      {(() => {
+        if (!selectedRound) return null
+        const round = round_scoreboards.find(r => r.round_id === selectedRound)
+        if (!round || round.status !== 'voided') return null
+        return (
+          <div className="mt-4 border border-[#CC4B37]/30 bg-[#CC4B37]/5 px-4 py-3">
+            <p style={jost} className="text-[10px] tracking-[0.12em] text-[#CC4B37]">
+              RONDA ANULADA — RESULTADOS NO INCLUIDOS EN EL RANKING GENERAL
+            </p>
+            {round.voided_reason && (
+              <p className="mt-1 text-[12px] text-[#666666]" style={lato}>
+                Motivo: {round.voided_reason}
+              </p>
+            )}
+          </div>
+        )
+      })()}
       <div className="mt-4 border border-[#EEEEEE]">
         {/* Header */}
         <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2.5 md:px-4">

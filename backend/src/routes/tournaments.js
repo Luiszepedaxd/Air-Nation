@@ -241,7 +241,6 @@ router.get("/public/:slug", async (req, res) => {
       .from("tournament_rounds")
       .select("*")
       .eq("tournament_id", tournament.id)
-      .neq("status", "voided")
       .order("round_number");
 
     const { data: players } = await supabase
@@ -250,14 +249,24 @@ router.get("/public/:slug", async (req, res) => {
       .eq("tournament_id", tournament.id)
       .order("created_at");
 
-    const roundIds = (rounds || []).map((r) => r.id);
+    const validRoundIds = (rounds || []).filter((r) => r.status !== "voided").map((r) => r.id);
     let allActions = [];
-    if (roundIds.length > 0) {
+    if (validRoundIds.length > 0) {
       const { data: acts } = await supabase
         .from("tournament_actions")
         .select("*")
-        .in("round_id", roundIds);
+        .in("round_id", validRoundIds);
       allActions = acts || [];
+    }
+
+    const voidedRoundIds = (rounds || []).filter((r) => r.status === "voided").map((r) => r.id);
+    let voidedActions = [];
+    if (voidedRoundIds.length > 0) {
+      const { data: acts } = await supabase
+        .from("tournament_actions")
+        .select("*")
+        .in("round_id", voidedRoundIds);
+      voidedActions = acts || [];
     }
 
     function computeStats(playerList, actionList) {
@@ -306,12 +315,16 @@ router.get("/public/:slug", async (req, res) => {
         .sort((a, b) => b.total_score - a.total_score);
     }
 
+    const allActionsIncludingVoided = [...allActions, ...voidedActions];
+
     const roundScoreboards = (rounds || []).map((r) => {
-      const roundActions = allActions.filter((a) => a.round_id === r.id);
+      const roundActions = allActionsIncludingVoided.filter((a) => a.round_id === r.id);
       return {
         round_id: r.id,
         round_number: r.round_number,
         name: r.name,
+        status: r.status,
+        voided_reason: r.voided_reason || null,
         scoreboard: computeStats(players || [], roundActions),
       };
     });
