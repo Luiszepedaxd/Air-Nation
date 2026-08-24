@@ -338,6 +338,24 @@ export function TournamentAdminClient({
     return () => clearInterval(poll)
   }, [isRefereeView, refereeActiveRoundId, loadTournament])
 
+  useEffect(() => {
+    if (!tournament || tournament.is_creator) return
+
+    const hasActiveRound = tournament.rounds.some(r => r.status === 'active')
+    const isFinalized = tournament.status === 'finalized'
+
+    if (hasActiveRound || isFinalized) return
+
+    const sendHeartbeat = () => {
+      void apiFetch(`/tournaments/referee/heartbeat/${tournamentId}`, { method: 'PATCH' })
+    }
+
+    sendHeartbeat()
+    const interval = setInterval(sendHeartbeat, 5000)
+
+    return () => clearInterval(interval)
+  }, [tournament, tournamentId])
+
   // En cuanto el productor inicia la ronda el árbitro entra directo al modo
   // muñeca, sin tener que tocar nada.
   useEffect(() => {
