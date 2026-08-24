@@ -192,6 +192,7 @@ export function PostMenu({
   onPin,
   canReport = false,
   onReport,
+  confirmLabel = '¿Eliminar este post?',
 }: {
   canDelete: boolean
   onDelete: () => void
@@ -200,6 +201,7 @@ export function PostMenu({
   onPin?: () => void
   canReport?: boolean
   onReport?: () => void
+  confirmLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -232,7 +234,7 @@ export function PostMenu({
             {confirming && canDelete ? (
               <div className="px-4 py-3">
                 <p style={lato} className="text-[12px] text-[#111111] mb-2">
-                  ¿Eliminar este post?
+                  {confirmLabel}
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -501,6 +503,7 @@ export function PostActions({
           currentUserAlias={currentUserAlias}
           currentUserAvatar={currentUserAvatar}
           postHref={postHref}
+          onCommentCountChange={(delta) => setCommentCount(c => Math.max(0, c + delta))}
         />
       )}
 
@@ -526,6 +529,7 @@ export function CommentsSection({
   currentUserAlias,
   currentUserAvatar,
   postHref,
+  onCommentCountChange,
 }: {
   postType: FeedPostType
   postId: string
@@ -534,6 +538,7 @@ export function CommentsSection({
   currentUserAlias: string | null
   currentUserAvatar: string | null
   postHref: string
+  onCommentCountChange?: (delta: number) => void
 }) {
   const [comments, setComments] = useState<PostComment[]>([])
   const [total, setTotal] = useState(0)
@@ -883,6 +888,31 @@ export function CommentsSection({
     }
   }
 
+  const handleDeleteComment = async (commentId: string, isRoot: boolean) => {
+    if (!currentUserId) return
+
+    const { error } = await supabase
+      .from('post_comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', currentUserId)
+
+    if (error) return
+
+    if (isRoot) {
+      setComments(prev => prev.filter(c => c.id !== commentId))
+      setTotal(t => Math.max(0, t - 1))
+    } else {
+      setComments(prev => prev.map(c =>
+        c.replies.some(r => r.id === commentId)
+          ? { ...c, replies: c.replies.filter(r => r.id !== commentId) }
+          : c
+      ))
+    }
+
+    onCommentCountChange?.(-1)
+  }
+
   const displayedComments = comments.slice(0, page * COMMENTS_PAGE_SIZE)
   const hasMore = total > displayedComments.length
 
@@ -1101,6 +1131,11 @@ export function CommentsSection({
                               )}
                             </div>
                           </div>
+                          <PostMenu
+                            canDelete={currentUserId === rep.user_id}
+                            onDelete={() => void handleDeleteComment(rep.id, false)}
+                            confirmLabel="¿Eliminar este comentario?"
+                          />
                         </div>
                       )
                     })}
@@ -1120,6 +1155,11 @@ export function CommentsSection({
                   </div>
                 )}
               </div>
+              <PostMenu
+                canDelete={currentUserId === c.user_id}
+                onDelete={() => void handleDeleteComment(c.id, true)}
+                confirmLabel="¿Eliminar este comentario?"
+              />
             </div>
           </div>
         )
