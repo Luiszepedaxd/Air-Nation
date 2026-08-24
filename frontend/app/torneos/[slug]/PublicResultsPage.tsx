@@ -80,11 +80,13 @@ export function PublicResultsPage({ slug }: { slug: string }) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[800px] px-4 py-20">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-48 animate-pulse bg-[#F4F4F4]" />
-          <div className="h-4 w-32 animate-pulse bg-[#F4F4F4]" />
-          <div className="mt-8 h-64 w-full animate-pulse bg-[#F4F4F4]" />
+      <div className="min-h-[100dvh] bg-[#FFFFFF]">
+        <div className="mx-auto max-w-[800px] px-4 py-20">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-8 w-48 animate-pulse bg-[#F4F4F4]" />
+            <div className="h-4 w-32 animate-pulse bg-[#F4F4F4]" />
+            <div className="mt-8 h-64 w-full animate-pulse bg-[#F4F4F4]" />
+          </div>
         </div>
       </div>
     )
@@ -92,15 +94,17 @@ export function PublicResultsPage({ slug }: { slug: string }) {
 
   if (error || !data) {
     return (
-      <div className="mx-auto flex min-h-[60vh] max-w-[800px] flex-col items-center justify-center px-6">
-        <TrophyIcon size={48} />
-        <p className="mt-4 text-[15px] text-[#CC4B37]" style={lato}>{error || 'Torneo no encontrado'}</p>
-        <p className="mt-2 text-[13px] text-[#999999]" style={lato}>
-          Este torneo no existe o sus resultados no están publicados.
-        </p>
-        <a href="https://www.airnation.online" className="mt-6 text-[12px] text-[#CC4B37] underline" style={lato}>
-          airnation.online
-        </a>
+      <div className="min-h-[100dvh] bg-[#FFFFFF]">
+        <div className="mx-auto flex min-h-[60vh] max-w-[800px] flex-col items-center justify-center px-6">
+          <TrophyIcon size={48} />
+          <p className="mt-4 text-[15px] text-[#CC4B37]" style={lato}>{error || 'Torneo no encontrado'}</p>
+          <p className="mt-2 text-[13px] text-[#999999]" style={lato}>
+            Este torneo no existe o sus resultados no están publicados.
+          </p>
+          <a href="https://www.airnation.online" className="mt-6 text-[12px] text-[#CC4B37] underline" style={lato}>
+            airnation.online
+          </a>
+        </div>
       </div>
     )
   }
@@ -112,7 +116,8 @@ export function PublicResultsPage({ slug }: { slug: string }) {
     : general_scoreboard
 
   return (
-    <div className="mx-auto max-w-[800px] px-4 py-8 pb-16 md:px-6">
+    <div className="min-h-[100dvh] bg-[#FFFFFF]">
+      <div className="mx-auto max-w-[800px] px-4 py-8 pb-16 md:px-6">
       {/* ── Header ──────────────────────────────── */}
       <div className="border-b border-[#EEEEEE] pb-6 text-center">
         <div className="flex items-center justify-center gap-3">
@@ -306,6 +311,7 @@ export function PublicResultsPage({ slug }: { slug: string }) {
         >
           airnation.online
         </a>
+      </div>
       </div>
     </div>
   )
