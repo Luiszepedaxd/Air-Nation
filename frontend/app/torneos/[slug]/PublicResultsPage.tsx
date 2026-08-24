@@ -44,7 +44,7 @@ export function PublicResultsPage({ slug }: { slug: string }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/tournaments/public/${slug}`)
+      const res = await fetch(`${API_BASE}/tournaments/public/${slug}`)
       if (!res.ok) throw new Error('Torneo no encontrado')
       setData(await res.json())
     } catch (err: unknown) {
