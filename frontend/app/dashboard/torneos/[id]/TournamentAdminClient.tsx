@@ -37,7 +37,7 @@ type Referee = {
   code: string
   name: string | null
   user_id: string | null
-  status: 'pending' | 'active'
+  status: 'pending' | 'joined' | 'active'
   joined_at: string | null
   created_at: string
 }
@@ -303,8 +303,8 @@ export function TournamentAdminClient({
     }
   }, [])
 
-  // Los árbitros se unen desde otro dispositivo, así que SETUP se refresca solo
-  // para que aparezcan como CONECTADO sin recargar la página.
+  // Los árbitros entran/salen de sala desde otro dispositivo, así que SETUP se refresca solo
+  // para que aparezcan como EN SALA sin recargar la página.
   const isCreatorView = tournament?.is_creator ?? false
 
   useEffect(() => {
@@ -338,6 +338,7 @@ export function TournamentAdminClient({
     return () => clearInterval(poll)
   }, [isRefereeView, refereeActiveRoundId, loadTournament])
 
+  // ── Presencia: entrar/salir de sala de espera ──────────────
   useEffect(() => {
     if (!tournament || tournament.is_creator) return
 
@@ -346,15 +347,14 @@ export function TournamentAdminClient({
 
     if (hasActiveRound || isFinalized) return
 
-    const sendHeartbeat = () => {
-      void apiFetch(`/tournaments/referee/heartbeat/${tournamentId}`, { method: 'PATCH' })
+    // Entrar a sala
+    void apiFetch(`/tournaments/referee/enter/${tournamentId}`, { method: 'PATCH' })
+
+    // Salir al desmontar o cambiar de estado
+    return () => {
+      void apiFetch(`/tournaments/referee/leave/${tournamentId}`, { method: 'PATCH' })
     }
-
-    sendHeartbeat()
-    const interval = setInterval(sendHeartbeat, 5000)
-
-    return () => clearInterval(interval)
-  }, [tournament, tournamentId])
+  }, [tournament?.is_creator, tournament?.status, tournament?.rounds, tournamentId])
 
   // En cuanto el productor inicia la ronda el árbitro entra directo al modo
   // muñeca, sin tener que tocar nada.
@@ -732,7 +732,7 @@ export function TournamentAdminClient({
   const assignedRefIds = new Set(assignments.map((a) => a.referee_id))
   const assignedPlayerIds = new Set(assignments.map((a) => a.player_id))
   const availableRefs = (tournament.referees || []).filter(
-    (r) => r.status === 'active' && !assignedRefIds.has(r.id)
+    (r) => (r.status === 'joined' || r.status === 'active') && !assignedRefIds.has(r.id)
   )
   const availablePlayers = (tournament.players || []).filter(
     (p) => !assignedPlayerIds.has(p.id)
@@ -1177,17 +1177,16 @@ export function TournamentAdminClient({
                         className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
                           r.status === 'active'
                             ? 'bg-[#2E7D32] text-[#FFFFFF]'
+                            : r.status === 'joined'
+                            ? 'bg-[#F9A825] text-[#111111]'
                             : 'bg-[#F4F4F4] text-[#999999]'
                         }`}
                       >
-                        {r.status === 'active' ? 'CONECTADO' : 'PENDIENTE'}
+                        {r.status === 'active' ? 'EN SALA' : r.status === 'joined' ? 'AUSENTE' : 'PENDIENTE'}
                       </span>
                     </span>
-                    <span
-                      className="col-span-1 text-right text-[11px] text-[#999999]"
-                      style={lato}
-                    >
-                      {r.joined_at ? '✓' : '—'}
+                    <span className="col-span-1 text-right text-[11px] text-[#999999]" style={lato}>
+                      {r.status === 'active' ? '✓' : r.joined_at ? '—' : '—'}
                     </span>
                   </div>
                 ))}

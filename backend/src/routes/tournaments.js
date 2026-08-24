@@ -369,7 +369,11 @@ router.post("/join", requireAuth, async (req, res) => {
     if (findErr || !referee) {
       return res.status(404).json({ error: "Código no encontrado" });
     }
-    if (referee.status === "active" && referee.user_id && referee.user_id !== userId) {
+    if (
+      (referee.status === "active" || referee.status === "joined") &&
+      referee.user_id &&
+      referee.user_id !== userId
+    ) {
       return res.status(409).json({ error: "Este código ya fue usado por otro árbitro" });
     }
     if (referee.user_id === userId) {
@@ -385,7 +389,7 @@ router.post("/join", requireAuth, async (req, res) => {
       .update({
         user_id: userId,
         name: name?.trim() || null,
-        status: "active",
+        status: "joined",
         joined_at: new Date().toISOString(),
       })
       .eq("id", referee.id)
@@ -401,22 +405,45 @@ router.post("/join", requireAuth, async (req, res) => {
   }
 });
 
-// PATCH /referee/heartbeat/:tournamentId — Árbitro envía heartbeat de presencia
-router.patch("/referee/heartbeat/:tournamentId", requireAuth, async (req, res) => {
+// PATCH /referee/enter/:tournamentId — Árbitro entra a sala de espera
+router.patch("/referee/enter/:tournamentId", requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
     const { tournamentId } = req.params;
 
     const { data, error } = await supabase
       .from("tournament_referees")
-      .update({ last_heartbeat: new Date().toISOString() })
+      .update({ status: "active" })
       .eq("tournament_id", tournamentId)
       .eq("user_id", userId)
+      .in("status", ["joined", "active"])
       .select("id")
       .maybeSingle();
 
     if (error) return res.status(500).json({ error: error.message });
     if (!data) return res.status(404).json({ error: "No eres árbitro de este torneo" });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /referee/leave/:tournamentId — Árbitro sale de sala de espera
+router.patch("/referee/leave/:tournamentId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { tournamentId } = req.params;
+
+    const { data, error } = await supabase
+      .from("tournament_referees")
+      .update({ status: "joined" })
+      .eq("tournament_id", tournamentId)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .select("id")
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
