@@ -481,6 +481,148 @@ function mapJoinedUserForPlayerPost(u: Record<string, unknown> | null | undefine
   }
 }
 
+async function fetchMentionAliasMap(
+  rows: Record<string, unknown>[]
+): Promise<Map<string, string>> {
+  const mentionIdSet = new Set<string>()
+  for (const r of rows) {
+    const m = r.mentions
+    if (Array.isArray(m)) {
+      for (const id of m) mentionIdSet.add(String(id))
+    }
+  }
+  const mentionAliasByUserId = new Map<string, string>()
+  if (mentionIdSet.size === 0) return mentionAliasByUserId
+  try {
+    const { data: mu, error: muErr } = await supabase
+      .from('users')
+      .select('id, alias')
+      .in('id', Array.from(mentionIdSet))
+    if (muErr) {
+      console.error('[FeedTab] users (mention aliases):', muErr.message, muErr)
+      return mentionAliasByUserId
+    }
+    for (const u of mu ?? []) {
+      const ur = u as { id: string; alias: string | null }
+      if (ur.alias?.trim()) mentionAliasByUserId.set(ur.id, ur.alias.trim())
+    }
+  } catch (e) {
+    console.error('[FeedTab] mention alias fetch failed', e)
+  }
+  return mentionAliasByUserId
+}
+
+async function fetchHighlightFeedItem(
+  postId: string,
+  postType: 'player' | 'team' | 'field',
+  blockedIds: Set<string>
+): Promise<FeedItem | null> {
+  if (postType === 'player') {
+    const { data } = await supabase
+      .from('player_posts')
+      .select(
+        'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+      )
+      .eq('id', postId)
+      .eq('published', true)
+      .maybeSingle()
+    if (!data) return null
+    const r = data as Record<string, unknown>
+    const userId = String(r.user_id ?? '')
+    if (blockedIds.has(userId)) return null
+    const u = Array.isArray(r.users) ? r.users[0] : r.users
+    const mentionAliasByUserId = await fetchMentionAliasMap([r])
+    const base = {
+      id: String(r.id),
+      post_owner_id: userId,
+      user_id: userId,
+      content: (r.content as string | null) ?? null,
+      fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+      video_url: (r.video_url as string | null) ?? null,
+      video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+      video_duration_s:
+        r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
+          ? Number(r.video_duration_s)
+          : undefined,
+      mentions: mentionIdsFromRow(r),
+      mentionAliasById: rowMentionAliasesFromMap(r, mentionAliasByUserId),
+      replica_id: r.replica_id ? String(r.replica_id) : null,
+      created_at: String(r.created_at),
+      user: mapJoinedUserForPlayerPost(u ? (u as Record<string, unknown>) : null),
+    }
+    return r.pinned
+      ? { kind: 'pinned_post' as const, ...base }
+      : { kind: 'player_post' as const, ...base }
+  }
+
+  if (postType === 'team') {
+    const { data } = await supabase
+      .from('team_posts')
+      .select('id, team_id, content, fotos_urls, created_at, created_by, teams(nombre, slug, logo_url)')
+      .eq('id', postId)
+      .eq('published', true)
+      .maybeSingle()
+    if (!data) return null
+    const r = data as Record<string, unknown>
+    const ownerId = r.created_by ? String(r.created_by) : null
+    if (ownerId && blockedIds.has(ownerId)) return null
+    const t = Array.isArray(r.teams) ? r.teams[0] : r.teams
+    if (!t) return null
+    return {
+      kind: 'team_post',
+      id: String(r.id),
+      team_id: String(r.team_id ?? ''),
+      post_owner_id: ownerId,
+      content: (r.content as string | null) ?? null,
+      fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+      created_at: String(r.created_at),
+      team: {
+        nombre: String((t as Record<string, unknown>).nombre ?? ''),
+        slug: String((t as Record<string, unknown>).slug ?? ''),
+        logo_url: (t as Record<string, unknown>).logo_url as string | null,
+      },
+    }
+  }
+
+  const { data } = await supabase
+    .from('field_posts')
+    .select('id, content, fotos_urls, created_at, created_by, fields(nombre, slug, foto_portada_url)')
+    .eq('id', postId)
+    .maybeSingle()
+  if (!data) return null
+  const r = data as Record<string, unknown>
+  const ownerId = r.created_by ? String(r.created_by) : null
+  if (ownerId && blockedIds.has(ownerId)) return null
+  const f = Array.isArray(r.fields) ? r.fields[0] : r.fields
+  return {
+    kind: 'field_post',
+    id: String(r.id),
+    content: (r.content as string | null) ?? null,
+    fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
+    created_at: String(r.created_at),
+    created_by: ownerId,
+    post_owner_id: ownerId,
+    field: {
+      nombre: f ? String((f as Record<string, unknown>).nombre ?? '') : '',
+      slug: f ? String((f as Record<string, unknown>).slug ?? '') : '',
+      foto_portada_url: f
+        ? ((f as Record<string, unknown>).foto_portada_url as string | null)
+        : null,
+    },
+  }
+}
+
+function HighlightBadge() {
+  return (
+    <span
+      style={jost}
+      className="mb-2 inline-flex items-center gap-1 rounded-sm bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
+    >
+      📩 Desde tu notificación
+    </span>
+  )
+}
+
 function formatRelativeTime(iso: string) {
   try {
     const diff = Date.now() - new Date(iso).getTime()
@@ -1092,7 +1234,7 @@ export function PostBox({
   )
 }
 
-function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole, isAdmin, onPostDeleted }: {
+function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, userTeamRole, isAdmin, onPostDeleted, highlighted = false }: {
   item: Extract<FeedItem, { kind: 'team_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
@@ -1100,11 +1242,16 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
   userTeamRole: 'founder' | 'admin' | null
   isAdmin: boolean
   onPostDeleted: (id: string) => void
+  highlighted?: boolean
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4 min-w-0">
+    <div
+      id={`feed-item-${item.id}`}
+      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border border-[#EEEEEE] bg-[#FFFFFF]'} p-4 min-w-0`}
+    >
+      {highlighted && <HighlightBadge />}
       <div className="flex items-center gap-3 mb-3">
         <Link href={`/equipos/${item.team.slug}`}>
           <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0">
@@ -1165,13 +1312,13 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         currentUserAvatar={currentUserAvatar}
         shareUrl={`/equipos/${item.team.slug}`}
         shareTitle={`${item.team.nombre} en AirNation`}
-        postHref={`/equipos/${item.team.slug}`}
+        postHref={`/dashboard?highlight_id=${item.id}&highlight_type=team`}
       />
     </div>
   )
 }
 
-function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner, isAdmin, onPostDeleted }: {
+function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isOwner, isAdmin, onPostDeleted, highlighted = false }: {
   item: Extract<FeedItem, { kind: 'player_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
@@ -1179,6 +1326,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   isOwner: boolean
   isAdmin: boolean
   onPostDeleted: (id: string) => void
+  highlighted?: boolean
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
@@ -1196,7 +1344,11 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   }
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4 min-w-0">
+    <div
+      id={`feed-item-${item.id}`}
+      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border border-[#EEEEEE] bg-[#FFFFFF]'} p-4 min-w-0`}
+    >
+      {highlighted && <HighlightBadge />}
       <div className="mb-3">
         <div className="flex items-center gap-3">
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
@@ -1299,18 +1451,19 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         currentUserAvatar={currentUserAvatar}
         shareUrl={`/u/${item.user_id}#post-${item.id}`}
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
-        postHref={`/u/${item.user_id}`}
+        postHref={`/dashboard?highlight_id=${item.id}&highlight_type=player`}
       />
     </div>
   )
 }
 
-function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isAdmin }: {
+function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar, isAdmin, highlighted = false }: {
   item: Extract<FeedItem, { kind: 'pinned_post' }>
   currentUserId: string | null
   currentUserAlias: string | null
   currentUserAvatar: string | null
   isAdmin: boolean
+  highlighted?: boolean
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
@@ -1324,8 +1477,12 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   }
 
   return (
-    <div className="border-2 border-[#CC4B37] bg-[#FFFFFF] p-4 min-w-0">
-      <div className="mb-2 flex items-center gap-1.5">
+    <div
+      id={`feed-item-${item.id}`}
+      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border-2 border-[#CC4B37] bg-[#FFFFFF]'} p-4 min-w-0`}
+    >
+      <div className="mb-2 flex items-center gap-1.5 flex-wrap">
+        {highlighted && <HighlightBadge />}
         <span
           style={jost}
           className="inline-flex items-center gap-1 rounded-sm bg-[#CC4B37] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white"
@@ -1430,7 +1587,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         currentUserAvatar={currentUserAvatar}
         shareUrl={`/u/${item.user_id}#post-${item.id}`}
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
-        postHref={`/u/${item.user_id}`}
+        postHref={`/dashboard?highlight_id=${item.id}&highlight_type=player`}
       />
     </div>
   )
@@ -1443,6 +1600,7 @@ function FieldPostCard({
   currentUserAvatar,
   isAdmin,
   onPostDeleted,
+  highlighted = false,
 }: {
   item: Extract<FeedItem, { kind: 'field_post' }>
   currentUserId: string | null
@@ -1450,11 +1608,16 @@ function FieldPostCard({
   currentUserAvatar: string | null
   isAdmin: boolean
   onPostDeleted: (id: string) => void
+  highlighted?: boolean
 }) {
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const initial = (item.field.nombre.trim()[0] || '?').toUpperCase()
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4 min-w-0">
+    <div
+      id={`feed-item-${item.id}`}
+      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border border-[#EEEEEE] bg-[#FFFFFF]'} p-4 min-w-0`}
+    >
+      {highlighted && <HighlightBadge />}
       <div className="mb-3 flex items-center gap-3">
         <Link href={`/campos/${item.field.slug}`}>
           <div className="h-9 w-9 shrink-0 overflow-hidden bg-[#F4F4F4]">
@@ -1522,7 +1685,7 @@ function FieldPostCard({
         postType="field"
         postId={item.id}
         postOwnerId={item.post_owner_id}
-        postHref={`/campos/${item.field.slug}`}
+        postHref={`/dashboard?highlight_id=${item.id}&highlight_type=field`}
         currentUserId={currentUserId}
         currentUserAlias={currentUserAlias}
         currentUserAvatar={currentUserAvatar}
@@ -1894,6 +2057,8 @@ function FeedTab({
   userTeams: { id: string; slug: string; rol: 'founder' | 'admin' }[]
   isAdmin: boolean
 }) {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [items, setItems] = useState<FeedItem[]>([])
   const itemsRef = useRef<FeedItem[]>([])
   useEffect(() => {
@@ -1904,8 +2069,17 @@ function FeedTab({
   const [loadingMore, setLoadingMore] = useState(false)
   const [cursorPlayerPosts, setCursorPlayerPosts] = useState<string | null>(null)
   const [cursorTeamPosts, setCursorTeamPosts] = useState<string | null>(null)
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+  const highlightAppliedRef = useRef(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const loadingMoreRef = useRef(false)
+
+  const highlightIdParam = searchParams.get('highlight_id')
+  const highlightTypeParam = searchParams.get('highlight_type') as
+    | 'player'
+    | 'team'
+    | 'field'
+    | null
 
   const load = useCallback(async () => {
       const isSilent = itemsRef.current.length > 0
@@ -2523,6 +2697,100 @@ function FeedTab({
   }, [load])
 
   useEffect(() => {
+    if (loading || items.length === 0) return
+    if (!highlightIdParam || !highlightTypeParam) return
+    if (
+      highlightTypeParam !== 'player' &&
+      highlightTypeParam !== 'team' &&
+      highlightTypeParam !== 'field'
+    ) {
+      return
+    }
+    if (highlightAppliedRef.current) return
+
+    const finishHighlight = () => {
+      setHighlightId(highlightIdParam)
+      router.replace('/dashboard', { scroll: false })
+    }
+
+    const moveExistingToFront = (list: FeedItem[], id: string) => {
+      const idx = list.findIndex((i) => i.id === id)
+      if (idx === -1) return list
+      if (idx === 0) return list
+      const next = [...list]
+      const [removed] = next.splice(idx, 1)
+      return [removed, ...next]
+    }
+
+    const findExisting = (list: FeedItem[]): FeedItem | undefined => {
+      if (highlightTypeParam === 'player') {
+        return list.find(
+          (i) =>
+            (i.kind === 'player_post' || i.kind === 'pinned_post') &&
+            i.id === highlightIdParam
+        )
+      }
+      if (highlightTypeParam === 'team') {
+        return list.find((i) => i.kind === 'team_post' && i.id === highlightIdParam)
+      }
+      return list.find((i) => i.kind === 'field_post' && i.id === highlightIdParam)
+    }
+
+    const applyHighlight = async () => {
+      highlightAppliedRef.current = true
+
+      const existing = findExisting(items)
+      if (existing) {
+        setItems((prev) => moveExistingToFront(prev, highlightIdParam))
+        finishHighlight()
+        return
+      }
+
+      let blockedIds = new Set<string>()
+      if (currentUserId) {
+        try {
+          blockedIds = await getBlockedUserIds(currentUserId)
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const fetched = await fetchHighlightFeedItem(
+        highlightIdParam,
+        highlightTypeParam,
+        blockedIds
+      )
+      if (!fetched) return
+
+      setItems((prev) => {
+        if (prev.some((i) => i.id === fetched.id)) {
+          return moveExistingToFront(prev, fetched.id)
+        }
+        return [fetched, ...prev]
+      })
+      finishHighlight()
+    }
+
+    void applyHighlight()
+  }, [
+    loading,
+    items,
+    highlightIdParam,
+    highlightTypeParam,
+    currentUserId,
+    router,
+  ])
+
+  useEffect(() => {
+    if (!highlightId) return
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`feed-item-${highlightId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [highlightId])
+
+  useEffect(() => {
     if (loading) return
     const el = sentinelRef.current
     if (!el) return
@@ -2574,6 +2842,7 @@ function FeedTab({
             currentUserAlias={currentUserAlias}
             currentUserAvatar={currentUserAvatar}
             isAdmin={isAdmin}
+            highlighted={item.id === highlightId}
           />
         )
         if (item.kind === 'team_post') {
@@ -2591,6 +2860,7 @@ function FeedTab({
               userTeamRole={teamRole}
               isAdmin={isAdmin}
               onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
+              highlighted={item.id === highlightId}
             />
           )
         }
@@ -2604,6 +2874,7 @@ function FeedTab({
             isOwner={currentUserId === item.user_id}
             isAdmin={isAdmin}
             onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
+            highlighted={item.id === highlightId}
           />
         )
         if (item.kind === 'field_post')
@@ -2616,6 +2887,7 @@ function FeedTab({
               currentUserAvatar={currentUserAvatar}
               isAdmin={isAdmin}
               onPostDeleted={(id: string) => setItems(prev => prev.filter(x => x.id !== id))}
+              highlighted={item.id === highlightId}
             />
           )
         if (item.kind === 'event')

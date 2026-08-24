@@ -602,7 +602,7 @@ export function CampoPublicTabs({
                         postType="field"
                         postId={p.id}
                         postOwnerId={field.created_by ?? null}
-                        postHref={`/campos/${field.slug}`}
+                        postHref={`/dashboard?highlight_id=${p.id}&highlight_type=field`}
                         currentUserId={currentUserId}
                         currentUserAlias={null}
                         currentUserAvatar={null}

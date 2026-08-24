@@ -155,7 +155,7 @@ export function TeamPosts({
                 postType="team"
                 postId={post.id}
                 postOwnerId={post.created_by ?? teamOwnerId}
-                postHref={`/equipos/${teamSlug}`}
+                postHref={`/dashboard?highlight_id=${post.id}&highlight_type=team`}
                 currentUserId={currentUserId}
                 currentUserAlias={null}
                 currentUserAvatar={null}

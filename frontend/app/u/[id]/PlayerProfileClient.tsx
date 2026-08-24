@@ -305,7 +305,7 @@ function PostsPanel({
               postType="player"
               postId={post.id}
               postOwnerId={profileUserId}
-              postHref={`/u/${profileUserId}`}
+              postHref={`/dashboard?highlight_id=${post.id}&highlight_type=player`}
               currentUserId={currentUserId}
               currentUserAlias={currentUserAlias}
               currentUserAvatar={currentUserAvatar}

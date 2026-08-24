@@ -180,7 +180,7 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                     postType="player"
                     postId={post.id}
                     postOwnerId={userId}
-                    postHref={`/u/${userId}`}
+                    postHref={`/dashboard?highlight_id=${post.id}&highlight_type=player`}
                     currentUserId={userId}
                     currentUserAlias={null}
                     currentUserAvatar={null}
