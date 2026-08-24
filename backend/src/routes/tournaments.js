@@ -401,6 +401,28 @@ router.post("/join", requireAuth, async (req, res) => {
   }
 });
 
+// PATCH /referee/heartbeat/:tournamentId — Árbitro envía heartbeat de presencia
+router.patch("/referee/heartbeat/:tournamentId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { tournamentId } = req.params;
+
+    const { data, error } = await supabase
+      .from("tournament_referees")
+      .update({ last_heartbeat: new Date().toISOString() })
+      .eq("tournament_id", tournamentId)
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) return res.status(500).json({ error: error.message });
+    if (!data) return res.status(404).json({ error: "No eres árbitro de este torneo" });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /mine — Mis torneos (como creador)
 router.get("/mine", requireAuth, async (req, res) => {
   try {
