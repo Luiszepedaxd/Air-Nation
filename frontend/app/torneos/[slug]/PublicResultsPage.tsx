@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -61,6 +62,7 @@ function formatDate(iso: string) {
 }
 
 export function PublicResultsPage({ slug }: { slug: string }) {
+  const router = useRouter()
   const [data, setData] = useState<PublicData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -98,6 +100,23 @@ export function PublicResultsPage({ slug }: { slug: string }) {
     return (
       <div className="min-h-[100dvh] bg-[#FFFFFF]">
         <div className="mx-auto flex min-h-[60vh] max-w-[800px] flex-col items-center justify-center px-6">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back()
+              } else {
+                router.push('/dashboard')
+              }
+            }}
+            className="mb-4 flex items-center gap-1 self-start text-[11px] uppercase tracking-[0.12em] text-[#999999] transition-colors hover:text-[#CC4B37]"
+            style={jost}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Volver
+          </button>
           <TrophyIcon size={48} />
           <p className="mt-4 text-[15px] text-[#CC4B37]" style={lato}>{error || 'Torneo no encontrado'}</p>
           <p className="mt-2 text-[13px] text-[#999999]" style={lato}>
@@ -120,6 +139,23 @@ export function PublicResultsPage({ slug }: { slug: string }) {
   return (
     <div className="min-h-[100dvh] bg-[#FFFFFF]">
       <div className="mx-auto max-w-[800px] px-4 py-8 pb-16 md:px-6">
+      <button
+        type="button"
+        onClick={() => {
+          if (window.history.length > 1) {
+            router.back()
+          } else {
+            router.push('/dashboard')
+          }
+        }}
+        className="mb-4 flex items-center gap-1 text-[11px] uppercase tracking-[0.12em] text-[#999999] transition-colors hover:text-[#CC4B37]"
+        style={jost}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        Volver
+      </button>
       {/* ── Header ──────────────────────────────── */}
       <div className="border-b border-[#EEEEEE] pb-6 text-center">
         <div className="flex items-center justify-center gap-3">
