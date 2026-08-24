@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
+import { supabase } from '@/lib/supabase'
 import { DurationPicker } from '@/components/DurationPicker'
 
 type Tournament = {
@@ -172,6 +173,7 @@ export function TournamentAdminClient({
   const [publishResults, setPublishResults] = useState(true)
   const [finalizing, setFinalizing] = useState(false)
   const [togglingPublish, setTogglingPublish] = useState(false)
+  const [onlineRefereeIds, setOnlineRefereeIds] = useState<Set<string>>(new Set())
 
   const router = useRouter()
 
@@ -303,8 +305,8 @@ export function TournamentAdminClient({
     }
   }, [])
 
-  // Los árbitros entran/salen de sala desde otro dispositivo, así que SETUP se refresca solo
-  // para que aparezcan como EN SALA sin recargar la página.
+  // Los árbitros se anuncian vía Realtime Presence; SETUP sigue refrescando
+  // jugadores y rondas cada 5s.
   const isCreatorView = tournament?.is_creator ?? false
 
   useEffect(() => {
@@ -315,55 +317,74 @@ export function TournamentAdminClient({
 
   // El árbitro no dispara ninguna acción aquí, así que necesita refrescar
   // para enterarse de que el productor ya inició una ronda.
-  const isRefereeView = tournament ? !tournament.is_creator : false
-  const refereeActiveRoundId = isRefereeView
-    ? (() => {
-        const activeRound = (tournament?.rounds || []).find(
-          (r) => r.status === 'active'
-        )
-        if (!activeRound) return null
-        if (activeRound.started_at) {
-          const endMs =
-            new Date(activeRound.started_at).getTime() +
-            activeRound.duration_seconds * 1000
-          if (Date.now() > endMs) return null
-        }
-        return activeRound.id
-      })()
-    : null
-
-  const hasActiveRound = tournament?.rounds.some(r => r.status === 'active') ?? false
-  const isTournamentFinalized = tournament?.status === 'finalized'
-  const shouldBeInRoom = isRefereeView && !hasActiveRound && !isTournamentFinalized
+  const refereeActiveRoundId =
+    tournament && !tournament.is_creator
+      ? (() => {
+          const activeRound = (tournament.rounds || []).find(
+            (r) => r.status === 'active'
+          )
+          if (!activeRound) return null
+          if (activeRound.started_at) {
+            const endMs =
+              new Date(activeRound.started_at).getTime() +
+              activeRound.duration_seconds * 1000
+            if (Date.now() > endMs) return null
+          }
+          return activeRound.id
+        })()
+      : null
 
   useEffect(() => {
-    if (!isRefereeView || refereeActiveRoundId) return
+    if (!tournament || tournament.is_creator || refereeActiveRoundId) return
     const poll = setInterval(() => void loadTournament(), 3000)
     return () => clearInterval(poll)
-  }, [isRefereeView, refereeActiveRoundId, loadTournament])
+  }, [tournament?.is_creator, refereeActiveRoundId, loadTournament])
 
-  const shouldBeInRoomRef = useRef(false)
-
-  // ── Presencia: enter/leave basado en shouldBeInRoom ────────
+  // ── Realtime Presence — árbitro se anuncia, productor escucha ──
   useEffect(() => {
-    if (shouldBeInRoom && !shouldBeInRoomRef.current) {
-      shouldBeInRoomRef.current = true
-      void apiFetch(`/tournaments/referee/enter/${tournamentId}`, { method: 'PATCH' })
-    } else if (!shouldBeInRoom && shouldBeInRoomRef.current) {
-      shouldBeInRoomRef.current = false
-      void apiFetch(`/tournaments/referee/leave/${tournamentId}`, { method: 'PATCH' })
-    }
-  }, [shouldBeInRoom, tournamentId])
+    if (!tournament) return
 
-  // ── Leave al desmontar el componente ───────────────────────
-  useEffect(() => {
-    return () => {
-      if (shouldBeInRoomRef.current) {
-        shouldBeInRoomRef.current = false
-        void apiFetch(`/tournaments/referee/leave/${tournamentId}`, { method: 'PATCH' })
+    const channelName = `tournament-presence-${tournamentId}`
+    const channel = supabase.channel(channelName)
+
+    const myReferee = tournament.referees.find((r) => r.user_id === userId)
+    const isReferee = !!myReferee && !tournament.is_creator
+    const hasActiveRound = tournament.rounds.some((r) => r.status === 'active')
+    const isFinalized = tournament.status === 'finalized'
+    const shouldAnnounce = isReferee && !hasActiveRound && !isFinalized
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState()
+      const ids = new Set<string>()
+      for (const key of Object.keys(state)) {
+        for (const presence of state[key]) {
+          const p = presence as unknown as { referee_id: string }
+          if (p.referee_id) ids.add(p.referee_id)
+        }
       }
+      setOnlineRefereeIds(ids)
+    })
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED' && shouldAnnounce && myReferee) {
+        await channel.track({
+          referee_id: myReferee.id,
+          user_id: userId,
+        })
+      }
+    })
+
+    return () => {
+      void supabase.removeChannel(channel)
     }
-  }, [tournamentId])
+  }, [
+    tournament?.is_creator,
+    tournament?.status,
+    tournament?.referees?.length,
+    tournament?.rounds?.length,
+    tournamentId,
+    userId,
+  ])
 
   // En cuanto el productor inicia la ronda el árbitro entra directo al modo
   // muñeca, sin tener que tocar nada.
@@ -1181,21 +1202,31 @@ export function TournamentAdminClient({
                       {r.name || '—'}
                     </span>
                     <span className="col-span-3">
-                      <span
-                        style={jost}
-                        className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
-                          r.status === 'active'
-                            ? 'bg-[#2E7D32] text-[#FFFFFF]'
-                            : r.status === 'joined'
-                            ? 'bg-[#F9A825] text-[#111111]'
-                            : 'bg-[#F4F4F4] text-[#999999]'
-                        }`}
-                      >
-                        {r.status === 'active' ? 'EN SALA' : r.status === 'joined' ? 'AUSENTE' : 'PENDIENTE'}
-                      </span>
+                      {(() => {
+                        if (r.status === 'pending') {
+                          return (
+                            <span style={jost} className="inline-block bg-[#F4F4F4] px-2 py-0.5 text-[9px] tracking-wide text-[#999999]">
+                              PENDIENTE
+                            </span>
+                          )
+                        }
+                        const isOnline = onlineRefereeIds.has(r.id)
+                        return (
+                          <span
+                            style={jost}
+                            className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
+                              isOnline
+                                ? 'bg-[#2E7D32] text-[#FFFFFF]'
+                                : 'bg-[#F9A825] text-[#111111]'
+                            }`}
+                          >
+                            {isOnline ? 'EN SALA' : 'AUSENTE'}
+                          </span>
+                        )
+                      })()}
                     </span>
                     <span className="col-span-1 text-right text-[11px] text-[#999999]" style={lato}>
-                      {r.status === 'active' ? '✓' : r.joined_at ? '—' : '—'}
+                      {r.status === 'pending' ? '—' : onlineRefereeIds.has(r.id) ? '✓' : '—'}
                     </span>
                   </div>
                 ))}
