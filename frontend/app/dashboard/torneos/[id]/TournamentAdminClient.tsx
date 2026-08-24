@@ -332,29 +332,38 @@ export function TournamentAdminClient({
       })()
     : null
 
+  const hasActiveRound = tournament?.rounds.some(r => r.status === 'active') ?? false
+  const isTournamentFinalized = tournament?.status === 'finalized'
+  const shouldBeInRoom = isRefereeView && !hasActiveRound && !isTournamentFinalized
+
   useEffect(() => {
     if (!isRefereeView || refereeActiveRoundId) return
     const poll = setInterval(() => void loadTournament(), 3000)
     return () => clearInterval(poll)
   }, [isRefereeView, refereeActiveRoundId, loadTournament])
 
-  // ── Presencia: entrar/salir de sala de espera ──────────────
+  const shouldBeInRoomRef = useRef(false)
+
+  // ── Presencia: enter/leave basado en shouldBeInRoom ────────
   useEffect(() => {
-    if (!tournament || tournament.is_creator) return
-
-    const hasActiveRound = tournament.rounds.some(r => r.status === 'active')
-    const isFinalized = tournament.status === 'finalized'
-
-    if (hasActiveRound || isFinalized) return
-
-    // Entrar a sala
-    void apiFetch(`/tournaments/referee/enter/${tournamentId}`, { method: 'PATCH' })
-
-    // Salir al desmontar o cambiar de estado
-    return () => {
+    if (shouldBeInRoom && !shouldBeInRoomRef.current) {
+      shouldBeInRoomRef.current = true
+      void apiFetch(`/tournaments/referee/enter/${tournamentId}`, { method: 'PATCH' })
+    } else if (!shouldBeInRoom && shouldBeInRoomRef.current) {
+      shouldBeInRoomRef.current = false
       void apiFetch(`/tournaments/referee/leave/${tournamentId}`, { method: 'PATCH' })
     }
-  }, [tournament?.is_creator, tournament?.status, tournament?.rounds, tournamentId])
+  }, [shouldBeInRoom, tournamentId])
+
+  // ── Leave al desmontar el componente ───────────────────────
+  useEffect(() => {
+    return () => {
+      if (shouldBeInRoomRef.current) {
+        shouldBeInRoomRef.current = false
+        void apiFetch(`/tournaments/referee/leave/${tournamentId}`, { method: 'PATCH' })
+      }
+    }
+  }, [tournamentId])
 
   // En cuanto el productor inicia la ronda el árbitro entra directo al modo
   // muñeca, sin tener que tocar nada.
