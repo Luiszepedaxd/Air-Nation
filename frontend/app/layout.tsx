@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import CapacitorBridge from "@/components/CapacitorBridge";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
+import { TruConversion } from "@/components/TruConversion";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
@@ -125,6 +126,7 @@ export default function RootLayout({
         />
         {children}
         <GoogleAnalytics />
+        <TruConversion />
         <CapacitorBridge />
         <PwaRegister />
         <PwaInstallPrompt />
