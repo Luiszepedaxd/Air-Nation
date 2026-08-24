@@ -45,6 +45,7 @@ export default function CapacitorBridge() {
 
     let backHandler: { remove: () => void } | null = null
     let urlHandler: { remove: () => void } | null = null
+    let pushActionHandler: { remove: () => void } | null = null
 
     const init = async () => {
       try {
@@ -116,6 +117,24 @@ export default function CapacitorBridge() {
           }
         })
 
+        // Tap en notificación push nativa (FCM) → navegar a la URL que mandó el backend
+        try {
+          const { PushNotifications } = await import('@capacitor/push-notifications')
+          pushActionHandler = await PushNotifications.addListener(
+            'pushNotificationActionPerformed',
+            (action) => {
+              const url = action.notification?.data?.url as string | undefined
+              if (url && typeof url === 'string') {
+                router.push(url)
+              } else {
+                router.push('/dashboard/perfil?tab=notificaciones')
+              }
+            }
+          )
+        } catch (err) {
+          console.error('[push] error registrando pushNotificationActionPerformed:', err)
+        }
+
         // Inicializar Google Sign-In nativo (una sola vez al arrancar).
         try {
           const { SocialLogin } = await import('@capgo/capacitor-social-login')
@@ -141,6 +160,7 @@ export default function CapacitorBridge() {
     return () => {
       backHandler?.remove()
       urlHandler?.remove()
+      pushActionHandler?.remove()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

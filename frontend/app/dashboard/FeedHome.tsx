@@ -2071,6 +2071,8 @@ function FeedTab({
   const [cursorTeamPosts, setCursorTeamPosts] = useState<string | null>(null)
   const [highlightId, setHighlightId] = useState<string | null>(null)
   const highlightAppliedRef = useRef(false)
+  const [freshLoaded, setFreshLoaded] = useState(false)
+  const highlightedItemRef = useRef<FeedItem | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const loadingMoreRef = useRef(false)
 
@@ -2425,7 +2427,16 @@ function FeedTab({
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
-      setItems([...pinnedRows, ...rest])
+      let combined: FeedItem[] = [...pinnedRows, ...rest]
+      if (highlightedItemRef.current) {
+        const stillPresent = combined.some(
+          (i) => i.id === highlightedItemRef.current!.id
+        )
+        if (!stillPresent) {
+          combined = [highlightedItemRef.current, ...combined]
+        }
+      }
+      setItems(combined)
 
       const teamData = teamPostsRes.data ?? []
       const playerData = playerPostsRes.data ?? []
@@ -2447,6 +2458,7 @@ function FeedTab({
         console.error('[FeedTab] load failed', e)
       } finally {
         setLoading(false)
+        setFreshLoaded(true)
       }
   }, [currentUserId])
 
@@ -2697,7 +2709,7 @@ function FeedTab({
   }, [load])
 
   useEffect(() => {
-    if (loading || items.length === 0) return
+    if (!freshLoaded || items.length === 0) return
     if (!highlightIdParam || !highlightTypeParam) return
     if (
       highlightTypeParam !== 'player' &&
@@ -2741,6 +2753,7 @@ function FeedTab({
 
       const existing = findExisting(items)
       if (existing) {
+        highlightedItemRef.current = existing
         setItems((prev) => moveExistingToFront(prev, highlightIdParam))
         finishHighlight()
         return
@@ -2761,7 +2774,7 @@ function FeedTab({
         blockedIds
       )
       if (!fetched) return
-
+      highlightedItemRef.current = fetched
       setItems((prev) => {
         if (prev.some((i) => i.id === fetched.id)) {
           return moveExistingToFront(prev, fetched.id)
@@ -2773,7 +2786,7 @@ function FeedTab({
 
     void applyHighlight()
   }, [
-    loading,
+    freshLoaded,
     items,
     highlightIdParam,
     highlightTypeParam,
