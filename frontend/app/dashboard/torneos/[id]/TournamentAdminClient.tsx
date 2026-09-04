@@ -55,6 +55,8 @@ type Round = {
   voided_reason: string | null
   voided_at: string | null
   created_at: string
+  game_type: 'speedsoft' | 'tactical_arena' | 'drills' | null
+  foul_penalty_seconds: number | null
 }
 
 type Assignment = {
@@ -148,6 +150,8 @@ export function TournamentAdminClient({
 
   const [roundName, setRoundName] = useState('')
   const [roundDuration, setRoundDuration] = useState(0)
+  const [roundGameType, setRoundGameType] = useState<'speedsoft' | 'tactical_arena' | 'drills'>('speedsoft')
+  const [roundFoulPenalty, setRoundFoulPenalty] = useState(5)
   const [creatingRound, setCreatingRound] = useState(false)
   const [activeRoundId, setActiveRoundId] = useState<string | null>(null)
   const [assignments, setAssignments] = useState<Assignment[]>([])
@@ -545,6 +549,8 @@ export function TournamentAdminClient({
         body: JSON.stringify({
           name: roundName.trim() || null,
           duration_seconds: roundDuration || undefined,
+          game_type: roundGameType,
+          foul_penalty_seconds: roundGameType === 'drills' ? roundFoulPenalty : undefined,
         }),
       })
       if (!res.ok) {
@@ -1266,6 +1272,38 @@ export function TournamentAdminClient({
                 style={lato}
                 maxLength={100}
               />
+              <div>
+                <label className="mb-1 block text-[11px] uppercase tracking-wide text-[#999999]" style={jost}>
+                  Tipo de juego
+                </label>
+                <select
+                  value={roundGameType}
+                  onChange={(e) => setRoundGameType(e.target.value as 'speedsoft' | 'tactical_arena' | 'drills')}
+                  className={inputClass}
+                  style={lato}
+                >
+                  <option value="speedsoft">Speedsoft</option>
+                  <option value="tactical_arena">Tactical Arena</option>
+                  <option value="drills">Drills Individuales</option>
+                </select>
+              </div>
+
+              {roundGameType === 'drills' && (
+                <div>
+                  <label className="mb-1 block text-[11px] uppercase tracking-wide text-[#999999]" style={jost}>
+                    Penalización por foul (segundos)
+                  </label>
+                  <input
+                    type="number"
+                    value={roundFoulPenalty}
+                    onChange={(e) => setRoundFoulPenalty(Math.max(1, Math.min(30, Number(e.target.value) || 5)))}
+                    min={1}
+                    max={30}
+                    className={`${inputClass} w-[100px]`}
+                    style={lato}
+                  />
+                </div>
+              )}
               <DurationPicker
                 value={roundDuration}
                 onChange={setRoundDuration}
@@ -1340,6 +1378,14 @@ export function TournamentAdminClient({
                             ? 'ANULADA'
                             : 'SETUP'}
                     </span>
+                    {r.game_type && (
+                      <span
+                        style={jost}
+                        className="ml-1 inline-block border border-[#EEEEEE] px-1.5 py-0.5 text-[8px] tracking-wide text-[#999999]"
+                      >
+                        {r.game_type === 'speedsoft' ? 'SPD' : r.game_type === 'drills' ? 'DRILL' : 'TAC'}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

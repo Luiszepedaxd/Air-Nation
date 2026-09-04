@@ -26,8 +26,8 @@ const btnSecondary =
 type Tournament = {
   id: string
   name: string
-  game_type: 'speedsoft' | 'tactical_arena'
-  status: 'setup' | 'active' | 'completed'
+  game_type: 'speedsoft' | 'tactical_arena' | 'drills' | null
+  status: 'setup' | 'active' | 'completed' | 'finalized'
   default_round_duration_seconds: number
   created_at: string
 }
@@ -41,7 +41,10 @@ type RefereeTournament = {
 }
 
 function gameTypeLabel(type: Tournament['game_type']) {
-  return type === 'speedsoft' ? 'SPEEDSOFT' : 'TACTICAL ARENA'
+  if (type === 'speedsoft') return 'SPEEDSOFT'
+  if (type === 'tactical_arena') return 'TACTICAL ARENA'
+  if (type === 'drills') return 'DRILLS'
+  return 'MIXTO'
 }
 
 function statusBadgeClass(status: string) {
@@ -85,7 +88,7 @@ export function TorneoHub() {
   const [loading, setLoading] = useState(true)
 
   const [tName, setTName] = useState('')
-  const [tType, setTType] = useState<'speedsoft' | 'tactical_arena'>('speedsoft')
+  const [tType, setTType] = useState<'speedsoft' | 'tactical_arena' | 'drills'>('speedsoft')
   const [tDuration, setTDuration] = useState(180)
   const [creating, setCreating] = useState(false)
 
@@ -263,18 +266,19 @@ export function TorneoHub() {
                 className="mb-1 block text-[11px] uppercase tracking-wide text-[#999999]"
                 style={jost}
               >
-                Tipo de juego
+                Modo principal (opcional)
               </label>
               <select
                 value={tType}
                 onChange={(e) =>
-                  setTType(e.target.value as 'speedsoft' | 'tactical_arena')
+                  setTType(e.target.value as 'speedsoft' | 'tactical_arena' | 'drills')
                 }
                 className={inputClass}
                 style={lato}
               >
                 <option value="speedsoft">Speedsoft</option>
                 <option value="tactical_arena">Tactical Arena</option>
+                <option value="drills">Drills Individuales</option>
               </select>
             </div>
             <DurationPicker

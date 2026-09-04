@@ -25,6 +25,8 @@ type RoundInfo = {
   status: 'setup' | 'active' | 'completed'
   started_at: string | null
   duration_seconds: number
+  game_type: 'speedsoft' | 'tactical_arena' | 'drills' | null
+  foul_penalty_seconds: number | null
 }
 
 type PlayerInfo = {
@@ -102,17 +104,16 @@ export function WristModeClient({
   tournamentId,
   roundId,
   userId,
-  gameType,
 }: {
   tournamentId: string
   roundId: string
   userId: string
-  gameType?: 'speedsoft' | 'tactical_arena'
 }) {
   const [round, setRound] = useState<RoundInfo | null>(null)
   const [assignment, setAssignment] = useState<AssignmentInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [gameType, setGameType] = useState<'speedsoft' | 'tactical_arena' | 'drills'>('speedsoft')
 
   const [actions, setActions] = useState<QueuedAction[]>(() => {
     if (typeof window === 'undefined') return []
@@ -238,6 +239,7 @@ export function WristModeClient({
         const data = await res.json()
         if (cancelled) return
         setRound(data.round || null)
+        if (data.round?.game_type) setGameType(data.round.game_type)
         setAssignment(data.assignment || null)
         if (!data.assignment) setError('No tienes asignación en esta ronda')
       } catch (err: unknown) {
@@ -392,7 +394,10 @@ export function WristModeClient({
           )
           if (res.ok) {
             const data = await res.json()
-            if (data.round) setRound(data.round)
+            if (data.round) {
+              setRound(data.round)
+              if (data.round.game_type) setGameType(data.round.game_type)
+            }
           }
         } catch {
           /* offline, ignorar */
@@ -666,11 +671,13 @@ export function WristModeClient({
               className={`shrink-0 rounded px-[5px] py-[1px] text-[8px] font-extrabold uppercase tracking-[0.1em] ${
                 gameType === 'speedsoft'
                   ? 'bg-[#0A2A4A] text-[#4FC3F7]'
-                  : 'bg-[#2A1A0A] text-[#FF9800]'
+                  : gameType === 'drills'
+                    ? 'bg-[#1A2A1A] text-[#81C784]'
+                    : 'bg-[#2A1A0A] text-[#FF9800]'
               }`}
               style={jostFont}
             >
-              {gameType === 'speedsoft' ? 'SPD' : 'TAC'}
+              {gameType === 'speedsoft' ? 'SPD' : gameType === 'drills' ? 'DRILL' : 'TAC'}
             </span>
           )}
           <span

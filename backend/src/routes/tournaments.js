@@ -57,6 +57,8 @@ function computeExportStats(playerList, actionList) {
       Objectives: 0,
       "Key Actions": 0,
       "Critical Actions": 0,
+      Fouls: 0,
+      "Drill Completes": 0,
       "K/D": 0,
       "Performance Score": 0,
       "Impact Score": 0,
@@ -72,6 +74,8 @@ function computeExportStats(playerList, actionList) {
     else if (a.action_type === "objective") s.Objectives++;
     else if (a.action_type === "key_action") s["Key Actions"]++;
     else if (a.action_type === "critical_action") s["Critical Actions"]++;
+    else if (a.action_type === "foul") s.Fouls++;
+    else if (a.action_type === "drill_complete") s["Drill Completes"]++;
   }
   return Object.values(statsMap)
     .map((s) => {
@@ -282,6 +286,8 @@ router.get("/public/:slug", async (req, res) => {
           objectives: 0,
           key_actions: 0,
           critical_actions: 0,
+          fouls: 0,
+          drill_completes: 0,
         };
       }
       for (const a of actionList) {
@@ -293,6 +299,8 @@ router.get("/public/:slug", async (req, res) => {
         else if (a.action_type === "objective") s.objectives++;
         else if (a.action_type === "key_action") s.key_actions++;
         else if (a.action_type === "critical_action") s.critical_actions++;
+        else if (a.action_type === "foul") s.fouls++;
+        else if (a.action_type === "drill_complete") s.drill_completes++;
       }
       return Object.values(statsMap)
         .map((s) => {
@@ -388,7 +396,7 @@ router.post("/join", requireAuth, async (req, res) => {
       .from("tournament_referees")
       .update({
         user_id: userId,
-        name: name?.trim() || null,
+        ...(name?.trim() ? { name: name.trim() } : {}),
         status: "joined",
         joined_at: new Date().toISOString(),
       })
@@ -496,7 +504,7 @@ router.get("/referee/assignment/:roundId", requireAuth, async (req, res) => {
 
     const { data: round } = await supabase
       .from("tournament_rounds")
-      .select("id, tournament_id, status, started_at, duration_seconds")
+      .select("id, tournament_id, status, started_at, duration_seconds, game_type, foul_penalty_seconds")
       .eq("id", roundId)
       .maybeSingle();
 
@@ -624,10 +632,10 @@ router.post("/", requireAuth, async (req, res) => {
     const userId = req.authUser.id;
     const { name, game_type, default_round_duration_seconds } = req.body;
 
-    if (!name || !game_type) {
-      return res.status(400).json({ error: "name y game_type son requeridos" });
+    if (!name) {
+      return res.status(400).json({ error: "name es requerido" });
     }
-    if (!["speedsoft", "tactical_arena"].includes(game_type)) {
+    if (game_type && !["speedsoft", "tactical_arena", "drills"].includes(game_type)) {
       return res.status(400).json({ error: "game_type inválido" });
     }
 
@@ -639,7 +647,7 @@ router.post("/", requireAuth, async (req, res) => {
         game_type,
         default_round_duration_seconds:
           default_round_duration_seconds ||
-          (game_type === 'speedsoft' ? 720 : 600),
+          (game_type === 'speedsoft' ? 720 : game_type === 'drills' ? 300 : 600),
       })
       .select()
       .single();
@@ -998,11 +1006,11 @@ router.post("/:id/rounds", requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
     const { id } = req.params;
-    const { name, duration_seconds } = req.body;
+    const { name, duration_seconds, game_type, foul_penalty_seconds } = req.body;
 
     const { data: t } = await supabase
       .from("tournaments")
-      .select("id, default_round_duration_seconds")
+      .select("id, default_round_duration_seconds, game_type")
       .eq("id", id)
       .eq("created_by", userId)
       .maybeSingle();
@@ -1019,6 +1027,8 @@ router.post("/:id/rounds", requireAuth, async (req, res) => {
 
     const nextNumber = (rounds && rounds.length > 0 ? rounds[0].round_number : 0) + 1;
 
+    const resolvedGameType = game_type || t.game_type || "speedsoft";
+
     const { data, error } = await supabase
       .from("tournament_rounds")
       .insert({
@@ -1026,6 +1036,9 @@ router.post("/:id/rounds", requireAuth, async (req, res) => {
         round_number: nextNumber,
         name: name?.trim() || `Ronda ${nextNumber}`,
         duration_seconds: duration_seconds || t.default_round_duration_seconds,
+        game_type: resolvedGameType,
+        foul_penalty_seconds:
+          resolvedGameType === "drills" ? foul_penalty_seconds || 5 : null,
       })
       .select()
       .single();
@@ -1559,7 +1572,7 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
       deadline = new Date(new Date(round.started_at).getTime() + round.duration_seconds * 1000);
     }
 
-    const validTypes = ["kill", "death", "first_kill", "objective", "key_action", "critical_action"];
+    const validTypes = ["kill", "death", "first_kill", "objective", "key_action", "critical_action", "foul", "drill_complete"];
     const now = new Date().toISOString();
 
     const hasFirstKillIncoming = actions.some((a) => a.action_type === "first_kill");
@@ -1673,6 +1686,8 @@ router.get("/:id/rounds/:roundId/scoreboard", requireAuth, async (req, res) => {
         objectives: 0,
         key_actions: 0,
         critical_actions: 0,
+        fouls: 0,
+        drill_completes: 0,
       };
     }
 
@@ -1685,6 +1700,8 @@ router.get("/:id/rounds/:roundId/scoreboard", requireAuth, async (req, res) => {
       else if (a.action_type === "objective") s.objectives++;
       else if (a.action_type === "key_action") s.key_actions++;
       else if (a.action_type === "critical_action") s.critical_actions++;
+      else if (a.action_type === "foul") s.fouls++;
+      else if (a.action_type === "drill_complete") s.drill_completes++;
     }
 
     const scoreboard = Object.values(statsMap).map((s) => {
