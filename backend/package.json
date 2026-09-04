@@ -18,7 +18,12 @@
     "stress:firstkill": "node stress-tests/runner.js firstkill",
     "stress:mixed": "node stress-tests/runner.js mixed",
     "stress:sim20": "node stress-tests/tournament-sim-20.js",
-    "stress:sim10": "node stress-tests/tournament-sim-20.js --referees=10"
+    "stress:sim10": "node stress-tests/tournament-sim-20.js --referees=10",
+    "stress:sim300": "node stress-tests/tournament-sim-300.js",
+    "stress:sim300:light": "node stress-tests/tournament-sim-300.js --auth-users=10 --workers=300",
+    "stress:sim300:noclean": "node stress-tests/tournament-sim-300.js --no-cleanup",
+    "stress:local": "node stress-tests/local-sim-300.js",
+    "stress:local:500": "node stress-tests/local-sim-300.js --workers=500"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1035.0",
