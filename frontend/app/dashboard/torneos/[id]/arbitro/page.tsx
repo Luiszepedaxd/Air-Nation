@@ -19,11 +19,19 @@ export default async function ArbitroPage({
   const roundId = searchParams.roundId
   if (!roundId) redirect(`/dashboard/torneos/${params.id}`)
 
+  // Cargar game_type del torneo para contextualizar los botones del árbitro
+  const { data: tournament } = await supabase
+    .from('tournaments')
+    .select('game_type')
+    .eq('id', params.id)
+    .maybeSingle()
+
   return (
     <WristModeClient
       tournamentId={params.id}
       roundId={roundId}
       userId={user.id}
+      gameType={tournament?.game_type as 'speedsoft' | 'tactical_arena' | undefined}
     />
   )
 }

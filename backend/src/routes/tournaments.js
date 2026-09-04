@@ -637,7 +637,9 @@ router.post("/", requireAuth, async (req, res) => {
         created_by: userId,
         name: name.trim(),
         game_type,
-        default_round_duration_seconds: default_round_duration_seconds || 180,
+        default_round_duration_seconds:
+          default_round_duration_seconds ||
+          (game_type === 'speedsoft' ? 720 : 600),
       })
       .select()
       .single();
@@ -1192,10 +1194,12 @@ router.patch("/:id/rounds/:roundId/start", requireAuth, async (req, res) => {
 });
 
 // PATCH /:id/rounds/:roundId/end — Terminar ronda manualmente
+// Body opcional: { winner_team: string, victory_condition: "elimination"|"control_point"|"time"|"objective" }
 router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
     const { id, roundId } = req.params;
+    const { winner_team, victory_condition } = req.body || {};
 
     const { data: t } = await supabase
       .from("tournaments")
@@ -1220,9 +1224,23 @@ router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
       });
     }
 
+    const updatePayload = {
+      status: "completed",
+      ended_at: new Date().toISOString(),
+    };
+
+    // Registro de ganador de ronda (AMG-2026.1 — condición de victoria)
+    const validConditions = ["elimination", "control_point", "time", "objective"];
+    if (winner_team && typeof winner_team === "string") {
+      updatePayload.winner_team = winner_team.trim();
+    }
+    if (victory_condition && validConditions.includes(victory_condition)) {
+      updatePayload.victory_condition = victory_condition;
+    }
+
     const { data, error } = await supabase
       .from("tournament_rounds")
-      .update({ status: "completed", ended_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq("id", roundId)
       .eq("status", "active")
       .select()

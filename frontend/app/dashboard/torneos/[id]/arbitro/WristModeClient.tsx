@@ -102,10 +102,12 @@ export function WristModeClient({
   tournamentId,
   roundId,
   userId,
+  gameType,
 }: {
   tournamentId: string
   roundId: string
   userId: string
+  gameType?: 'speedsoft' | 'tactical_arena'
 }) {
   const [round, setRound] = useState<RoundInfo | null>(null)
   const [assignment, setAssignment] = useState<AssignmentInfo | null>(null)
@@ -256,6 +258,25 @@ export function WristModeClient({
   const roundStatus = round?.status
   const roundDuration = round?.duration_seconds
 
+  // ── Verificación global de First Kill ───────────────────────────────────────
+  // Se extrae como useCallback para poder invocarlo también al final de cada
+  // sync exitoso, no solo desde el intervalo de 2 s. Esto cierra el gap de
+  // ~2 s en el que un segundo árbitro podría haber dado click antes del poll.
+  const checkFirstKill = useCallback(async () => {
+    try {
+      const res = await apiFetch(
+        `/tournaments/${tournamentId}/rounds/${roundId}/first-kill`
+      )
+      if (res.ok) {
+        const data = await res.json() as { exists: boolean; player_name: string | null }
+        setGlobalFirstKillTaken(data.exists)
+        if (data.exists) setFirstKillPlayerName(data.player_name)
+      }
+    } catch {
+      /* offline, ignorar */
+    }
+  }, [tournamentId, roundId])
+
   const syncActions = useCallback(async () => {
     const pending = actionsRef.current.filter((a) => !a.synced)
     if (pending.length === 0) {
@@ -288,13 +309,20 @@ export function WristModeClient({
           )
         )
         setSyncStatus('synced')
+        // Si este batch incluía un first_kill, o si había un first_kill pendiente,
+        // verificamos el estado global inmediatamente para reflejar si otro árbitro
+        // se adelantó (cierra el gap de ~2 s del intervalo fijo).
+        const hadFirstKill = pending.some((a) => a.action_type === 'first_kill')
+        if (hadFirstKill || !globalFirstKillTaken) {
+          void checkFirstKill()
+        }
       } else {
         setSyncStatus('offline')
       }
     } catch {
       setSyncStatus('offline')
     }
-  }, [tournamentId, roundId])
+  }, [tournamentId, roundId, checkFirstKill, globalFirstKillTaken])
 
   const handleConfirmSync = async () => {
     setConfirming(true)
@@ -375,28 +403,15 @@ export function WristModeClient({
     return () => clearInterval(poll)
   }, [roundId])
 
+  // Poll each 2 s while round is active. checkFirstKill is also called
+  // immediately after every successful sync to close the race-condition gap.
   useEffect(() => {
     if (round?.status !== 'active') return
-
-    const checkFirstKill = async () => {
-      try {
-        const res = await apiFetch(
-          `/tournaments/${tournamentId}/rounds/${roundId}/first-kill`
-        )
-        if (res.ok) {
-          const data = await res.json()
-          setGlobalFirstKillTaken(data.exists)
-          if (data.exists) setFirstKillPlayerName(data.player_name)
-        }
-      } catch {
-        /* offline, ignore */
-      }
-    }
 
     void checkFirstKill()
     const interval = setInterval(() => void checkFirstKill(), 2000)
     return () => clearInterval(interval)
-  }, [round?.status, tournamentId, roundId])
+  }, [round?.status, checkFirstKill])
 
   const recordAction = useCallback(
     (type: ActionType) => {
@@ -472,6 +487,26 @@ export function WristModeClient({
 
   const buttonsDisabled =
     round?.status !== 'active' || (timeLeft !== null && timeLeft <= 0)
+
+  // ── Configuración de botones secundarios según tipo de juego (AMG-2026.1) ──
+  // Speedsoft: solo CONTROL POINT (captura CP enemigo). KEY ACTION y CRITICAL
+  // ACTION no existen en las reglas de Speedsoft → se ocultan.
+  // Tactical Arena: ENTREGA (objetivo), PORTADOR (evento portador, +5 pts),
+  // ACTIVACIÓN (activación completada, +10 pts).
+  type SecondaryBtn = {
+    action: ActionType
+    lines: [string, string?]   // max 2 líneas de texto
+    accent?: boolean            // borde rojo (acciones críticas)
+  }
+  const secondaryButtons: SecondaryBtn[] = gameType === 'speedsoft'
+    ? [
+        { action: 'objective',        lines: ['CONTROL', 'POINT']  },
+      ]
+    : [
+        { action: 'objective',        lines: ['ENTREGA']            },
+        { action: 'key_action',       lines: ['PORTADOR']           },
+        { action: 'critical_action',  lines: ['ACTIVA', 'CIÓN'],  accent: true },
+      ]
 
   // Solo hay un first kill por ronda (global). Deshacer lo local solo re-habilita
   // si nadie más lo registró en el servidor.
@@ -626,6 +661,18 @@ export function WristModeClient({
       {/* Barra superior: jugador + timer + sync */}
       <div className="flex h-[48px] items-center justify-between px-3">
         <div className="flex items-center gap-2 overflow-hidden">
+          {gameType && (
+            <span
+              className={`shrink-0 rounded px-[5px] py-[1px] text-[8px] font-extrabold uppercase tracking-[0.1em] ${
+                gameType === 'speedsoft'
+                  ? 'bg-[#0A2A4A] text-[#4FC3F7]'
+                  : 'bg-[#2A1A0A] text-[#FF9800]'
+              }`}
+              style={jostFont}
+            >
+              {gameType === 'speedsoft' ? 'SPD' : 'TAC'}
+            </span>
+          )}
           <span
             className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#FFFFFF]"
             style={jostFont}
@@ -713,13 +760,13 @@ export function WristModeClient({
             onClick={() => recordAction('first_kill')}
             className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] ${
               firstKillUsed
-                ? 'border-[#2E7D32] bg-[#1A2E1A]'
+                ? 'border-[#2E7D32] bg-[#1A2E1A]'           // ✓ yo lo registré — verde
                 : globalFirstKillTaken
-                  ? 'border-[#333333] bg-[#1A1A1A] opacity-40'
+                  ? 'border-[#F9A825] bg-[#2A1F00]'          // ✗ otro lo tomó — ámbar
                   : flash === 'first_kill'
                     ? 'border-[#333333] bg-[#333333]'
                     : 'border-[#333333] bg-[#1A1A1A]'
-            } disabled:opacity-30`}
+            }`}
             style={{ ...jostFont, borderRadius: 4 }}
           >
             <span
@@ -727,7 +774,7 @@ export function WristModeClient({
                 firstKillUsed
                   ? 'text-[#2E7D32]'
                   : globalFirstKillTaken
-                    ? 'text-[#666666]'
+                    ? 'text-[#F9A825]'
                     : 'text-[#FFFFFF]'
               }`}
             >
@@ -739,10 +786,10 @@ export function WristModeClient({
                 </>
               ) : globalFirstKillTaken ? (
                 <>
-                  FIRST KILL
+                  ✗ FIRST
                   <br />
                   <span className="text-[8px] normal-case">
-                    {firstKillPlayerName || 'Tomado'}
+                    {firstKillPlayerName ? `por ${firstKillPlayerName}` : 'ya tomado'}
                   </span>
                 </>
               ) : (
@@ -754,51 +801,38 @@ export function WristModeClient({
               )}
             </span>
           </button>
-          <button
-            type="button"
-            disabled={buttonsDisabled}
-            onClick={() => recordAction('objective')}
-            className={`flex flex-1 items-center justify-center border border-[#333333] transition-all active:scale-[0.96] disabled:opacity-30 ${
-              flash === 'objective' ? 'bg-[#333333]' : 'bg-[#1A1A1A]'
-            }`}
-            style={{ ...jostFont, borderRadius: 4 }}
-          >
-            <span className="text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] text-[#FFFFFF] sm:text-[12px]">
-              OBJECTIVE
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={buttonsDisabled}
-            onClick={() => recordAction('key_action')}
-            className={`flex flex-1 items-center justify-center border border-[#333333] transition-all active:scale-[0.96] disabled:opacity-30 ${
-              flash === 'key_action' ? 'bg-[#333333]' : 'bg-[#1A1A1A]'
-            }`}
-            style={{ ...jostFont, borderRadius: 4 }}
-          >
-            <span className="text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] text-[#FFFFFF] sm:text-[12px]">
-              KEY
-              <br />
-              ACTION
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={buttonsDisabled}
-            onClick={() => recordAction('critical_action')}
-            className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] disabled:opacity-30 ${
-              flash === 'critical_action'
-                ? 'border-[#FF1C1C] bg-[#331111]'
-                : 'border-[#CC4B37] bg-[#1A1A1A]'
-            }`}
-            style={{ ...jostFont, borderRadius: 4 }}
-          >
-            <span className="text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] text-[#CC4B37] sm:text-[12px]">
-              CRITICAL
-              <br />
-              ACTION
-            </span>
-          </button>
+          {secondaryButtons.map((btn) => (
+            <button
+              key={btn.action}
+              type="button"
+              disabled={buttonsDisabled}
+              onClick={() => recordAction(btn.action)}
+              className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] disabled:opacity-30 ${
+                btn.accent
+                  ? flash === btn.action
+                    ? 'border-[#FF1C1C] bg-[#331111]'
+                    : 'border-[#CC4B37] bg-[#1A1A1A]'
+                  : flash === btn.action
+                    ? 'border-[#333333] bg-[#333333]'
+                    : 'border-[#333333] bg-[#1A1A1A]'
+              }`}
+              style={{ ...jostFont, borderRadius: 4 }}
+            >
+              <span
+                className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
+                  btn.accent ? 'text-[#CC4B37]' : 'text-[#FFFFFF]'
+                }`}
+              >
+                {btn.lines[0]}
+                {btn.lines[1] && (
+                  <>
+                    <br />
+                    {btn.lines[1]}
+                  </>
+                )}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -816,8 +850,10 @@ export function WristModeClient({
 
         <div className="flex items-center gap-4">
           <span className="text-[10px] tabular-nums text-[#666666]" style={latoFont}>
-            FK:{counts.first_kills} OBJ:{counts.objectives} KA:{counts.key_actions}{' '}
-            CA:{counts.critical_actions}
+            {gameType === 'speedsoft'
+              ? `FK:${counts.first_kills} CP:${counts.objectives}`
+              : `FK:${counts.first_kills} OBJ:${counts.objectives} PORT:${counts.key_actions} ACT:${counts.critical_actions}`
+            }
           </span>
           {pendingCount > 0 && (
             <span className="text-[10px] text-[#F9A825]" style={latoFont}>
