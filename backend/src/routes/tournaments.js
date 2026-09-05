@@ -1406,12 +1406,10 @@ router.patch("/:id/rounds/:roundId/start", requireAuth, async (req, res) => {
 });
 
 // PATCH /:id/rounds/:roundId/end — Terminar ronda manualmente
-// Body opcional: { winner_team: string, victory_condition: "elimination"|"control_point"|"time"|"objective" }
 router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
     const { id, roundId } = req.params;
-    const { winner_team, victory_condition } = req.body || {};
 
     const { data: t } = await supabase
       .from("tournaments")
@@ -1441,15 +1439,6 @@ router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
       ended_at: new Date().toISOString(),
     };
 
-    // Registro de ganador de ronda (AMG-2026.1 — condición de victoria)
-    const validConditions = ["elimination", "control_point", "time", "objective"];
-    if (winner_team && typeof winner_team === "string") {
-      updatePayload.winner_team = winner_team.trim();
-    }
-    if (victory_condition && validConditions.includes(victory_condition)) {
-      updatePayload.victory_condition = victory_condition;
-    }
-
     const { data, error } = await supabase
       .from("tournament_rounds")
       .update(updatePayload)
@@ -1461,6 +1450,63 @@ router.patch("/:id/rounds/:roundId/end", requireAuth, async (req, res) => {
     if (error) {
       return res.status(500).json({ error: error.message });
     }
+
+    // Calcular ganador automáticamente por score de equipo
+    const { data: roundActions } = await supabase
+      .from("tournament_actions")
+      .select("player_id, action_type")
+      .eq("round_id", roundId);
+
+    const { data: roundPlayers } = await supabase
+      .from("tournament_players")
+      .select("id, team_name")
+      .eq("tournament_id", id);
+
+    if (roundActions && roundPlayers && roundPlayers.some((p) => p.team_name)) {
+      const playerScores = {};
+      for (const p of roundPlayers) {
+        playerScores[p.id] = {
+          team: p.team_name,
+          kills: 0,
+          deaths: 0,
+          first_kills: 0,
+          objectives: 0,
+          key_actions: 0,
+          critical_actions: 0,
+        };
+      }
+      for (const a of roundActions) {
+        const s = playerScores[a.player_id];
+        if (!s) continue;
+        if (a.action_type === "kill") s.kills++;
+        else if (a.action_type === "death") s.deaths++;
+        else if (a.action_type === "first_kill") s.first_kills++;
+        else if (a.action_type === "objective") s.objectives++;
+        else if (a.action_type === "key_action") s.key_actions++;
+        else if (a.action_type === "critical_action") s.critical_actions++;
+      }
+
+      const teamScores = {};
+      for (const s of Object.values(playerScores)) {
+        if (!s.team) continue;
+        if (!teamScores[s.team]) teamScores[s.team] = 0;
+        const perf =
+          s.kills * 2 +
+          s.first_kills * 3 +
+          (s.kills > 0 && s.deaths === 0 ? 1 : 0) * 2 -
+          s.deaths * 1;
+        const impact = s.key_actions * 5 + s.critical_actions * 10 + s.objectives * 3;
+        teamScores[s.team] += perf + impact;
+      }
+
+      const teams = Object.entries(teamScores).sort((a, b) => b[1] - a[1]);
+      if (teams.length > 0) {
+        const winner = teams[0][0];
+        await supabase.from("tournament_rounds").update({ winner_team: winner }).eq("id", roundId);
+        data.winner_team = winner;
+      }
+    }
+
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1486,23 +1486,16 @@ export function WristModeClient({
                 </p>
               </div>
             ) : syncConfirmed ? (
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <div className="flex items-center gap-2">
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
                   <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
                   <span
                     className="text-[13px] font-semibold text-[#2E7D32]"
                     style={latoFont}
                   >
-                    ✓ Confirmado
+                    ✓ Confirmado — esperando cierre de ronda
                   </span>
                 </div>
-                <Link
-                  href={`/dashboard/torneos/${tournamentId}`}
-                  className="text-[12px] text-[#666666] underline"
-                  style={latoFont}
-                >
-                  Volver al torneo
-                </Link>
               </div>
             ) : (
               <div className="mt-6">

@@ -176,10 +176,6 @@ export function TournamentAdminClient({
   const [voidReason, setVoidReason] = useState('')
   const [voiding, setVoiding] = useState(false)
 
-  // Ganador de ronda (AMG-2026.1)
-  const [winnerTeam, setWinnerTeam] = useState('')
-  const [victoryCondition, setVictoryCondition] = useState<'elimination' | 'control_point' | 'time' | 'objective' | ''>('')
-
   const [showFinalizeModal, setShowFinalizeModal] = useState(false)
   const [publishResults, setPublishResults] = useState(true)
   const [finalizing, setFinalizing] = useState(false)
@@ -673,13 +669,9 @@ export function TournamentAdminClient({
   const handleEndRound = async () => {
     if (!activeRoundId) return
     try {
-      const body: Record<string, string> = {}
-      if (winnerTeam.trim()) body.winner_team = winnerTeam.trim()
-      if (victoryCondition) body.victory_condition = victoryCondition
-
       const res = await apiFetch(
         `/tournaments/${tournamentId}/rounds/${activeRoundId}/end`,
-        { method: 'PATCH', body: JSON.stringify(body) }
+        { method: 'PATCH' }
       )
       if (!res.ok) {
         const e = await res.json()
@@ -689,8 +681,6 @@ export function TournamentAdminClient({
       setShowSyncChecklist(false)
       setSyncStatuses([])
       setAllSyncConfirmed(false)
-      setWinnerTeam('')
-      setVictoryCondition('')
       void loadTournament()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Error')
@@ -1878,45 +1868,6 @@ export function TournamentAdminClient({
                           </div>
                         </div>
                       ))}
-                    </div>
-                  )}
-
-                  {activeRound?.game_type !== 'drills' && (
-                    <div className="mt-4 border border-[#333333] bg-[#0D0D0D] p-3">
-                      <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#CC4B37]">
-                        GANADOR DE RONDA (REGLAMENTO AMG)
-                      </p>
-                      <input
-                        type="text"
-                        value={winnerTeam}
-                        onChange={(e) => setWinnerTeam(e.target.value)}
-                        placeholder="Equipo ganador (ej: Cobras)"
-                        className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-[12px] text-[#FFFFFF] outline-none focus:border-[#CC4B37]"
-                        style={lato}
-                        maxLength={80}
-                      />
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {([
-                          { value: 'elimination', label: 'Eliminación total' },
-                          { value: 'control_point', label: 'Captura CP' },
-                          { value: 'objective', label: 'Objetivo' },
-                          { value: 'time', label: 'Por tiempo' },
-                        ] as const).map(opt => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setVictoryCondition(v => v === opt.value ? '' : opt.value)}
-                            style={jost}
-                            className={`border px-3 py-1 text-[9px] tracking-wide transition-colors ${
-                              victoryCondition === opt.value
-                                ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                                : 'border-[#444444] text-[#666666] hover:border-[#CC4B37] hover:text-[#CC4B37]'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
                     </div>
                   )}
 
