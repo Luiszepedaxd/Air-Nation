@@ -1104,6 +1104,40 @@ router.post("/:id/rounds", requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /:id/rounds/:roundId — Eliminar ronda (solo si está en setup)
+router.delete("/:id/rounds/:roundId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id, roundId } = req.params;
+
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", id)
+      .eq("created_by", userId)
+      .maybeSingle();
+    if (!t) return res.status(403).json({ error: "Solo el creador" });
+
+    const { data: round } = await supabase
+      .from("tournament_rounds")
+      .select("id, status")
+      .eq("id", roundId)
+      .eq("tournament_id", id)
+      .maybeSingle();
+
+    if (!round) return res.status(404).json({ error: "Ronda no encontrada" });
+    if (round.status !== "setup") {
+      return res.status(400).json({ error: "Solo se pueden eliminar rondas en setup" });
+    }
+
+    const { error } = await supabase.from("tournament_rounds").delete().eq("id", roundId);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /:id/rounds/:roundId/assign — Asignar árbitro a jugador
 router.post("/:id/rounds/:roundId/assign", requireAuth, async (req, res) => {
   try {
@@ -1588,7 +1622,7 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
 
     const { data: round } = await supabase
       .from("tournament_rounds")
-      .select("id, status, started_at, duration_seconds, tournament_id")
+      .select("id, status, started_at, duration_seconds, tournament_id, game_type")
       .eq("id", roundId)
       .eq("tournament_id", id)
       .maybeSingle();
@@ -1620,7 +1654,8 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
     }
 
     let deadline = null;
-    if (round.started_at) {
+    // Drills usan cronómetro ascendente — no hay deadline
+    if (round.started_at && round.game_type !== "drills") {
       deadline = new Date(new Date(round.started_at).getTime() + round.duration_seconds * 1000);
     }
 

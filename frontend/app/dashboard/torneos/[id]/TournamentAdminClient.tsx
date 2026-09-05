@@ -580,6 +580,27 @@ export function TournamentAdminClient({
     void loadAssignments(roundId)
   }
 
+  const handleDeleteRound = async (roundId: string) => {
+    if (!window.confirm('¿Eliminar esta ronda?')) return
+    try {
+      const res = await apiFetch(
+        `/tournaments/${tournamentId}/rounds/${roundId}`,
+        { method: 'DELETE' }
+      )
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+      if (activeRoundId === roundId) {
+        setActiveRoundId(null)
+        setAssignments([])
+      }
+      void loadTournament()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar ronda')
+    }
+  }
+
   const handleAssign = async () => {
     if (!activeRoundId || !selectedReferee || !selectedPlayer) return
     setAssigning(true)
@@ -1401,56 +1422,69 @@ export function TournamentAdminClient({
             ) : (
               <div className="flex flex-col gap-2">
                 {tournament.rounds.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => handleSelectRound(r.id)}
-                    className={`flex items-center justify-between border px-4 py-3 text-left transition-colors ${
-                      activeRoundId === r.id
-                        ? 'border-[#CC4B37] bg-[#CC4B37]/5'
-                        : 'border-[#EEEEEE] bg-[#FFFFFF] hover:border-[#DDDDDD]'
-                    }`}
-                  >
-                    <div>
-                      <span
-                        className="text-[13px] font-semibold text-[#111111]"
-                        style={lato}
-                      >
-                        {r.name || `Ronda ${r.round_number}`}
-                      </span>
-                      <span className="ml-2 text-[11px] text-[#999999]" style={lato}>
-                        {r.duration_seconds}s
-                      </span>
-                    </div>
-                    <span
-                      style={jost}
-                      className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
-                        r.status === 'active'
-                          ? 'bg-[#2E7D32] text-[#FFFFFF]'
-                          : r.status === 'completed'
-                            ? 'bg-[#111111] text-[#FFFFFF]'
-                            : r.status === 'voided'
-                              ? 'bg-[#CC4B37] text-[#FFFFFF]'
-                              : 'bg-[#F4F4F4] text-[#666666]'
+                  <div key={r.id} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectRound(r.id)}
+                      className={`flex flex-1 items-center justify-between border px-4 py-3 text-left transition-colors ${
+                        activeRoundId === r.id
+                          ? 'border-[#CC4B37] bg-[#CC4B37]/5'
+                          : 'border-[#EEEEEE] bg-[#FFFFFF] hover:border-[#DDDDDD]'
                       }`}
                     >
-                      {r.status === 'active'
-                        ? 'EN VIVO'
-                        : r.status === 'completed'
-                          ? 'TERMINADA'
-                          : r.status === 'voided'
-                            ? 'ANULADA'
-                            : 'SETUP'}
-                    </span>
-                    {r.game_type && (
-                      <span
-                        style={jost}
-                        className="ml-1 inline-block border border-[#EEEEEE] px-1.5 py-0.5 text-[8px] tracking-wide text-[#999999]"
+                      <div>
+                        <span
+                          className="text-[13px] font-semibold text-[#111111]"
+                          style={lato}
+                        >
+                          {r.name || `Ronda ${r.round_number}`}
+                        </span>
+                        <span className="ml-2 text-[11px] text-[#999999]" style={lato}>
+                          {r.duration_seconds}s
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          style={jost}
+                          className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
+                            r.status === 'active'
+                              ? 'bg-[#2E7D32] text-[#FFFFFF]'
+                              : r.status === 'completed'
+                                ? 'bg-[#111111] text-[#FFFFFF]'
+                                : r.status === 'voided'
+                                  ? 'bg-[#CC4B37] text-[#FFFFFF]'
+                                  : 'bg-[#F4F4F4] text-[#666666]'
+                          }`}
+                        >
+                          {r.status === 'active'
+                            ? 'EN VIVO'
+                            : r.status === 'completed'
+                              ? 'TERMINADA'
+                              : r.status === 'voided'
+                                ? 'ANULADA'
+                                : 'SETUP'}
+                        </span>
+                        {r.game_type && (
+                          <span
+                            style={jost}
+                            className="inline-block border border-[#EEEEEE] px-1.5 py-0.5 text-[8px] tracking-wide text-[#999999]"
+                          >
+                            {r.game_type === 'speedsoft' ? 'SPD' : r.game_type === 'drills' ? 'DRILL' : 'TAC'}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                    {r.status === 'setup' && (
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteRound(r.id)}
+                        className="shrink-0 px-2 py-3 text-[12px] text-[#CC4B37] transition-colors hover:text-[#111111]"
+                        title="Eliminar ronda"
                       >
-                        {r.game_type === 'speedsoft' ? 'SPD' : r.game_type === 'drills' ? 'DRILL' : 'TAC'}
-                      </span>
+                        ✕
+                      </button>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
             )}

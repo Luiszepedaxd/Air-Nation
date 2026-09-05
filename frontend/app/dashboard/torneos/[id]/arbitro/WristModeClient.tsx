@@ -630,7 +630,8 @@ export function WristModeClient({
 
   if (round && round.status === 'completed') {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
+      <div className="flex h-[100dvh] flex-col items-start overflow-y-auto bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
+        <div className="my-auto w-full py-6 text-center">
         <p
           className="text-[16px] font-extrabold uppercase tracking-[0.2em] text-[#FFFFFF]"
           style={jostFont}
@@ -708,6 +709,7 @@ export function WristModeClient({
             </button>
           </div>
         )}
+        </div>
       </div>
     )
   }
@@ -778,9 +780,10 @@ export function WristModeClient({
           )}
         </div>
 
-        <div className="text-center">
+        {/* Centro: timer + deshacer */}
+        <div className="flex items-center gap-3">
           {gameType === 'drills' ? (
-            <div>
+            <div className="text-center">
               <span className="font-mono text-[22px] font-bold tabular-nums leading-none text-[#FFFFFF]">
                 {formatTimer(drillElapsed)}
               </span>
@@ -800,6 +803,17 @@ export function WristModeClient({
             >
               {timeLeft !== null ? formatTimer(timeLeft) : '--:--'}
             </span>
+          )}
+          {gameType !== 'drills' && (
+            <button
+              type="button"
+              onClick={undoLast}
+              disabled={actions.length === 0 || buttonsDisabled}
+              className="flex items-center gap-1 border border-[#444444] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.08em] text-[#999999] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-30"
+              style={{ ...jostFont, borderRadius: 3 }}
+            >
+              ↩ UNDO
+            </button>
           )}
         </div>
 
@@ -1028,18 +1042,8 @@ export function WristModeClient({
         )}
       </div>
 
-      {/* Barra inferior: deshacer + estado */}
-      <div className="flex h-[48px] items-center justify-between px-1">
-        <button
-          type="button"
-          onClick={undoLast}
-          disabled={actions.length === 0 || buttonsDisabled}
-          className="text-[11px] uppercase tracking-[0.1em] text-[#666666] transition-colors hover:text-[#CC4B37] disabled:opacity-30"
-          style={jostFont}
-        >
-          ↩ DESHACER
-        </button>
-
+      {/* Barra inferior: estado */}
+      <div className="flex h-[48px] items-center justify-end px-1">
         <div className="flex items-center gap-4">
           <span className="text-[10px] tabular-nums text-[#666666]" style={latoFont}>
             {gameType === 'drills' ? (
@@ -1060,8 +1064,8 @@ export function WristModeClient({
 
       {/* Overlay drill completado */}
       {gameType === 'drills' && drillFinished && (
-        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
-          <div className="text-center">
+        <div className="absolute inset-0 z-[10000] flex items-start justify-center overflow-y-auto bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
+          <div className="my-auto py-6 text-center">
             <p
               className="text-[20px] font-extrabold uppercase tracking-[0.3em] text-[#2E7D32]"
               style={jostFont}
@@ -1152,8 +1156,8 @@ export function WristModeClient({
 
       {/* Overlay de tiempo agotado */}
       {gameType !== 'drills' && timeLeft !== null && timeLeft <= 0 && (
-        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
-          <div className="text-center">
+        <div className="absolute inset-0 z-[10000] flex items-start justify-center overflow-y-auto bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
+          <div className="my-auto py-6 text-center">
             <p
               className="text-[24px] font-extrabold uppercase tracking-[0.3em] text-[#CC4B37]"
               style={jostFont}
