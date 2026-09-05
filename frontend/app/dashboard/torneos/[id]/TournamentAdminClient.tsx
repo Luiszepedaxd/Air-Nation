@@ -940,127 +940,162 @@ export function TournamentAdminClient({
 
       {/* ═══════════════ TAB: SETUP ═══════════════ */}
       {subTab === 'setup' && isCreator && (
-        <div className="space-y-8">
+        <div className="space-y-10">
+          {/* ═══════════════ JUGADORES ═══════════════ */}
           <section>
-            <h2
-              style={{ ...jost, fontSize: 11, letterSpacing: '0.12em' }}
-              className="mb-3 text-[#999999]"
-            >
-              JUGADORES ({tournament.players?.length || 0})
-            </h2>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                type="text"
-                value={newPlayerName}
-                onChange={(e) => setNewPlayerName(e.target.value)}
-                placeholder="Nombre del jugador"
-                className={`${inputClass} flex-1`}
-                style={lato}
-                maxLength={80}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleAddPlayer()
-                }}
-              />
-              <input
-                type="text"
-                value={newPlayerTeam}
-                onChange={(e) => setNewPlayerTeam(e.target.value)}
-                placeholder="Equipo (opcional)"
-                className={`${inputClass} sm:max-w-[180px]`}
-                style={lato}
-                maxLength={80}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleAddPlayer()
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => void handleAddPlayer()}
-                disabled={addingPlayer || !newPlayerName.trim()}
-                style={jost}
-                className={`${btnPrimary} shrink-0`}
-              >
-                {addingPlayer ? '...' : 'AGREGAR'}
-              </button>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <input
-                ref={playerFileRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) void handleImportPlayers(file)
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => playerFileRef.current?.click()}
-                disabled={importingPlayers}
-                style={jost}
-                className={`${btnSecondary} text-[10px]`}
-              >
-                {importingPlayers ? 'IMPORTANDO...' : '📄 IMPORTAR EXCEL'}
-              </button>
-              <span className="text-[11px] text-[#999999]" style={lato}>
-                Columnas: NOMBRE, EQUIPO (opcional)
+            <div className="flex items-center justify-between">
+              <h2 style={{ ...jost, fontSize: 13, letterSpacing: '0.12em' }} className="text-[#111111]">
+                JUGADORES
+              </h2>
+              <span className="text-[12px] tabular-nums text-[#999999]" style={lato}>
+                {tournament.players?.length || 0} registrados
               </span>
             </div>
+            <p className="mt-1 text-[12px] text-[#999999]" style={lato}>
+              Agrega a los jugadores que participarán. Puedes escribir uno por uno o importar una lista desde Excel.
+            </p>
+
+            {/* Agregar jugador */}
+            <div className="mt-4 border border-[#EEEEEE] bg-[#FAFAFA] p-4">
+              <p style={jost} className="mb-3 text-[10px] tracking-[0.12em] text-[#999999]">
+                AGREGAR JUGADOR
+              </p>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={newPlayerName}
+                    onChange={(e) => setNewPlayerName(e.target.value)}
+                    placeholder="Nombre o alias del jugador"
+                    className={`${inputClass} flex-1`}
+                    style={lato}
+                    maxLength={80}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void handleAddPlayer()
+                    }}
+                  />
+                  <input
+                    type="text"
+                    value={newPlayerTeam}
+                    onChange={(e) => setNewPlayerTeam(e.target.value)}
+                    placeholder="Equipo (opcional)"
+                    className={`${inputClass} sm:max-w-[200px]`}
+                    style={lato}
+                    maxLength={80}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void handleAddPlayer()
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleAddPlayer()}
+                  disabled={addingPlayer || !newPlayerName.trim()}
+                  style={jost}
+                  className={`${btnPrimary} w-full sm:w-auto sm:self-end`}
+                >
+                  {addingPlayer ? 'AGREGANDO...' : 'AGREGAR JUGADOR'}
+                </button>
+              </div>
+
+              {/* Separador con importar */}
+              <div className="mt-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#EEEEEE]" />
+                <span className="text-[10px] uppercase tracking-widest text-[#CCCCCC]" style={jost}>o</span>
+                <div className="h-px flex-1 bg-[#EEEEEE]" />
+              </div>
+
+              <div className="mt-3">
+                <input
+                  ref={playerFileRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) void handleImportPlayers(file)
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => playerFileRef.current?.click()}
+                  disabled={importingPlayers}
+                  style={jost}
+                  className={`${btnSecondary} w-full text-[10px]`}
+                >
+                  {importingPlayers ? 'IMPORTANDO...' : 'IMPORTAR DESDE EXCEL'}
+                </button>
+                <p className="mt-2 text-center text-[10px] text-[#CCCCCC]" style={lato}>
+                  El archivo debe tener las columnas NOMBRE y EQUIPO (opcional)
+                </p>
+              </div>
+            </div>
+
+            {/* Lista de jugadores */}
             {(tournament.players || []).length > 0 && (
-              <div className="mt-3 border border-[#EEEEEE]">
-                {tournament.players.map((p, i) => (
-                  <div
-                    key={p.id}
-                    className={`flex items-center justify-between px-4 py-2.5 ${
-                      i < tournament.players.length - 1
-                        ? 'border-b border-[#F4F4F4]'
-                        : ''
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <span
-                        className="text-[13px] font-semibold text-[#111111]"
-                        style={lato}
-                      >
-                        {p.name}
-                      </span>
-                      {p.team_name && (
-                        <span className="ml-2 text-[11px] text-[#999999]" style={lato}>
-                          {p.team_name}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleDeletePlayer(p.id)}
-                      className="ml-2 text-[11px] text-[#CC4B37] transition-colors hover:text-[#111111]"
-                      style={lato}
-                      title="Eliminar jugador"
+              <div className="mt-4">
+                <div className="border border-[#EEEEEE]">
+                  {tournament.players.map((p, i) => (
+                    <div
+                      key={p.id}
+                      className={`flex items-center justify-between px-4 py-2.5 ${
+                        i < tournament.players.length - 1 ? 'border-b border-[#F4F4F4]' : ''
+                      }`}
                     >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[11px] tabular-nums text-[#CCCCCC]" style={lato}>
+                          {i + 1}
+                        </span>
+                        <span className="text-[13px] font-semibold text-[#111111]" style={lato}>
+                          {p.name}
+                        </span>
+                        {p.team_name && (
+                          <span className="text-[11px] text-[#999999]" style={lato}>
+                            — {p.team_name}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeletePlayer(p.id)}
+                        className="ml-2 text-[11px] text-[#CC4B37] transition-colors hover:text-[#111111]"
+                        style={lato}
+                        title="Eliminar jugador"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </section>
 
+          {/* ═══════════════ ÁRBITROS ═══════════════ */}
           <section>
-            <h2
-              style={{ ...jost, fontSize: 11, letterSpacing: '0.12em' }}
-              className="mb-3 text-[#999999]"
-            >
-              ÁRBITROS ({tournament.referees?.length || 0})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 style={{ ...jost, fontSize: 13, letterSpacing: '0.12em' }} className="text-[#111111]">
+                ÁRBITROS
+              </h2>
+              <span className="text-[12px] tabular-nums text-[#999999]" style={lato}>
+                {tournament.referees?.length || 0} códigos
+              </span>
+            </div>
+            <p className="mt-1 text-[12px] text-[#999999]" style={lato}>
+              Cada árbitro recibe un código único para entrar al torneo. Escribe sus nombres y el sistema genera los códigos automáticamente.
+            </p>
 
-            <div className="border border-[#EEEEEE] p-4">
+            {/* Agregar árbitros por nombre */}
+            <div className="mt-4 border border-[#EEEEEE] bg-[#FAFAFA] p-4">
               <p style={jost} className="mb-3 text-[10px] tracking-[0.12em] text-[#999999]">
-                AGREGAR POR NOMBRE
+                NOMBRES DE ÁRBITROS
               </p>
               <div className="flex flex-col gap-2">
                 {refNames.map((name, idx) => (
                   <div key={idx} className="flex items-center gap-2">
+                    <span className="w-[20px] text-right text-[11px] tabular-nums text-[#CCCCCC]" style={lato}>
+                      {idx + 1}
+                    </span>
                     <input
                       type="text"
                       value={name}
@@ -1069,7 +1104,7 @@ export function TournamentAdminClient({
                         updated[idx] = e.target.value
                         setRefNames(updated)
                       }}
-                      placeholder={`Árbitro ${idx + 1}`}
+                      placeholder={`Nombre del árbitro ${idx + 1}`}
                       className={`${inputClass} flex-1`}
                       style={lato}
                       maxLength={80}
@@ -1086,7 +1121,7 @@ export function TournamentAdminClient({
                       <button
                         type="button"
                         onClick={() => setRefNames(refNames.filter((_, i) => i !== idx))}
-                        className="text-[14px] text-[#CC4B37] hover:text-[#111111]"
+                        className="text-[12px] text-[#CC4B37] hover:text-[#111111]"
                       >
                         ✕
                       </button>
@@ -1096,10 +1131,10 @@ export function TournamentAdminClient({
                 <button
                   type="button"
                   onClick={() => setRefNames([...refNames, ''])}
-                  className="self-start text-[11px] text-[#666666] transition-colors hover:text-[#CC4B37]"
+                  className="ml-[28px] self-start text-[11px] text-[#CC4B37] transition-colors hover:text-[#111111]"
                   style={lato}
                 >
-                  + Agregar otro
+                  + Agregar otro árbitro
                 </button>
               </div>
               <button
@@ -1107,149 +1142,150 @@ export function TournamentAdminClient({
                 onClick={() => void handleGenerateRefsWithNames()}
                 disabled={generatingRefs || refNames.every((n) => !n.trim())}
                 style={jost}
-                className={`${btnPrimary} mt-3 w-full`}
+                className={`${btnPrimary} mt-4 w-full`}
               >
                 {generatingRefs
                   ? 'GENERANDO...'
-                  : `GENERAR ${refNames.filter((n) => n.trim()).length || 0} CÓDIGOS`}
+                  : `GENERAR ${refNames.filter((n) => n.trim()).length || 0} CÓDIGO${refNames.filter((n) => n.trim()).length === 1 ? '' : 'S'}`}
               </button>
+
+              {/* Separador */}
+              <div className="mt-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#EEEEEE]" />
+                <span className="text-[10px] uppercase tracking-widest text-[#CCCCCC]" style={jost}>o</span>
+                <div className="h-px flex-1 bg-[#EEEEEE]" />
+              </div>
+
+              {/* Import Excel */}
+              <div className="mt-3">
+                <input
+                  ref={refereeFileRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) void handleImportReferees(file)
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => refereeFileRef.current?.click()}
+                  disabled={importingRefs}
+                  style={jost}
+                  className={`${btnSecondary} w-full text-[10px]`}
+                >
+                  {importingRefs ? 'IMPORTANDO...' : 'IMPORTAR DESDE EXCEL'}
+                </button>
+                <p className="mt-2 text-center text-[10px] text-[#CCCCCC]" style={lato}>
+                  El archivo debe tener la columna NOMBRE DEL ÁRBITRO
+                </p>
+              </div>
+
+              {/* Generar sin nombre (colapsado) */}
+              <details className="mt-4 border-t border-[#EEEEEE] pt-3">
+                <summary className="cursor-pointer text-[11px] text-[#999999] hover:text-[#CC4B37]" style={lato}>
+                  Generar códigos sin nombre asignado
+                </summary>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={refCount}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, '')
+                      setRefCount(raw)
+                    }}
+                    onBlur={() => {
+                      const n = parseInt(refCount, 10)
+                      if (!n || n < 1) setRefCount('1')
+                      else if (n > 50) setRefCount('50')
+                    }}
+                    placeholder="1"
+                    className={`${inputClass} w-[60px] text-center`}
+                    style={lato}
+                    maxLength={2}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleGenerateRefs()}
+                    disabled={generatingRefs}
+                    style={jost}
+                    className={`${btnSecondary} text-[10px]`}
+                  >
+                    GENERAR
+                  </button>
+                  <span className="text-[10px] text-[#CCCCCC]" style={lato}>
+                    códigos anónimos
+                  </span>
+                </div>
+              </details>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <input
-                ref={refereeFileRef}
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) void handleImportReferees(file)
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => refereeFileRef.current?.click()}
-                disabled={importingRefs}
-                style={jost}
-                className={`${btnSecondary} text-[10px]`}
-              >
-                {importingRefs ? 'IMPORTANDO...' : '📄 IMPORTAR EXCEL'}
-              </button>
-              <span className="text-[11px] text-[#999999]" style={lato}>
-                Columna: NOMBRE DEL ÁRBITRO
-              </span>
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#F4F4F4] pt-3">
-              <span className="text-[11px] text-[#999999]" style={lato}>
-                O generar sin nombre:
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={refCount}
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/[^0-9]/g, '')
-                  setRefCount(raw)
-                }}
-                onBlur={() => {
-                  const n = parseInt(refCount, 10)
-                  if (!n || n < 1) setRefCount('1')
-                  else if (n > 50) setRefCount('50')
-                }}
-                placeholder="1"
-                className={`${inputClass} w-[60px] text-center`}
-                style={lato}
-                maxLength={2}
-              />
-              <button
-                type="button"
-                onClick={() => void handleGenerateRefs()}
-                disabled={generatingRefs}
-                style={jost}
-                className={`${btnSecondary} text-[10px]`}
-              >
-                GENERAR
-              </button>
-            </div>
-
+            {/* Resultado de import */}
             {importResult && (
-              <p className="mt-2 text-[12px] font-semibold text-[#2E7D32]" style={lato}>
+              <p className="mt-3 text-[12px] font-semibold text-[#2E7D32]" style={lato}>
                 ✓ {importResult}
               </p>
             )}
 
+            {/* Tabla de árbitros */}
             {(tournament.referees || []).length > 0 && (
-              <div className="mt-4 border border-[#EEEEEE]">
-                <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
-                  <span
-                    style={jost}
-                    className="col-span-3 text-[9px] tracking-widest text-[#999999]"
-                  >
-                    CÓDIGO
-                  </span>
-                  <span
-                    style={jost}
-                    className="col-span-5 text-[9px] tracking-widest text-[#999999]"
-                  >
-                    NOMBRE
-                  </span>
-                  <span
-                    style={jost}
-                    className="col-span-3 text-[9px] tracking-widest text-[#999999]"
-                  >
-                    STATUS
-                  </span>
-                  <span
-                    style={jost}
-                    className="col-span-1 text-right text-[9px] tracking-widest text-[#999999]"
-                  >
-                    ✓
-                  </span>
-                </div>
-                {tournament.referees.map((r) => (
-                  <div
-                    key={r.id}
-                    className="grid grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-2.5 last:border-0"
-                  >
-                    <span
-                      className="col-span-3 font-mono text-[13px] font-bold tracking-widest text-[#111111]"
-                      style={lato}
+              <div className="mt-4">
+                <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#999999]">
+                  CÓDIGOS GENERADOS — compartir con los árbitros para que se unan
+                </p>
+                <div className="border border-[#EEEEEE]">
+                  <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                    <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">CÓDIGO</span>
+                    <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#999999]">NOMBRE</span>
+                    <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">ESTADO</span>
+                    <span style={jost} className="col-span-1 text-right text-[9px] tracking-widest text-[#999999]">✓</span>
+                  </div>
+                  {tournament.referees.map((r) => (
+                    <div
+                      key={r.id}
+                      className="grid grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-2.5 last:border-0"
                     >
-                      {r.code}
-                    </span>
-                    <span className="col-span-5 text-[12px] text-[#111111]" style={lato}>
-                      {r.name || '—'}
-                    </span>
-                    <span className="col-span-3">
-                      {(() => {
-                        if (r.status === 'pending') {
+                      <span
+                        className="col-span-3 font-mono text-[13px] font-bold tracking-widest text-[#111111]"
+                        style={lato}
+                      >
+                        {r.code}
+                      </span>
+                      <span className="col-span-5 text-[12px] text-[#111111]" style={lato}>
+                        {r.name || '—'}
+                      </span>
+                      <span className="col-span-3">
+                        {(() => {
+                          if (r.status === 'pending') {
+                            return (
+                              <span style={jost} className="inline-block bg-[#F4F4F4] px-2 py-0.5 text-[9px] tracking-wide text-[#999999]">
+                                PENDIENTE
+                              </span>
+                            )
+                          }
+                          const isOnline = onlineRefereeIds.has(r.id)
                           return (
-                            <span style={jost} className="inline-block bg-[#F4F4F4] px-2 py-0.5 text-[9px] tracking-wide text-[#999999]">
-                              PENDIENTE
+                            <span
+                              style={jost}
+                              className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
+                                isOnline
+                                  ? 'bg-[#2E7D32] text-[#FFFFFF]'
+                                  : 'bg-[#F9A825] text-[#111111]'
+                              }`}
+                            >
+                              {isOnline ? 'EN SALA' : 'AUSENTE'}
                             </span>
                           )
-                        }
-                        const isOnline = onlineRefereeIds.has(r.id)
-                        return (
-                          <span
-                            style={jost}
-                            className={`inline-block px-2 py-0.5 text-[9px] tracking-wide ${
-                              isOnline
-                                ? 'bg-[#2E7D32] text-[#FFFFFF]'
-                                : 'bg-[#F9A825] text-[#111111]'
-                            }`}
-                          >
-                            {isOnline ? 'EN SALA' : 'AUSENTE'}
-                          </span>
-                        )
-                      })()}
-                    </span>
-                    <span className="col-span-1 text-right text-[11px] text-[#999999]" style={lato}>
-                      {r.status === 'pending' ? '—' : onlineRefereeIds.has(r.id) ? '✓' : '—'}
-                    </span>
-                  </div>
-                ))}
+                        })()}
+                      </span>
+                      <span className="col-span-1 text-right text-[11px] text-[#999999]" style={lato}>
+                        {r.status === 'pending' ? '—' : onlineRefereeIds.has(r.id) ? '✓' : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </section>
