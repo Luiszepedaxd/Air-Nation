@@ -575,14 +575,127 @@ router.get("/referee/assignment/:roundId", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "No eres árbitro" });
     }
 
-    const { data: assignment } = await supabase
+    let assignment = null;
+    if (round.game_type === "drills") {
+      const { data: rows } = await supabase
+        .from("tournament_assignments")
+        .select("*, tournament_players(id, name, team_name)")
+        .eq("round_id", roundId)
+        .eq("referee_id", referee.id)
+        .order("drill_order", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true })
+        .limit(1);
+      assignment = rows?.[0] || null;
+    } else {
+      const { data, error: assignErr } = await supabase
+        .from("tournament_assignments")
+        .select("*, tournament_players(id, name, team_name)")
+        .eq("round_id", roundId)
+        .eq("referee_id", referee.id)
+        .maybeSingle();
+      if (assignErr && assignErr.code !== "PGRST116") {
+        return res.status(500).json({ error: assignErr.message });
+      }
+      assignment = data;
+    }
+
+    res.json({ round, referee, assignment: assignment || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /referee/drill-queue/:roundId — Cola de jugadores para drills
+router.get("/referee/drill-queue/:roundId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { roundId } = req.params;
+
+    const { data: round } = await supabase
+      .from("tournament_rounds")
+      .select("id, tournament_id, status, started_at, duration_seconds, game_type, foul_penalty_seconds")
+      .eq("id", roundId)
+      .maybeSingle();
+
+    if (!round) return res.status(404).json({ error: "Ronda no encontrada" });
+
+    const { data: referee } = await supabase
+      .from("tournament_referees")
+      .select("id")
+      .eq("tournament_id", round.tournament_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!referee) return res.status(403).json({ error: "No eres árbitro" });
+
+    const { data: assignments } = await supabase
       .from("tournament_assignments")
       .select("*, tournament_players(id, name, team_name)")
       .eq("round_id", roundId)
       .eq("referee_id", referee.id)
+      .order("drill_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: true });
+
+    const enriched = await Promise.all(
+      (assignments || []).map(async (a) => {
+        const { data: actions } = await supabase
+          .from("tournament_actions")
+          .select("action_type")
+          .eq("assignment_id", a.id);
+
+        const fouls = (actions || []).filter((x) => x.action_type === "foul").length;
+        const completed =
+          (actions || []).filter((x) => x.action_type === "drill_complete").length > 0;
+
+        return {
+          ...a,
+          fouls,
+          completed,
+        };
+      })
+    );
+
+    res.json({
+      round,
+      referee,
+      assignments: enriched,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /referee/start-drill/:assignmentId — Iniciar drill de un jugador
+router.patch("/referee/start-drill/:assignmentId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { assignmentId } = req.params;
+
+    const { data: assignment } = await supabase
+      .from("tournament_assignments")
+      .select("id, round_id, referee_id, drill_started_at, tournament_referees(user_id)")
+      .eq("id", assignmentId)
       .maybeSingle();
 
-    res.json({ round, referee, assignment: assignment || null });
+    if (!assignment) return res.status(404).json({ error: "Asignación no encontrada" });
+
+    const refereeUserId = assignment.tournament_referees?.user_id;
+    if (refereeUserId !== userId) {
+      return res.status(403).json({ error: "No eres el árbitro asignado" });
+    }
+    if (assignment.drill_started_at) {
+      return res.json({ already_started: true });
+    }
+
+    const { data, error } = await supabase
+      .from("tournament_assignments")
+      .update({ drill_started_at: new Date().toISOString() })
+      .eq("id", assignmentId)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1520,12 +1633,22 @@ router.patch("/:id/rounds/:roundId/confirm-sync", requireAuth, async (req, res) 
 
     if (!referee) return res.status(403).json({ error: "No eres árbitro de este torneo" });
 
-    const { data: assignment } = await supabase
-      .from("tournament_assignments")
-      .select("id, sync_confirmed_at")
-      .eq("round_id", roundId)
-      .eq("referee_id", referee.id)
-      .maybeSingle();
+    const { assignment_id } = req.body;
+
+    const { data: assignment } = assignment_id
+      ? await supabase
+          .from("tournament_assignments")
+          .select("id, sync_confirmed_at")
+          .eq("id", assignment_id)
+          .eq("round_id", roundId)
+          .eq("referee_id", referee.id)
+          .maybeSingle()
+      : await supabase
+          .from("tournament_assignments")
+          .select("id, sync_confirmed_at")
+          .eq("round_id", roundId)
+          .eq("referee_id", referee.id)
+          .maybeSingle();
 
     if (!assignment) return res.status(404).json({ error: "No tienes asignación en esta ronda" });
 
@@ -1614,7 +1737,7 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
   try {
     const userId = req.authUser.id;
     const { id, roundId } = req.params;
-    const { actions } = req.body;
+    const { actions, assignment_id } = req.body;
 
     if (!Array.isArray(actions) || actions.length === 0) {
       return res.status(400).json({ error: "actions array requerido" });
@@ -1642,12 +1765,20 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "No eres árbitro de este torneo" });
     }
 
-    const { data: assignment } = await supabase
-      .from("tournament_assignments")
-      .select("id, player_id")
-      .eq("round_id", roundId)
-      .eq("referee_id", refereeRecord.id)
-      .maybeSingle();
+    const { data: assignment } = assignment_id
+      ? await supabase
+          .from("tournament_assignments")
+          .select("id, player_id")
+          .eq("id", assignment_id)
+          .eq("round_id", roundId)
+          .eq("referee_id", refereeRecord.id)
+          .maybeSingle()
+      : await supabase
+          .from("tournament_assignments")
+          .select("id, player_id")
+          .eq("round_id", roundId)
+          .eq("referee_id", refereeRecord.id)
+          .maybeSingle();
 
     if (!assignment) {
       return res.status(403).json({ error: "No tienes asignación en esta ronda" });
@@ -1711,6 +1842,16 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
     if (error) {
       return res.status(500).json({ error: error.message });
     }
+
+    const drillCompleteInserted = (data || []).some((a) => a.action_type === "drill_complete");
+    if (drillCompleteInserted && assignment) {
+      await supabase
+        .from("tournament_assignments")
+        .update({ drill_completed_at: new Date().toISOString() })
+        .eq("id", assignment.id)
+        .is("drill_completed_at", null);
+    }
+
     res.json({ inserted: data?.length || 0, skipped: actions.length - (data?.length || 0) });
   } catch (err) {
     res.status(500).json({ error: err.message });

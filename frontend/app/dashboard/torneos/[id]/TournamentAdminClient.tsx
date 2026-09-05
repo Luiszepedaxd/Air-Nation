@@ -811,12 +811,27 @@ export function TournamentAdminClient({
 
   const handleAutoAssign = async () => {
     if (!activeRoundId) return
-    const pairsToAssign = availableRefs
-      .slice(0, Math.min(availableRefs.length, availablePlayers.length))
-      .map((ref, i) => ({
-        referee_id: ref.id,
-        player_id: availablePlayers[i].id,
+
+    const activeRound = tournament?.rounds.find((r) => r.id === activeRoundId)
+    let pairsToAssign: { referee_id: string; player_id: string }[] = []
+
+    if (activeRound?.game_type === 'drills') {
+      const drillRefs = (tournament.referees || []).filter(
+        (r) => r.status === 'joined' || r.status === 'active'
+      )
+      if (drillRefs.length === 0) {
+        setError('No hay árbitros disponibles')
+        return
+      }
+      pairsToAssign = availablePlayers.map((p, i) => ({
+        referee_id: drillRefs[i % drillRefs.length].id,
+        player_id: p.id,
       }))
+    } else {
+      pairsToAssign = availableRefs
+        .slice(0, Math.min(availableRefs.length, availablePlayers.length))
+        .map((ref, i) => ({ referee_id: ref.id, player_id: availablePlayers[i].id }))
+    }
 
     if (pairsToAssign.length === 0) {
       setError('No hay árbitros y jugadores disponibles para emparejar')
@@ -828,10 +843,7 @@ export function TournamentAdminClient({
     try {
       const res = await apiFetch(
         `/tournaments/${tournamentId}/rounds/${activeRoundId}/assign/batch`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ pairs: pairsToAssign }),
-        }
+        { method: 'POST', body: JSON.stringify({ pairs: pairsToAssign }) }
       )
       if (!res.ok) {
         const e = await res.json()
@@ -1683,6 +1695,22 @@ export function TournamentAdminClient({
                   </p>
                 )}
               </div>
+
+              {activeRound?.game_type === 'drills' && scoreboard.length > 0 && (
+                <div className="mt-4 text-center">
+                  <p style={jost} className="text-[11px] tracking-[0.15em] text-[#999999]">
+                    PROGRESO: {scoreboard.filter((s) => (s.drill_completes || 0) > 0).length} / {scoreboard.length} completados
+                  </p>
+                  <div className="mt-2 h-[6px] w-full bg-[#333333]">
+                    <div
+                      className="h-full bg-[#2E7D32] transition-all"
+                      style={{
+                        width: `${(scoreboard.filter((s) => (s.drill_completes || 0) > 0).length / scoreboard.length) * 100}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {scoreboard.length > 0 && (
                 <div className="mt-6">

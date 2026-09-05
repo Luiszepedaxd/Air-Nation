@@ -43,6 +43,18 @@ type AssignmentInfo = {
   tournament_players: PlayerInfo
 }
 
+type DrillQueueItem = {
+  id: string
+  player_id: string
+  tournament_players: PlayerInfo
+  drill_started_at: string | null
+  drill_completed_at: string | null
+  drill_order: number | null
+  fouls: number
+  completed: boolean
+  sync_confirmed_at: string | null
+}
+
 const jostFont = { fontFamily: "'Jost', sans-serif" } as const
 const latoFont = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -117,19 +129,7 @@ export function WristModeClient({
   const [error, setError] = useState<string | null>(null)
   const [gameType, setGameType] = useState<'speedsoft' | 'tactical_arena' | 'drills'>('speedsoft')
 
-  const [actions, setActions] = useState<QueuedAction[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const stored = localStorage.getItem(`tournament_actions_${roundId}`)
-      if (stored) {
-        const parsed = JSON.parse(stored) as QueuedAction[]
-        return Array.isArray(parsed) ? parsed : []
-      }
-    } catch {
-      /* ignore */
-    }
-    return []
-  })
+  const [actions, setActions] = useState<QueuedAction[]>([])
   const actionsRef = useRef<QueuedAction[]>([])
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
@@ -153,6 +153,12 @@ export function WristModeClient({
   const [drillElapsed, setDrillElapsed] = useState(0)
   const [drillFinished, setDrillFinished] = useState(false)
   const drillTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const [drillQueue, setDrillQueue] = useState<DrillQueueItem[]>([])
+  const [currentDrillIdx, setCurrentDrillIdx] = useState<number | null>(null)
+  const [drillPhase, setDrillPhase] = useState<'queue' | 'active' | 'done'>('queue')
+
+  const storageKey = `tournament_actions_${roundId}${gameType === 'drills' && assignment ? `_${assignment.id}` : ''}`
 
   const startSoundPlayedRef = useRef(false)
   const endSoundPlayedRef = useRef(false)
@@ -199,25 +205,44 @@ export function WristModeClient({
 
   useEffect(() => {
     try {
+      if (typeof window === 'undefined') return
+      const stored = localStorage.getItem(storageKey)
+      if (stored) {
+        const parsed = JSON.parse(stored) as QueuedAction[]
+        const arr = Array.isArray(parsed) ? parsed : []
+        setActions(arr)
+        actionsRef.current = arr
+        return
+      }
+      setActions([])
+      actionsRef.current = []
+    } catch {
+      setActions([])
+      actionsRef.current = []
+    }
+  }, [storageKey])
+
+  useEffect(() => {
+    try {
       if (actions.length > 0) {
-        localStorage.setItem(`tournament_actions_${roundId}`, JSON.stringify(actions))
+        localStorage.setItem(storageKey, JSON.stringify(actions))
       } else {
-        localStorage.removeItem(`tournament_actions_${roundId}`)
+        localStorage.removeItem(storageKey)
       }
     } catch {
       /* storage full or unavailable */
     }
-  }, [actions, roundId])
+  }, [actions, storageKey])
 
   useEffect(() => {
     if (actions.length > 0 && actions.every((a) => a.synced)) {
       try {
-        localStorage.removeItem(`tournament_actions_${roundId}`)
+        localStorage.removeItem(storageKey)
       } catch {
         /* ignore */
       }
     }
-  }, [actions, roundId])
+  }, [actions, storageKey])
 
   useEffect(() => {
     const hasPending = actions.some((a) => !a.synced)
@@ -248,7 +273,9 @@ export function WristModeClient({
         setRound(data.round || null)
         if (data.round?.game_type) setGameType(data.round.game_type)
         setAssignment(data.assignment || null)
-        if (!data.assignment) setError('No tienes asignación en esta ronda')
+        if (!data.assignment && data.round?.game_type !== 'drills') {
+          setError('No tienes asignación en esta ronda')
+        }
       } catch (err: unknown) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Error')
       } finally {
@@ -301,6 +328,7 @@ export function WristModeClient({
         {
           method: 'POST',
           body: JSON.stringify({
+            assignment_id: assignment?.id,
             actions: pending.map((a) => ({
               action_type: a.action_type,
               recorded_at: a.recorded_at,
@@ -331,16 +359,41 @@ export function WristModeClient({
     } catch {
       setSyncStatus('offline')
     }
-  }, [tournamentId, roundId, checkFirstKill, globalFirstKillTaken])
+  }, [tournamentId, roundId, checkFirstKill, globalFirstKillTaken, assignment?.id])
 
   const handleConfirmSync = async () => {
     setConfirming(true)
     try {
       const res = await apiFetch(
         `/tournaments/${tournamentId}/rounds/${roundId}/confirm-sync`,
-        { method: 'PATCH' }
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ assignment_id: assignment?.id }),
+        }
       )
-      if (res.ok) setSyncConfirmed(true)
+      if (res.ok) {
+        setSyncConfirmed(true)
+        if (gameType === 'drills') {
+          const nextIdx = drillQueue.findIndex(
+            (q, i) => i > (currentDrillIdx ?? -1) && !q.completed
+          )
+          if (nextIdx >= 0) {
+            setTimeout(() => {
+              setSyncConfirmed(false)
+              setDrillFinished(false)
+              setDrillPhase('queue')
+              setAssignment(null)
+              setActions([])
+              actionsRef.current = []
+              setCurrentDrillIdx(null)
+            }, 1500)
+          } else {
+            setTimeout(() => {
+              setDrillPhase('done')
+            }, 1500)
+          }
+        }
+      }
     } catch { /* silenciar */ }
     finally { setConfirming(false) }
   }
@@ -381,15 +434,15 @@ export function WristModeClient({
   // ── Timer ascendente para drills ───────────────────────────
   useEffect(() => {
     if (gameType !== 'drills') return
-    if (!roundStartedAt || roundStatus !== 'active') return
+    if (roundStatus !== 'active') return
     if (drillFinished) return
+    if (drillPhase !== 'active') return
 
-    const startedMs = new Date(roundStartedAt).getTime()
+    const currentDrill = currentDrillIdx !== null ? drillQueue[currentDrillIdx] : null
+    const drillStart = currentDrill?.drill_started_at
+    if (!drillStart) return
 
-    if (!startSoundPlayedRef.current) {
-      startSoundPlayedRef.current = true
-      playStartSound()
-    }
+    const startedMs = new Date(drillStart).getTime()
 
     const tick = () => {
       const elapsed = Math.max(0, Math.floor((Date.now() - startedMs) / 1000))
@@ -405,7 +458,7 @@ export function WristModeClient({
         drillTimerRef.current = null
       }
     }
-  }, [gameType, roundStartedAt, roundStatus, drillFinished])
+  }, [gameType, roundStatus, drillFinished, drillPhase, currentDrillIdx, drillQueue])
 
   useEffect(() => {
     const hasPending = actionsRef.current.some((a) => !a.synced)
@@ -445,6 +498,84 @@ export function WristModeClient({
     return () => clearInterval(poll)
   }, [roundId])
 
+  // ── Cargar cola de drills ──────────────────────────────────
+  useEffect(() => {
+    if (gameType !== 'drills') return
+    if (!round || round.status !== 'active') return
+
+    const loadQueue = async () => {
+      try {
+        const res = await apiFetch(`/tournaments/referee/drill-queue/${roundId}`)
+        if (res.ok) {
+          const data = await res.json()
+          const queue = (data.assignments || []) as DrillQueueItem[]
+          setDrillQueue(queue)
+
+          const allDone = queue.length > 0 && queue.every((q) => q.completed)
+          if (allDone) {
+            setDrillPhase('done')
+            return
+          }
+
+          const inProgress = queue.findIndex((q) => q.drill_started_at && !q.completed)
+          if (inProgress >= 0 && drillPhase !== 'active') {
+            setCurrentDrillIdx(inProgress)
+            setDrillPhase('active')
+            setAssignment({
+              id: queue[inProgress].id,
+              player_id: queue[inProgress].player_id,
+              tournament_players: queue[inProgress].tournament_players,
+            })
+          } else if (!drillFinished && drillPhase !== 'active') {
+            setDrillPhase('queue')
+          }
+        }
+      } catch {
+        /* silenciar */
+      }
+    }
+
+    void loadQueue()
+    const interval = setInterval(loadQueue, 5000)
+    return () => clearInterval(interval)
+  }, [gameType, round?.status, roundId, drillFinished, drillPhase])
+
+  const handleStartDrill = async (queueItem: DrillQueueItem, idx: number) => {
+    try {
+      const res = await apiFetch(`/tournaments/referee/start-drill/${queueItem.id}`, {
+        method: 'PATCH',
+      })
+      if (!res.ok) {
+        const e = await res.json()
+        throw new Error(e.error)
+      }
+
+      setCurrentDrillIdx(idx)
+      setDrillPhase('active')
+      setDrillFinished(false)
+      setSyncConfirmed(false)
+      setActions([])
+      actionsRef.current = []
+      setDrillElapsed(0)
+
+      setAssignment({
+        id: queueItem.id,
+        player_id: queueItem.player_id,
+        tournament_players: queueItem.tournament_players,
+      })
+
+      setDrillQueue((prev) =>
+        prev.map((q, i) =>
+          i === idx ? { ...q, drill_started_at: new Date().toISOString() } : q
+        )
+      )
+
+      playStartSound()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error')
+    }
+  }
+
   // Poll each 2 s while round is active. checkFirstKill is also called
   // immediately after every successful sync to close the race-condition gap.
   useEffect(() => {
@@ -482,6 +613,10 @@ export function WristModeClient({
         if (type === 'drill_complete') {
           setDrillFinished(true)
           playEndSound()
+
+          setDrillQueue((prev) =>
+            prev.map((q, i) => (i === currentDrillIdx ? { ...q, completed: true } : q))
+          )
         }
 
         void syncActions()
@@ -514,7 +649,7 @@ export function WristModeClient({
 
       void syncActions()
     },
-    [gameType, drillFinished, timeLeft, round?.status, userId, roundId, syncActions, globalFirstKillTaken]
+    [gameType, drillFinished, timeLeft, round?.status, userId, roundId, syncActions, globalFirstKillTaken, currentDrillIdx]
   )
 
   // Solo revierte en local: lo ya sincronizado se queda en el servidor.
@@ -570,7 +705,7 @@ export function WristModeClient({
 
   const buttonsDisabled =
     gameType === 'drills'
-      ? round?.status !== 'active' || drillFinished
+      ? round?.status !== 'active' || drillFinished || drillPhase !== 'active'
       : round?.status !== 'active' || (timeLeft !== null && timeLeft <= 0)
 
   // ── Configuración de botones secundarios según tipo de juego (AMG-2026.1) ──
@@ -609,7 +744,22 @@ export function WristModeClient({
     )
   }
 
-  if (error || !assignment) {
+  if (
+    gameType === 'drills' &&
+    round?.status === 'active' &&
+    drillQueue.length === 0 &&
+    !error
+  ) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
+        <p className="text-[14px] text-[#999999]" style={latoFont}>
+          Cargando cola de jugadores...
+        </p>
+      </div>
+    )
+  }
+
+  if (error || (!assignment && gameType !== 'drills')) {
     return (
       <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
         <p className="text-center text-[14px] text-[#CC4B37]" style={latoFont}>
@@ -626,7 +776,13 @@ export function WristModeClient({
     )
   }
 
-  const player = assignment.tournament_players
+  const queuePlayer =
+    currentDrillIdx !== null
+      ? drillQueue[currentDrillIdx]?.tournament_players
+      : drillQueue.find((q) => !q.completed)?.tournament_players
+  const player =
+    assignment?.tournament_players ??
+    queuePlayer ?? { name: drillPhase === 'queue' ? 'Cola' : '—', team_name: null as string | null }
 
   if (round && round.status === 'completed') {
     return (
@@ -764,6 +920,11 @@ export function WristModeClient({
               {gameType === 'speedsoft' ? 'SPD' : gameType === 'drills' ? 'DRILL' : 'TAC'}
             </span>
           )}
+          {gameType === 'drills' && currentDrillIdx !== null && drillPhase === 'active' && (
+            <span className="text-[9px] text-[#666666]" style={jostFont}>
+              {currentDrillIdx + 1}/{drillQueue.length}
+            </span>
+          )}
           <span
             className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#FFFFFF]"
             style={jostFont}
@@ -854,7 +1015,95 @@ export function WristModeClient({
       {/* Botones principales */}
       <div className="flex h-[calc(100dvh-52px-48px)] flex-col gap-[8px] px-[8px] pb-[4px]">
         {gameType === 'drills' ? (
-          <div className="flex flex-1 gap-[6px]">
+          <>
+            {drillPhase === 'queue' ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4">
+                <p style={jostFont} className="text-[12px] uppercase tracking-[0.15em] text-[#999999]">
+                  SIGUIENTE JUGADOR
+                </p>
+                <div className="flex w-full max-w-[400px] flex-col gap-2">
+                  {drillQueue.map((q, idx) => (
+                    <button
+                      key={q.id}
+                      type="button"
+                      disabled={q.completed}
+                      onClick={() => void handleStartDrill(q, idx)}
+                      className={`flex items-center justify-between border px-4 py-3 text-left transition-all active:scale-[0.97] ${
+                        q.completed
+                          ? 'border-[#2E7D32]/30 bg-[#1A2E1A] opacity-60'
+                          : 'border-[#444444] bg-[#222222] hover:border-[#CC4B37]'
+                      }`}
+                      style={{ borderRadius: 4 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-[14px] tabular-nums text-[#666666]" style={latoFont}>
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <p className="text-[14px] font-semibold text-[#FFFFFF]" style={latoFont}>
+                            {q.tournament_players.name}
+                          </p>
+                          {q.tournament_players.team_name && (
+                            <p className="text-[11px] text-[#666666]" style={latoFont}>
+                              {q.tournament_players.team_name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {q.completed ? (
+                        <span className="text-[13px] font-bold text-[#2E7D32]" style={jostFont}>
+                          ✓
+                        </span>
+                      ) : (
+                        <span style={jostFont} className="text-[10px] uppercase tracking-[0.1em] text-[#CC4B37]">
+                          INICIAR
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {drillQueue.length > 0 && (
+                  <p className="text-[11px] text-[#666666]" style={latoFont}>
+                    {drillQueue.filter((q) => q.completed).length} / {drillQueue.length} completados
+                  </p>
+                )}
+              </div>
+            ) : drillPhase === 'done' ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                <p style={jostFont} className="text-[18px] uppercase tracking-[0.2em] text-[#2E7D32]">
+                  TODOS COMPLETADOS
+                </p>
+                <p className="text-[13px] text-[#999999]" style={latoFont}>
+                  {drillQueue.length} jugadores evaluados
+                </p>
+                {actions.some((a) => !a.synced) ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#F9A825]" />
+                    <span className="text-[13px] text-[#F9A825]" style={latoFont}>
+                      Sincronizando...
+                    </span>
+                  </div>
+                ) : syncConfirmed ? (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+                    <span className="text-[13px] text-[#2E7D32]" style={latoFont}>
+                      ✓ Confirmado
+                    </span>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleConfirmSync()}
+                    disabled={confirming}
+                    className="bg-[#2E7D32] px-6 py-3 text-[13px] font-extrabold uppercase tracking-[0.15em] text-[#FFFFFF] active:scale-[0.97] disabled:opacity-50"
+                    style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
+                  >
+                    {confirming ? 'CONFIRMANDO...' : '✓ CONFIRMAR SYNC COMPLETO'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-1 gap-[6px]">
             <button
               type="button"
               disabled={buttonsDisabled}
@@ -898,7 +1147,9 @@ export function WristModeClient({
                 </span>
               )}
             </button>
-          </div>
+              </div>
+            )}
+          </>
         ) : (
           <>
             <div className="flex flex-1 gap-[6px]">
@@ -1063,7 +1314,7 @@ export function WristModeClient({
       </div>
 
       {/* Overlay drill completado */}
-      {gameType === 'drills' && drillFinished && (
+      {gameType === 'drills' && drillFinished && drillPhase === 'active' && (
         <div className="absolute inset-0 z-[10000] flex items-start justify-center overflow-y-auto bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
           <div className="my-auto py-6 text-center">
             <p
