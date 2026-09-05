@@ -87,6 +87,10 @@ type ScoreboardEntry = {
   total_score: number
   fouls: number
   drill_completes: number
+  drill_elapsed_seconds: number | null
+  drill_penalty_seconds: number | null
+  drill_final_seconds: number | null
+  drill_completed: boolean
 }
 
 type SyncStatus = {
@@ -127,6 +131,14 @@ function formatTimer(seconds: number) {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+function formatDrillTime(totalSeconds: number | null): string {
+  if (totalSeconds === null) return '—'
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  if (m > 0) return `${m}:${s.toString().padStart(2, '0')}`
+  return `${s}s`
 }
 
 export function TournamentAdminClient({
@@ -1847,21 +1859,31 @@ export function TournamentAdminClient({
                   {activeRound?.game_type === 'drills' ? (
                     <>
                       <div className="grid grid-cols-12 border-b border-[#333333] px-3 py-2">
-                        <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#666666]">JUGADOR</span>
-                        <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#666666]">FOULS</span>
+                        <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#666666]">#</span>
+                        <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#666666]">JUGADOR</span>
+                        <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#666666]">TIEMPO</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">FOULS</span>
                         <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#666666]">PENALIZ.</span>
-                        <span style={jost} className="col-span-3 text-right text-[9px] tracking-widest text-[#CC4B37]">ESTADO</span>
+                        <span style={jost} className="col-span-3 text-right text-[9px] tracking-widest text-[#CC4B37]">FINAL</span>
                       </div>
                       {scoreboard.map((s, i) => (
                         <div key={s.player_id} className={`grid grid-cols-12 items-center px-3 py-2 ${i < scoreboard.length - 1 ? 'border-b border-[#222222]' : ''}`}>
-                          <div className="col-span-5 min-w-0">
+                          <span className="col-span-1 text-[12px] font-bold tabular-nums text-[#666666]" style={lato}>{i + 1}</span>
+                          <div className="col-span-3 min-w-0">
                             <p className="truncate text-[12px] font-semibold text-[#FFFFFF]" style={lato}>{s.name}</p>
                             {s.team_name && <p className="truncate text-[10px] text-[#666666]" style={lato}>{s.team_name}</p>}
                           </div>
-                          <span className="col-span-2 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.fouls || 0}</span>
-                          <span className="col-span-2 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>+{(s.fouls || 0) * (activeRound?.foul_penalty_seconds || 5)}s</span>
-                          <span className="col-span-3 text-right text-[13px] font-bold tabular-nums text-[#2E7D32]" style={lato}>
-                            {(s.drill_completes || 0) > 0 ? '✓' : '...'}
+                          <span className="col-span-2 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>
+                            {formatDrillTime(s.drill_elapsed_seconds)}
+                          </span>
+                          <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>
+                            {s.fouls || 0}
+                          </span>
+                          <span className="col-span-2 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>
+                            {s.drill_penalty_seconds ? `+${s.drill_penalty_seconds}s` : '—'}
+                          </span>
+                          <span className={`col-span-3 text-right text-[15px] font-bold tabular-nums ${s.drill_completed ? 'text-[#2E7D32]' : 'text-[#999999]'}`} style={lato}>
+                            {s.drill_completed ? formatDrillTime(s.drill_final_seconds) : '...'}
                           </span>
                         </div>
                       ))}
@@ -2163,22 +2185,30 @@ export function TournamentAdminClient({
                 <>
                   <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
                     <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
-                    <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
-                    <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">FOULS</span>
+                    <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
+                    <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">TIEMPO</span>
+                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">FOULS</span>
                     <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">PENALIZ.</span>
-                    <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">ESTADO</span>
+                    <span style={jost} className="col-span-3 text-right text-[9px] tracking-widest text-[#CC4B37]">FINAL</span>
                   </div>
                   {scoreboard.map((s, i) => (
                     <div key={s.player_id} className={`grid grid-cols-12 items-center px-4 py-3 hover:bg-[#FAFAFA] ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
                       <span className="col-span-1 text-[12px] font-bold text-[#999999]" style={lato}>{i + 1}</span>
-                      <div className="col-span-5 min-w-0">
+                      <div className="col-span-3 min-w-0">
                         <p className="truncate text-[13px] font-semibold text-[#111111]" style={lato}>{s.name}</p>
                         {s.team_name && <p className="truncate text-[10px] text-[#999999]" style={lato}>{s.team_name}</p>}
                       </div>
-                      <span className="col-span-2 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.fouls || 0}</span>
-                      <span className="col-span-2 text-center text-[13px] tabular-nums text-[#666666]" style={lato}>+{(s.fouls || 0) * 5}s</span>
-                      <span className="col-span-2 text-right text-[13px] font-bold tabular-nums text-[#2E7D32]" style={lato}>
-                        {(s.drill_completes || 0) > 0 ? '✓ COMPLETADO' : 'PENDIENTE'}
+                      <span className="col-span-2 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>
+                        {formatDrillTime(s.drill_elapsed_seconds)}
+                      </span>
+                      <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>
+                        {s.fouls || 0}
+                      </span>
+                      <span className="col-span-2 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>
+                        {s.drill_penalty_seconds ? `+${s.drill_penalty_seconds}s` : '—'}
+                      </span>
+                      <span className={`col-span-3 text-right text-[15px] font-bold tabular-nums ${s.drill_completed ? 'text-[#2E7D32]' : 'text-[#999999]'}`} style={lato}>
+                        {s.drill_completed ? formatDrillTime(s.drill_final_seconds) : '...'}
                       </span>
                     </div>
                   ))}

@@ -339,6 +339,43 @@ router.get("/public/:slug", async (req, res) => {
       };
     });
 
+    // Enriquecer scoreboards de drills con tiempos
+    for (const rs of roundScoreboards) {
+      if (rs.game_type !== "drills") continue;
+
+      const { data: drillAssignments } = await supabase
+        .from("tournament_assignments")
+        .select("player_id, drill_started_at, drill_completed_at")
+        .eq("round_id", rs.round_id);
+
+      const roundData = (rounds || []).find((r) => r.id === rs.round_id);
+      const foulPenalty = roundData?.foul_penalty_seconds || 5;
+
+      for (const s of rs.scoreboard) {
+        const da = (drillAssignments || []).find((a) => a.player_id === s.player_id);
+        if (da && da.drill_started_at && da.drill_completed_at) {
+          const elapsedMs =
+            new Date(da.drill_completed_at).getTime() - new Date(da.drill_started_at).getTime();
+          s.drill_elapsed_seconds = Math.round(elapsedMs / 1000);
+          s.drill_penalty_seconds = (s.fouls || 0) * foulPenalty;
+          s.drill_final_seconds = s.drill_elapsed_seconds + s.drill_penalty_seconds;
+          s.drill_completed = true;
+        } else {
+          s.drill_elapsed_seconds = null;
+          s.drill_penalty_seconds = null;
+          s.drill_final_seconds = null;
+          s.drill_completed = false;
+        }
+      }
+
+      rs.scoreboard.sort((a, b) => {
+        if (a.drill_final_seconds === null && b.drill_final_seconds === null) return 0;
+        if (a.drill_final_seconds === null) return 1;
+        if (b.drill_final_seconds === null) return -1;
+        return a.drill_final_seconds - b.drill_final_seconds;
+      });
+    }
+
     const generalScoreboard = computeStats(players || [], allActions);
 
     res.json({
@@ -2068,9 +2105,43 @@ router.get("/:id/rounds/:roundId/scoreboard", requireAuth, async (req, res) => {
       };
     });
 
-    scoreboard.sort((a, b) => b.total_score - a.total_score);
-
     const { data: round } = await supabase.from("tournament_rounds").select("*").eq("id", roundId).single();
+
+    // Para drills: enriquecer con tiempos del assignment
+    if (round?.game_type === "drills") {
+      const { data: drillAssignments } = await supabase
+        .from("tournament_assignments")
+        .select("player_id, drill_started_at, drill_completed_at")
+        .eq("round_id", roundId);
+
+      const foulPenalty = round.foul_penalty_seconds || 5;
+
+      for (const s of scoreboard) {
+        const da = (drillAssignments || []).find((a) => a.player_id === s.player_id);
+        if (da && da.drill_started_at && da.drill_completed_at) {
+          const elapsedMs =
+            new Date(da.drill_completed_at).getTime() - new Date(da.drill_started_at).getTime();
+          s.drill_elapsed_seconds = Math.round(elapsedMs / 1000);
+          s.drill_penalty_seconds = (s.fouls || 0) * foulPenalty;
+          s.drill_final_seconds = s.drill_elapsed_seconds + s.drill_penalty_seconds;
+          s.drill_completed = true;
+        } else {
+          s.drill_elapsed_seconds = null;
+          s.drill_penalty_seconds = null;
+          s.drill_final_seconds = null;
+          s.drill_completed = !!da?.drill_completed_at;
+        }
+      }
+
+      scoreboard.sort((a, b) => {
+        if (a.drill_final_seconds === null && b.drill_final_seconds === null) return 0;
+        if (a.drill_final_seconds === null) return 1;
+        if (b.drill_final_seconds === null) return -1;
+        return a.drill_final_seconds - b.drill_final_seconds;
+      });
+    } else {
+      scoreboard.sort((a, b) => b.total_score - a.total_score);
+    }
 
     res.json({ round, scoreboard });
   } catch (err) {
