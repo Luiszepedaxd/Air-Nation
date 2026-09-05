@@ -16,12 +16,16 @@ type ScoreEntry = {
   kills: number; deaths: number; first_kills: number; objectives: number
   key_actions: number; critical_actions: number; kd: number
   performance_score: number; impact_score: number; total_score: number
+  fouls: number
+  drill_completes: number
 }
 
 type RoundScoreboard = {
   round_id: string; round_number: number; name: string | null
   status?: string
   voided_reason?: string | null
+  game_type?: string | null
+  foul_penalty_seconds?: number | null
   scoreboard: ScoreEntry[]
 }
 
@@ -135,6 +139,21 @@ export function PublicResultsPage({ slug }: { slug: string }) {
   const selectedScoreboard = selectedRound
     ? round_scoreboards.find(r => r.round_id === selectedRound)?.scoreboard || []
     : general_scoreboard
+
+  const generalGameType = round_scoreboards.length > 0
+    ? (round_scoreboards.every(r => r.game_type === round_scoreboards[0]?.game_type)
+      ? round_scoreboards[0]?.game_type
+      : 'mixed')
+    : null
+
+  const currentGameType = selectedRound
+    ? round_scoreboards.find(r => r.round_id === selectedRound)?.game_type || null
+    : generalGameType
+
+  const selectedRoundData = selectedRound
+    ? round_scoreboards.find(r => r.round_id === selectedRound)
+    : null
+  const foulPenaltySeconds = selectedRoundData?.foul_penalty_seconds ?? 5
 
   return (
     <div className="min-h-[100dvh] bg-[#FFFFFF]">
@@ -306,57 +325,107 @@ export function PublicResultsPage({ slug }: { slug: string }) {
         )
       })()}
       <div className="mt-4 border border-[#EEEEEE]">
-        {/* Header */}
-        <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2.5 md:px-4">
-          <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
-          <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
-          <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">K</span>
-          <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">D</span>
-          <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">K/D</span>
-          <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">FK</span>
-          <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">OBJ</span>
-          <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">KA+CA</span>
-          <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">SCORE</span>
-        </div>
-
-        {/* Rows */}
-        {selectedScoreboard.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <p className="text-[13px] text-[#999999]" style={lato}>Sin datos para esta ronda</p>
-          </div>
-        ) : selectedScoreboard.map((s, i) => (
-          <div
-            key={s.player_id}
-            className={`grid grid-cols-12 items-center px-3 py-3 transition-colors hover:bg-[#FAFAFA] md:px-4 ${
-              i < selectedScoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''
-            } ${i < 3 ? 'bg-[#FAFAFA]/50' : ''}`}
-          >
-            <span className={`col-span-1 text-[13px] font-bold tabular-nums ${
-              i === 0 ? 'text-[#CC4B37]' : 'text-[#CCCCCC]'
-            }`} style={lato}>
-              {i + 1}
-            </span>
-            <div className="col-span-3 min-w-0">
-              <p className={`truncate text-[13px] ${i === 0 ? 'font-bold text-[#111111]' : 'font-semibold text-[#111111]'}`} style={lato}>
-                {s.name}
-              </p>
-              {s.team_name && (
-                <p className="truncate text-[10px] text-[#999999]" style={lato}>{s.team_name}</p>
-              )}
+        {currentGameType === 'drills' ? (
+          <>
+            <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2.5 md:px-4">
+              <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
+              <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
+              <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">FOULS</span>
+              <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">PENALIZ.</span>
+              <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">ESTADO</span>
             </div>
-            <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#111111]" style={lato}>{s.kills}</span>
-            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>{s.deaths}</span>
-            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>{s.kd}</span>
-            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.first_kills}</span>
-            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.objectives}</span>
-            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.key_actions + s.critical_actions}</span>
-            <span className={`col-span-2 text-right tabular-nums font-bold ${
-              i === 0 ? 'text-[18px] text-[#CC4B37]' : 'text-[15px] text-[#CC4B37]'
-            }`} style={lato}>
-              {s.total_score}
-            </span>
-          </div>
-        ))}
+            {selectedScoreboard.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-[13px] text-[#999999]" style={lato}>Sin datos para esta ronda</p>
+              </div>
+            ) : selectedScoreboard.map((s, i) => (
+              <div
+                key={s.player_id}
+                className={`grid grid-cols-12 items-center px-3 py-3 transition-colors hover:bg-[#FAFAFA] md:px-4 ${
+                  i < selectedScoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''
+                } ${i < 3 ? 'bg-[#FAFAFA]/50' : ''}`}
+              >
+                <span className={`col-span-1 text-[13px] font-bold tabular-nums ${
+                  i === 0 ? 'text-[#CC4B37]' : 'text-[#CCCCCC]'
+                }`} style={lato}>
+                  {i + 1}
+                </span>
+                <div className="col-span-5 min-w-0">
+                  <p className={`truncate text-[13px] ${i === 0 ? 'font-bold text-[#111111]' : 'font-semibold text-[#111111]'}`} style={lato}>
+                    {s.name}
+                  </p>
+                  {s.team_name && (
+                    <p className="truncate text-[10px] text-[#999999]" style={lato}>{s.team_name}</p>
+                  )}
+                </div>
+                <span className="col-span-2 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.fouls || 0}</span>
+                <span className="col-span-2 text-center text-[13px] tabular-nums text-[#666666]" style={lato}>+{(s.fouls || 0) * foulPenaltySeconds}s</span>
+                <span className="col-span-2 text-right text-[13px] font-bold tabular-nums text-[#2E7D32]" style={lato}>
+                  {(s.drill_completes || 0) > 0 ? '✓ COMPLETADO' : 'PENDIENTE'}
+                </span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2.5 md:px-4">
+              <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
+              <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
+              <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">K</span>
+              <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">D</span>
+              <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">K/D</span>
+              <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">OBJ</span>
+              <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">KA+CA</span>
+              <span style={jost} className="col-span-3 text-right text-[9px] tracking-widest text-[#CC4B37]">SCORE</span>
+            </div>
+            {selectedScoreboard.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <p className="text-[13px] text-[#999999]" style={lato}>Sin datos para esta ronda</p>
+              </div>
+            ) : selectedScoreboard.map((s, i) => {
+              const hasFK = s.first_kills > 0
+              return (
+                <div
+                  key={s.player_id}
+                  className={`grid grid-cols-12 items-center px-3 py-3 transition-colors hover:bg-[#FAFAFA] md:px-4 ${
+                    i < selectedScoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''
+                  } ${i < 3 ? 'bg-[#FAFAFA]/50' : ''}`}
+                >
+                  <span className={`col-span-1 text-[13px] font-bold tabular-nums ${
+                    i === 0 ? 'text-[#CC4B37]' : 'text-[#CCCCCC]'
+                  }`} style={lato}>
+                    {i + 1}
+                  </span>
+                  <div className="col-span-3 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`truncate text-[13px] ${i === 0 ? 'font-bold text-[#111111]' : 'font-semibold text-[#111111]'}`} style={lato}>
+                        {s.name}
+                      </p>
+                      {hasFK && (
+                        <span className="shrink-0 bg-[#CC4B37] px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#FFFFFF]" style={jost}>
+                          FK
+                        </span>
+                      )}
+                    </div>
+                    {s.team_name && (
+                      <p className="truncate text-[10px] text-[#999999]" style={lato}>{s.team_name}</p>
+                    )}
+                  </div>
+                  <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#111111]" style={lato}>{s.kills}</span>
+                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>{s.deaths}</span>
+                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>{s.kd}</span>
+                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.objectives}</span>
+                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.key_actions + s.critical_actions}</span>
+                  <span className={`col-span-3 text-right tabular-nums font-bold ${
+                    i === 0 ? 'text-[18px] text-[#CC4B37]' : 'text-[15px] text-[#CC4B37]'
+                  }`} style={lato}>
+                    {s.total_score}
+                  </span>
+                </div>
+              )
+            })}
+          </>
+        )}
       </div>
 
       {/* ── Footer ──────────────────────────────── */}

@@ -555,7 +555,9 @@ export function WristModeClient({
     counts.first_kills +
     counts.objectives +
     counts.key_actions +
-    counts.critical_actions
+    counts.critical_actions +
+    counts.fouls +
+    counts.drill_completes
 
   const pendingCount = actions.filter((a) => !a.synced).length
 
@@ -599,7 +601,7 @@ export function WristModeClient({
 
   if (loading) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[#111111] px-3 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
+      <div className="flex h-[100dvh] items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
         <p className="text-[14px] text-[#999999]" style={latoFont}>
           Cargando...
         </p>
@@ -609,7 +611,7 @@ export function WristModeClient({
 
   if (error || !assignment) {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6 pb-2 pt-2 sm:pb-3 sm:pt-3">
+      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
         <p className="text-center text-[14px] text-[#CC4B37]" style={latoFont}>
           {error || 'Sin asignación en esta ronda'}
         </p>
@@ -628,7 +630,7 @@ export function WristModeClient({
 
   if (round && round.status === 'completed') {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6 pb-2 pt-2 sm:pb-3 sm:pt-3">
+      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
         <p
           className="text-[16px] font-extrabold uppercase tracking-[0.2em] text-[#FFFFFF]"
           style={jostFont}
@@ -712,7 +714,7 @@ export function WristModeClient({
 
   if (round?.status === 'setup') {
     return (
-      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-6 pb-2 pt-2 sm:pb-3 sm:pt-3">
+      <div className="flex h-[100dvh] flex-col items-center justify-center bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
         <p
           className="text-[14px] uppercase tracking-[0.2em] text-[#999999]"
           style={jostFont}
@@ -740,11 +742,11 @@ export function WristModeClient({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] select-none overflow-hidden bg-[#111111] px-3 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3"
+      className="fixed inset-0 z-[9999] select-none overflow-hidden bg-[#111111] px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4"
       style={{ touchAction: 'manipulation' }}
     >
       {/* Barra superior: jugador + timer + sync */}
-      <div className="flex h-[48px] items-center justify-between px-3">
+      <div className="flex h-[52px] items-center justify-between px-1">
         <div className="flex items-center gap-2 overflow-hidden">
           {gameType && (
             <span
@@ -836,7 +838,7 @@ export function WristModeClient({
       </div>
 
       {/* Botones principales */}
-      <div className="flex h-[calc(100dvh-48px-44px)] flex-col gap-[6px] px-[6px] pb-[3px]">
+      <div className="flex h-[calc(100dvh-52px-48px)] flex-col gap-[8px] px-[8px] pb-[4px]">
         {gameType === 'drills' ? (
           <div className="flex flex-1 gap-[6px]">
             <button
@@ -895,8 +897,15 @@ export function WristModeClient({
                 }`}
                 style={{ ...jostFont, borderRadius: 4 }}
               >
-                <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
-                  KILL
+                <span className="flex flex-col items-center">
+                  <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
+                    KILL
+                  </span>
+                  {counts.kills > 0 && (
+                    <span className="mt-0.5 font-mono text-[20px] font-bold tabular-nums text-[#FFFFFF]/70 sm:text-[24px]">
+                      {counts.kills}
+                    </span>
+                  )}
                 </span>
               </button>
               <button
@@ -908,8 +917,15 @@ export function WristModeClient({
                 }`}
                 style={{ ...jostFont, borderRadius: 4 }}
               >
-                <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
-                  DEATH
+                <span className="flex flex-col items-center">
+                  <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
+                    DEATH
+                  </span>
+                  {counts.deaths > 0 && (
+                    <span className="mt-0.5 font-mono text-[20px] font-bold tabular-nums text-[#FFFFFF]/70 sm:text-[24px]">
+                      {counts.deaths}
+                    </span>
+                  )}
                 </span>
               </button>
             </div>
@@ -980,17 +996,30 @@ export function WristModeClient({
                   style={{ ...jostFont, borderRadius: 4 }}
                 >
                   <span
-                    className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
+                    className={`flex flex-col items-center text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
                       btn.accent ? 'text-[#CC4B37]' : 'text-[#FFFFFF]'
                     }`}
                   >
-                    {btn.lines[0]}
-                    {btn.lines[1] && (
-                      <>
-                        <br />
-                        {btn.lines[1]}
-                      </>
-                    )}
+                    <span>
+                      {btn.lines[0]}
+                      {btn.lines[1] && (
+                        <>
+                          <br />
+                          {btn.lines[1]}
+                        </>
+                      )}
+                    </span>
+                    {(() => {
+                      const c = btn.action === 'objective' ? counts.objectives
+                        : btn.action === 'key_action' ? counts.key_actions
+                        : btn.action === 'critical_action' ? counts.critical_actions
+                        : 0
+                      return c > 0 ? (
+                        <span className="mt-0.5 font-mono text-[12px] font-bold tabular-nums text-[#FFFFFF]/60 sm:text-[14px]">
+                          {c}
+                        </span>
+                      ) : null
+                    })()}
                   </span>
                 </button>
               ))}
@@ -1000,7 +1029,7 @@ export function WristModeClient({
       </div>
 
       {/* Barra inferior: deshacer + estado */}
-      <div className="flex h-[44px] items-center justify-between px-3">
+      <div className="flex h-[48px] items-center justify-between px-1">
         <button
           type="button"
           onClick={undoLast}
@@ -1031,7 +1060,7 @@ export function WristModeClient({
 
       {/* Overlay drill completado */}
       {gameType === 'drills' && drillFinished && (
-        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-3 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
+        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
           <div className="text-center">
             <p
               className="text-[20px] font-extrabold uppercase tracking-[0.3em] text-[#2E7D32]"
@@ -1123,7 +1152,7 @@ export function WristModeClient({
 
       {/* Overlay de tiempo agotado */}
       {gameType !== 'drills' && timeLeft !== null && timeLeft <= 0 && (
-        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-3 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
+        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
           <div className="text-center">
             <p
               className="text-[24px] font-extrabold uppercase tracking-[0.3em] text-[#CC4B37]"

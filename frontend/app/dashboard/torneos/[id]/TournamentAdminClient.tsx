@@ -81,6 +81,8 @@ type ScoreboardEntry = {
   performance_score: number
   impact_score: number
   total_score: number
+  fouls: number
+  drill_completes: number
 }
 
 type SyncStatus = {
@@ -164,6 +166,7 @@ export function TournamentAdminClient({
 
   const [scoreboard, setScoreboard] = useState<ScoreboardEntry[]>([])
   const [scoreRoundId, setScoreRoundId] = useState<string | null>(null)
+  const [scoreRoundGameType, setScoreRoundGameType] = useState<string | null>(null)
 
   const [showSyncChecklist, setShowSyncChecklist] = useState(false)
   const [syncStatuses, setSyncStatuses] = useState<SyncStatus[]>([])
@@ -236,6 +239,7 @@ export function TournamentAdminClient({
         if (res.ok) {
           const data = await res.json()
           setScoreboard(data.scoreboard || [])
+          setScoreRoundGameType(data.round?.game_type || null)
         }
       } catch {
         /* silenciar */
@@ -1588,72 +1592,65 @@ export function TournamentAdminClient({
 
               {scoreboard.length > 0 && (
                 <div className="mt-6">
-                  <div className="grid grid-cols-12 border-b border-[#333333] px-3 py-2">
-                    <span style={jost} className="col-span-4 text-[9px] tracking-widest text-[#666666]">
-                      JUGADOR
-                    </span>
-                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
-                      K
-                    </span>
-                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
-                      D
-                    </span>
-                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
-                      FK
-                    </span>
-                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
-                      OBJ
-                    </span>
-                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
-                      KA
-                    </span>
-                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
-                      CA
-                    </span>
-                    <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">
-                      SCORE
-                    </span>
-                  </div>
-                  {scoreboard.map((s, i) => (
-                    <div
-                      key={s.player_id}
-                      className={`grid grid-cols-12 items-center px-3 py-2 ${
-                        i < scoreboard.length - 1 ? 'border-b border-[#222222]' : ''
-                      }`}
-                    >
-                      <div className="col-span-4 min-w-0">
-                        <p className="truncate text-[12px] font-semibold text-[#FFFFFF]" style={lato}>
-                          {s.name}
-                        </p>
-                        {s.team_name && (
-                          <p className="truncate text-[10px] text-[#666666]" style={lato}>
-                            {s.team_name}
-                          </p>
-                        )}
+                  {activeRound?.game_type === 'drills' ? (
+                    <>
+                      <div className="grid grid-cols-12 border-b border-[#333333] px-3 py-2">
+                        <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#666666]">JUGADOR</span>
+                        <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#666666]">FOULS</span>
+                        <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#666666]">PENALIZ.</span>
+                        <span style={jost} className="col-span-3 text-right text-[9px] tracking-widest text-[#CC4B37]">ESTADO</span>
                       </div>
-                      <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#FFFFFF]" style={lato}>
-                        {s.kills}
-                      </span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>
-                        {s.deaths}
-                      </span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>
-                        {s.first_kills}
-                      </span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>
-                        {s.objectives}
-                      </span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>
-                        {s.key_actions}
-                      </span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>
-                        {s.critical_actions}
-                      </span>
-                      <span className="col-span-2 text-right text-[15px] font-bold tabular-nums text-[#CC4B37]" style={lato}>
-                        {s.total_score}
-                      </span>
-                    </div>
-                  ))}
+                      {scoreboard.map((s, i) => (
+                        <div key={s.player_id} className={`grid grid-cols-12 items-center px-3 py-2 ${i < scoreboard.length - 1 ? 'border-b border-[#222222]' : ''}`}>
+                          <div className="col-span-5 min-w-0">
+                            <p className="truncate text-[12px] font-semibold text-[#FFFFFF]" style={lato}>{s.name}</p>
+                            {s.team_name && <p className="truncate text-[10px] text-[#666666]" style={lato}>{s.team_name}</p>}
+                          </div>
+                          <span className="col-span-2 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.fouls || 0}</span>
+                          <span className="col-span-2 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>+{(s.fouls || 0) * (activeRound?.foul_penalty_seconds || 5)}s</span>
+                          <span className="col-span-3 text-right text-[13px] font-bold tabular-nums text-[#2E7D32]" style={lato}>
+                            {(s.drill_completes || 0) > 0 ? '✓' : '...'}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-12 border-b border-[#333333] px-3 py-2">
+                        <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#666666]">JUGADOR</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">K</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">D</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">OBJ</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">KA</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">CA</span>
+                        <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">SCORE</span>
+                      </div>
+                      {scoreboard.map((s, i) => {
+                        const hasFK = s.first_kills > 0
+                        return (
+                          <div key={s.player_id} className={`grid grid-cols-12 items-center px-3 py-2 ${i < scoreboard.length - 1 ? 'border-b border-[#222222]' : ''}`}>
+                            <div className="col-span-5 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="truncate text-[12px] font-semibold text-[#FFFFFF]" style={lato}>{s.name}</p>
+                                {hasFK && (
+                                  <span className="shrink-0 bg-[#CC4B37] px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#FFFFFF]" style={jost}>
+                                    FK
+                                  </span>
+                                )}
+                              </div>
+                              {s.team_name && <p className="truncate text-[10px] text-[#666666]" style={lato}>{s.team_name}</p>}
+                            </div>
+                            <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#FFFFFF]" style={lato}>{s.kills}</span>
+                            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>{s.deaths}</span>
+                            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.objectives}</span>
+                            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.key_actions}</span>
+                            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.critical_actions}</span>
+                            <span className="col-span-2 text-right text-[15px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.total_score}</span>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1938,78 +1935,69 @@ export function TournamentAdminClient({
             </p>
           ) : (
             <div className="border border-[#EEEEEE]">
-              <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
-                <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">
-                  #
-                </span>
-                <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">
-                  JUGADOR
-                </span>
-                <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">
-                  K
-                </span>
-                <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">
-                  D
-                </span>
-                <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">
-                  FK
-                </span>
-                <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">
-                  OBJ
-                </span>
-                <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">
-                  KA
-                </span>
-                <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">
-                  CA
-                </span>
-                <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">
-                  TOTAL
-                </span>
-              </div>
-              {scoreboard.map((s, i) => (
-                <div
-                  key={s.player_id}
-                  className={`grid grid-cols-12 items-center px-4 py-3 ${
-                    i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''
-                  } hover:bg-[#FAFAFA]`}
-                >
-                  <span className="col-span-1 text-[12px] font-bold text-[#999999]" style={lato}>
-                    {i + 1}
-                  </span>
-                  <div className="col-span-3 min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-[#111111]" style={lato}>
-                      {s.name}
-                    </p>
-                    {s.team_name && (
-                      <p className="truncate text-[10px] text-[#999999]" style={lato}>
-                        {s.team_name}
-                      </p>
-                    )}
+              {scoreRoundGameType === 'drills' ? (
+                <>
+                  <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                    <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
+                    <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
+                    <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">FOULS</span>
+                    <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">PENALIZ.</span>
+                    <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">ESTADO</span>
                   </div>
-                  <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#111111]" style={lato}>
-                    {s.kills}
-                  </span>
-                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#666666]" style={lato}>
-                    {s.deaths}
-                  </span>
-                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>
-                    {s.first_kills}
-                  </span>
-                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>
-                    {s.objectives}
-                  </span>
-                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>
-                    {s.key_actions}
-                  </span>
-                  <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>
-                    {s.critical_actions}
-                  </span>
-                  <span className="col-span-2 text-right text-[15px] font-bold tabular-nums text-[#CC4B37]" style={lato}>
-                    {s.total_score}
-                  </span>
-                </div>
-              ))}
+                  {scoreboard.map((s, i) => (
+                    <div key={s.player_id} className={`grid grid-cols-12 items-center px-4 py-3 hover:bg-[#FAFAFA] ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
+                      <span className="col-span-1 text-[12px] font-bold text-[#999999]" style={lato}>{i + 1}</span>
+                      <div className="col-span-5 min-w-0">
+                        <p className="truncate text-[13px] font-semibold text-[#111111]" style={lato}>{s.name}</p>
+                        {s.team_name && <p className="truncate text-[10px] text-[#999999]" style={lato}>{s.team_name}</p>}
+                      </div>
+                      <span className="col-span-2 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.fouls || 0}</span>
+                      <span className="col-span-2 text-center text-[13px] tabular-nums text-[#666666]" style={lato}>+{(s.fouls || 0) * 5}s</span>
+                      <span className="col-span-2 text-right text-[13px] font-bold tabular-nums text-[#2E7D32]" style={lato}>
+                        {(s.drill_completes || 0) > 0 ? '✓ COMPLETADO' : 'PENDIENTE'}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                    <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
+                    <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
+                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">K</span>
+                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">D</span>
+                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">OBJ</span>
+                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">KA</span>
+                    <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">CA</span>
+                    <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">TOTAL</span>
+                  </div>
+                  {scoreboard.map((s, i) => {
+                    const hasFK = s.first_kills > 0
+                    return (
+                      <div key={s.player_id} className={`grid grid-cols-12 items-center px-4 py-3 hover:bg-[#FAFAFA] ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
+                        <span className="col-span-1 text-[12px] font-bold text-[#999999]" style={lato}>{i + 1}</span>
+                        <div className="col-span-3 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="truncate text-[13px] font-semibold text-[#111111]" style={lato}>{s.name}</p>
+                            {hasFK && (
+                              <span className="shrink-0 bg-[#CC4B37] px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#FFFFFF]" style={jost}>
+                                FK
+                              </span>
+                            )}
+                          </div>
+                          {s.team_name && <p className="truncate text-[10px] text-[#999999]" style={lato}>{s.team_name}</p>}
+                        </div>
+                        <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#111111]" style={lato}>{s.kills}</span>
+                        <span className="col-span-1 text-center text-[13px] tabular-nums text-[#666666]" style={lato}>{s.deaths}</span>
+                        <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.objectives}</span>
+                        <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.key_actions}</span>
+                        <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]" style={lato}>{s.critical_actions}</span>
+                        <span className="col-span-2 text-right text-[15px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.total_score}</span>
+                      </div>
+                    )
+                  })}
+                </>
+              )}
             </div>
           )}
         </div>

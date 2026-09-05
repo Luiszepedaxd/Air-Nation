@@ -333,6 +333,8 @@ router.get("/public/:slug", async (req, res) => {
         name: r.name,
         status: r.status,
         voided_reason: r.voided_reason || null,
+        game_type: r.game_type || null,
+        foul_penalty_seconds: r.foul_penalty_seconds ?? null,
         scoreboard: computeStats(players || [], roundActions),
       };
     });
