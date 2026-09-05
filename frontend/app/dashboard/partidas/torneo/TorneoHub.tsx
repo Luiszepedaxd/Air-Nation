@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/apiFetch'
-import { DurationPicker } from '@/components/DurationPicker'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -73,12 +72,6 @@ function formatDate(iso: string) {
   }
 }
 
-function formatDuration(seconds: number) {
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) return `${h}h ${m}min`
-  return `${m} min`
-}
 
 export function TorneoHub() {
   const router = useRouter()
@@ -88,8 +81,6 @@ export function TorneoHub() {
   const [loading, setLoading] = useState(true)
 
   const [tName, setTName] = useState('')
-  const [tType, setTType] = useState<'speedsoft' | 'tactical_arena' | 'drills'>('speedsoft')
-  const [tDuration, setTDuration] = useState(180)
   const [creating, setCreating] = useState(false)
 
   const [joinCode, setJoinCode] = useState('')
@@ -120,10 +111,6 @@ export function TorneoHub() {
 
   const handleCreate = async () => {
     if (!tName.trim()) return
-    if (tDuration < 60) {
-      setError('La duración mínima es 1 minuto')
-      return
-    }
     setCreating(true)
     setError(null)
     try {
@@ -131,8 +118,6 @@ export function TorneoHub() {
         method: 'POST',
         body: JSON.stringify({
           name: tName.trim(),
-          game_type: tType,
-          default_round_duration_seconds: tDuration,
         }),
       })
       if (!res.ok) {
@@ -261,38 +246,12 @@ export function TorneoHub() {
                 autoFocus
               />
             </div>
-            <div>
-              <label
-                className="mb-1 block text-[11px] uppercase tracking-wide text-[#999999]"
-                style={jost}
-              >
-                Modo principal (opcional)
-              </label>
-              <select
-                value={tType}
-                onChange={(e) =>
-                  setTType(e.target.value as 'speedsoft' | 'tactical_arena' | 'drills')
-                }
-                className={inputClass}
-                style={lato}
-              >
-                <option value="speedsoft">Speedsoft</option>
-                <option value="tactical_arena">Tactical Arena</option>
-                <option value="drills">Drills Individuales</option>
-              </select>
-            </div>
-            <DurationPicker
-              value={tDuration}
-              onChange={setTDuration}
-              showHours
-              label="DURACIÓN POR RONDA (DEFAULT)"
-            />
           </div>
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={() => void handleCreate()}
-              disabled={creating || !tName.trim() || tDuration < 60}
+              disabled={creating || !tName.trim()}
               style={jost}
               className={`${btnPrimary} flex-1`}
             >
@@ -418,9 +377,6 @@ export function TorneoHub() {
                         className={`inline-block px-2 py-0.5 text-[10px] tracking-wide ${statusBadgeClass(t.status)}`}
                       >
                         {statusLabel(t.status)}
-                      </span>
-                      <span className="text-[11px] text-[#999999]" style={lato}>
-                        {formatDuration(t.default_round_duration_seconds)}
                       </span>
                     </div>
                     <p className="mt-1 text-[11px] text-[#999999]" style={lato}>

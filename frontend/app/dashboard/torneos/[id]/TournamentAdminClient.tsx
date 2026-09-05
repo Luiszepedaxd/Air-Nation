@@ -1453,9 +1453,11 @@ export function TournamentAdminClient({
                         >
                           {r.name || `Ronda ${r.round_number}`}
                         </span>
-                        <span className="ml-2 text-[11px] text-[#999999]" style={lato}>
-                          {r.duration_seconds}s
-                        </span>
+                        {r.game_type !== 'drills' && (
+                          <span className="ml-2 text-[11px] text-[#999999]" style={lato}>
+                            {r.duration_seconds}s
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span
@@ -1688,31 +1690,35 @@ export function TournamentAdminClient({
                 <p style={jost} className="text-[11px] tracking-[0.2em] text-[#CC4B37]">
                   EN VIVO — {activeRound.name || `Ronda ${activeRound.round_number}`}
                 </p>
-                <p className="mt-2 font-mono text-[64px] font-bold tabular-nums leading-none text-[#FFFFFF] md:text-[80px]">
-                  {timeLeft !== null ? formatTimer(timeLeft) : '--:--'}
-                </p>
-                {timeLeft !== null && timeLeft <= 0 && (
-                  <p style={jost} className="mt-2 text-[14px] tracking-[0.2em] text-[#CC4B37]">
-                    TIEMPO AGOTADO
-                  </p>
+                {activeRound?.game_type === 'drills' ? (
+                  scoreboard.length > 0 && (
+                    <div className="mt-4 text-center">
+                      <p style={jost} className="text-[11px] tracking-[0.15em] text-[#999999]">
+                        PROGRESO: {scoreboard.filter((s) => (s.drill_completes || 0) > 0).length} / {scoreboard.length} completados
+                      </p>
+                      <div className="mt-2 h-[6px] w-full bg-[#333333]">
+                        <div
+                          className="h-full bg-[#2E7D32] transition-all"
+                          style={{
+                            width: `${(scoreboard.filter((s) => (s.drill_completes || 0) > 0).length / scoreboard.length) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <>
+                    <p className="mt-2 font-mono text-[64px] font-bold tabular-nums leading-none text-[#FFFFFF] md:text-[80px]">
+                      {timeLeft !== null ? formatTimer(timeLeft) : '--:--'}
+                    </p>
+                    {timeLeft !== null && timeLeft <= 0 && (
+                      <p style={jost} className="mt-2 text-[14px] tracking-[0.2em] text-[#CC4B37]">
+                        TIEMPO AGOTADO
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
-
-              {activeRound?.game_type === 'drills' && scoreboard.length > 0 && (
-                <div className="mt-4 text-center">
-                  <p style={jost} className="text-[11px] tracking-[0.15em] text-[#999999]">
-                    PROGRESO: {scoreboard.filter((s) => (s.drill_completes || 0) > 0).length} / {scoreboard.length} completados
-                  </p>
-                  <div className="mt-2 h-[6px] w-full bg-[#333333]">
-                    <div
-                      className="h-full bg-[#2E7D32] transition-all"
-                      style={{
-                        width: `${(scoreboard.filter((s) => (s.drill_completes || 0) > 0).length / scoreboard.length) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
 
               {scoreboard.length > 0 && (
                 <div className="mt-6">
