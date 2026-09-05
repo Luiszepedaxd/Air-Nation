@@ -1949,6 +1949,36 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
   }
 });
 
+// DELETE /:id/rounds/:roundId/actions/:clientEventId — Deshacer una acción
+router.delete("/:id/rounds/:roundId/actions/:clientEventId", requireAuth, async (req, res) => {
+  try {
+    const userId = req.authUser.id;
+    const { id, roundId, clientEventId } = req.params;
+
+    const { data: referee } = await supabase
+      .from("tournament_referees")
+      .select("id")
+      .eq("tournament_id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!referee) return res.status(403).json({ error: "No eres árbitro" });
+
+    const { data, error } = await supabase
+      .from("tournament_actions")
+      .delete()
+      .eq("client_event_id", clientEventId)
+      .eq("referee_id", referee.id)
+      .eq("round_id", roundId)
+      .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ deleted: data?.length || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET /:id/rounds/:roundId/first-kill — ¿Ya existe first kill en esta ronda?
 router.get("/:id/rounds/:roundId/first-kill", requireAuth, async (req, res) => {
   try {

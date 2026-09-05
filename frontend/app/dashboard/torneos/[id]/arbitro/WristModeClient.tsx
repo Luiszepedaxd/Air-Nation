@@ -660,10 +660,24 @@ export function WristModeClient({
     [gameType, drillFinished, timeLeft, round?.status, userId, roundId, syncActions, globalFirstKillTaken, currentDrillIdx]
   )
 
-  // Solo revierte en local: lo ya sincronizado se queda en el servidor.
+  // Deshacer localmente; si ya estaba sincronizada, borrar del servidor también.
   const undoLast = useCallback(() => {
-    setActions((prev) => (prev.length === 0 ? prev : prev.slice(0, -1)))
-  }, [])
+    const current = actionsRef.current
+    if (current.length === 0) return
+
+    const lastAction = current[current.length - 1]
+
+    const updated = current.slice(0, current.length - 1)
+    actionsRef.current = updated
+    setActions(updated)
+
+    if (lastAction.synced) {
+      void apiFetch(
+        `/tournaments/${tournamentId}/rounds/${roundId}/actions/${lastAction.client_event_id}`,
+        { method: 'DELETE' }
+      )
+    }
+  }, [tournamentId, roundId])
 
   const counts = actions.reduce(
     (acc, a) => {

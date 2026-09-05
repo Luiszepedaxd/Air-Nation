@@ -66,6 +66,10 @@ type Assignment = {
   player_id: string
   tournament_referees: Referee
   tournament_players: Player
+  sync_confirmed_at: string | null
+  drill_started_at: string | null
+  drill_completed_at: string | null
+  drill_order: number | null
 }
 
 type ScoreboardEntry = {
@@ -464,7 +468,9 @@ export function TournamentAdminClient({
           const res = await apiFetch(`/tournaments/referee/drill-queue/${activeRound.id}`)
           if (res.ok) {
             const data = await res.json()
-            setRefereeHasAssignment((data.assignments || []).length > 0)
+            const assignments = data.assignments || []
+            const hasPending = assignments.some((a: { completed: boolean }) => !a.completed)
+            setRefereeHasAssignment(hasPending)
           }
         } else {
           const res = await apiFetch(`/tournaments/referee/assignment/${activeRound.id}`)
@@ -859,14 +865,36 @@ export function TournamentAdminClient({
   const isCreator = tournament.is_creator
   const activeRound = tournament.rounds?.find((r) => r.id === activeRoundId)
 
+  const isRoundDrills = activeRound?.game_type === 'drills'
+
   const assignedRefIds = new Set(assignments.map((a) => a.referee_id))
   const assignedPlayerIds = new Set(assignments.map((a) => a.player_id))
-  const availableRefs = (tournament.referees || []).filter(
-    (r) => (r.status === 'joined' || r.status === 'active') && !assignedRefIds.has(r.id)
+
+  const refIdsWithPendingDrills = new Set(
+    assignments
+      .filter((a) => !a.sync_confirmed_at && !a.drill_completed_at)
+      .map((a) => a.referee_id)
   )
+
+  const availableRefs = (tournament.referees || []).filter((r) => {
+    const isJoinedOrActive = r.status === 'active' || r.status === 'joined'
+    if (!isJoinedOrActive) return false
+    if (isRoundDrills) {
+      return !refIdsWithPendingDrills.has(r.id)
+    }
+    return !assignedRefIds.has(r.id)
+  })
+
   const availablePlayers = (tournament.players || []).filter(
     (p) => !assignedPlayerIds.has(p.id)
   )
+
+  const pendingAssignments = isRoundDrills
+    ? assignments.filter((a) => !a.drill_completed_at)
+    : assignments
+  const completedDrillAssignments = isRoundDrills
+    ? assignments.filter((a) => a.drill_completed_at)
+    : []
 
   const handleAutoAssign = async () => {
     if (!activeRoundId) return
@@ -875,15 +903,12 @@ export function TournamentAdminClient({
     let pairsToAssign: { referee_id: string; player_id: string }[] = []
 
     if (activeRound?.game_type === 'drills') {
-      const drillRefs = (tournament.referees || []).filter(
-        (r) => r.status === 'joined' || r.status === 'active'
-      )
-      if (drillRefs.length === 0) {
+      if (availableRefs.length === 0) {
         setError('No hay árbitros disponibles')
         return
       }
       pairsToAssign = availablePlayers.map((p, i) => ({
-        referee_id: drillRefs[i % drillRefs.length].id,
+        referee_id: availableRefs[i % availableRefs.length].id,
         player_id: p.id,
       }))
     } else {
@@ -1690,13 +1715,13 @@ export function TournamentAdminClient({
                 </button>
               )}
 
-              {assignments.length > 0 && (
+              {pendingAssignments.length > 0 && (
                 <div className="mt-4">
                   <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#999999]">
-                    ASIGNACIONES ({assignments.length})
+                    {isRoundDrills ? 'EN PROGRESO' : 'ASIGNACIONES'} ({pendingAssignments.length})
                   </p>
                   <div className="border border-[#EEEEEE]">
-                    {assignments.map((a) => (
+                    {pendingAssignments.map((a) => (
                       <div
                         key={a.id}
                         className="flex items-center justify-between border-b border-[#F4F4F4] px-4 py-2.5 last:border-0"
@@ -1717,14 +1742,50 @@ export function TournamentAdminClient({
                             </span>
                           )}
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void handleUnassign(a.id)}
-                          className="text-[11px] text-[#CC4B37] hover:text-[#111111]"
-                          style={lato}
-                        >
-                          ✕
-                        </button>
+                        {!a.drill_completed_at && (
+                          <button
+                            type="button"
+                            onClick={() => void handleUnassign(a.id)}
+                            className="text-[11px] text-[#CC4B37] hover:text-[#111111]"
+                            style={lato}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {completedDrillAssignments.length > 0 && (
+                <div className="mt-4">
+                  <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#2E7D32]">
+                    COMPLETADOS ({completedDrillAssignments.length})
+                  </p>
+                  <div className="border border-[#2E7D32]/30 bg-[#2E7D32]/5">
+                    {completedDrillAssignments.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between border-b border-[#2E7D32]/10 px-4 py-2.5 last:border-0"
+                      >
+                        <div className="flex items-center gap-2 text-[12px]" style={lato}>
+                          <span className="font-semibold text-[#2E7D32]">
+                            {a.tournament_referees?.name ||
+                              a.tournament_referees?.code ||
+                              '?'}
+                          </span>
+                          <span className="text-[#999999]">→</span>
+                          <span className="font-semibold text-[#111111]">
+                            {a.tournament_players?.name || '?'}
+                          </span>
+                          {a.tournament_players?.team_name && (
+                            <span className="text-[11px] text-[#999999]">
+                              ({a.tournament_players.team_name})
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[12px] font-bold text-[#2E7D32]">✓</span>
                       </div>
                     ))}
                   </div>
