@@ -412,11 +412,35 @@ export function TournamentAdminClient({
     const activeRound = tournament.rounds.find((r) => r.status === 'active')
     if (!activeRound) return
 
-    // No redirigir si el tiempo de la ronda ya expiró
-    if (activeRound.started_at) {
-      const startedMs = new Date(activeRound.started_at).getTime()
-      const endMs = startedMs + activeRound.duration_seconds * 1000
+    // Verificar que el tiempo no expiró (speedsoft/tactical)
+    if (activeRound.started_at && activeRound.game_type !== 'drills') {
+      const endMs =
+        new Date(activeRound.started_at).getTime() + activeRound.duration_seconds * 1000
       if (Date.now() > endMs) return
+    }
+
+    // En drills, verificar si tiene jugadores pendientes
+    if (activeRound.game_type === 'drills') {
+      const checkAndRedirect = async () => {
+        try {
+          const queueRes = await apiFetch(
+            `/tournaments/referee/drill-queue/${activeRound.id}`
+          )
+          if (!queueRes.ok) return
+          const queueData = await queueRes.json()
+          const assignments = queueData.assignments || []
+          if (assignments.length === 0) return
+          const allDone = assignments.every((a: { completed: boolean }) => a.completed)
+          if (allDone) return
+          router.push(
+            `/dashboard/torneos/${tournamentId}/arbitro?roundId=${activeRound.id}`
+          )
+        } catch {
+          /* no redirigir si falla */
+        }
+      }
+      void checkAndRedirect()
+      return
     }
 
     router.push(
