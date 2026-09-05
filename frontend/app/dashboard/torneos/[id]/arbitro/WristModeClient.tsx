@@ -981,7 +981,7 @@ export function WristModeClient({
               className="flex items-center gap-1 border border-[#444444] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.08em] text-[#999999] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-30"
               style={{ ...jostFont, borderRadius: 3 }}
             >
-              ↩ UNDO
+              ↩ DESHACER
             </button>
           )}
         </div>
