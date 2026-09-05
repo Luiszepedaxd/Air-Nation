@@ -181,6 +181,7 @@ export function TournamentAdminClient({
   const [finalizing, setFinalizing] = useState(false)
   const [togglingPublish, setTogglingPublish] = useState(false)
   const [onlineRefereeIds, setOnlineRefereeIds] = useState<Set<string>>(new Set())
+  const [refereeHasAssignment, setRefereeHasAssignment] = useState<boolean | null>(null)
 
   const router = useRouter()
 
@@ -447,6 +448,39 @@ export function TournamentAdminClient({
       `/dashboard/torneos/${tournamentId}/arbitro?roundId=${activeRound.id}`
     )
   }, [tournament, tournamentId, router])
+
+  // ── Verificar si el árbitro tiene asignación en la ronda activa ──
+  useEffect(() => {
+    if (!tournament || tournament.is_creator) return
+    const activeRound = tournament.rounds.find((r) => r.status === 'active')
+    if (!activeRound) {
+      setRefereeHasAssignment(null)
+      return
+    }
+
+    const check = async () => {
+      try {
+        if (activeRound.game_type === 'drills') {
+          const res = await apiFetch(`/tournaments/referee/drill-queue/${activeRound.id}`)
+          if (res.ok) {
+            const data = await res.json()
+            setRefereeHasAssignment((data.assignments || []).length > 0)
+          }
+        } else {
+          const res = await apiFetch(`/tournaments/referee/assignment/${activeRound.id}`)
+          if (res.ok) {
+            const data = await res.json()
+            setRefereeHasAssignment(!!data.assignment)
+          }
+        }
+      } catch {
+        setRefereeHasAssignment(null)
+      }
+    }
+    void check()
+    const interval = setInterval(check, 5000)
+    return () => clearInterval(interval)
+  }, [tournament, tournament?.rounds])
 
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return
@@ -2262,34 +2296,60 @@ export function TournamentAdminClient({
           <div className="flex flex-col items-center justify-center py-16">
             {activeRound ? (
               <>
-                <span className="text-[48px]">🎯</span>
-                <p
-                  className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
-                  style={{ fontFamily: "'Jost', sans-serif" }}
-                >
-                  RONDA EN CURSO
-                </p>
-                <p className="mt-2 text-center text-[13px] text-[#666666]" style={{ fontFamily: "'Lato', sans-serif" }}>
-                  {activeRound.name || `Ronda ${activeRound.round_number}`}
-                </p>
+                {refereeHasAssignment === false ? (
+                  <>
+                    <span className="text-[48px]">⏳</span>
+                    <p
+                      className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
+                      style={{ fontFamily: "'Jost', sans-serif" }}
+                    >
+                      SIN ASIGNACIÓN
+                    </p>
+                    <p className="mt-2 text-center text-[13px] text-[#666666]" style={{ fontFamily: "'Lato', sans-serif" }}>
+                      Hay una ronda en curso pero no tienes jugador asignado. Espera a que el organizador te asigne.
+                    </p>
+                    <div className="mt-6 flex items-center gap-2">
+                      <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#F9A825]" />
+                      <span
+                        className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
+                        style={{ fontFamily: "'Jost', sans-serif" }}
+                      >
+                        Esperando asignación
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[48px]">🎯</span>
+                    <p
+                      className="mt-4 text-[16px] font-extrabold uppercase tracking-[0.15em] text-[#111111]"
+                      style={{ fontFamily: "'Jost', sans-serif" }}
+                    >
+                      RONDA EN CURSO
+                    </p>
+                    <p className="mt-2 text-center text-[13px] text-[#666666]" style={{ fontFamily: "'Lato', sans-serif" }}>
+                      {activeRound.name || `Ronda ${activeRound.round_number}`}
+                    </p>
 
-                <Link
-                  href={`/dashboard/torneos/${tournamentId}/arbitro?roundId=${activeRound.id}`}
-                  className="mt-6 inline-flex w-full max-w-[400px] items-center justify-center bg-[#CC4B37] px-6 py-4 text-[14px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#111111] active:scale-[0.97]"
-                  style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
-                >
-                  🔴 ENTRAR AL MODO ARBITRAJE
-                </Link>
+                    <Link
+                      href={`/dashboard/torneos/${tournamentId}/arbitro?roundId=${activeRound.id}`}
+                      className="mt-6 inline-flex w-full max-w-[400px] items-center justify-center bg-[#CC4B37] px-6 py-4 text-[14px] font-extrabold uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#111111] active:scale-[0.97]"
+                      style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
+                    >
+                      🔴 ENTRAR AL MODO ARBITRAJE
+                    </Link>
 
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#CC4B37]" />
-                  <span
-                    className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
-                    style={{ fontFamily: "'Jost', sans-serif" }}
-                  >
-                    Conectado
-                  </span>
-                </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#CC4B37]" />
+                      <span
+                        className="text-[11px] uppercase tracking-[0.12em] text-[#999999]"
+                        style={{ fontFamily: "'Jost', sans-serif" }}
+                      >
+                        Conectado
+                      </span>
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <>
