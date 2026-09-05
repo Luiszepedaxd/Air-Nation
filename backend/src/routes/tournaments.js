@@ -1635,21 +1635,30 @@ router.patch("/:id/rounds/:roundId/confirm-sync", requireAuth, async (req, res) 
 
     const { assignment_id } = req.body;
 
-    const { data: assignment } = assignment_id
-      ? await supabase
-          .from("tournament_assignments")
-          .select("id, sync_confirmed_at")
-          .eq("id", assignment_id)
-          .eq("round_id", roundId)
-          .eq("referee_id", referee.id)
-          .maybeSingle()
-      : await supabase
-          .from("tournament_assignments")
-          .select("id, sync_confirmed_at")
-          .eq("round_id", roundId)
-          .eq("referee_id", referee.id)
-          .maybeSingle();
+    let assignmentData = null;
+    if (assignment_id) {
+      const { data } = await supabase
+        .from("tournament_assignments")
+        .select("id, sync_confirmed_at")
+        .eq("id", assignment_id)
+        .eq("round_id", roundId)
+        .eq("referee_id", referee.id)
+        .maybeSingle();
+      assignmentData = data;
+    } else {
+      const { data } = await supabase
+        .from("tournament_assignments")
+        .select("id, sync_confirmed_at")
+        .eq("round_id", roundId)
+        .eq("referee_id", referee.id);
+      if (data && data.length === 1) {
+        assignmentData = data[0];
+      } else if (data && data.length > 1) {
+        return res.status(400).json({ error: "assignment_id requerido" });
+      }
+    }
 
+    const assignment = assignmentData;
     if (!assignment) return res.status(404).json({ error: "No tienes asignación en esta ronda" });
 
     if (assignment.sync_confirmed_at) {
@@ -1765,21 +1774,34 @@ router.post("/:id/rounds/:roundId/actions", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "No eres árbitro de este torneo" });
     }
 
-    const { data: assignment } = assignment_id
-      ? await supabase
-          .from("tournament_assignments")
-          .select("id, player_id")
-          .eq("id", assignment_id)
-          .eq("round_id", roundId)
-          .eq("referee_id", refereeRecord.id)
-          .maybeSingle()
-      : await supabase
-          .from("tournament_assignments")
-          .select("id, player_id")
-          .eq("round_id", roundId)
-          .eq("referee_id", refereeRecord.id)
-          .maybeSingle();
+    // Resolver assignment — en drills se requiere assignment_id explícito
+    let assignmentData = null;
+    if (assignment_id) {
+      const { data } = await supabase
+        .from("tournament_assignments")
+        .select("id, player_id")
+        .eq("id", assignment_id)
+        .eq("round_id", roundId)
+        .eq("referee_id", refereeRecord.id)
+        .maybeSingle();
+      assignmentData = data;
+    } else {
+      // Fallback: solo funciona si hay exactamente 1 assignment (speedsoft/tactical)
+      const { data } = await supabase
+        .from("tournament_assignments")
+        .select("id, player_id")
+        .eq("round_id", roundId)
+        .eq("referee_id", refereeRecord.id);
+      if (data && data.length === 1) {
+        assignmentData = data[0];
+      } else if (data && data.length > 1) {
+        return res
+          .status(400)
+          .json({ error: "assignment_id requerido para rondas con múltiples asignaciones" });
+      }
+    }
 
+    const assignment = assignmentData;
     if (!assignment) {
       return res.status(403).json({ error: "No tienes asignación en esta ronda" });
     }

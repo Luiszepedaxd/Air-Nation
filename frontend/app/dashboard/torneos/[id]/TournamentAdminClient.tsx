@@ -1401,13 +1401,15 @@ export function TournamentAdminClient({
                   />
                 </div>
               )}
-              <DurationPicker
-                value={roundDuration}
-                onChange={setRoundDuration}
-                showHours={false}
-                maxMinutes={60}
-                label="DURACIÓN"
-              />
+              {roundGameType !== 'drills' && (
+                <DurationPicker
+                  value={roundDuration}
+                  onChange={setRoundDuration}
+                  showHours={false}
+                  maxMinutes={60}
+                  label="DURACIÓN"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => void handleCreateRound()}
@@ -1739,19 +1741,25 @@ export function TournamentAdminClient({
                   ) : (
                     <>
                       <div className="grid grid-cols-12 border-b border-[#333333] px-3 py-2">
-                        <span style={jost} className="col-span-5 text-[9px] tracking-widest text-[#666666]">JUGADOR</span>
+                        <span style={jost} className={`${activeRound?.game_type === 'speedsoft' ? 'col-span-7' : 'col-span-5'} text-[9px] tracking-widest text-[#666666]`}>JUGADOR</span>
                         <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">K</span>
                         <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">D</span>
-                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">OBJ</span>
-                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">KA</span>
-                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">CA</span>
-                        <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#CC4B37]">SCORE</span>
+                        <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">
+                          {activeRound?.game_type === 'speedsoft' ? 'CP' : 'OBJ'}
+                        </span>
+                        {activeRound?.game_type !== 'speedsoft' && (
+                          <>
+                            <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">KA</span>
+                            <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#666666]">CA</span>
+                          </>
+                        )}
+                        <span style={jost} className={`${activeRound?.game_type === 'speedsoft' ? 'col-span-3' : 'col-span-2'} text-right text-[9px] tracking-widest text-[#CC4B37]`}>SCORE</span>
                       </div>
                       {scoreboard.map((s, i) => {
                         const hasFK = s.first_kills > 0
                         return (
                           <div key={s.player_id} className={`grid grid-cols-12 items-center px-3 py-2 ${i < scoreboard.length - 1 ? 'border-b border-[#222222]' : ''}`}>
-                            <div className="col-span-5 min-w-0">
+                            <div className={`${activeRound?.game_type === 'speedsoft' ? 'col-span-7' : 'col-span-5'} min-w-0`}>
                               <div className="flex items-center gap-1.5">
                                 <p className="truncate text-[12px] font-semibold text-[#FFFFFF]" style={lato}>{s.name}</p>
                                 {hasFK && (
@@ -1765,9 +1773,13 @@ export function TournamentAdminClient({
                             <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#FFFFFF]" style={lato}>{s.kills}</span>
                             <span className="col-span-1 text-center text-[13px] tabular-nums text-[#999999]" style={lato}>{s.deaths}</span>
                             <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.objectives}</span>
-                            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.key_actions}</span>
-                            <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.critical_actions}</span>
-                            <span className="col-span-2 text-right text-[15px] font-bold tabular-nums text-[#CC4B37]" style={lato}>{s.total_score}</span>
+                            {activeRound?.game_type !== 'speedsoft' && (
+                              <>
+                                <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.key_actions}</span>
+                                <span className="col-span-1 text-center text-[13px] tabular-nums text-[#FFFFFF]" style={lato}>{s.critical_actions}</span>
+                              </>
+                            )}
+                            <span className={`${activeRound?.game_type === 'speedsoft' ? 'col-span-3' : 'col-span-2'} text-right text-[15px] font-bold tabular-nums text-[#CC4B37]`} style={lato}>{s.total_score}</span>
                           </div>
                         )
                       })}
@@ -1850,43 +1862,44 @@ export function TournamentAdminClient({
                     </div>
                   )}
 
-                  {/* Declarar ganador de ronda — AMG-2026.1 */}
-                  <div className="mt-4 border border-[#333333] bg-[#0D0D0D] p-3">
-                    <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#CC4B37]">
-                      GANADOR DE RONDA (REGLAMENTO AMG)
-                    </p>
-                    <input
-                      type="text"
-                      value={winnerTeam}
-                      onChange={(e) => setWinnerTeam(e.target.value)}
-                      placeholder="Equipo ganador (ej: Cobras)"
-                      className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-[12px] text-[#FFFFFF] outline-none focus:border-[#CC4B37]"
-                      style={lato}
-                      maxLength={80}
-                    />
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {([
-                        { value: 'elimination', label: 'Eliminación total' },
-                        { value: 'control_point', label: 'Captura CP' },
-                        { value: 'objective', label: 'Objetivo' },
-                        { value: 'time', label: 'Por tiempo' },
-                      ] as const).map(opt => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setVictoryCondition(v => v === opt.value ? '' : opt.value)}
-                          style={jost}
-                          className={`border px-3 py-1 text-[9px] tracking-wide transition-colors ${
-                            victoryCondition === opt.value
-                              ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
-                              : 'border-[#444444] text-[#666666] hover:border-[#CC4B37] hover:text-[#CC4B37]'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
+                  {activeRound?.game_type !== 'drills' && (
+                    <div className="mt-4 border border-[#333333] bg-[#0D0D0D] p-3">
+                      <p style={jost} className="mb-2 text-[10px] tracking-[0.12em] text-[#CC4B37]">
+                        GANADOR DE RONDA (REGLAMENTO AMG)
+                      </p>
+                      <input
+                        type="text"
+                        value={winnerTeam}
+                        onChange={(e) => setWinnerTeam(e.target.value)}
+                        placeholder="Equipo ganador (ej: Cobras)"
+                        className="w-full border border-[#333333] bg-[#1A1A1A] px-3 py-2 text-[12px] text-[#FFFFFF] outline-none focus:border-[#CC4B37]"
+                        style={lato}
+                        maxLength={80}
+                      />
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {([
+                          { value: 'elimination', label: 'Eliminación total' },
+                          { value: 'control_point', label: 'Captura CP' },
+                          { value: 'objective', label: 'Objetivo' },
+                          { value: 'time', label: 'Por tiempo' },
+                        ] as const).map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setVictoryCondition(v => v === opt.value ? '' : opt.value)}
+                            style={jost}
+                            className={`border px-3 py-1 text-[9px] tracking-wide transition-colors ${
+                              victoryCondition === opt.value
+                                ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
+                                : 'border-[#444444] text-[#666666] hover:border-[#CC4B37] hover:text-[#CC4B37]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="mt-4 flex gap-2">
                     <button
