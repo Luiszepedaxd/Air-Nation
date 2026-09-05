@@ -973,17 +973,15 @@ export function WristModeClient({
               {timeLeft !== null ? formatTimer(timeLeft) : '--:--'}
             </span>
           )}
-          {gameType !== 'drills' && (
-            <button
-              type="button"
-              onClick={undoLast}
-              disabled={actions.length === 0 || buttonsDisabled}
-              className="flex items-center gap-1 border border-[#444444] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.08em] text-[#999999] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-30"
-              style={{ ...jostFont, borderRadius: 3 }}
-            >
-              ↩ DESHACER
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={undoLast}
+            disabled={actions.length === 0 || buttonsDisabled}
+            className="flex items-center gap-1 border border-[#444444] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.08em] text-[#999999] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] disabled:opacity-30"
+            style={{ ...jostFont, borderRadius: 3 }}
+          >
+            ↩ DESHACER
+          </button>
         </div>
 
         <div className="flex items-center gap-3">
