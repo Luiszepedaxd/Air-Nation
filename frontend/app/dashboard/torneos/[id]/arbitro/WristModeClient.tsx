@@ -11,6 +11,8 @@ type ActionType =
   | 'objective'
   | 'key_action'
   | 'critical_action'
+  | 'foul'
+  | 'drill_complete'
 
 type QueuedAction = {
   action_type: ActionType
@@ -146,6 +148,11 @@ export function WristModeClient({
 
   const [syncConfirmed, setSyncConfirmed] = useState(false)
   const [confirming, setConfirming] = useState(false)
+
+  // Drills: cronómetro ascendente
+  const [drillElapsed, setDrillElapsed] = useState(0)
+  const [drillFinished, setDrillFinished] = useState(false)
+  const drillTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const startSoundPlayedRef = useRef(false)
   const endSoundPlayedRef = useRef(false)
@@ -339,6 +346,7 @@ export function WristModeClient({
   }
 
   useEffect(() => {
+    if (gameType === 'drills') return
     if (!roundStartedAt || roundStatus !== 'active' || !roundDuration) return
 
     const endMs = new Date(roundStartedAt).getTime() + roundDuration * 1000
@@ -368,7 +376,36 @@ export function WristModeClient({
         timerRef.current = null
       }
     }
-  }, [roundStartedAt, roundStatus, roundDuration, syncActions])
+  }, [gameType, roundStartedAt, roundStatus, roundDuration, syncActions])
+
+  // ── Timer ascendente para drills ───────────────────────────
+  useEffect(() => {
+    if (gameType !== 'drills') return
+    if (!roundStartedAt || roundStatus !== 'active') return
+    if (drillFinished) return
+
+    const startedMs = new Date(roundStartedAt).getTime()
+
+    if (!startSoundPlayedRef.current) {
+      startSoundPlayedRef.current = true
+      playStartSound()
+    }
+
+    const tick = () => {
+      const elapsed = Math.max(0, Math.floor((Date.now() - startedMs) / 1000))
+      setDrillElapsed(elapsed)
+    }
+
+    tick()
+    drillTimerRef.current = setInterval(tick, 250)
+
+    return () => {
+      if (drillTimerRef.current) {
+        clearInterval(drillTimerRef.current)
+        drillTimerRef.current = null
+      }
+    }
+  }, [gameType, roundStartedAt, roundStatus, drillFinished])
 
   useEffect(() => {
     const hasPending = actionsRef.current.some((a) => !a.synced)
@@ -411,15 +448,47 @@ export function WristModeClient({
   // Poll each 2 s while round is active. checkFirstKill is also called
   // immediately after every successful sync to close the race-condition gap.
   useEffect(() => {
+    if (gameType === 'drills') return
     if (round?.status !== 'active') return
 
     void checkFirstKill()
     const interval = setInterval(() => void checkFirstKill(), 2000)
     return () => clearInterval(interval)
-  }, [round?.status, checkFirstKill])
+  }, [gameType, round?.status, checkFirstKill])
 
   const recordAction = useCallback(
     (type: ActionType) => {
+      // Drills: no usa countdown, usa elapsed
+      if (gameType === 'drills') {
+        if (round?.status !== 'active') return
+        if (drillFinished) return
+
+        const action: QueuedAction = {
+          action_type: type,
+          recorded_at: new Date().toISOString(),
+          client_event_id: `${userId}-${roundId}-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 6)}`,
+          synced: false,
+        }
+
+        actionsRef.current = [...actionsRef.current, action]
+        setActions((prev) => [...prev, action])
+
+        if (flashTimeout.current) clearTimeout(flashTimeout.current)
+        setFlash(type)
+        flashTimeout.current = setTimeout(() => setFlash(null), 300)
+
+        if (type === 'drill_complete') {
+          setDrillFinished(true)
+          playEndSound()
+        }
+
+        void syncActions()
+        return
+      }
+
+      // Speedsoft / Tactical: lógica existente
       if (timeLeft !== null && timeLeft <= 0) return
       if (round?.status !== 'active') return
       if (type === 'first_kill' && globalFirstKillTaken) return
@@ -445,7 +514,7 @@ export function WristModeClient({
 
       void syncActions()
     },
-    [timeLeft, round?.status, userId, roundId, syncActions, globalFirstKillTaken]
+    [gameType, drillFinished, timeLeft, round?.status, userId, roundId, syncActions, globalFirstKillTaken]
   )
 
   // Solo revierte en local: lo ya sincronizado se queda en el servidor.
@@ -461,6 +530,8 @@ export function WristModeClient({
       else if (a.action_type === 'objective') acc.objectives++
       else if (a.action_type === 'key_action') acc.key_actions++
       else if (a.action_type === 'critical_action') acc.critical_actions++
+      else if (a.action_type === 'foul') acc.fouls++
+      else if (a.action_type === 'drill_complete') acc.drill_completes++
       return acc
     },
     {
@@ -470,8 +541,13 @@ export function WristModeClient({
       objectives: 0,
       key_actions: 0,
       critical_actions: 0,
+      fouls: 0,
+      drill_completes: 0,
     }
   )
+
+  const drillPenaltyTotal = counts.fouls * (round?.foul_penalty_seconds || 5)
+  const drillFinalTime = drillElapsed + drillPenaltyTotal
 
   const totalActions =
     counts.kills +
@@ -491,7 +567,9 @@ export function WristModeClient({
         : '#CC4B37'
 
   const buttonsDisabled =
-    round?.status !== 'active' || (timeLeft !== null && timeLeft <= 0)
+    gameType === 'drills'
+      ? round?.status !== 'active' || drillFinished
+      : round?.status !== 'active' || (timeLeft !== null && timeLeft <= 0)
 
   // ── Configuración de botones secundarios según tipo de juego (AMG-2026.1) ──
   // Speedsoft: solo CONTROL POINT (captura CP enemigo). KEY ACTION y CRITICAL
@@ -507,11 +585,13 @@ export function WristModeClient({
     ? [
         { action: 'objective',        lines: ['CONTROL', 'POINT']  },
       ]
-    : [
-        { action: 'objective',        lines: ['ENTREGA']            },
-        { action: 'key_action',       lines: ['PORTADOR']           },
-        { action: 'critical_action',  lines: ['ACTIVA', 'CIÓN'],  accent: true },
-      ]
+    : gameType === 'tactical_arena'
+      ? [
+          { action: 'objective',        lines: ['ENTREGA']            },
+          { action: 'key_action',       lines: ['PORTADOR']           },
+          { action: 'critical_action',  lines: ['ACTIVA', 'CIÓN'],  accent: true },
+        ]
+      : []
 
   // Solo hay un first kill por ronda (global). Deshacer lo local solo re-habilita
   // si nadie más lo registró en el servidor.
@@ -697,24 +777,50 @@ export function WristModeClient({
         </div>
 
         <div className="text-center">
-          <span
-            className={`font-mono text-[22px] font-bold tabular-nums leading-none ${
-              timeLeft !== null && timeLeft <= 30
-                ? 'text-[#CC4B37]'
-                : 'text-[#FFFFFF]'
-            }`}
-          >
-            {timeLeft !== null ? formatTimer(timeLeft) : '--:--'}
-          </span>
+          {gameType === 'drills' ? (
+            <div>
+              <span className="font-mono text-[22px] font-bold tabular-nums leading-none text-[#FFFFFF]">
+                {formatTimer(drillElapsed)}
+              </span>
+              {drillPenaltyTotal > 0 && (
+                <span className="ml-1 text-[14px] font-bold tabular-nums text-[#CC4B37]">
+                  +{drillPenaltyTotal}s
+                </span>
+              )}
+            </div>
+          ) : (
+            <span
+              className={`font-mono text-[22px] font-bold tabular-nums leading-none ${
+                timeLeft !== null && timeLeft <= 30
+                  ? 'text-[#CC4B37]'
+                  : 'text-[#FFFFFF]'
+              }`}
+            >
+              {timeLeft !== null ? formatTimer(timeLeft) : '--:--'}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[14px] font-bold tabular-nums text-[#2E7D32]">
-            {counts.kills}K
-          </span>
-          <span className="font-mono text-[14px] tabular-nums text-[#999999]">
-            {counts.deaths}D
-          </span>
+          {gameType === 'drills' ? (
+            <>
+              <span className="font-mono text-[14px] font-bold tabular-nums text-[#CC4B37]">
+                {counts.fouls}F
+              </span>
+              <span className="font-mono text-[14px] font-bold tabular-nums text-[#2E7D32]">
+                {formatTimer(drillFinalTime)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="font-mono text-[14px] font-bold tabular-nums text-[#2E7D32]">
+                {counts.kills}K
+              </span>
+              <span className="font-mono text-[14px] tabular-nums text-[#999999]">
+                {counts.deaths}D
+              </span>
+            </>
+          )}
           <span
             className="h-[8px] w-[8px] rounded-full"
             style={{ backgroundColor: syncDotColor }}
@@ -731,116 +837,166 @@ export function WristModeClient({
 
       {/* Botones principales */}
       <div className="flex h-[calc(100dvh-48px-44px)] flex-col gap-[6px] px-[6px] pb-[3px]">
-        <div className="flex flex-1 gap-[6px]">
-          <button
-            type="button"
-            disabled={buttonsDisabled}
-            onClick={() => recordAction('kill')}
-            className={`flex flex-[1.2] items-center justify-center transition-all active:scale-[0.96] disabled:opacity-30 ${
-              flash === 'kill' ? 'bg-[#FF1C1C]' : 'bg-[#CC4B37]'
-            }`}
-            style={{ ...jostFont, borderRadius: 4 }}
-          >
-            <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
-              KILL
-            </span>
-          </button>
-          <button
-            type="button"
-            disabled={buttonsDisabled}
-            onClick={() => recordAction('death')}
-            className={`flex flex-1 items-center justify-center transition-all active:scale-[0.96] disabled:opacity-30 ${
-              flash === 'death' ? 'bg-[#555555]' : 'bg-[#333333]'
-            }`}
-            style={{ ...jostFont, borderRadius: 4 }}
-          >
-            <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
-              DEATH
-            </span>
-          </button>
-        </div>
-
-        <div className="flex h-[64px] gap-[6px] sm:h-[72px]">
-          <button
-            type="button"
-            disabled={buttonsDisabled || firstKillUsed || globalFirstKillTaken}
-            onClick={() => recordAction('first_kill')}
-            className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] ${
-              firstKillUsed
-                ? 'border-[#2E7D32] bg-[#1A2E1A]'           // ✓ yo lo registré — verde
-                : globalFirstKillTaken
-                  ? 'border-[#F9A825] bg-[#2A1F00]'          // ✗ otro lo tomó — ámbar
-                  : flash === 'first_kill'
-                    ? 'border-[#333333] bg-[#333333]'
-                    : 'border-[#333333] bg-[#1A1A1A]'
-            }`}
-            style={{ ...jostFont, borderRadius: 4 }}
-          >
-            <span
-              className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
-                firstKillUsed
-                  ? 'text-[#2E7D32]'
-                  : globalFirstKillTaken
-                    ? 'text-[#F9A825]'
-                    : 'text-[#FFFFFF]'
-              }`}
-            >
-              {firstKillUsed ? (
-                <>
-                  ✓ FIRST
-                  <br />
-                  KILL
-                </>
-              ) : globalFirstKillTaken ? (
-                <>
-                  ✗ FIRST
-                  <br />
-                  <span className="text-[8px] normal-case">
-                    {firstKillPlayerName ? `por ${firstKillPlayerName}` : 'ya tomado'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  FIRST
-                  <br />
-                  KILL
-                </>
-              )}
-            </span>
-          </button>
-          {secondaryButtons.map((btn) => (
+        {gameType === 'drills' ? (
+          <div className="flex flex-1 gap-[6px]">
             <button
-              key={btn.action}
               type="button"
               disabled={buttonsDisabled}
-              onClick={() => recordAction(btn.action)}
-              className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] disabled:opacity-30 ${
-                btn.accent
-                  ? flash === btn.action
-                    ? 'border-[#FF1C1C] bg-[#331111]'
-                    : 'border-[#CC4B37] bg-[#1A1A1A]'
-                  : flash === btn.action
-                    ? 'border-[#333333] bg-[#333333]'
-                    : 'border-[#333333] bg-[#1A1A1A]'
+              onClick={() => recordAction('foul')}
+              className={`flex flex-1 flex-col items-center justify-center transition-all active:scale-[0.96] disabled:opacity-30 ${
+                flash === 'foul' ? 'bg-[#FF1C1C]' : 'bg-[#CC4B37]'
               }`}
               style={{ ...jostFont, borderRadius: 4 }}
             >
-              <span
-                className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
-                  btn.accent ? 'text-[#CC4B37]' : 'text-[#FFFFFF]'
-                }`}
-              >
-                {btn.lines[0]}
-                {btn.lines[1] && (
-                  <>
-                    <br />
-                    {btn.lines[1]}
-                  </>
-                )}
+              <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
+                FOUL
               </span>
+              <span className="mt-1 text-[14px] font-bold tabular-nums text-[#FFFFFF]/70 sm:text-[16px]">
+                +{round?.foul_penalty_seconds || 5}s
+              </span>
+              {counts.fouls > 0 && (
+                <span className="mt-1 font-mono text-[18px] font-bold tabular-nums text-[#FFFFFF] sm:text-[22px]">
+                  {counts.fouls}
+                </span>
+              )}
             </button>
-          ))}
-        </div>
+            <button
+              type="button"
+              disabled={buttonsDisabled || counts.drill_completes >= 1}
+              onClick={() => recordAction('drill_complete')}
+              className={`flex flex-1 flex-col items-center justify-center transition-all active:scale-[0.96] disabled:opacity-30 ${
+                counts.drill_completes >= 1
+                  ? 'bg-[#1B5E20]'
+                  : flash === 'drill_complete'
+                    ? 'bg-[#4CAF50]'
+                    : 'bg-[#2E7D32]'
+              }`}
+              style={{ ...jostFont, borderRadius: 4 }}
+            >
+              <span className="text-[24px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[32px]">
+                {counts.drill_completes >= 1 ? '✓' : 'COMPLETADO'}
+              </span>
+              {counts.drill_completes >= 1 && (
+                <span className="mt-1 text-[14px] font-bold text-[#FFFFFF]/70">
+                  {formatTimer(drillFinalTime)}
+                </span>
+              )}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-1 gap-[6px]">
+              <button
+                type="button"
+                disabled={buttonsDisabled}
+                onClick={() => recordAction('kill')}
+                className={`flex flex-[1.2] items-center justify-center transition-all active:scale-[0.96] disabled:opacity-30 ${
+                  flash === 'kill' ? 'bg-[#FF1C1C]' : 'bg-[#CC4B37]'
+                }`}
+                style={{ ...jostFont, borderRadius: 4 }}
+              >
+                <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
+                  KILL
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={buttonsDisabled}
+                onClick={() => recordAction('death')}
+                className={`flex flex-1 items-center justify-center transition-all active:scale-[0.96] disabled:opacity-30 ${
+                  flash === 'death' ? 'bg-[#555555]' : 'bg-[#333333]'
+                }`}
+                style={{ ...jostFont, borderRadius: 4 }}
+              >
+                <span className="text-[28px] font-extrabold uppercase tracking-[0.1em] text-[#FFFFFF] sm:text-[36px]">
+                  DEATH
+                </span>
+              </button>
+            </div>
+
+            <div className="flex h-[64px] gap-[6px] sm:h-[72px]">
+              <button
+                type="button"
+                disabled={buttonsDisabled || firstKillUsed || globalFirstKillTaken}
+                onClick={() => recordAction('first_kill')}
+                className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] ${
+                  firstKillUsed
+                    ? 'border-[#2E7D32] bg-[#1A2E1A]'
+                    : globalFirstKillTaken
+                      ? 'border-[#F9A825] bg-[#2A1F00]'
+                      : flash === 'first_kill'
+                        ? 'border-[#333333] bg-[#333333]'
+                        : 'border-[#333333] bg-[#1A1A1A]'
+                }`}
+                style={{ ...jostFont, borderRadius: 4 }}
+              >
+                <span
+                  className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
+                    firstKillUsed
+                      ? 'text-[#2E7D32]'
+                      : globalFirstKillTaken
+                        ? 'text-[#F9A825]'
+                        : 'text-[#FFFFFF]'
+                  }`}
+                >
+                  {firstKillUsed ? (
+                    <>
+                      ✓ FIRST
+                      <br />
+                      KILL
+                    </>
+                  ) : globalFirstKillTaken ? (
+                    <>
+                      ✗ FIRST
+                      <br />
+                      <span className="text-[8px] normal-case">
+                        {firstKillPlayerName ? `por ${firstKillPlayerName}` : 'ya tomado'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      FIRST
+                      <br />
+                      KILL
+                    </>
+                  )}
+                </span>
+              </button>
+              {secondaryButtons.map((btn) => (
+                <button
+                  key={btn.action}
+                  type="button"
+                  disabled={buttonsDisabled}
+                  onClick={() => recordAction(btn.action)}
+                  className={`flex flex-1 items-center justify-center border transition-all active:scale-[0.96] disabled:opacity-30 ${
+                    btn.accent
+                      ? flash === btn.action
+                        ? 'border-[#FF1C1C] bg-[#331111]'
+                        : 'border-[#CC4B37] bg-[#1A1A1A]'
+                      : flash === btn.action
+                        ? 'border-[#333333] bg-[#333333]'
+                        : 'border-[#333333] bg-[#1A1A1A]'
+                  }`}
+                  style={{ ...jostFont, borderRadius: 4 }}
+                >
+                  <span
+                    className={`text-center text-[10px] font-extrabold uppercase leading-tight tracking-[0.08em] sm:text-[12px] ${
+                      btn.accent ? 'text-[#CC4B37]' : 'text-[#FFFFFF]'
+                    }`}
+                  >
+                    {btn.lines[0]}
+                    {btn.lines[1] && (
+                      <>
+                        <br />
+                        {btn.lines[1]}
+                      </>
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Barra inferior: deshacer + estado */}
@@ -857,10 +1013,13 @@ export function WristModeClient({
 
         <div className="flex items-center gap-4">
           <span className="text-[10px] tabular-nums text-[#666666]" style={latoFont}>
-            {gameType === 'speedsoft'
-              ? `FK:${counts.first_kills} CP:${counts.objectives}`
-              : `FK:${counts.first_kills} OBJ:${counts.objectives} PORT:${counts.key_actions} ACT:${counts.critical_actions}`
-            }
+            {gameType === 'drills' ? (
+              `Fouls:${counts.fouls} (+${drillPenaltyTotal}s) · Tiempo:${formatTimer(drillElapsed)} · Final:${formatTimer(drillFinalTime)}`
+            ) : gameType === 'speedsoft' ? (
+              `FK:${counts.first_kills} CP:${counts.objectives}`
+            ) : (
+              `FK:${counts.first_kills} OBJ:${counts.objectives} PORT:${counts.key_actions} ACT:${counts.critical_actions}`
+            )}
           </span>
           {pendingCount > 0 && (
             <span className="text-[10px] text-[#F9A825]" style={latoFont}>
@@ -870,8 +1029,100 @@ export function WristModeClient({
         </div>
       </div>
 
+      {/* Overlay drill completado */}
+      {gameType === 'drills' && drillFinished && (
+        <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-3 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
+          <div className="text-center">
+            <p
+              className="text-[20px] font-extrabold uppercase tracking-[0.3em] text-[#2E7D32]"
+              style={jostFont}
+            >
+              CIRCUITO
+            </p>
+            <p
+              className="mt-1 text-[20px] font-extrabold uppercase tracking-[0.3em] text-[#FFFFFF]"
+              style={jostFont}
+            >
+              COMPLETADO
+            </p>
+
+            <p className="mt-6 font-mono text-[48px] font-bold tabular-nums text-[#2E7D32]">
+              {formatTimer(drillFinalTime)}
+            </p>
+
+            <div className="mt-4 flex justify-center gap-6">
+              <div className="text-center">
+                <p className="text-[24px] font-bold tabular-nums text-[#FFFFFF]">
+                  {formatTimer(drillElapsed)}
+                </p>
+                <p className="text-[10px] uppercase tracking-widest text-[#666666]" style={jostFont}>
+                  Tiempo
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[24px] font-bold tabular-nums text-[#CC4B37]">
+                  {counts.fouls}
+                </p>
+                <p className="text-[10px] uppercase tracking-widest text-[#666666]" style={jostFont}>
+                  Fouls
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[24px] font-bold tabular-nums text-[#CC4B37]">
+                  +{drillPenaltyTotal}s
+                </p>
+                <p className="text-[10px] uppercase tracking-widest text-[#666666]" style={jostFont}>
+                  Penalización
+                </p>
+              </div>
+            </div>
+
+            {actions.some((a) => !a.synced) ? (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] animate-pulse rounded-full bg-[#F9A825]" />
+                  <span className="text-[13px] font-semibold text-[#F9A825]" style={latoFont}>
+                    Sincronizando {actions.filter((a) => !a.synced).length} acciones...
+                  </span>
+                </div>
+                <p className="mt-2 text-[11px] text-[#666666]" style={latoFont}>
+                  No cierres la app. Esperando conexión...
+                </p>
+              </div>
+            ) : syncConfirmed ? (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+                  <span className="text-[13px] font-semibold text-[#2E7D32]" style={latoFont}>
+                    ✓ Confirmado — esperando cierre de ronda
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-[8px] w-[8px] rounded-full bg-[#2E7D32]" />
+                  <span className="text-[13px] font-semibold text-[#2E7D32]" style={latoFont}>
+                    ✓ Todo sincronizado
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleConfirmSync()}
+                  disabled={confirming}
+                  className="mt-4 w-full bg-[#2E7D32] px-6 py-3 text-[13px] font-extrabold uppercase tracking-[0.15em] text-[#FFFFFF] transition-colors hover:bg-[#1B5E20] active:scale-[0.97] disabled:opacity-50"
+                  style={{ fontFamily: "'Jost', sans-serif", borderRadius: 4 }}
+                >
+                  {confirming ? 'CONFIRMANDO...' : '✓ CONFIRMAR SYNC COMPLETO'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Overlay de tiempo agotado */}
-      {timeLeft !== null && timeLeft <= 0 && (
+      {gameType !== 'drills' && timeLeft !== null && timeLeft <= 0 && (
         <div className="absolute inset-0 z-[10000] flex items-center justify-center bg-[#111111]/95 px-3 pb-2 pt-2 sm:px-4 sm:pb-3 sm:pt-3">
           <div className="text-center">
             <p
