@@ -311,6 +311,17 @@ export function TournamentAdminClient({
   }, [activeRoundId, rounds, startTimer, loadScoreboard])
 
   useEffect(() => {
+    if (!activeRoundId) return
+    const activeRound = rounds?.find((r) => r.id === activeRoundId)
+    if (activeRound?.status !== 'active' || activeRound?.game_type !== 'drills') return
+
+    const interval = setInterval(() => {
+      void loadAssignments(activeRoundId)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [activeRoundId, rounds, loadAssignments])
+
+  useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
       if (pollRef.current) clearInterval(pollRef.current)
@@ -1507,13 +1518,15 @@ export function TournamentAdminClient({
           </section>
 
           {/* LOBBY DE ASIGNACIÓN */}
-          {activeRound && activeRound.status === 'setup' && (
+          {activeRound && (activeRound.status === 'setup' || (activeRound.status === 'active' && activeRound.game_type === 'drills')) && (
             <section>
               <h2
                 style={{ ...jost, fontSize: 11, letterSpacing: '0.12em' }}
                 className="mb-3 text-[#999999]"
               >
-                LOBBY — {activeRound.name || `Ronda ${activeRound.round_number}`}
+                {activeRound?.status === 'active' && activeRound?.game_type === 'drills'
+                  ? `AGREGAR JUGADORES — ${activeRound.name || `Ronda ${activeRound.round_number}`}`
+                  : `LOBBY — ${activeRound?.name || `Ronda ${activeRound?.round_number}`}`}
               </h2>
               {availableRefs.length > 0 && availablePlayers.length > 0 && (
                 <div className="mb-4">
@@ -1670,14 +1683,14 @@ export function TournamentAdminClient({
                 </div>
               )}
 
-              {assignments.length > 0 && (
+              {assignments.length > 0 && activeRound?.status === 'setup' && (
                 <button
                   type="button"
                   onClick={() => void handleStartRound()}
                   style={jost}
                   className={`${btnDanger} mt-4 w-full text-[13px]`}
                 >
-                  INICIAR RONDA
+                  🔥 INICIAR RONDA
                 </button>
               )}
             </section>
