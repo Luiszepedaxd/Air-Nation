@@ -1006,27 +1006,39 @@ export function TournamentAdminClient({
               </div>
 
               <div className="mt-3">
-                <input
-                  ref={playerFileRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) void handleImportPlayers(file)
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => playerFileRef.current?.click()}
-                  disabled={importingPlayers}
-                  style={jost}
-                  className={`${btnSecondary} w-full text-[10px]`}
-                >
-                  {importingPlayers ? 'IMPORTANDO...' : 'IMPORTAR DESDE EXCEL'}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/tournaments/templates/players`}
+                    download
+                    style={jost}
+                    className={`${btnSecondary} flex-1 text-center text-[10px]`}
+                  >
+                    DESCARGAR PLANTILLA
+                  </a>
+                  <div className="flex-1">
+                    <input
+                      ref={playerFileRef}
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) void handleImportPlayers(file)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => playerFileRef.current?.click()}
+                      disabled={importingPlayers}
+                      style={jost}
+                      className={`${btnPrimary} w-full text-[10px]`}
+                    >
+                      {importingPlayers ? 'IMPORTANDO...' : 'IMPORTAR EXCEL LLENADO'}
+                    </button>
+                  </div>
+                </div>
                 <p className="mt-2 text-center text-[10px] text-[#CCCCCC]" style={lato}>
-                  El archivo debe tener las columnas NOMBRE y EQUIPO (opcional)
+                  Descarga la plantilla, llénala con los datos, y luego impórtala
                 </p>
               </div>
             </div>
@@ -1158,27 +1170,39 @@ export function TournamentAdminClient({
 
               {/* Import Excel */}
               <div className="mt-3">
-                <input
-                  ref={refereeFileRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) void handleImportReferees(file)
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => refereeFileRef.current?.click()}
-                  disabled={importingRefs}
-                  style={jost}
-                  className={`${btnSecondary} w-full text-[10px]`}
-                >
-                  {importingRefs ? 'IMPORTANDO...' : 'IMPORTAR DESDE EXCEL'}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/tournaments/templates/referees`}
+                    download
+                    style={jost}
+                    className={`${btnSecondary} flex-1 text-center text-[10px]`}
+                  >
+                    DESCARGAR PLANTILLA
+                  </a>
+                  <div className="flex-1">
+                    <input
+                      ref={refereeFileRef}
+                      type="file"
+                      accept=".xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) void handleImportReferees(file)
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => refereeFileRef.current?.click()}
+                      disabled={importingRefs}
+                      style={jost}
+                      className={`${btnPrimary} w-full text-[10px]`}
+                    >
+                      {importingRefs ? 'IMPORTANDO...' : 'IMPORTAR EXCEL LLENADO'}
+                    </button>
+                  </div>
+                </div>
                 <p className="mt-2 text-center text-[10px] text-[#CCCCCC]" style={lato}>
-                  El archivo debe tener la columna NOMBRE DEL ÁRBITRO
+                  Descarga la plantilla, llénala con los nombres, y luego impórtala
                 </p>
               </div>
 

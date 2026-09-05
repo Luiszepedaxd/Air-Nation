@@ -360,6 +360,56 @@ router.get("/public/:slug", async (req, res) => {
   }
 });
 
+// GET /templates/players — Descargar plantilla de jugadores
+router.get("/templates/players", (req, res) => {
+  try {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["NOMBRE", "EQUIPO"],
+      ['Carlos "Viper" Mendoza (ejemplo, borrar)', "Cobras GDL (ejemplo, borrar)"],
+    ]);
+    ws["!cols"] = [{ wch: 35 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Jugadores");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="plantilla_jugadores.xlsx"'
+    );
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /templates/referees — Descargar plantilla de árbitros
+router.get("/templates/referees", (req, res) => {
+  try {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["NOMBRE DEL ÁRBITRO"],
+      ["Juan López (ejemplo, borrar)"],
+    ]);
+    ws["!cols"] = [{ wch: 45 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Árbitros");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="plantilla_arbitros.xlsx"'
+    );
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /join — Árbitro se une con código
 router.post("/join", requireAuth, async (req, res) => {
   try {
