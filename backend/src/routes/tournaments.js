@@ -1351,6 +1351,29 @@ router.delete("/:id/rounds/:roundId/assign/:assignmentId", requireAuth, async (r
       return res.status(403).json({ error: "Solo el creador" });
     }
 
+    const { data: assignmentCheck } = await supabase
+      .from("tournament_assignments")
+      .select("id, drill_started_at, drill_completed_at")
+      .eq("id", assignmentId)
+      .maybeSingle();
+
+    if (!assignmentCheck) return res.status(404).json({ error: "Asignación no encontrada" });
+
+    const { count: actionCount } = await supabase
+      .from("tournament_actions")
+      .select("id", { count: "exact", head: true })
+      .eq("assignment_id", assignmentId);
+
+    if (
+      assignmentCheck.drill_started_at ||
+      assignmentCheck.drill_completed_at ||
+      (actionCount && actionCount > 0)
+    ) {
+      return res
+        .status(400)
+        .json({ error: "No se puede eliminar una asignación que ya tiene datos registrados" });
+    }
+
     const { error } = await supabase.from("tournament_assignments").delete().eq("id", assignmentId);
     if (error) {
       return res.status(500).json({ error: error.message });
