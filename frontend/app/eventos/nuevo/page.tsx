@@ -107,11 +107,11 @@ export default async function EventoNuevoPage({
   }
 
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
-      <header className="bg-[#111111] px-4 py-8 md:py-10">
-        <div className="mx-auto max-w-[960px] md:px-6">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#FFFFFF] text-[#111111]">
+      <header className="w-full max-w-full overflow-hidden bg-[#111111] px-4 py-8 md:py-10">
+        <div className="mx-auto w-full max-w-[960px] min-w-0 md:px-6">
           <h1
-            className="text-2xl font-extrabold uppercase leading-tight text-white"
+            className="break-words text-2xl font-extrabold uppercase leading-tight text-white"
             style={{ ...jostHeading, fontWeight: 800 }}
           >
             NUEVO EVENTO
@@ -122,7 +122,7 @@ export default async function EventoNuevoPage({
         </div>
       </header>
 
-      <div className="mx-auto max-w-[960px] px-4 py-8 md:px-6">
+      <div className="mx-auto w-full max-w-[960px] min-w-0 box-border px-4 py-8 md:px-6">
         <EventoNuevoForm
           publicFields={publicFields}
           privateFields={privateFields}

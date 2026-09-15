@@ -82,13 +82,20 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
             {field.ciudad}
           </p>
         ) : null}
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="mt-4 flex w-full max-w-full flex-row flex-nowrap items-stretch gap-2 sm:gap-3">
           <Link
             href={crearEventoHref}
             style={{ ...jostBtn, borderRadius: 0 }}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 bg-[#CC4B37] px-5 py-2.5 text-[11px] tracking-[0.12em] text-white transition-colors hover:bg-[#D95540]"
+            className="inline-flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2 bg-[#CC4B37] px-3 py-2.5 text-[11px] tracking-[0.12em] text-white transition-colors hover:bg-[#D95540] sm:flex-none sm:px-5"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+              className="shrink-0"
+            >
               <path
                 d="M12 5v14M5 12h14"
                 stroke="currentColor"
@@ -96,9 +103,13 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
                 strokeLinecap="round"
               />
             </svg>
-            CREAR EVENTO
+            <span className="truncate">CREAR EVENTO</span>
           </Link>
-          <CampoShareButton nombre={field.nombre} slug={field.slug} />
+          <CampoShareButton
+            nombre={field.nombre}
+            slug={field.slug}
+            className="min-w-0 flex-1 sm:flex-none"
+          />
         </div>
       </div>
     </div>

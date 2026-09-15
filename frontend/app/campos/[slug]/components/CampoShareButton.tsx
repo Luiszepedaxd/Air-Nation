@@ -11,9 +11,11 @@ const jostBtn = {
 export function CampoShareButton({
   nombre,
   slug,
+  className = '',
 }: {
   nombre: string
   slug: string
+  className?: string
 }) {
   const [label, setLabel] = useState('COMPARTIR')
 
@@ -45,10 +47,17 @@ export function CampoShareButton({
       type="button"
       onClick={() => void handleShare()}
       style={jostBtn}
-      className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-solid border-[#111111] bg-[#FFFFFF] px-4 py-2.5 text-[11px] tracking-[0.12em] text-[#111111] transition-opacity hover:opacity-90"
+      className={`inline-flex min-h-[44px] min-w-0 items-center justify-center gap-2 border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2.5 text-[11px] tracking-[0.12em] text-[#111111] transition-opacity hover:opacity-90 sm:px-4 ${className}`}
       aria-label="Compartir campo"
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden
+        className="shrink-0"
+      >
         <path
           d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v12M8 7l4-4 4 4"
           stroke="currentColor"
@@ -57,7 +66,7 @@ export function CampoShareButton({
           strokeLinejoin="round"
         />
       </svg>
-      {label}
+      <span className="truncate">{label}</span>
     </button>
   )
 }

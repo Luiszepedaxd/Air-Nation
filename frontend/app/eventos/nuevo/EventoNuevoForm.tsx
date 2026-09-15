@@ -145,7 +145,7 @@ export function EventoNuevoForm({
   return (
     <form
       onSubmit={(e) => void handleSubmit(e)}
-      className="mx-auto max-w-[640px] space-y-8 pb-12"
+      className="mx-auto w-full min-w-0 max-w-[640px] space-y-8 pb-12"
     >
       <div>
         <label
@@ -160,7 +160,7 @@ export function EventoNuevoForm({
           onChange={(e) => setTitle(e.target.value)}
           maxLength={100}
           required
-          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
           style={{ borderRadius: 2 }}
         />
       </div>
@@ -177,7 +177,7 @@ export function EventoNuevoForm({
           onChange={(e) => setDescripcion(e.target.value)}
           maxLength={1000}
           rows={5}
-          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
           style={{ borderRadius: 2 }}
         />
         <p className="mt-1 text-[11px] text-[#999999]" style={latoBody}>
@@ -192,11 +192,11 @@ export function EventoNuevoForm({
         >
           Tipo
         </p>
-        <div className="flex gap-2">
+        <div className="flex w-full min-w-0 gap-2">
           <button
             type="button"
             onClick={() => setTipoSafe('publico')}
-            className={`flex-1 border border-solid px-4 py-3 text-[10px] tracking-[0.12em] ${
+            className={`min-w-0 flex-1 border border-solid px-3 py-3 text-[10px] tracking-[0.12em] ${
               tipo === 'publico'
                 ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
                 : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
@@ -209,7 +209,7 @@ export function EventoNuevoForm({
             type="button"
             disabled={!canCreatePrivate || Boolean(lockedField)}
             onClick={() => canCreatePrivate && setTipoSafe('privado')}
-            className={`flex-1 border border-solid px-4 py-3 text-[10px] tracking-[0.12em] ${
+            className={`min-w-0 flex-1 border border-solid px-3 py-3 text-[10px] tracking-[0.12em] ${
               tipo === 'privado'
                 ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
                 : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
@@ -244,7 +244,7 @@ export function EventoNuevoForm({
           ) : null}
         </p>
         {lockedField ? (
-          <p className="text-sm text-[#666666]" style={latoBody}>
+          <p className="break-words text-sm text-[#666666]" style={latoBody}>
             Campo: {lockedField.nombre}
           </p>
         ) : (
@@ -252,7 +252,7 @@ export function EventoNuevoForm({
             value={fieldId}
             onChange={(e) => setFieldId(e.target.value)}
             required={tipo === 'privado'}
-            className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+            className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
             style={{ borderRadius: 2 }}
           >
             <option value="">
@@ -283,7 +283,7 @@ export function EventoNuevoForm({
           value={fechaLocal}
           onChange={(e) => setFechaLocal(e.target.value)}
           required
-          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
           style={{ borderRadius: 2 }}
         />
       </div>
@@ -300,7 +300,7 @@ export function EventoNuevoForm({
           min={0}
           value={cupo}
           onChange={(e) => setCupo(e.target.value)}
-          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
           style={{ borderRadius: 2 }}
         />
       </div>
@@ -318,7 +318,7 @@ export function EventoNuevoForm({
           value={cupoVendidoCreador}
           onChange={(e) => setCupoVendidoCreador(e.target.value)}
           placeholder="0"
-          className="w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+          className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
           style={{ borderRadius: 2 }}
         />
         <p className="mt-1 text-[11px] text-[#999999]" style={latoBody}>
@@ -346,7 +346,7 @@ export function EventoNuevoForm({
       </div>
 
       {clientError ? (
-        <p className="text-sm text-[#CC4B37]" style={latoBody}>
+        <p className="break-words text-sm text-[#CC4B37]" style={latoBody}>
           {clientError}
         </p>
       ) : null}
@@ -355,7 +355,7 @@ export function EventoNuevoForm({
         <button
           type="submit"
           disabled={saving || activeUploads > 0}
-          className="min-h-[48px] min-w-[140px] bg-[#CC4B37] px-6 text-[11px] tracking-[0.12em] text-[#FFFFFF] disabled:opacity-50"
+          className="min-h-[48px] max-w-full flex-1 basis-[140px] bg-[#CC4B37] px-4 text-[11px] tracking-[0.12em] text-[#FFFFFF] disabled:opacity-50 sm:min-w-[140px] sm:flex-none sm:basis-auto sm:px-6"
           style={jostHeading}
         >
           {saving ? 'PUBLICANDO…' : 'PUBLICAR EVENTO'}
@@ -364,7 +364,7 @@ export function EventoNuevoForm({
           type="button"
           onClick={() => router.push('/eventos')}
           disabled={saving}
-          className="min-h-[48px] min-w-[140px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-6 text-[11px] tracking-[0.12em] text-[#666666]"
+          className="min-h-[48px] max-w-full flex-1 basis-[140px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 text-[11px] tracking-[0.12em] text-[#666666] sm:min-w-[140px] sm:flex-none sm:basis-auto sm:px-6"
           style={jostHeading}
         >
           CANCELAR
