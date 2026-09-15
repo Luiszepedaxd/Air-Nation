@@ -13,6 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/campos`, priority: 0.9, changeFrequency: 'daily' },
     { url: `${BASE}/equipos`, priority: 0.8, changeFrequency: 'daily' },
     { url: `${BASE}/eventos`, priority: 0.8, changeFrequency: 'daily' },
+    { url: `${BASE}/ranking`, priority: 0.8, changeFrequency: 'weekly' },
   ]
 
   let postEntries: MetadataRoute.Sitemap = []
