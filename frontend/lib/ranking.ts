@@ -297,7 +297,12 @@ function mapResultado(row: Record<string, unknown>): RankingResultadoEvento {
     equipo_nombre: strOrNull(row.equipo_nombre),
     posicion: numOrNull(row.posicion),
     resultado_faccion: strOrNull(row.resultado_faccion),
-    participacion: row.participacion == null ? true : bool(row.participacion),
+    participacion:
+      row.participacion === 'parcial'
+        ? false
+        : row.participacion == null
+          ? true
+          : bool(row.participacion),
     puntos_posicion: num(row.puntos_posicion),
     puntos_bono: num(row.puntos_bono),
     puntos_total: num(row.puntos_total),
@@ -499,7 +504,12 @@ export async function fetchHistorialJugador(
         bolsa: num(evento.bolsa),
         posicion: numOrNull(row.posicion),
         resultado_faccion: strOrNull(row.resultado_faccion),
-        participacion: row.participacion == null ? true : bool(row.participacion),
+        participacion:
+          row.participacion === 'parcial'
+            ? false
+            : row.participacion == null
+              ? true
+              : bool(row.participacion),
         puntos_posicion: num(row.puntos_posicion),
         puntos_bono: num(row.puntos_bono),
         puntos_total: num(row.puntos_total),
