@@ -9,7 +9,7 @@ import ProximosEventosHome from "@/components/landing/ProximosEventosHome";
 import CtaBandaUnete from "@/components/landing/CtaBandaUnete";
 import CredencialHolografica from "@/components/landing/CredencialHolografica";
 import BlogHome from "@/components/landing/BlogHome";
-import CommunitySection from "@/components/landing/CommunitySection";
+import CamposHomeCarousel from "@/components/landing/CamposHomeCarousel";
 import ContactoSection  from "@/components/landing/ContactoSection";
 import Footer           from "@/components/landing/Footer";
 
@@ -107,7 +107,7 @@ export default function Home() {
       <CtaBandaUnete />
       <CredencialHolografica />
       <BlogHome />
-      <CommunitySection />
+      <CamposHomeCarousel />
       <ContactoSection />
       <Footer />
     </main>
