@@ -1,5 +1,6 @@
 import type { CampoDetailRow } from '../../types'
 import { ClickableImage } from '@/components/ui/ClickableImage'
+import { CampoShareButton } from './CampoShareButton'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -71,6 +72,7 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
             {field.ciudad}
           </p>
         ) : null}
+        <CampoShareButton nombre={field.nombre} slug={field.slug} />
       </div>
     </div>
   )
