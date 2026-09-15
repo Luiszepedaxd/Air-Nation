@@ -84,7 +84,7 @@ export function CampoCard({
   const avg = ratingValue(field.promedio_rating)
   const hasReviews = avg > 0
   const isCarousel = variant === 'carousel'
-  const imageAspect = isCarousel ? 'aspect-[4/5]' : 'aspect-video'
+  const imageAspect = isCarousel ? 'aspect-[5/4]' : 'aspect-video'
 
   return (
     <Link

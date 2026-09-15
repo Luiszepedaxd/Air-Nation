@@ -15,7 +15,7 @@ const RESUME_DELAY_MS = 1200
 /** Saca los clones del tab order y del árbol de accesibilidad (React 18 no tipa `inert`). */
 const inertProps = { inert: '' } as unknown as HTMLAttributes<HTMLDivElement>
 
-const SLIDE_CLASS = 'w-[200px] shrink-0 pr-3 sm:w-[220px] sm:pr-4 lg:w-[240px]'
+const SLIDE_CLASS = 'w-[240px] shrink-0 pr-3 sm:w-[260px] sm:pr-4 lg:w-[280px]'
 
 function buildLoop(fields: CampoListRow[]): CampoListRow[] {
   if (fields.length === 0) return []
