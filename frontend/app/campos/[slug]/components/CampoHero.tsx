@@ -1,9 +1,15 @@
+import Link from 'next/link'
 import type { CampoDetailRow } from '../../types'
 import { ClickableImage } from '@/components/ui/ClickableImage'
 import { CampoShareButton } from './CampoShareButton'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
+const jostBtn = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+  textTransform: 'uppercase' as const,
+} as const
 
 function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
   const t = (raw ?? '').toLowerCase().trim()
@@ -14,6 +20,10 @@ function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
 export function CampoHero({ field }: { field: CampoDetailRow }) {
   const tipo = normalizeTipo(field.tipo)
   const logo = field.logo_url?.trim()
+  const crearEventoHref = `/eventos/nuevo?${new URLSearchParams({
+    field_id: field.id,
+    field_nombre: field.nombre,
+  }).toString()}`
 
   return (
     <div className="relative w-full">
@@ -72,7 +82,24 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
             {field.ciudad}
           </p>
         ) : null}
-        <CampoShareButton nombre={field.nombre} slug={field.slug} />
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link
+            href={crearEventoHref}
+            style={{ ...jostBtn, borderRadius: 0 }}
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 bg-[#CC4B37] px-5 py-2.5 text-[11px] tracking-[0.12em] text-white transition-colors hover:bg-[#D95540]"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M12 5v14M5 12h14"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+            CREAR EVENTO
+          </Link>
+          <CampoShareButton nombre={field.nombre} slug={field.slug} />
+        </div>
       </div>
     </div>
   )

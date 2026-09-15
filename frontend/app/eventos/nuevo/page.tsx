@@ -45,7 +45,17 @@ export default async function EventoNuevoPage({
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
-    redirect('/login?redirect=/eventos/nuevo')
+    // Conservamos el query string (ej: ?field_id=...&field_nombre=...) para
+    // volver al destino exacto después del login.
+    const qs = new URLSearchParams()
+    for (const [key, value] of Object.entries(searchParams)) {
+      const first = firstSearchParam(value)
+      if (first != null) qs.set(key, first)
+    }
+    const target = qs.toString()
+      ? `/eventos/nuevo?${qs.toString()}`
+      : '/eventos/nuevo'
+    redirect(`/login?redirect=${encodeURIComponent(target)}`)
   }
 
   const { data: mods } = await supabase

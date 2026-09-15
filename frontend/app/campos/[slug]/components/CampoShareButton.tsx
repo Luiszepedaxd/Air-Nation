@@ -45,7 +45,7 @@ export function CampoShareButton({
       type="button"
       onClick={() => void handleShare()}
       style={jostBtn}
-      className="mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 border border-solid border-[#111111] bg-[#FFFFFF] px-4 py-2.5 text-[11px] tracking-[0.12em] text-[#111111] transition-opacity hover:opacity-90"
+      className="inline-flex min-h-[44px] items-center justify-center gap-2 border border-solid border-[#111111] bg-[#FFFFFF] px-4 py-2.5 text-[11px] tracking-[0.12em] text-[#111111] transition-opacity hover:opacity-90"
       aria-label="Compartir campo"
     >
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

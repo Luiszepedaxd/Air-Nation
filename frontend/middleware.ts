@@ -65,15 +65,15 @@ export async function middleware(request: NextRequest) {
     pathname === '/eventos/nuevo'
 
   if (!session && requiresAuth) {
-    if (pathname === '/campos/nuevo') {
-      return NextResponse.redirect(
-        new URL('/login?redirect=/campos/nuevo', request.url)
+    if (pathname === '/campos/nuevo' || pathname === '/eventos/nuevo') {
+      // Conservamos el query string completo (ej: ?field_id=...&field_nombre=...)
+      // para que el login regrese al destino exacto con su preselección.
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set(
+        'redirect',
+        `${pathname}${request.nextUrl.search}`
       )
-    }
-    if (pathname === '/eventos/nuevo') {
-      return NextResponse.redirect(
-        new URL('/login?redirect=/eventos/nuevo', request.url)
-      )
+      return NextResponse.redirect(loginUrl)
     }
     return NextResponse.redirect(new URL('/login', request.url))
   }
