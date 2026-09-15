@@ -130,6 +130,15 @@ export default function Footer() {
               </li>
               <li>
                 <Link
+                  href="/ranking"
+                  className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
+                  style={lato}
+                >
+                  Ranking
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/equipos"
                   className="text-[0.9rem] text-white/70 transition-colors hover:text-white"
                   style={lato}

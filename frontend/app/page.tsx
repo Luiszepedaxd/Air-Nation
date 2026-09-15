@@ -6,6 +6,7 @@ import Navbar           from "@/components/landing/Navbar";
 import Hero             from "@/components/landing/Hero";
 import QueEsAirNation   from "@/components/landing/QueEsAirNation";
 import ProximosEventosHome from "@/components/landing/ProximosEventosHome";
+import RankingNacionalHome from "@/components/landing/RankingNacionalHome";
 import CtaBandaUnete from "@/components/landing/CtaBandaUnete";
 import CredencialHolografica from "@/components/landing/CredencialHolografica";
 import BlogHome from "@/components/landing/BlogHome";
@@ -38,6 +39,9 @@ export const metadata: Metadata = {
     'airsoft monterrey',
     'gotcha méxico',
     'gelsoft méxico',
+    'ranking airsoft méxico',
+    'ranking nacional airsoft',
+    'torneos airsoft méxico',
   ],
   alternates: {
     canonical: 'https://www.airnation.online',
@@ -104,6 +108,7 @@ export default function Home() {
       <Hero />
       <QueEsAirNation />
       <ProximosEventosHome />
+      <RankingNacionalHome />
       <CtaBandaUnete />
       <CredencialHolografica />
       <BlogHome />
