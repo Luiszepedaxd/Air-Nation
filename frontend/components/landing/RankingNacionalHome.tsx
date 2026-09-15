@@ -19,28 +19,28 @@ export default async function RankingNacionalHome() {
       className="relative bg-[#FFFFFF] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
     >
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-10">
+        <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:items-stretch lg:gap-10">
           <RevealOnScroll>
             <div>
-              <div className="mb-5 flex items-center gap-4">
-                <span className="block h-[2px] w-7 bg-[#CC4B37]" />
-                <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-                  {TEXTOS_HOME.eyebrow} · {temporada.nombre}
+              <div className="mb-6">
+                <div className="mb-5 flex items-center gap-4">
+                  <span className="block h-[2px] w-7 bg-[#CC4B37]" />
+                  <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
+                    {TEXTOS_HOME.eyebrow} · {temporada.nombre}
+                  </p>
+                </div>
+                <h2
+                  className="font-display font-black uppercase leading-[0.95] text-[#111111]"
+                  style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.75rem)' }}
+                >
+                  LOS MEJORES DEL AIRSOFT{' '}
+                  <span className="text-[#CC4B37]">MEXICANO.</span>
+                </h2>
+                <p className="mt-3 font-body text-[0.95rem] text-[#666666]">
+                  Juega, suma puntos y compite por ser el número 1 del país.
                 </p>
               </div>
-              <h2
-                className="font-display font-black uppercase leading-[0.9] text-[#111111]"
-                style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}
-              >
-                LOS MEJORES
-                <br />
-                DEL AIRSOFT
-                <br />
-                <span className="text-[#CC4B37]">MEXICANO.</span>
-              </h2>
-              <div className="mt-8">
-                <TablaRanking filas={filas} compacta />
-              </div>
+              <TablaRanking filas={filas} compacta />
               <Link
                 href="/ranking"
                 className="group mt-6 inline-flex items-center gap-2 font-body text-[0.7rem] font-bold uppercase tracking-[0.18em] text-[#CC4B37] hover:text-[#CC4B37]/80"
@@ -51,7 +51,7 @@ export default async function RankingNacionalHome() {
           </RevealOnScroll>
 
           <RevealOnScroll delay={0.1} direction="up" distance={40}>
-            <div className="flex h-full flex-col bg-[#111111] p-6 sm:p-8 lg:p-10">
+            <div className="flex h-full flex-col justify-center bg-[#111111] p-8 lg:p-10">
               <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
                 {TEXTOS_HOME.orgEyebrow}
               </p>

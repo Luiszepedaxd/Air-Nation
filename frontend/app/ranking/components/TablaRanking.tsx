@@ -34,7 +34,7 @@ function FilaContenido({
     <>
       <span
         className={`col-span-1 text-[13px] font-bold tabular-nums ${
-          esTop3 ? 'text-[#CC4B37]' : 'text-[#CCCCCC]'
+          esTop3 ? 'text-[#CC4B37]' : 'text-[#999999]'
         }`}
         style={lato}
       >
@@ -58,7 +58,7 @@ function FilaContenido({
               {ETIQUETAS.tu}
             </span>
           ) : null}
-          {!perfilHref ? (
+          {!perfilHref && !compacta ? (
             <span
               title={ETIQUETAS.sinCuentaTooltip}
               className="shrink-0 bg-[#EEEEEE] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#999999]"
