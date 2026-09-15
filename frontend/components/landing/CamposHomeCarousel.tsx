@@ -44,34 +44,27 @@ export default async function CamposHomeCarousel() {
     >
       <div className="mx-auto max-w-7xl">
         <RevealOnScroll>
-          <div className="mb-6 flex flex-col gap-6 sm:mb-10 lg:mb-12 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-5 flex items-center gap-4">
+          <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+            <div className="max-w-xl">
+              <div className="mb-3 flex items-center gap-4">
                 <span className="block h-[2px] w-7 bg-[#CC4B37]" />
                 <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
                   Campos
                 </p>
               </div>
-              <h2
-                className="font-display font-black uppercase leading-[0.9] text-[#111111]"
-                style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}
-              >
-                DONDE SE
-                <br />
-                JUEGA EN
-                <br />
-                <span className="text-[#CC4B37]">MÉXICO.</span>
+              <h2 className="font-display text-2xl font-black uppercase leading-[1.05] text-[#111111] sm:text-3xl md:text-4xl">
+                Dónde se juega en{' '}
+                <span className="text-[#CC4B37]">México</span>
               </h2>
-              <p className="mt-6 font-body text-base leading-[1.7] text-[#666666] sm:text-[1.05rem]">
-                Campos aprobados cerca de ti. Públicos, privados y destacados
-                de la comunidad airsoftera.
+              <p className="mt-3 font-body text-sm leading-[1.7] text-[#666666] sm:text-base">
+                Campos aprobados, públicos y privados, en toda la República.
               </p>
             </div>
             <Link
               href="/campos"
-              className="group inline-flex shrink-0 items-center gap-2 self-start font-body text-[0.7rem] font-bold uppercase tracking-[0.18em] text-[#CC4B37] hover:text-[#CC4B37]/80 lg:self-end"
+              className="group inline-flex shrink-0 items-center gap-2 self-start font-body text-[0.7rem] font-bold uppercase tracking-[0.18em] text-[#CC4B37] hover:text-[#CC4B37]/80 sm:self-end"
             >
-              Ver todos los campos
+              Ver todos
               <svg
                 width="14"
                 height="14"
