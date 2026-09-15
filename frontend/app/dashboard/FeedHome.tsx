@@ -30,6 +30,13 @@ import { CropModal } from '@/components/posts/CropModal'
 import { MentionInput } from '@/components/posts/MentionInput'
 import { VideoTrimmer } from '@/components/posts/VideoTrimmer'
 import { PostContent } from '@/components/feed/PostContent'
+import { TablaRanking } from '@/app/ranking/components/TablaRanking'
+import {
+  fetchTablaRanking,
+  fetchTemporadaActiva,
+  type RankingFila,
+  type RankingTemporada,
+} from '@/lib/ranking'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -179,7 +186,7 @@ export function FeedInlineVideo({
   )
 }
 
-type Tab = 'feed' | 'eventos' | 'equipos' | 'noticias' | 'videos'
+type Tab = 'feed' | 'eventos' | 'ranking' | 'equipos' | 'noticias' | 'videos'
 
 /**
  * Renderiza texto con @alias (incluye espacios en el alias). Si hay `mentionAliasById`,
@@ -3219,6 +3226,101 @@ function EventosTab({
   )
 }
 
+function OrganizadoresRankingBanner() {
+  return (
+    <Link
+      href="/ranking#organizadores"
+      style={jost}
+      className="mb-4 flex items-center justify-between bg-[#CC4B37] px-4 py-4"
+    >
+      <div>
+        <p className="text-[12px] font-extrabold uppercase tracking-wide text-[#FFFFFF]">
+          ¿ORGANIZAS UN EVENTO?
+        </p>
+        <p
+          className="mt-0.5 text-[11px] font-normal uppercase tracking-wide text-white/75"
+          style={{ fontFamily: "'Lato', sans-serif", textTransform: 'none', fontWeight: 400 }}
+        >
+          Haz que tus resultados cuenten para el Ranking Nacional. Gratis hasta el 28 de febrero.
+        </p>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginLeft: 12 }}>
+        <path d="M5 12h14M13 6l6 6-6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </Link>
+  )
+}
+
+function RankingTab({ currentUserId }: { currentUserId: string }) {
+  const [loading, setLoading] = useState(true)
+  const [temporada, setTemporada] = useState<RankingTemporada | null>(null)
+  const [filas, setFilas] = useState<RankingFila[]>([])
+
+  useEffect(() => {
+    const load = async () => {
+      const t = await fetchTemporadaActiva(supabase)
+      setTemporada(t)
+      if (t) {
+        const rows = await fetchTablaRanking(supabase, t.id, 50)
+        setFilas(rows)
+      }
+      setLoading(false)
+    }
+    void load()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="border border-[#EEEEEE] animate-pulse">
+            <div className="h-12 w-full bg-[#F4F4F4]" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!temporada) {
+    return (
+      <p style={lato} className="py-12 text-center text-[13px] text-[#999999]">
+        El Ranking Nacional arranca pronto.
+      </p>
+    )
+  }
+
+  return (
+    <div>
+      <OrganizadoresRankingBanner />
+      <div className="mb-3">
+        <p style={jost} className="text-[11px] font-extrabold uppercase tracking-wide text-[#999999]">
+          {temporada.nombre}
+        </p>
+        <p style={lato} className="mt-0.5 text-[11px] text-[#666666]">
+          {filas.length} jugadores rankeados
+        </p>
+      </div>
+      <TablaRanking filas={filas} resaltarUserId={currentUserId} />
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+        <Link
+          href="/ranking"
+          style={jost}
+          className="text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
+        >
+          VER RANKING COMPLETO →
+        </Link>
+        <Link
+          href="/ranking#puntos"
+          style={jost}
+          className="text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
+        >
+          SISTEMA DE PUNTOS →
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 // ─── EQUIPOS TAB ───
 function EquiposTab() {
   const [items, setItems] = useState<TeamDirItem[]>([])
@@ -3590,6 +3692,7 @@ function VideosTab({
 const TABS: { id: Tab; label: string }[] = [
   { id: 'feed', label: 'FEED' },
   { id: 'eventos', label: 'EVENTOS' },
+  { id: 'ranking', label: 'RANKING' },
   { id: 'equipos', label: 'EQUIPOS' },
   { id: 'noticias', label: 'NOTICIAS' },
   { id: 'videos', label: 'VIDEOS' },
@@ -3706,6 +3809,7 @@ export function FeedHome({
             currentUserAvatar={userAvatar}
           />
         )}
+        {activeTab === 'ranking' && <RankingTab currentUserId={userId} />}
         {activeTab === 'equipos' && <EquiposTab />}
         {activeTab === 'noticias' && (
           <NoticiasTab
