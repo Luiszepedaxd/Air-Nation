@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { createPublicSupabaseClient } from '../supabase-public'
+import { fetchHistorialJugador } from '@/lib/ranking'
 import { PlayerProfileClient } from './PlayerProfileClient'
 import { PlayerHero } from './PlayerHero'
+import { RankingJugadorSection } from './RankingJugadorSection'
 import type { PlayerEventRow, PlayerPostRow, PublicReplicaRow, PublicUserProfile } from './types'
 
 export const revalidate = 0
@@ -351,6 +353,7 @@ export default async function PublicProfilePage({
     { count: followingCount },
     followRow,
     teamMemberRes,
+    historialRanking,
   ] = await Promise.all([
     supabasePublic
       .from('user_follows')
@@ -377,6 +380,7 @@ export default async function PublicProfilePage({
           .eq('status', 'activo')
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    fetchHistorialJugador(supabasePublic, user.id),
   ])
 
   const teamRole = mapTeamRole(
@@ -411,6 +415,12 @@ export default async function PublicProfilePage({
         postsCount={posts.length}
         isBlockedByMe={isBlockedByMe}
       />
+
+      {!isBlockedByMe &&
+        historialRanking &&
+        historialRanking.resultados.length > 0 && (
+          <RankingJugadorSection historial={historialRanking} />
+        )}
 
       {isBlockedByMe ? (
         <div className="mx-auto max-w-[960px] px-4 py-12 md:px-6 md:py-16">
