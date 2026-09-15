@@ -73,18 +73,28 @@ function initialNombre(nombre: string): string {
   return t.charAt(0).toUpperCase()
 }
 
-export function CampoCard({ field }: { field: CampoListRow }) {
+export function CampoCard({
+  field,
+  variant = 'default',
+}: {
+  field: CampoListRow
+  variant?: 'default' | 'carousel'
+}) {
   const tipo = normalizeTipo(field.tipo)
   const avg = ratingValue(field.promedio_rating)
   const hasReviews = avg > 0
+  const isCarousel = variant === 'carousel'
+  const imageAspect = isCarousel ? 'aspect-[4/5]' : 'aspect-video'
 
   return (
     <Link
       href={`/campos/${field.slug}`}
-      className="group block border border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC]"
+      className={`group block border border-[#EEEEEE] bg-[#FFFFFF] text-left transition-colors hover:border-[#CCCCCC] ${
+        isCarousel ? 'h-full' : ''
+      }`}
     >
-      <article>
-        <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
+      <article className={isCarousel ? 'flex h-full flex-col' : undefined}>
+        <div className={`relative w-full overflow-hidden bg-[#111111] ${imageAspect}`}>
           {field.foto_portada_url ? (
             <img
               src={field.foto_portada_url}
@@ -124,23 +134,33 @@ export function CampoCard({ field }: { field: CampoListRow }) {
             </div>
           ) : null}
         </div>
-        <div className="space-y-2 p-3">
+        <div
+          className={`space-y-2 p-3 ${
+            isCarousel ? 'flex min-h-[7.5rem] flex-1 flex-col' : ''
+          }`}
+        >
           <h2
             className="line-clamp-2 text-base font-extrabold uppercase leading-snug text-[#111111]"
             style={jost}
           >
             {field.nombre}
           </h2>
-          {field.ciudad ? (
-            <p
-              className="flex items-center gap-1.5 text-sm text-[#666666]"
-              style={lato}
-            >
-              <PinIcon />
-              {field.ciudad}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-2">
+          <p
+            className={`flex items-center gap-1.5 text-sm text-[#666666] ${
+              isCarousel ? 'min-h-[1.25rem]' : ''
+            }`}
+            style={lato}
+          >
+            {field.ciudad ? (
+              <>
+                <PinIcon />
+                {field.ciudad}
+              </>
+            ) : isCarousel ? (
+              <span className="invisible">—</span>
+            ) : null}
+          </p>
+          <div className={`flex flex-wrap items-center gap-2 ${isCarousel ? 'mt-auto' : ''}`}>
             {hasReviews ? (
               <>
                 <StarsRow value={avg} />

@@ -15,7 +15,7 @@ const RESUME_DELAY_MS = 1200
 /** Saca los clones del tab order y del árbol de accesibilidad (React 18 no tipa `inert`). */
 const inertProps = { inert: '' } as unknown as HTMLAttributes<HTMLDivElement>
 
-const SLIDE_CLASS = 'w-[260px] shrink-0 pr-4 sm:w-[288px] sm:pr-5 lg:w-[308px]'
+const SLIDE_CLASS = 'w-[200px] shrink-0 pr-3 sm:w-[220px] sm:pr-4 lg:w-[240px]'
 
 function buildLoop(fields: CampoListRow[]): CampoListRow[] {
   if (fields.length === 0) return []
@@ -32,7 +32,6 @@ export function CamposHomeCarouselTrack({ fields }: { fields: CampoListRow[] }) 
     if (!el) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
 
-    // Hover/foco pausan mientras duren; scroll y touch pausan por unos segundos.
     let holding = false
     let idleUntil = 0
     let lastFrame = 0
@@ -50,7 +49,6 @@ export function CamposHomeCarouselTrack({ fields }: { fields: CampoListRow[] }) 
       idleUntil = performance.now() + RESUME_DELAY_MS
     }
     const onScroll = () => {
-      // Ignora el scroll que escribe el propio autoplay; sólo pausa el del usuario.
       if (selfScrollLeft >= 0 && Math.abs(el.scrollLeft - selfScrollLeft) < 2) return
       nudgeIdle()
     }
@@ -61,7 +59,6 @@ export function CamposHomeCarouselTrack({ fields }: { fields: CampoListRow[] }) 
       lastFrame = now
       if (holding || now < idleUntil || dt === 0) return
 
-      // La pista lleva dos vueltas idénticas: al pasar la mitad, volvemos atrás sin que se note.
       const half = el.scrollWidth / 2
       if (half <= 0) return
       let next = el.scrollLeft + PX_PER_SECOND * dt
@@ -98,48 +95,30 @@ export function CamposHomeCarouselTrack({ fields }: { fields: CampoListRow[] }) 
   return (
     <div
       ref={scrollerRef}
-      className="campos-marquee scrollbar-hide overflow-x-auto"
+      className="scrollbar-hide overflow-x-auto"
       style={{ WebkitOverflowScrolling: 'touch' }}
       role="region"
       aria-roledescription="carrusel"
       aria-label="Campos aprobados"
     >
-      <div className="flex w-max">
+      <div className="flex w-max items-stretch">
         {loop.map((field, i) => (
-          <div key={`campo-${i}`} className={SLIDE_CLASS}>
-            <CampoCard field={field} />
+          <div key={`campo-${i}`} className={`${SLIDE_CLASS} flex`}>
+            <div className="flex h-full w-full flex-col">
+              <CampoCard field={field} variant="carousel" />
+            </div>
           </div>
         ))}
-        {/* Segunda vuelta idéntica: es lo que permite reiniciar el scroll sin salto visible. */}
-        <div className="flex" aria-hidden {...inertProps}>
+        <div className="flex items-stretch" aria-hidden {...inertProps}>
           {loop.map((field, i) => (
-            <div key={`campo-clon-${i}`} className={SLIDE_CLASS}>
-              <CampoCard field={field} />
+            <div key={`campo-clon-${i}`} className={`${SLIDE_CLASS} flex`}>
+              <div className="flex h-full w-full flex-col">
+                <CampoCard field={field} variant="carousel" />
+              </div>
             </div>
           ))}
         </div>
       </div>
-
-      <style jsx>{`
-        @media (min-width: 768px) {
-          .campos-marquee {
-            -webkit-mask-image: linear-gradient(
-              to right,
-              transparent,
-              #000 3%,
-              #000 97%,
-              transparent
-            );
-            mask-image: linear-gradient(
-              to right,
-              transparent,
-              #000 3%,
-              #000 97%,
-              transparent
-            );
-          }
-        }
-      `}</style>
     </div>
   )
 }
