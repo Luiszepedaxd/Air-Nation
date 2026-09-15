@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { LUGAR_BANDO, STATS_LABELS } from './ranking-contenido'
 
 export type RankingTemporada = {
   id: string
@@ -104,19 +105,79 @@ export type RankingHistorialJugador = {
 }
 
 export const NIVELES_RANKING = [
-  { nivel: 1, nombre: 'Recreativo', descripcion: 'Dominguera o partida abierta de 1 día', puntos: 25 },
-  { nivel: 2, nombre: 'Torneo local', descripcion: 'Torneo de 1 día con posiciones', puntos: 100 },
-  { nivel: 3, nombre: 'Evento mayor', descripcion: 'Milsim de 2–3 días o torneo regional', puntos: 150 },
-  { nivel: 4, nombre: 'Circuito nacional', descripcion: 'Stage de circuito nacional (ej. AMG)', puntos: 200 },
-  { nivel: 5, nombre: 'Final nacional', descripcion: 'Final de circuito o campeonato nacional', puntos: 300 },
+  {
+    nivel: 1,
+    nombre: 'Dominguera',
+    descripcion: 'Partidas abiertas y recreativas de un día.',
+    puntos: 25,
+  },
+  {
+    nivel: 2,
+    nombre: 'Torneo',
+    descripcion: 'Torneos de un día con lugares definidos.',
+    puntos: 100,
+  },
+  {
+    nivel: 3,
+    nombre: 'Milsim o evento grande',
+    descripcion: 'Milsim de 2 a 3 días o torneos regionales.',
+    puntos: 150,
+  },
+  {
+    nivel: 4,
+    nombre: 'Circuito nacional',
+    descripcion: 'Fechas de un circuito nacional, como AMG.',
+    puntos: 200,
+  },
+  {
+    nivel: 5,
+    nombre: 'Final nacional',
+    descripcion: 'La final de un circuito o un campeonato nacional.',
+    puntos: 300,
+  },
 ] as const
 
 export const FACTORES_TAMANO = [
-  { rango: '6 – 15', min: 6, max: 15, factor: 0.5 },
-  { rango: '16 – 39', min: 16, max: 39, factor: 0.75 },
-  { rango: '40 – 99', min: 40, max: 99, factor: 1 },
-  { rango: '100 – 199', min: 100, max: 199, factor: 1.25 },
-  { rango: '200 o más', min: 200, max: Infinity, factor: 1.5 },
+  {
+    rango: '6 – 15',
+    min: 6,
+    max: 15,
+    factor: 0.5,
+    etiqueta: 'Evento chico',
+    porcentaje: 50,
+  },
+  {
+    rango: '16 – 39',
+    min: 16,
+    max: 39,
+    factor: 0.75,
+    etiqueta: 'Evento mediano',
+    porcentaje: 75,
+  },
+  {
+    rango: '40 – 99',
+    min: 40,
+    max: 99,
+    factor: 1,
+    etiqueta: 'Evento normal',
+    porcentaje: 100,
+  },
+  {
+    rango: '100 – 199',
+    min: 100,
+    max: 199,
+    factor: 1.25,
+    etiqueta: 'Evento grande',
+    porcentaje: 125,
+  },
+  {
+    rango: '200 o más',
+    min: 200,
+    max: Infinity,
+    factor: 1.5,
+    etiqueta: 'Evento masivo',
+    porcentaje: 150,
+  },
 ] as const
 
 export const PORCENTAJES_POSICION = [
@@ -147,7 +208,7 @@ export const DISCIPLINA_LABELS: Record<string, string> = {
 export const MODALIDAD_LABELS: Record<string, string> = {
   individual: 'Individual',
   equipos: 'Por equipos',
-  facciones: 'Por facciones',
+  facciones: 'Por bandos',
 }
 
 export const PRECIO_TARIFA_AIRNATION = 19
@@ -164,8 +225,45 @@ export function factorPorJugadores(n: number): number {
   return match?.factor ?? 0
 }
 
+export function tamanoInfo(n: number): (typeof FACTORES_TAMANO)[number] | null {
+  if (n < 6) return null
+  return FACTORES_TAMANO.find((r) => n >= r.min && n <= r.max) ?? null
+}
+
 export function nivelInfo(nivel: number) {
   return NIVELES_RANKING.find((n) => n.nivel === nivel) ?? NIVELES_RANKING[0]
+}
+
+export function lugarTexto(
+  posicion: number | null,
+  resultadoFaccion: string | null
+): string {
+  if (resultadoFaccion) {
+    const key = resultadoFaccion.toLowerCase().replace(/\s+/g, '_')
+    if (LUGAR_BANDO[key]) return LUGAR_BANDO[key]
+    if (key === 'ganador' || key === 'primera' || key === 'ganadora') {
+      return LUGAR_BANDO.ganadora
+    }
+    if (
+      key === 'tercera' ||
+      key === 'tercera_mas' ||
+      key === 'tercera_en_adelante' ||
+      key === 'tercera_o_mas' ||
+      key === 'resto'
+    ) {
+      return LUGAR_BANDO.tercera_o_mas
+    }
+    if (key === 'segunda') return LUGAR_BANDO.segunda
+    const s = key.replace(/_/g, ' ')
+    if (!s) return '—'
+    return s.charAt(0).toUpperCase() + s.slice(1)
+  }
+  if (posicion != null) return `${posicion}º lugar`
+  return '—'
+}
+
+export function puntosDeBono(bolsa: number, porcentaje: number): number {
+  return Math.round((bolsa * porcentaje) / 100)
 }
 
 export function hrefJugador(userId: string | null): string | null {
@@ -186,6 +284,7 @@ export function formatFechaRanking(fecha: string): string {
 }
 
 export function humanizarStat(key: string): string {
+  if (STATS_LABELS[key]) return STATS_LABELS[key]
   const s = key.replace(/_/g, ' ')
   if (!s) return s
   return s.charAt(0).toUpperCase() + s.slice(1)

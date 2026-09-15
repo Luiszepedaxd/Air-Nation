@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { RankingFila } from '@/lib/ranking'
 import { hrefJugador } from '@/lib/ranking'
+import { ETIQUETAS } from '@/lib/ranking-contenido'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -54,15 +55,16 @@ function FilaContenido({
               className="shrink-0 bg-[#CC4B37] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white"
               style={jost}
             >
-              TÚ
+              {ETIQUETAS.tu}
             </span>
           ) : null}
           {!perfilHref ? (
             <span
+              title={ETIQUETAS.sinCuentaTooltip}
               className="shrink-0 bg-[#EEEEEE] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#999999]"
               style={jost}
             >
-              SIN RECLAMAR
+              {ETIQUETAS.sinCuenta}
             </span>
           ) : null}
         </div>
@@ -114,7 +116,7 @@ export function TablaRanking({ filas, compacta, resaltarUserId }: Props) {
     return (
       <div className="border border-[#EEEEEE] bg-white px-4 py-10 text-center">
         <p className="text-[13px] text-[#999999]" style={lato}>
-          La tabla se llena con el primer evento rankeado de la temporada.
+          {ETIQUETAS.tablaVacia}
         </p>
       </div>
     )
@@ -127,14 +129,14 @@ export function TablaRanking({ filas, compacta, resaltarUserId }: Props) {
           #
         </span>
         <span style={jost} className="col-span-6 text-[9px] tracking-widest text-[#999999] sm:col-span-7">
-          JUGADOR
+          {ETIQUETAS.jugador}
         </span>
         {!compacta ? (
           <span
             style={jost}
             className="col-span-2 hidden text-center text-[9px] tracking-widest text-[#999999] sm:block"
           >
-            EVENTOS
+            {ETIQUETAS.eventos}
           </span>
         ) : null}
         <span
@@ -143,7 +145,7 @@ export function TablaRanking({ filas, compacta, resaltarUserId }: Props) {
             compacta ? 'col-span-5' : ''
           }`}
         >
-          PUNTOS
+          {ETIQUETAS.puntos}
         </span>
       </div>
       {filas.map((fila, i) => (

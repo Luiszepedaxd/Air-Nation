@@ -37,6 +37,7 @@ import {
   type RankingFila,
   type RankingTemporada,
 } from '@/lib/ranking'
+import { TEXTOS_FEED } from '@/lib/ranking-contenido'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -3235,13 +3236,13 @@ function OrganizadoresRankingBanner() {
     >
       <div>
         <p className="text-[12px] font-extrabold uppercase tracking-wide text-[#FFFFFF]">
-          ¿ORGANIZAS UN EVENTO?
+          {TEXTOS_FEED.bannerTitulo}
         </p>
         <p
           className="mt-0.5 text-[11px] font-normal uppercase tracking-wide text-white/75"
           style={{ fontFamily: "'Lato', sans-serif", textTransform: 'none', fontWeight: 400 }}
         >
-          Haz que tus resultados cuenten para el Ranking Nacional. Gratis hasta el 28 de febrero.
+          {TEXTOS_FEED.bannerTexto}
         </p>
       </div>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginLeft: 12 }}>
@@ -3284,7 +3285,7 @@ function RankingTab({ currentUserId }: { currentUserId: string }) {
   if (!temporada) {
     return (
       <p style={lato} className="py-12 text-center text-[13px] text-[#999999]">
-        El Ranking Nacional arranca pronto.
+        {TEXTOS_FEED.vacio}
       </p>
     )
   }
@@ -3297,7 +3298,7 @@ function RankingTab({ currentUserId }: { currentUserId: string }) {
           {temporada.nombre}
         </p>
         <p style={lato} className="mt-0.5 text-[11px] text-[#666666]">
-          {filas.length} jugadores rankeados
+          {TEXTOS_FEED.jugadores(filas.length)}
         </p>
       </div>
       <TablaRanking filas={filas} resaltarUserId={currentUserId} />
@@ -3307,14 +3308,14 @@ function RankingTab({ currentUserId }: { currentUserId: string }) {
           style={jost}
           className="text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
         >
-          VER RANKING COMPLETO →
+          {TEXTOS_FEED.verCompleto}
         </Link>
         <Link
           href="/ranking#puntos"
           style={jost}
           className="text-[11px] font-extrabold uppercase tracking-wide text-[#CC4B37]"
         >
-          SISTEMA DE PUNTOS →
+          {TEXTOS_FEED.comoSeGanan}
         </Link>
       </div>
     </div>

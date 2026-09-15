@@ -9,16 +9,18 @@ import { BadgeCapturaAirNation } from '@/app/ranking/components/BadgeCapturaAirN
 import {
   DISCIPLINA_LABELS,
   MODALIDAD_LABELS,
-  TOPE_BONO_PORCENTAJE,
-  factorPorJugadores,
   fetchEventoRanking,
   formatFechaRanking,
   hrefJugador,
   humanizarStat,
+  lugarTexto,
   nivelInfo,
+  puntosDeBono,
+  tamanoInfo,
   type RankingEventoDetalle,
   type RankingResultadoEvento,
 } from '@/lib/ranking'
+import { ETIQUETAS, TEXTOS_EVENTO } from '@/lib/ranking-contenido'
 
 export const revalidate = 300
 
@@ -32,17 +34,6 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-const FACCION_POSICION_LABELS: Record<string, string> = {
-  ganadora: 'Ganadora',
-  ganador: 'Ganadora',
-  primera: 'Ganadora',
-  segunda: 'Segunda',
-  tercera: 'Tercera+',
-  tercera_mas: 'Tercera+',
-  tercera_en_adelante: 'Tercera+',
-  resto: 'Tercera+',
-}
-
 const getEvento = cache(async (slug: string): Promise<RankingEventoDetalle | null> => {
   const sb = createPublicSupabaseClient()
   return fetchEventoRanking(sb, slug)
@@ -52,33 +43,12 @@ function canonicalUrl(slug: string) {
   return `https://www.airnation.online/ranking/eventos/${slug}`
 }
 
-function etiquetaColumnaPosicion(
-  modalidad: string,
-  resultado: RankingResultadoEvento
-): string {
-  if (modalidad === 'facciones' && resultado.resultado_faccion) {
-    const key = resultado.resultado_faccion.toLowerCase().replace(/\s+/g, '_')
-    return (
-      FACCION_POSICION_LABELS[key] ??
-      FACCION_POSICION_LABELS[resultado.resultado_faccion] ??
-      humanizarStat(resultado.resultado_faccion)
-    )
-  }
-  if (resultado.posicion != null) return String(resultado.posicion)
-  return '—'
-}
-
 function formatStatValue(value: unknown): string {
   if (value == null || value === '') return '—'
   if (typeof value === 'boolean') return value ? 'Sí' : 'No'
   if (typeof value === 'number' && Number.isFinite(value)) return String(value)
   if (typeof value === 'string') return value
   return JSON.stringify(value)
-}
-
-function lineaBonoObtenido(nombre: string, porcentaje: number, veces: number): string {
-  const totalPct = porcentaje * veces
-  return `${nombre} × ${veces} = +${totalPct}%`
 }
 
 export async function generateMetadata({
@@ -95,7 +65,7 @@ export async function generateMetadata({
   }
 
   const title = `${evento.nombre} · Resultados Ranking Nacional | AirNation`
-  const description = `Resultados del ${formatFechaRanking(evento.fecha)} en ${evento.ciudad}. ${evento.total_jugadores} jugadores rankeados en el Ranking Nacional de Airsoft México.`
+  const description = `Resultados del ${formatFechaRanking(evento.fecha)} en ${evento.ciudad}. ${evento.total_jugadores} jugadores en el Ranking Nacional de Airsoft México.`
   const canonical = canonicalUrl(evento.slug)
 
   return {
@@ -120,52 +90,62 @@ export async function generateMetadata({
   }
 }
 
-function FichaCalculo({ evento }: { evento: RankingEventoDetalle }) {
+function FichaPuntos({ evento }: { evento: RankingEventoDetalle }) {
   const ni = nivelInfo(evento.nivel)
-  const factor = factorPorJugadores(evento.total_jugadores)
-  const puntosNivel = ni.puntos
+  const tam = tamanoInfo(evento.total_jugadores)
 
   return (
     <div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <div className="border border-[#EEEEEE] bg-white px-4 py-4">
           <p className="text-[9px] tracking-widest text-[#999999]" style={jost}>
-            NIVEL {evento.nivel}
+            {TEXTOS_EVENTO.cajaTipo}
           </p>
           <p className="mt-2 text-[14px] font-bold text-[#111111]" style={lato}>
             {ni.nombre}
           </p>
           <p className="mt-1 text-[13px] tabular-nums text-[#666666]" style={lato}>
-            {puntosNivel} pts base
+            {ni.puntos} puntos
           </p>
         </div>
         <div className="border border-[#EEEEEE] bg-white px-4 py-4">
           <p className="text-[9px] tracking-widest text-[#999999]" style={jost}>
-            {evento.total_jugadores} JUGADORES
+            {TEXTOS_EVENTO.cajaTamano}
           </p>
           <p className="mt-2 text-[14px] font-bold text-[#111111]" style={lato}>
-            Factor × {factor}
+            {evento.total_jugadores} jugadores
           </p>
+          {tam ? (
+            <p className="mt-1 text-[13px] text-[#666666]" style={lato}>
+              {tam.etiqueta} ({tam.porcentaje}%)
+            </p>
+          ) : null}
         </div>
         <div className="border border-[#CC4B37]/30 bg-white px-4 py-4">
           <p className="text-[9px] tracking-widest text-[#999999]" style={jost}>
-            BOLSA
+            {TEXTOS_EVENTO.cajaPuntos}
           </p>
           <p className="mt-2 text-[18px] font-bold tabular-nums text-[#CC4B37]" style={lato}>
-            {evento.bolsa} pts
-          </p>
-        </div>
-        <div className="border border-[#EEEEEE] bg-white px-4 py-4">
-          <p className="text-[9px] tracking-widest text-[#999999]" style={jost}>
-            MODALIDAD
-          </p>
-          <p className="mt-2 text-[14px] font-bold text-[#111111]" style={lato}>
-            {MODALIDAD_LABELS[evento.modalidad] ?? evento.modalidad}
+            {evento.bolsa}
           </p>
         </div>
       </div>
-      <p className="mt-3 text-[12px] tabular-nums text-[#666666]" style={lato}>
-        {puntosNivel} × {factor} = {evento.bolsa} pts
+      {tam ? (
+        <p className="mt-3 text-[12px] text-[#666666]" style={lato}>
+          {TEXTOS_EVENTO.cuenta(
+            ni.nombre,
+            ni.puntos,
+            tam.etiqueta,
+            tam.porcentaje,
+            evento.bolsa
+          )}
+        </p>
+      ) : null}
+      <p className="mt-4 inline-block border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2 text-[12px] font-bold text-[#666666]" style={jost}>
+        {TEXTOS_EVENTO.comoSeJugo}:{' '}
+        <span style={{ ...lato, fontWeight: 600, textTransform: 'none' }}>
+          {MODALIDAD_LABELS[evento.modalidad] ?? evento.modalidad}
+        </span>
       </p>
     </div>
   )
@@ -183,18 +163,20 @@ function JugadorCell({ resultado }: { resultado: RankingResultadoEvento }) {
         </span>
         {!perfilHref ? (
           <span
+            title={ETIQUETAS.sinCuentaTooltip}
             className="shrink-0 bg-[#EEEEEE] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#999999]"
             style={jost}
           >
-            SIN RECLAMAR
+            {ETIQUETAS.sinCuenta}
           </span>
         ) : null}
         {esParcial ? (
           <span
+            title={ETIQUETAS.noJugoTodoTooltip}
             className="shrink-0 bg-[#EEEEEE] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#666666]"
             style={jost}
           >
-            PARCIAL
+            {ETIQUETAS.noJugoTodo}
           </span>
         ) : null}
       </div>
@@ -231,12 +213,20 @@ function TablaResultados({
     )
   }
 
+  const headers = [
+    ETIQUETAS.lugar,
+    ETIQUETAS.jugador,
+    ETIQUETAS.porSuLugar,
+    ETIQUETAS.extra,
+    ETIQUETAS.total,
+  ]
+
   return (
     <div className="overflow-x-auto border border-[#EEEEEE] bg-white">
       <table className="min-w-full text-left" style={lato}>
         <thead>
           <tr className="border-b border-[#EEEEEE] bg-[#FAFAFA]">
-            {['#', 'JUGADOR', 'POSICIÓN', 'BONO', 'TOTAL'].map((h) => (
+            {headers.map((h) => (
               <th
                 key={h}
                 className="whitespace-nowrap px-3 py-2.5 text-[9px] tracking-widest text-[#999999] first:pl-4 last:pr-4 last:text-right"
@@ -252,12 +242,13 @@ function TablaResultados({
             const statEntries = Object.entries(r.stats_organizador).filter(
               ([, v]) => v != null && v !== ''
             )
+            const lugar = lugarTexto(r.posicion, r.resultado_faccion)
 
             return (
               <Fragment key={r.id}>
                 <tr className="border-b border-[#F4F4F4] align-top">
-                  <td className="whitespace-nowrap px-3 py-3 pl-4 text-[13px] font-bold tabular-nums text-[#666666]">
-                    {etiquetaColumnaPosicion(evento.modalidad, r)}
+                  <td className="whitespace-nowrap px-3 py-3 pl-4 text-[13px] font-bold text-[#111111]">
+                    {lugar}
                   </td>
                   <td className="min-w-[200px] px-3 py-3">
                     <JugadorCell resultado={r} />
@@ -273,78 +264,80 @@ function TablaResultados({
                   </td>
                 </tr>
                 <tr className="border-b border-[#F4F4F4] bg-[#FAFAFA]/80">
-                    <td colSpan={5} className="px-4 py-2 pb-4">
-                      <details className="group">
-                        <summary
-                          className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.08em] text-[#666666] marker:hidden [&::-webkit-details-marker]:hidden"
-                          style={jost}
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            Ver desglose
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              className="text-[#CC4B37] transition-transform group-open:rotate-180"
-                              aria-hidden
+                  <td colSpan={5} className="px-4 py-2 pb-4">
+                    <details className="group">
+                      <summary
+                        className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-[0.08em] text-[#666666] marker:hidden [&::-webkit-details-marker]:hidden"
+                        style={jost}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          {ETIQUETAS.verComoSumo}
+                          <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-[#CC4B37] transition-transform group-open:rotate-180"
+                            aria-hidden
+                          >
+                            <path
+                              d="M6 9l6 6 6-6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                      </summary>
+                      <div className="mt-3 space-y-2 pl-0 sm:pl-2">
+                        <p className="text-[13px] text-[#333333]">
+                          {TEXTOS_EVENTO.sumaLugar(lugar, r.puntos_posicion)}
+                        </p>
+                        {r.bonos.map((b, i) => {
+                          const pts =
+                            puntosDeBono(evento.bolsa, b.porcentaje) * b.veces
+                          return (
+                            <p key={`${b.nombre}-${i}`} className="text-[13px] text-[#333333]">
+                              {TEXTOS_EVENTO.sumaExtra(b.nombre, b.veces, pts)}
+                            </p>
+                          )
+                        })}
+                        <p className="text-[13px] font-bold text-[#111111]">
+                          {TEXTOS_EVENTO.sumaTotal(r.puntos_total)}
+                        </p>
+                        {statEntries.length > 0 ? (
+                          <div className="mt-4 border-t border-[#EEEEEE] pt-3">
+                            <p
+                              className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#999999]"
+                              style={jost}
                             >
-                              <path
-                                d="M6 9l6 6 6-6"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </span>
-                        </summary>
-                        <div className="mt-3 space-y-4 pl-0 sm:pl-2">
-                          {r.bonos.length > 0 ? (
-                            <div>
-                              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#999999]" style={jost}>
-                                Bonos obtenidos
-                              </p>
-                              <ul className="space-y-1 text-[13px] text-[#333333]">
-                                {r.bonos.map((b, i) => (
-                                  <li key={`${b.nombre}-${i}`}>
-                                    {lineaBonoObtenido(b.nombre, b.porcentaje, b.veces)}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : null}
-                          {statEntries.length > 0 ? (
-                            <div>
-                              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#999999]" style={jost}>
-                                Estadísticas del organizador
-                              </p>
-                              <ul className="grid gap-1 sm:grid-cols-2">
-                                {statEntries.map(([key, value]) => (
-                                  <li
-                                    key={key}
-                                    className="flex justify-between gap-4 border-b border-[#EEEEEE] py-1 text-[12px]"
-                                  >
-                                    <span className="text-[#666666]">{humanizarStat(key)}</span>
-                                    <span className="font-medium tabular-nums text-[#111111]">
-                                      {formatStatValue(value)}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                              <p className="mt-3 text-[11px] leading-relaxed text-[#999999]">
-                                Estadísticas registradas por el organizador. No afectan los puntos del
-                                ranking.
-                              </p>
-                            </div>
-                          ) : null}
-                          {r.bonos.length === 0 && statEntries.length === 0 ? (
-                            <p className="text-[12px] text-[#999999]">Sin bonos ni estadísticas adicionales.</p>
-                          ) : null}
-                        </div>
-                      </details>
-                    </td>
-                  </tr>
+                              {ETIQUETAS.datosDelEvento}
+                            </p>
+                            <ul className="grid gap-1 sm:grid-cols-2">
+                              {statEntries.map(([key, value]) => (
+                                <li
+                                  key={key}
+                                  className="flex justify-between gap-4 border-b border-[#EEEEEE] py-1 text-[12px]"
+                                >
+                                  <span className="text-[#666666]">
+                                    {humanizarStat(key)}
+                                  </span>
+                                  <span className="font-medium tabular-nums text-[#111111]">
+                                    {formatStatValue(value)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-3 text-[11px] leading-relaxed text-[#999999]">
+                              {ETIQUETAS.datosDelEventoNota}
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    </details>
+                  </td>
+                </tr>
               </Fragment>
             )
           })}
@@ -377,7 +370,7 @@ export default async function RankingEventoPage({
               href="/ranking#eventos"
               className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37] transition-opacity hover:opacity-80"
             >
-              RANKING NACIONAL / EVENTOS
+              {TEXTOS_EVENTO.breadcrumb}
             </Link>
           </nav>
 
@@ -389,8 +382,8 @@ export default async function RankingEventoPage({
           </h1>
 
           <p className="mt-4 font-body text-[15px] text-[#666666]">
-            {formatFechaRanking(evento.fecha)} · {evento.ciudad} · Organiza:{' '}
-            {evento.organizador_nombre}
+            {formatFechaRanking(evento.fecha)} · {evento.ciudad} ·{' '}
+            {TEXTOS_EVENTO.organiza}: {evento.organizador_nombre}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -406,7 +399,7 @@ export default async function RankingEventoPage({
                 className="bg-[#111111] px-2 py-1 text-[7px] font-bold uppercase tracking-wider text-white"
                 style={jost}
               >
-                EVENTO FUNDADOR
+                {ETIQUETAS.eventoFundador}
               </span>
             ) : null}
           </div>
@@ -417,60 +410,69 @@ export default async function RankingEventoPage({
         <div className="mx-auto max-w-7xl space-y-10">
           <div>
             <h2 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-              Ficha de cálculo
+              {TEXTOS_EVENTO.puntosTitulo}
             </h2>
-            <FichaCalculo evento={evento} />
+            <FichaPuntos evento={evento} />
           </div>
 
           <div>
             <h2 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-              Criterio de posición final
+              {TEXTOS_EVENTO.ordenTitulo}
             </h2>
             <div className="border border-[#EEEEEE] bg-[#F4F4F4] px-5 py-5">
               <p className="text-[14px] leading-relaxed text-[#333333]" style={lato}>
                 {evento.criterio_posicion || '—'}
               </p>
               <p className="mt-3 text-[12px] text-[#666666]" style={lato}>
-                Definido por el organizador y publicado antes del evento.
+                {TEXTOS_EVENTO.ordenNota}
               </p>
             </div>
           </div>
 
           <div>
             <h2 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-              Bonos declarados
+              {TEXTOS_EVENTO.extraTitulo}
             </h2>
             {evento.bonos.length === 0 ? (
               <p className="text-[14px] text-[#666666]" style={lato}>
-                Este evento no declaró bonos.
+                {TEXTOS_EVENTO.extraVacio}
               </p>
             ) : (
               <ul className="space-y-4 border border-[#EEEEEE] bg-white px-5 py-5">
-                {evento.bonos.map((b) => (
-                  <li key={b.id} className="border-b border-[#F4F4F4] pb-4 last:border-0 last:pb-0">
-                    <p className="text-[14px] font-bold text-[#111111]" style={lato}>
-                      {b.nombre}
-                      <span className="ml-2 font-semibold text-[#CC4B37]">
-                        +{b.porcentaje}% de la bolsa
-                      </span>
-                    </p>
-                    {b.descripcion ? (
-                      <p className="mt-1 text-[13px] leading-relaxed text-[#666666]" style={lato}>
-                        {b.descripcion}
+                {evento.bonos.map((b) => {
+                  const pts = puntosDeBono(evento.bolsa, b.porcentaje)
+                  return (
+                    <li
+                      key={b.id}
+                      className="border-b border-[#F4F4F4] pb-4 last:border-0 last:pb-0"
+                    >
+                      <p className="text-[14px] font-bold text-[#111111]" style={lato}>
+                        {b.nombre}
+                        <span className="ml-2 font-semibold text-[#CC4B37]">
+                          · {TEXTOS_EVENTO.extraCadaUno(pts)}
+                        </span>
                       </p>
-                    ) : null}
-                  </li>
-                ))}
+                      {b.descripcion ? (
+                        <p
+                          className="mt-1 text-[13px] leading-relaxed text-[#666666]"
+                          style={lato}
+                        >
+                          {b.descripcion}
+                        </p>
+                      ) : null}
+                    </li>
+                  )
+                })}
               </ul>
             )}
             <p className="mt-3 text-[12px] text-[#666666]" style={lato}>
-              Tope por jugador: {TOPE_BONO_PORCENTAJE}% de la bolsa.
+              {TEXTOS_EVENTO.extraNota}
             </p>
           </div>
 
           <div>
             <h2 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-              Resultados
+              {TEXTOS_EVENTO.resultadosTitulo}
             </h2>
             <TablaResultados evento={evento} resultados={evento.resultados} />
           </div>
@@ -480,7 +482,7 @@ export default async function RankingEventoPage({
       <section className="border-t border-[#EEEEEE] bg-white px-5 py-8 sm:px-8">
         <div className="mx-auto max-w-7xl">
           <p className="font-body text-[14px] leading-relaxed text-[#444444]">
-            ¿Ves un error en estos resultados? Tienes 72 horas desde la publicación para reportarlo a{' '}
+            {TEXTOS_EVENTO.avisoError}{' '}
             <a
               href="mailto:info@airnation.online"
               className="font-semibold text-[#CC4B37] underline-offset-2 hover:underline"

@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import {
   formatFechaRanking,
-  humanizarStat,
+  lugarTexto,
+  nivelInfo,
+  puntosDeBono,
   type RankingHistorialJugador,
 } from '@/lib/ranking'
+import { ETIQUETAS, TEXTOS_EVENTO, TEXTOS_PERFIL } from '@/lib/ranking-contenido'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -12,37 +15,6 @@ const jost = {
 } as const
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
-
-const FACCION_LABELS: Record<string, string> = {
-  ganadora: 'Facción ganadora',
-  ganador: 'Facción ganadora',
-  primera: 'Facción ganadora',
-  segunda: 'Segunda facción',
-  tercera: 'Tercera facción en adelante',
-  tercera_mas: 'Tercera facción en adelante',
-  tercera_en_adelante: 'Tercera facción en adelante',
-  resto: 'Tercera facción en adelante',
-}
-
-function etiquetaResultado(
-  posicion: number | null,
-  resultadoFaccion: string | null
-): string {
-  if (posicion != null) return `${posicion}º lugar`
-  if (resultadoFaccion) {
-    const key = resultadoFaccion.toLowerCase().replace(/\s+/g, '_')
-    return (
-      FACCION_LABELS[key] ??
-      FACCION_LABELS[resultadoFaccion] ??
-      humanizarStat(resultadoFaccion)
-    )
-  }
-  return '—'
-}
-
-function lineaBono(nombre: string, porcentaje: number, veces: number): string {
-  return `${nombre} × ${veces} (+${porcentaje}% c/u)`
-}
 
 type Props = {
   historial: RankingHistorialJugador
@@ -56,14 +28,14 @@ export function RankingJugadorSection({ historial }: Props) {
     <section className="mx-auto max-w-[960px] px-4 pb-8 md:px-6 md:pb-10">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EEEEEE] pb-3">
         <h2 className="text-[13px] tracking-[0.06em] text-[#111111]" style={jost}>
-          Ranking nacional
+          {TEXTOS_PERFIL.titulo}
         </h2>
         <Link
           href="/ranking"
           className="text-[11px] tracking-[0.08em] text-[#CC4B37] transition-colors hover:text-[#111111]"
           style={jost}
         >
-          Ver tabla →
+          {TEXTOS_PERFIL.verTabla}
         </Link>
       </div>
 
@@ -74,9 +46,10 @@ export function RankingJugadorSection({ historial }: Props) {
         <span className="text-[28px] font-extrabold tabular-nums leading-none text-[#CC4B37]">
           {posicionDisplay}
         </span>
+        <span className="text-[14px] text-[#999999]">{TEXTOS_PERFIL.deMexico}</span>
         <span className="text-[14px] text-[#999999]">·</span>
         <span className="text-[15px] font-bold tabular-nums text-[#111111]">
-          {historial.puntos_actuales} PTS
+          {TEXTOS_PERFIL.puntos(historial.puntos_actuales)}
         </span>
         {historial.temporada_nombre ? (
           <>
@@ -86,9 +59,16 @@ export function RankingJugadorSection({ historial }: Props) {
         ) : null}
       </div>
 
-      <ul className="mt-6 space-y-4">
+      <p className="mt-6 text-[11px] tracking-[0.08em] text-[#999999]" style={jost}>
+        {TEXTOS_PERFIL.susEventos}
+      </p>
+
+      <ul className="mt-3 space-y-4">
         {historial.resultados.map((r) => {
           const esParcial = !r.participacion
+          const ni = nivelInfo(r.nivel)
+          const lugar = lugarTexto(r.posicion, r.resultado_faccion)
+
           return (
             <li
               key={`${r.evento_slug}-${r.fecha}`}
@@ -104,19 +84,20 @@ export function RankingJugadorSection({ historial }: Props) {
                     {r.evento_nombre}
                   </Link>
                   <p className="mt-1 text-[12px] text-[#666666]" style={lato}>
-                    {formatFechaRanking(r.fecha)} · Nivel {r.nivel} · {r.total_jugadores}{' '}
+                    {formatFechaRanking(r.fecha)} · {ni.nombre} · {r.total_jugadores}{' '}
                     jugadores
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-[13px] text-[#333333]" style={lato}>
-                      {etiquetaResultado(r.posicion, r.resultado_faccion)}
+                      {lugar}
                     </span>
                     {esParcial ? (
                       <span
+                        title={ETIQUETAS.noJugoTodoTooltip}
                         className="shrink-0 bg-[#EEEEEE] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#666666]"
                         style={jost}
                       >
-                        PARCIAL
+                        {ETIQUETAS.noJugoTodo}
                       </span>
                     ) : null}
                   </div>
@@ -135,7 +116,7 @@ export function RankingJugadorSection({ historial }: Props) {
                   style={jost}
                 >
                   <span className="inline-flex items-center gap-2">
-                    Ver desglose
+                    {ETIQUETAS.verComoSumo}
                     <svg
                       width="14"
                       height="14"
@@ -154,20 +135,21 @@ export function RankingJugadorSection({ historial }: Props) {
                     </svg>
                   </span>
                 </summary>
-                <div className="mt-3 space-y-3" style={lato}>
+                <div className="mt-3 space-y-2" style={lato}>
                   <p className="text-[13px] text-[#333333]">
-                    {r.puntos_posicion} pts por posición + {r.puntos_bono} pts de bono ={' '}
-                    {r.puntos_total} pts
+                    {TEXTOS_EVENTO.sumaLugar(lugar, r.puntos_posicion)}
                   </p>
-                  {r.bonos.length > 0 ? (
-                    <ul className="space-y-1 text-[12px] text-[#666666]">
-                      {r.bonos.map((b, i) => (
-                        <li key={`${b.nombre}-${i}`}>
-                          {lineaBono(b.nombre, b.porcentaje, b.veces)}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+                  {r.bonos.map((b, i) => {
+                    const pts = puntosDeBono(r.bolsa, b.porcentaje) * b.veces
+                    return (
+                      <p key={`${b.nombre}-${i}`} className="text-[13px] text-[#333333]">
+                        {TEXTOS_EVENTO.sumaExtra(b.nombre, b.veces, pts)}
+                      </p>
+                    )
+                  })}
+                  <p className="text-[13px] font-bold text-[#111111]">
+                    {TEXTOS_EVENTO.sumaTotal(r.puntos_total)}
+                  </p>
                 </div>
               </details>
             </li>
@@ -176,12 +158,12 @@ export function RankingJugadorSection({ historial }: Props) {
       </ul>
 
       <p className="mt-6 text-center text-[12px] text-[#666666]" style={lato}>
-        Cada punto tiene origen visible.{' '}
+        {TEXTOS_PERFIL.pie}{' '}
         <Link
           href="/ranking#puntos"
           className="font-medium text-[#CC4B37] underline-offset-2 hover:underline"
         >
-          Consulta el sistema de puntos →
+          {TEXTOS_PERFIL.pieLink}
         </Link>
       </p>
     </section>

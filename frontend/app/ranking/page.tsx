@@ -8,14 +8,10 @@ import {
   CONTACTO_ORGANIZADORES,
   DISCIPLINA_LABELS,
   FACTORES_TAMANO,
-  FECHA_FIN_GRATIS_TEXTO,
   NIVELES_RANKING,
-  PORCENTAJES_FACCION,
   PORCENTAJES_POSICION,
-  DIAS_PAGO_TARIFA_AIRNATION,
   PRECIO_TARIFA_AIRNATION,
   PRECIO_TARIFA_ESTANDAR,
-  TOPE_BONO_PORCENTAJE,
   fetchEventosTemporada,
   fetchTablaRanking,
   fetchTemporadaActiva,
@@ -23,9 +19,18 @@ import {
   nivelInfo,
 } from '@/lib/ranking'
 import {
-  CASOS_RANKING,
+  EJEMPLOS_RANKING,
+  ETIQUETAS,
   FAQ_JUGADORES,
   FAQ_ORGANIZADORES,
+  HERO_RANKING,
+  PASOS_RANKING,
+  REGLAS_EN_CORTO,
+  TEXTOS_EVENTOS,
+  TEXTOS_ORGANIZADORES,
+  TEXTOS_PUNTOS,
+  TEXTOS_TABLA,
+  TEXTOS_TRANSPARENCIA,
 } from '@/lib/ranking-contenido'
 import { BadgeCapturaAirNation } from './components/BadgeCapturaAirNation'
 import { TablaRanking } from './components/TablaRanking'
@@ -37,7 +42,7 @@ const OG_IMAGE = 'https://www.airnation.online/og-default.jpg'
 
 const PAGE_TITLE = 'Ranking Nacional de Airsoft México | AirNation'
 const PAGE_DESCRIPTION =
-  'El ranking oficial del airsoft mexicano. Tabla de la temporada, sistema de puntos transparente y cómo hacer que tu evento cuente.'
+  'Juega eventos, suma puntos y compite por ser el número 1 del airsoft en México. Tabla, eventos y cómo se ganan los puntos.'
 
 export const metadata: Metadata = {
   title: {
@@ -124,45 +129,6 @@ function FaqColumn({
   )
 }
 
-function RankingTableSimple({
-  headers,
-  rows,
-}: {
-  headers: string[]
-  rows: (string | number)[][]
-}) {
-  return (
-    <div className="overflow-x-auto border border-[#EEEEEE] bg-white">
-      <table className="min-w-full text-left text-[13px]" style={{ fontFamily: "'Lato', sans-serif" }}>
-        <thead>
-          <tr className="border-b border-[#EEEEEE] bg-[#FAFAFA]">
-            {headers.map((h) => (
-              <th
-                key={h}
-                className="whitespace-nowrap px-3 py-2.5 text-[9px] font-extrabold uppercase tracking-widest text-[#999999]"
-                style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800 }}
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, ri) => (
-            <tr key={ri} className="border-b border-[#F4F4F4] last:border-0">
-              {row.map((cell, ci) => (
-                <td key={ci} className="px-3 py-2.5 text-[#111111]">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
 export default async function RankingPage() {
   const sb = createPublicSupabaseClient()
   const temporada = await fetchTemporadaActiva(sb)
@@ -173,8 +139,8 @@ export default async function RankingPage() {
       ])
     : [[], []]
 
-  const jugadoresRankeados = filas.length
-  const eventosRankeados = eventos.length
+  const jugadoresEnTabla = filas.length
+  const eventosQueCuentan = eventos.length
 
   const faqJsonLd = {
     '@context': 'https://schema.org',
@@ -205,37 +171,38 @@ export default async function RankingPage() {
               <div className="mb-5 flex items-center gap-4">
                 <span className="block h-[2px] w-7 bg-[#CC4B37]" />
                 <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-                  {temporada?.nombre ?? 'Ranking Nacional'}
+                  {temporada?.nombre ?? HERO_RANKING.titulo}
                 </p>
               </div>
               <h1
                 className="font-display font-black uppercase leading-[0.9] text-white"
                 style={{ fontSize: 'clamp(2.4rem, 6vw, 5rem)' }}
               >
-                RANKING
+                {HERO_RANKING.titulo.split(' ')[0]}
                 <br />
-                <span className="text-[#CC4B37]">NACIONAL</span>
+                <span className="text-[#CC4B37]">
+                  {HERO_RANKING.titulo.split(' ').slice(1).join(' ')}
+                </span>
               </h1>
               <p className="mt-6 max-w-2xl font-body text-base leading-[1.7] text-white/70 sm:text-[1.05rem]">
-                Un solo ranking para todo el airsoft mexicano. Cada evento rankeado suma
-                puntos y cada punto tiene origen visible.
+                {HERO_RANKING.subtitulo}
               </p>
 
               <div className="mt-10 grid gap-4 sm:grid-cols-3">
                 <div className="border border-white/10 bg-white/5 px-4 py-4">
                   <p className="font-display text-2xl font-black tabular-nums text-white">
-                    {temporada ? jugadoresRankeados : '—'}
+                    {temporada ? jugadoresEnTabla : '—'}
                   </p>
                   <p className="mt-1 font-body text-[0.7rem] uppercase tracking-[0.12em] text-white/60">
-                    Jugadores rankeados
+                    {HERO_RANKING.statJugadores}
                   </p>
                 </div>
                 <div className="border border-white/10 bg-white/5 px-4 py-4">
                   <p className="font-display text-2xl font-black tabular-nums text-white">
-                    {temporada ? eventosRankeados : '—'}
+                    {temporada ? eventosQueCuentan : '—'}
                   </p>
                   <p className="mt-1 font-body text-[0.7rem] uppercase tracking-[0.12em] text-white/60">
-                    Eventos rankeados
+                    {HERO_RANKING.statEventos}
                   </p>
                 </div>
                 <div className="border border-[#CC4B37]/40 bg-[#CC4B37]/10 px-4 py-4">
@@ -243,7 +210,7 @@ export default async function RankingPage() {
                     Gratis
                   </p>
                   <p className="mt-1 font-body text-[0.7rem] uppercase tracking-[0.12em] text-white/60">
-                    Para jugadores
+                    {HERO_RANKING.statGratis}
                   </p>
                 </div>
               </div>
@@ -253,17 +220,53 @@ export default async function RankingPage() {
                   href="#tabla"
                   className="inline-flex items-center justify-center bg-[#CC4B37] px-8 py-[1.1rem] font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90"
                 >
-                  Ver tabla
+                  {HERO_RANKING.botonTabla}
                 </a>
                 <a
                   href="#organizadores"
                   className="inline-flex items-center justify-center border border-solid border-white/35 px-8 py-[1.1rem] font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white/90 transition-colors hover:border-white hover:text-white"
                 >
-                  Organizo eventos
+                  {HERO_RANKING.botonOrganizador}
                 </a>
               </div>
             </div>
           </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* ASÍ FUNCIONA */}
+      <section className="relative bg-white px-5 py-10 sm:px-8 sm:py-14 lg:py-20">
+        <div className="mx-auto max-w-7xl">
+          <RevealOnScroll>
+            <h2
+              className="mb-10 font-display font-black uppercase leading-[0.9] text-[#111111]"
+              style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+            >
+              ASÍ
+              <br />
+              <span className="text-[#CC4B37]">FUNCIONA</span>
+            </h2>
+          </RevealOnScroll>
+          <div className="grid gap-6 md:grid-cols-3">
+            {PASOS_RANKING.map((paso, i) => (
+              <RevealOnScroll key={paso.titulo} delay={i * 0.05}>
+                <article className="flex h-full flex-col border border-[#EEEEEE] bg-[#FAFAFA] p-6">
+                  <p
+                    className="font-display text-4xl font-black tabular-nums text-[#CC4B37]"
+                    style={{ lineHeight: 1 }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </p>
+                  <h3 className="mt-4 font-body text-[15px] font-bold text-[#111111]">
+                    {paso.titulo}
+                  </h3>
+                  <p className="mt-3 font-body text-[14px] leading-relaxed text-[#666666]">
+                    {paso.texto}
+                  </p>
+                </article>
+              </RevealOnScroll>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -272,30 +275,22 @@ export default async function RankingPage() {
           {/* TABLA */}
           <section
             id="tabla"
-            className="relative bg-white px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
+            className="relative bg-[#F4F4F4] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
           >
             <div className="mx-auto max-w-7xl">
               <RevealOnScroll>
-                <div className="mb-8 max-w-2xl">
-                  <div className="mb-5 flex items-center gap-4">
-                    <span className="block h-[2px] w-7 bg-[#CC4B37]" />
-                    <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-                      Temporada actual
-                    </p>
-                  </div>
-                  <h2
-                    className="font-display font-black uppercase leading-[0.9] text-[#111111]"
-                    style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
-                  >
-                    TABLA
-                    <br />
-                    <span className="text-[#CC4B37]">NACIONAL</span>
-                  </h2>
-                </div>
+                <h2
+                  className="mb-8 font-display font-black uppercase leading-[0.9] text-[#111111]"
+                  style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+                >
+                  {TEXTOS_TABLA.titulo}
+                </h2>
                 <TablaRanking filas={filas} />
                 <p className="mt-4 font-body text-sm leading-relaxed text-[#666666]">
-                  Cuentan los mejores {temporada.max_resultados} resultados de cada jugador
-                  en la temporada, con máximo {temporada.max_recreativos} de nivel recreativo.
+                  {TEXTOS_TABLA.nota(
+                    temporada.max_resultados,
+                    temporada.max_recreativos
+                  )}
                 </p>
               </RevealOnScroll>
             </div>
@@ -304,26 +299,16 @@ export default async function RankingPage() {
           {/* EVENTOS */}
           <section
             id="eventos"
-            className="relative bg-[#F4F4F4] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
+            className="relative bg-white px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
           >
             <div className="mx-auto max-w-7xl">
               <RevealOnScroll>
-                <div className="mb-8 max-w-2xl">
-                  <div className="mb-5 flex items-center gap-4">
-                    <span className="block h-[2px] w-7 bg-[#CC4B37]" />
-                    <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-                      {temporada.nombre}
-                    </p>
-                  </div>
-                  <h2
-                    className="font-display font-black uppercase leading-[0.9] text-[#111111]"
-                    style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
-                  >
-                    EVENTOS DE
-                    <br />
-                    <span className="text-[#CC4B37]">LA TEMPORADA</span>
-                  </h2>
-                </div>
+                <h2
+                  className="mb-8 font-display font-black uppercase leading-[0.9] text-[#111111]"
+                  style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+                >
+                  {TEXTOS_EVENTOS.titulo}
+                </h2>
               </RevealOnScroll>
 
               {eventos.length === 0 ? (
@@ -349,7 +334,7 @@ export default async function RankingPage() {
                                 className="shrink-0 bg-[#111111] px-2 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white"
                                 style={{ fontFamily: "'Jost', sans-serif" }}
                               >
-                                Evento fundador
+                                {ETIQUETAS.eventoFundador}
                               </span>
                             ) : null}
                           </div>
@@ -361,7 +346,7 @@ export default async function RankingPage() {
                           </p>
                           <div className="mt-4 flex flex-wrap gap-2">
                             <span className="border border-[#EEEEEE] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#111111]">
-                              Nivel {ev.nivel} · {ni.nombre}
+                              {ni.nombre}
                             </span>
                             <span className="border border-[#EEEEEE] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#666666]">
                               {DISCIPLINA_LABELS[ev.disciplina] ?? ev.disciplina}
@@ -371,10 +356,10 @@ export default async function RankingPage() {
                             ) : null}
                           </div>
                           <p className="mt-4 font-body text-[13px] text-[#111111]">
-                            {ev.total_jugadores} jugadores
+                            {TEXTOS_EVENTOS.jugadores(ev.total_jugadores)}
                           </p>
                           <p className="mt-1 font-body text-[13px] font-bold tabular-nums text-[#CC4B37]">
-                            Bolsa {ev.bolsa} pts
+                            {TEXTOS_EVENTOS.puntosEnJuego(ev.bolsa)}
                           </p>
                         </Link>
                       </RevealOnScroll>
@@ -390,108 +375,179 @@ export default async function RankingPage() {
       {/* PUNTOS */}
       <section
         id="puntos"
-        className="relative bg-white px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
+        className="relative bg-[#F4F4F4] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
       >
         <div className="mx-auto max-w-7xl">
           <RevealOnScroll>
-            <div className="mb-8 max-w-2xl">
-              <div className="mb-5 flex items-center gap-4">
-                <span className="block h-[2px] w-7 bg-[#CC4B37]" />
-                <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-                  Reglas públicas
+            <h2
+              className="mb-4 font-display font-black uppercase leading-[0.9] text-[#111111]"
+              style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+            >
+              {TEXTOS_PUNTOS.titulo}
+            </h2>
+            <p className="mb-10 max-w-2xl font-body text-[15px] leading-relaxed text-[#666666]">
+              {TEXTOS_PUNTOS.intro}
+            </p>
+
+            <div className="space-y-12">
+              <div>
+                <h3 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
+                  {TEXTOS_PUNTOS.tipoTitulo}
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  {NIVELES_RANKING.map((n) => (
+                    <div
+                      key={n.nivel}
+                      className="border border-[#EEEEEE] bg-white p-4"
+                    >
+                      <p className="font-body text-[14px] font-bold text-[#111111]">
+                        {n.nombre}
+                      </p>
+                      <p className="mt-2 font-body text-[12px] leading-relaxed text-[#666666]">
+                        {n.descripcion}
+                      </p>
+                      <p className="mt-3 font-display text-2xl font-black tabular-nums text-[#CC4B37]">
+                        {n.puntos}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 font-body text-[13px] text-[#666666]">
+                  {TEXTOS_PUNTOS.tipoNota}
                 </p>
               </div>
-              <h2
-                className="font-display font-black uppercase leading-[0.9] text-[#111111]"
-                style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
-              >
-                CÓMO SE CALCULAN
-                <br />
-                <span className="text-[#CC4B37]">LOS PUNTOS</span>
-              </h2>
-            </div>
 
-            <div className="mb-10 border border-[#EEEEEE] bg-[#F4F4F4] px-5 py-6 sm:px-8">
-              <p
-                className="text-center text-[14px] font-bold text-[#111111] md:text-[16px]"
-                style={{ fontFamily: "'Jost', sans-serif" }}
-              >
-                Puntos = Bolsa del evento × % por posición + Bonos
-              </p>
-              <p
-                className="mt-2 text-center text-[13px] text-[#666666]"
-                style={{ fontFamily: "'Lato', sans-serif" }}
-              >
-                Bolsa = Puntos por nivel × Factor de tamaño
-              </p>
-            </div>
+              <div>
+                <h3 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
+                  {TEXTOS_PUNTOS.tamanoTitulo}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {FACTORES_TAMANO.map((f) => (
+                    <div
+                      key={f.rango}
+                      className="min-w-[140px] flex-1 border border-[#EEEEEE] bg-white px-3 py-3 text-center sm:min-w-0"
+                    >
+                      <p className="font-body text-[11px] font-bold uppercase text-[#111111]">
+                        {f.etiqueta}
+                      </p>
+                      <p className="mt-1 font-body text-[10px] text-[#999999]">
+                        {f.rango} jugadores
+                      </p>
+                      <p className="mt-2 font-display text-lg font-black text-[#CC4B37]">
+                        {f.porcentaje}%
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 font-body text-[13px] text-[#666666]">
+                  {TEXTOS_PUNTOS.tamanoNota}
+                </p>
+                <p className="mt-3 border border-[#EEEEEE] bg-white px-4 py-3 font-body text-[13px] text-[#444444]">
+                  {TEXTOS_PUNTOS.ejemploCuenta}
+                </p>
+              </div>
 
-            <div className="space-y-8">
               <div>
-                <h3 className="mb-3 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-                  Nivel del evento
+                <h3 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
+                  {TEXTOS_PUNTOS.lugarTitulo}
                 </h3>
-                <RankingTableSimple
-                  headers={['Nivel', 'Nombre', 'Descripción', 'Puntos base']}
-                  rows={NIVELES_RANKING.map((n) => [
-                    n.nivel,
-                    n.nombre,
-                    n.descripcion,
-                    n.puntos,
-                  ])}
-                />
+                <div className="space-y-2">
+                  {PORCENTAJES_POSICION.map((p) => (
+                    <div
+                      key={p.posicion}
+                      className="flex items-center gap-3"
+                    >
+                      <span
+                        className="w-24 shrink-0 font-body text-[12px] font-bold text-[#111111]"
+                      >
+                        {p.posicion}
+                      </span>
+                      <div className="relative h-7 flex-1 bg-[#EEEEEE]">
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[#CC4B37]"
+                          style={{ width: `${p.porcentaje}%` }}
+                        />
+                      </div>
+                      <span className="w-28 shrink-0 text-right font-body text-[11px] text-[#666666]">
+                        {TEXTOS_PUNTOS.lugarBarra(p.porcentaje)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 font-body text-[13px] text-[#666666]">
+                  {TEXTOS_PUNTOS.lugarNota}
+                </p>
               </div>
+
               <div>
-                <h3 className="mb-3 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-                  Factor de tamaño
+                <h3 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
+                  {TEXTOS_PUNTOS.bandosTitulo}
                 </h3>
-                <RankingTableSimple
-                  headers={['Jugadores', 'Factor']}
-                  rows={FACTORES_TAMANO.map((f) => [f.rango, f.factor])}
-                />
+                <div className="space-y-2">
+                  {TEXTOS_PUNTOS.bandos.map((b) => (
+                    <div key={b.resultado} className="flex items-center gap-3">
+                      <span className="w-32 shrink-0 font-body text-[12px] font-bold text-[#111111]">
+                        {b.resultado}
+                      </span>
+                      <div className="relative h-7 flex-1 bg-[#EEEEEE]">
+                        <div
+                          className="absolute inset-y-0 left-0 bg-[#CC4B37]"
+                          style={{ width: `${b.porcentaje}%` }}
+                        />
+                      </div>
+                      <span className="w-28 shrink-0 text-right font-body text-[11px] text-[#666666]">
+                        {TEXTOS_PUNTOS.lugarBarra(b.porcentaje)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 font-body text-[13px] text-[#666666]">
+                  {TEXTOS_PUNTOS.bandosNota}
+                </p>
               </div>
+
               <div>
-                <h3 className="mb-3 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-                  Por posición (individual / equipos)
+                <h3 className="mb-4 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
+                  {TEXTOS_PUNTOS.extraTitulo}
                 </h3>
-                <RankingTableSimple
-                  headers={['Posición', '% de la bolsa']}
-                  rows={PORCENTAJES_POSICION.map((p) => [
-                    p.posicion,
-                    `${p.porcentaje}%`,
-                  ])}
-                />
-              </div>
-              <div>
-                <h3 className="mb-3 font-body text-[0.7rem] font-bold uppercase tracking-[0.2em] text-[#111111]">
-                  Por facción
-                </h3>
-                <RankingTableSimple
-                  headers={['Resultado', '% de la bolsa']}
-                  rows={PORCENTAJES_FACCION.map((p) => [
-                    p.resultado,
-                    `${p.porcentaje}%`,
-                  ])}
-                />
+                <div className="border border-[#EEEEEE] bg-white px-5 py-5">
+                  <p className="font-body text-[14px] leading-relaxed text-[#333333]">
+                    {TEXTOS_PUNTOS.extraTexto}
+                  </p>
+                </div>
               </div>
             </div>
-
-            <ul className="mt-10 space-y-3 font-body text-[14px] leading-relaxed text-[#444444]">
-              <li>
-                Bonos declarados antes del evento, con tope de {TOPE_BONO_PORCENTAJE}% de
-                la bolsa por jugador.
-              </li>
-              <li>
-                El criterio de posición final lo define el organizador y se publica antes
-                del evento.
-              </li>
-              <li>
-                Desempate en la tabla: (1) más primeros lugares, (2) más eventos completos,
-                (3) mejor posición en el evento de mayor nivel, (4) resultado más reciente.
-              </li>
-              <li>El nivel del evento nunca depende de un pago.</li>
-            </ul>
           </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* REGLAS */}
+      <section className="relative bg-white px-5 py-10 sm:px-8 sm:py-14 lg:py-20">
+        <div className="mx-auto max-w-7xl">
+          <RevealOnScroll>
+            <h2
+              className="mb-10 font-display font-black uppercase leading-[0.9] text-[#111111]"
+              style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)' }}
+            >
+              LAS REGLAS,
+              <br />
+              <span className="text-[#CC4B37]">EN CORTO</span>
+            </h2>
+          </RevealOnScroll>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {REGLAS_EN_CORTO.map((regla, i) => (
+              <RevealOnScroll key={regla.titulo} delay={i * 0.05}>
+                <article className="h-full border border-[#EEEEEE] bg-[#FAFAFA] p-5">
+                  <h3 className="font-body text-[14px] font-bold text-[#111111]">
+                    {regla.titulo}
+                  </h3>
+                  <p className="mt-3 font-body text-[13px] leading-relaxed text-[#666666]">
+                    {regla.texto}
+                  </p>
+                </article>
+              </RevealOnScroll>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -503,25 +559,17 @@ export default async function RankingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             <RevealOnScroll>
-              <div className="mb-5 flex items-center gap-4">
-                <span className="block h-[2px] w-7 bg-[#CC4B37]" />
-                <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
-                  Para organizadores
-                </p>
-              </div>
+              <p className="font-body text-[0.65rem] font-bold uppercase tracking-[0.28em] text-[#CC4B37]">
+                {TEXTOS_ORGANIZADORES.eyebrow}
+              </p>
               <h2
-                className="font-display font-black uppercase leading-[0.95] text-white"
+                className="mt-4 font-display font-black uppercase leading-[0.95] text-white"
                 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.75rem)' }}
               >
-                ¿TIENES PENSADO HACER UN EVENTO? HAZ QUE TUS RESULTADOS CUENTEN.
+                {TEXTOS_ORGANIZADORES.titulo}
               </h2>
               <ul className="mt-8 space-y-4">
-                {[
-                  'Tus jugadores suman puntos en el ranking nacional',
-                  'Página pública de resultados con desglose transparente',
-                  'Captura en vivo con AirNation: menor tarifa y distintivo CAPTURA AIRNATION',
-                  'Tu evento visible para toda la comunidad AirNation',
-                ].map((texto) => (
+                {TEXTOS_ORGANIZADORES.beneficios.map((texto) => (
                   <li key={texto} className="flex gap-3 font-body text-[15px] text-white/75">
                     <span className="mt-1 shrink-0 text-[#CC4B37]" aria-hidden>
                       ✓
@@ -534,13 +582,11 @@ export default async function RankingPage() {
 
             <RevealOnScroll delay={0.1}>
               <div className="border-2 border-[#CC4B37] bg-[#111111] p-6 sm:p-8">
-                <p
-                  className="font-display text-xl font-black uppercase leading-tight text-[#CC4B37] sm:text-2xl"
-                >
-                  Gratis hasta el {FECHA_FIN_GRATIS_TEXTO}
+                <p className="font-display text-xl font-black uppercase leading-tight text-[#CC4B37] sm:text-2xl">
+                  {TEXTOS_ORGANIZADORES.gratis}
                 </p>
                 <p className="mt-4 font-body text-[12px] text-white/45">
-                  Después, dos tarifas por jugador rankeado:
+                  {TEXTOS_ORGANIZADORES.despues}
                 </p>
                 <div className="mt-4 space-y-0 border border-[#333333]">
                   <div className="border-b border-[#333333] p-4">
@@ -549,21 +595,20 @@ export default async function RankingPage() {
                         className="text-[9px] font-bold uppercase tracking-widest text-white/80"
                         style={{ fontFamily: "'Jost', sans-serif" }}
                       >
-                        Tarifa AirNation
+                        {TEXTOS_ORGANIZADORES.tarifaAirnationEtiqueta}
                       </p>
                       <span
                         className="bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
                         style={{ fontFamily: "'Jost', sans-serif" }}
                       >
-                        Recomendada
+                        {TEXTOS_ORGANIZADORES.tarifaAirnationBadge}
                       </span>
                     </div>
                     <p className="mt-2 font-display text-2xl font-black tabular-nums text-white">
                       ${PRECIO_TARIFA_AIRNATION} MXN
                     </p>
                     <p className="mt-2 font-body text-[13px] leading-relaxed text-white/65">
-                      Resultados capturados en AirNation y pago dentro de{' '}
-                      {DIAS_PAGO_TARIFA_AIRNATION} días.
+                      {TEXTOS_ORGANIZADORES.tarifaAirnationTexto}
                     </p>
                   </div>
                   <div className="p-4">
@@ -571,26 +616,24 @@ export default async function RankingPage() {
                       className="text-[9px] font-bold uppercase tracking-widest text-white/55"
                       style={{ fontFamily: "'Jost', sans-serif" }}
                     >
-                      Tarifa estándar
+                      {TEXTOS_ORGANIZADORES.tarifaExternaEtiqueta}
                     </p>
                     <p className="mt-2 font-display text-lg font-black tabular-nums text-white/45">
                       ${PRECIO_TARIFA_ESTANDAR} MXN
                     </p>
                     <p className="mt-2 font-body text-[13px] leading-relaxed text-white/55">
-                      Resultados enviados por otro medio o pago después de{' '}
-                      {DIAS_PAGO_TARIFA_AIRNATION} días.
+                      {TEXTOS_ORGANIZADORES.tarifaExternaTexto}
                     </p>
                   </div>
                 </div>
                 <p className="mt-4 font-body text-[14px] leading-relaxed text-white/70">
-                  Organizadores fundadores conservan estas tarifas durante toda la Temporada
-                  2027.
+                  {TEXTOS_ORGANIZADORES.fundador}
                 </p>
                 <a
                   href={CONTACTO_ORGANIZADORES}
                   className="mt-8 inline-flex w-full items-center justify-center bg-[#CC4B37] px-6 py-4 font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90 sm:w-auto"
                 >
-                  Quiero que mi evento cuente
+                  {TEXTOS_ORGANIZADORES.cta}
                 </a>
               </div>
             </RevealOnScroll>
@@ -598,7 +641,7 @@ export default async function RankingPage() {
         </div>
       </section>
 
-      {/* CASOS */}
+      {/* EJEMPLOS */}
       <section
         id="casos"
         className="relative bg-[#F4F4F4] px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
@@ -615,7 +658,7 @@ export default async function RankingPage() {
             </h2>
           </RevealOnScroll>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {CASOS_RANKING.map((caso, i) => (
+            {EJEMPLOS_RANKING.map((caso, i) => (
               <RevealOnScroll key={caso.titulo} delay={i * 0.05}>
                 <article className="flex h-full flex-col border border-[#EEEEEE] bg-white p-5">
                   <div className="flex flex-wrap items-start gap-2">
@@ -627,12 +670,12 @@ export default async function RankingPage() {
                         className="shrink-0 bg-[#CC4B37] px-2 py-0.5 text-[7px] font-bold uppercase tracking-wider text-white"
                         style={{ fontFamily: "'Jost', sans-serif" }}
                       >
-                        Caso real
+                        CASO REAL
                       </span>
                     ) : null}
                   </div>
                   <p className="mt-3 font-body text-[13px] leading-relaxed text-[#666666]">
-                    {caso.calculo}
+                    {caso.explicacion}
                   </p>
                   <p className="mt-3 font-body text-[13px] font-bold leading-relaxed text-[#111111]">
                     {caso.resultado}
@@ -661,8 +704,8 @@ export default async function RankingPage() {
             </h2>
           </RevealOnScroll>
           <div className="grid gap-10 lg:grid-cols-2">
-            <FaqColumn titulo="Jugadores" items={FAQ_JUGADORES} />
-            <FaqColumn titulo="Organizadores" items={FAQ_ORGANIZADORES} />
+            <FaqColumn titulo="SI JUEGAS" items={FAQ_JUGADORES} />
+            <FaqColumn titulo="SI ORGANIZAS" items={FAQ_ORGANIZADORES} />
           </div>
         </div>
       </section>
@@ -670,11 +713,7 @@ export default async function RankingPage() {
       {/* TRANSPARENCIA */}
       <section className="border-t border-[#EEEEEE] bg-[#F4F4F4] px-5 py-8 sm:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 sm:flex-row sm:flex-wrap sm:justify-between sm:gap-6">
-          {[
-            'Ventana de corrección de 72 horas',
-            'Datos de contacto nunca compartidos entre organizadores',
-            'Reglas publicadas antes de cada evento',
-          ].map((linea) => (
+          {TEXTOS_TRANSPARENCIA.map((linea) => (
             <p
               key={linea}
               className="font-body text-[0.7rem] font-bold uppercase tracking-[0.14em] text-[#666666]"
