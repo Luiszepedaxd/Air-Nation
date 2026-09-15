@@ -57,7 +57,7 @@ export default async function CamposHomeCarousel() {
                 <span className="text-[#CC4B37]">México</span>
               </h2>
               <p className="mt-3 font-body text-sm leading-[1.7] text-[#666666] sm:text-base">
-                Encuentra tu siguiente lugar para organizar tu evento o tu dominguera.
+                Campo listo para tu dominguera — o para el evento que vas a armar.
               </p>
             </div>
             <Link
