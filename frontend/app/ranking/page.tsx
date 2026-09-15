@@ -12,7 +12,9 @@ import {
   NIVELES_RANKING,
   PORCENTAJES_FACCION,
   PORCENTAJES_POSICION,
-  PRECIO_POR_JUGADOR,
+  DIAS_PAGO_TARIFA_AIRNATION,
+  PRECIO_TARIFA_AIRNATION,
+  PRECIO_TARIFA_ESTANDAR,
   TOPE_BONO_PORCENTAJE,
   fetchEventosTemporada,
   fetchTablaRanking,
@@ -25,6 +27,7 @@ import {
   FAQ_JUGADORES,
   FAQ_ORGANIZADORES,
 } from '@/lib/ranking-contenido'
+import { BadgeCapturaAirNation } from './components/BadgeCapturaAirNation'
 import { TablaRanking } from './components/TablaRanking'
 
 export const revalidate = 300
@@ -363,6 +366,9 @@ export default async function RankingPage() {
                             <span className="border border-[#EEEEEE] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#666666]">
                               {DISCIPLINA_LABELS[ev.disciplina] ?? ev.disciplina}
                             </span>
+                            {ev.metodo_captura === 'airnation' ? (
+                              <BadgeCapturaAirNation />
+                            ) : null}
                           </div>
                           <p className="mt-4 font-body text-[13px] text-[#111111]">
                             {ev.total_jugadores} jugadores
@@ -513,7 +519,7 @@ export default async function RankingPage() {
                 {[
                   'Tus jugadores suman puntos en el ranking nacional',
                   'Página pública de resultados con desglose transparente',
-                  'Arbitraje y resultados en vivo con el módulo de torneos de AirNation',
+                  'Captura en vivo con AirNation: menor tarifa y distintivo CAPTURA AIRNATION',
                   'Tu evento visible para toda la comunidad AirNation',
                 ].map((texto) => (
                   <li key={texto} className="flex gap-3 font-body text-[15px] text-white/75">
@@ -528,16 +534,56 @@ export default async function RankingPage() {
 
             <RevealOnScroll delay={0.1}>
               <div className="border-2 border-[#CC4B37] bg-[#111111] p-6 sm:p-8">
-                <p className="font-body text-sm text-white/40 line-through">
-                  ${PRECIO_POR_JUGADOR} MXN por jugador rankeado
-                </p>
                 <p
-                  className="mt-2 font-display text-xl font-black uppercase leading-tight text-[#CC4B37] sm:text-2xl"
+                  className="font-display text-xl font-black uppercase leading-tight text-[#CC4B37] sm:text-2xl"
                 >
                   Gratis hasta el {FECHA_FIN_GRATIS_TEXTO}
                 </p>
+                <p className="mt-4 font-body text-[12px] text-white/45">
+                  Después, dos tarifas por jugador rankeado:
+                </p>
+                <div className="mt-4 space-y-0 border border-[#333333]">
+                  <div className="border-b border-[#333333] p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p
+                        className="text-[9px] font-bold uppercase tracking-widest text-white/80"
+                        style={{ fontFamily: "'Jost', sans-serif" }}
+                      >
+                        Tarifa AirNation
+                      </p>
+                      <span
+                        className="bg-[#CC4B37] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white"
+                        style={{ fontFamily: "'Jost', sans-serif" }}
+                      >
+                        Recomendada
+                      </span>
+                    </div>
+                    <p className="mt-2 font-display text-2xl font-black tabular-nums text-white">
+                      ${PRECIO_TARIFA_AIRNATION} MXN
+                    </p>
+                    <p className="mt-2 font-body text-[13px] leading-relaxed text-white/65">
+                      Resultados capturados en AirNation y pago dentro de{' '}
+                      {DIAS_PAGO_TARIFA_AIRNATION} días.
+                    </p>
+                  </div>
+                  <div className="p-4">
+                    <p
+                      className="text-[9px] font-bold uppercase tracking-widest text-white/55"
+                      style={{ fontFamily: "'Jost', sans-serif" }}
+                    >
+                      Tarifa estándar
+                    </p>
+                    <p className="mt-2 font-display text-lg font-black tabular-nums text-white/45">
+                      ${PRECIO_TARIFA_ESTANDAR} MXN
+                    </p>
+                    <p className="mt-2 font-body text-[13px] leading-relaxed text-white/55">
+                      Resultados enviados por otro medio o pago después de{' '}
+                      {DIAS_PAGO_TARIFA_AIRNATION} días.
+                    </p>
+                  </div>
+                </div>
                 <p className="mt-4 font-body text-[14px] leading-relaxed text-white/70">
-                  Organizadores fundadores conservan $19 por jugador durante toda la Temporada
+                  Organizadores fundadores conservan estas tarifas durante toda la Temporada
                   2027.
                 </p>
                 <a

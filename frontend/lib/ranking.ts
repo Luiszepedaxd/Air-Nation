@@ -8,6 +8,7 @@ export type RankingTemporada = {
   fecha_fin: string
   gratuita: boolean
   precio_por_jugador: number
+  precio_estandar: number
   max_resultados: number
   max_recreativos: number
 }
@@ -39,6 +40,7 @@ export type RankingEventoResumen = {
   total_jugadores: number
   bolsa: number
   es_fundador: boolean
+  metodo_captura: 'airnation' | 'externo'
 }
 
 export type RankingBonoDeclarado = {
@@ -148,7 +150,9 @@ export const MODALIDAD_LABELS: Record<string, string> = {
   facciones: 'Por facciones',
 }
 
-export const PRECIO_POR_JUGADOR = 19
+export const PRECIO_TARIFA_AIRNATION = 19
+export const PRECIO_TARIFA_ESTANDAR = 29
+export const DIAS_PAGO_TARIFA_AIRNATION = 7
 export const FECHA_FIN_GRATIS_TEXTO = '28 de febrero de 2027'
 export const TOPE_BONO_PORCENTAJE = 30
 export const CONTACTO_ORGANIZADORES =
@@ -225,6 +229,7 @@ function mapTemporada(row: Record<string, unknown>): RankingTemporada {
     fecha_fin: str(row.fecha_fin),
     gratuita: bool(row.gratuita),
     precio_por_jugador: num(row.precio_por_jugador),
+    precio_estandar: num(row.precio_estandar, PRECIO_TARIFA_ESTANDAR),
     max_resultados: num(row.max_resultados),
     max_recreativos: num(row.max_recreativos),
   }
@@ -260,8 +265,15 @@ function mapEventoResumen(row: Record<string, unknown>): RankingEventoResumen {
     total_jugadores: num(row.total_jugadores),
     bolsa: num(row.bolsa),
     es_fundador: bool(row.es_fundador),
+    metodo_captura: row.metodo_captura === 'airnation' ? 'airnation' : 'externo',
   }
 }
+
+const RANKING_EVENTO_RESUMEN_SELECT =
+  'id, slug, nombre, fecha, ciudad, organizador_nombre, disciplina, nivel, modalidad, total_jugadores, bolsa, es_fundador, metodo_captura'
+
+const RANKING_EVENTO_DETALLE_SELECT =
+  `${RANKING_EVENTO_RESUMEN_SELECT}, criterio_posicion, notas`
 
 function mapBonosResultado(raw: unknown): RankingResultadoBono[] {
   if (!Array.isArray(raw)) return []
@@ -357,7 +369,7 @@ export async function fetchEventosTemporada(
 ): Promise<RankingEventoResumen[]> {
   const { data, error } = await sb
     .from('ranking_eventos')
-    .select('*')
+    .select(RANKING_EVENTO_RESUMEN_SELECT)
     .eq('temporada_id', temporadaId)
     .eq('estado', 'publicado')
     .order('fecha', { ascending: false })
@@ -376,7 +388,7 @@ export async function fetchEventoRanking(
 ): Promise<RankingEventoDetalle | null> {
   const { data: evento, error } = await sb
     .from('ranking_eventos')
-    .select('*')
+    .select(RANKING_EVENTO_DETALLE_SELECT)
     .eq('slug', slug)
     .eq('estado', 'publicado')
     .maybeSingle()

@@ -24,8 +24,9 @@ export const FAQ_JUGADORES: FaqItem[] = [
 
 export const FAQ_ORGANIZADORES: FaqItem[] = [
   { pregunta: '¿Qué eventos pueden entrar al ranking?', respuesta: 'Cualquiera: torneos, speedsoft, milsim, domingueras o circuitos, con mínimo 6 jugadores y publicados en AirNation al menos 7 días antes.' },
-  { pregunta: '¿Cuánto cuesta?', respuesta: '$19 MXN por jugador rankeado. Gratis durante toda la Temporada Inaugural, hasta el 28 de febrero de 2027.' },
-  { pregunta: '¿Qué es ser organizador fundador?', respuesta: 'Si registras al menos un evento rankeado antes del 28 de febrero de 2027, conservas el precio de $19 por jugador durante toda la Temporada 2027.' },
+  { pregunta: '¿Cuánto cuesta?', respuesta: 'Tarifa AirNation: $19 MXN por jugador rankeado si capturas los resultados en AirNation y pagas dentro de los 7 días posteriores al evento. Tarifa estándar: $29 MXN si envías los resultados por otro medio (Excel, fotos, mensajes) o pagas después. Gratis durante toda la Temporada Inaugural, hasta el 28 de febrero de 2027.' },
+  { pregunta: '¿Por qué cuesta menos capturar en AirNation?', respuesta: 'Porque los resultados llegan completos y verificables desde el evento, sin que nadie tenga que transcribirlos. Hay menos errores, se publican más rápido y tu evento lleva el distintivo CAPTURA AIRNATION.' },
+  { pregunta: '¿Qué es ser organizador fundador?', respuesta: 'Si registras al menos un evento rankeado antes del 28 de febrero de 2027, conservas las tarifas de $19 y $29 durante toda la Temporada 2027, aunque suban para nuevos organizadores.' },
   { pregunta: '¿Quién decide el nivel de mi evento?', respuesta: 'Tú lo propones al registrarlo y AirNation lo valida en un máximo de 48 horas según las tablas públicas.' },
   { pregunta: '¿Puedo usar mi propia dinámica de juego?', respuesta: 'Sí. Tú defines cómo se decide la posición final. Solo debes publicarlo antes del evento y no puede cambiar durante el evento.' },
   { pregunta: '¿Puedo dar puntos extra?', respuesta: 'Sí, con bonos declarados antes del evento (MVP, objetivos, rondas ganadas). Tope de 30% de la bolsa por jugador.' },

@@ -5,6 +5,7 @@ import { Fragment, cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import Navbar from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
+import { BadgeCapturaAirNation } from '@/app/ranking/components/BadgeCapturaAirNation'
 import {
   DISCIPLINA_LABELS,
   MODALIDAD_LABELS,
@@ -399,6 +400,7 @@ export default async function RankingEventoPage({
             <span className="border border-[#EEEEEE] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#666666]">
               {modalidadLabel}
             </span>
+            {evento.metodo_captura === 'airnation' ? <BadgeCapturaAirNation /> : null}
             {evento.es_fundador ? (
               <span
                 className="bg-[#111111] px-2 py-1 text-[7px] font-bold uppercase tracking-wider text-white"

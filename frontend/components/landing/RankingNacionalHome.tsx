@@ -4,7 +4,7 @@ import { RevealOnScroll } from '@/components/animations/RevealOnScroll'
 import { TablaRanking } from '@/app/ranking/components/TablaRanking'
 import {
   FECHA_FIN_GRATIS_TEXTO,
-  PRECIO_POR_JUGADOR,
+  PRECIO_TARIFA_AIRNATION,
   fetchTablaRanking,
   fetchTemporadaActiva,
 } from '@/lib/ranking'
@@ -105,7 +105,7 @@ export default async function RankingNacionalHome() {
                 ))}
               </ul>
               <p className="mt-8 font-body text-[14px] leading-relaxed text-white/70">
-                ${PRECIO_POR_JUGADOR} MXN por jugador ·{' '}
+                Desde ${PRECIO_TARIFA_AIRNATION} MXN por jugador ·{' '}
                 <span className="text-[#CC4B37]">
                   Gratis hasta el {FECHA_FIN_GRATIS_TEXTO}
                 </span>
