@@ -962,17 +962,23 @@ export function CommentsSection({
         return (
           <div key={c.id} className="space-y-2">
             <div className="flex gap-2">
-              <div className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+              <Link
+                href={`/u/${c.user_id}`}
+                aria-label={`Ver perfil de ${name}`}
+                className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]"
+              >
                 {c.user.avatar_url
                   ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" />
                   : <div className="w-full h-full flex items-center justify-center text-[10px] text-[#CC4B37] font-bold" style={jost}>
                       {name[0].toUpperCase()}
                     </div>
                 }
-              </div>
+              </Link>
               <div className="flex-1 min-w-0">
                 <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
-                  <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111]">{name}</p>
+                  <Link href={`/u/${c.user_id}`} className="inline-block max-w-full">
+                    <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
+                  </Link>
                   <p style={lato} className="text-[13px] text-[#111111] mt-0.5 break-words">{c.content}</p>
                 </div>
                 <div className="flex items-center gap-3 mt-1 ml-1">
@@ -1070,17 +1076,23 @@ export function CommentsSection({
                       const repName = rep.user.alias?.trim() || rep.user.nombre?.trim() || 'Jugador'
                       return (
                         <div key={rep.id} className="flex gap-2">
-                          <div className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]">
+                          <Link
+                            href={`/u/${rep.user_id}`}
+                            aria-label={`Ver perfil de ${repName}`}
+                            className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]"
+                          >
                             {rep.user.avatar_url
                               ? <img src={rep.user.avatar_url} alt="" className="w-full h-full object-cover" />
                               : <div className="w-full h-full flex items-center justify-center text-[9px] text-[#CC4B37] font-bold" style={jost}>
                                   {repName[0].toUpperCase()}
                                 </div>
                             }
-                          </div>
+                          </Link>
                           <div className="flex-1 min-w-0">
                             <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
-                              <p style={jost} className="text-[10px] font-extrabold uppercase text-[#111111]">{repName}</p>
+                              <Link href={`/u/${rep.user_id}`} className="inline-block max-w-full">
+                                <p style={jost} className="text-[10px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{repName}</p>
+                              </Link>
                               <p style={lato} className="text-[12px] text-[#111111] mt-0.5 break-words">
                                 {rep.reply_to_user_alias && rep.reply_to_user_id && rep.reply_to_user_id !== c.user_id && (
                                   <Link

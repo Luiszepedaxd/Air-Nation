@@ -224,6 +224,7 @@ type FeedItem =
     }
 
 const FEED_SCROLL_Y_KEY = 'feed_scroll_y'
+const FEED_SCROLL_ANCHOR_KEY = 'feed_scroll_anchor'
 const FEED_ITEMS_CACHE_KEY = 'feed_items_cache'
 const FEED_ITEMS_TS_KEY = 'feed_items_ts'
 const FEED_CACHE_MAX_MS = 30 * 60 * 1000
@@ -239,6 +240,7 @@ export function clearFeedSessionCache() {
   if (typeof window === 'undefined') return
   try {
     sessionStorage.removeItem(FEED_SCROLL_Y_KEY)
+    sessionStorage.removeItem(FEED_SCROLL_ANCHOR_KEY)
     sessionStorage.removeItem(FEED_ITEMS_CACHE_KEY)
     sessionStorage.removeItem(FEED_ITEMS_TS_KEY)
   } catch {
@@ -298,29 +300,123 @@ function touchFeedItemsTimestamp() {
   }
 }
 
+function setScrollTop(top: number) {
+  const container = getScrollContainer()
+  if (container instanceof Window) container.scrollTo(0, top)
+  else container.scrollTop = top
+}
+
+function getScrollRootTop(): number {
+  const c = document.getElementById('dashboard-scroll-root')
+  return c ? c.getBoundingClientRect().top : 0
+}
+
+/**
+ * Posición guardada del feed. `y` es el fallback; el ancla (primera card
+ * visible + su offset) es lo que realmente aguanta que el contenido cambie
+ * de altura al volver (media que carga, revalidación en background, banner).
+ */
+type FeedScrollTarget = { y: number; anchorId: string | null; anchorDelta: number }
+
+const FEED_ITEM_DOM_PREFIX = 'feed-item-'
+
+function readFeedAnchorFromDom(): { id: string; delta: number } | null {
+  const rootTop = getScrollRootTop()
+  const nodes = document.querySelectorAll<HTMLElement>(`[id^="${FEED_ITEM_DOM_PREFIX}"]`)
+  for (const el of Array.from(nodes)) {
+    const rect = el.getBoundingClientRect()
+    if (rect.bottom > rootTop + 1) {
+      return { id: el.id.slice(FEED_ITEM_DOM_PREFIX.length), delta: rect.top - rootTop }
+    }
+  }
+  return null
+}
+
 function persistFeedScrollY() {
   if (typeof window === 'undefined') return
   try {
     sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(getScrollTop()))
+    const anchor = readFeedAnchorFromDom()
+    if (anchor) {
+      sessionStorage.setItem(FEED_SCROLL_ANCHOR_KEY, `${anchor.id}:${Math.round(anchor.delta)}`)
+    } else {
+      sessionStorage.removeItem(FEED_SCROLL_ANCHOR_KEY)
+    }
   } catch {
     /* ignore */
   }
 }
 
-function restoreFeedScrollY() {
-  if (typeof window === 'undefined') return
-  const yRaw = sessionStorage.getItem(FEED_SCROLL_Y_KEY)
-  const y = yRaw != null ? Number(yRaw) : 0
-  const top = Number.isFinite(y) && y >= 0 ? y : 0
-  const apply = () => {
-    const container = getScrollContainer()
-    if (container instanceof Window) container.scrollTo(0, top)
-    else container.scrollTop = top
+function readFeedScrollTarget(): FeedScrollTarget | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const yRaw = sessionStorage.getItem(FEED_SCROLL_Y_KEY)
+    const yNum = yRaw != null ? Number(yRaw) : NaN
+    const y = Number.isFinite(yNum) && yNum > 0 ? yNum : 0
+
+    const anchorRaw = sessionStorage.getItem(FEED_SCROLL_ANCHOR_KEY)
+    const sep = anchorRaw ? anchorRaw.lastIndexOf(':') : -1
+    const anchorId = anchorRaw && sep > 0 ? anchorRaw.slice(0, sep) : null
+    const deltaNum = anchorRaw && sep > 0 ? Number(anchorRaw.slice(sep + 1)) : 0
+
+    if (y === 0 && !anchorId) return null
+    return { y, anchorId, anchorDelta: Number.isFinite(deltaNum) ? deltaNum : 0 }
+  } catch {
+    return null
   }
-  requestAnimationFrame(() => {
-    apply()
-    requestAnimationFrame(apply)
-  })
+}
+
+/** scrollTop que deja el ancla donde estaba; `y` si esa card ya no existe. */
+function desiredScrollTop(target: FeedScrollTarget): number {
+  if (target.anchorId) {
+    const el = document.getElementById(`${FEED_ITEM_DOM_PREFIX}${target.anchorId}`)
+    if (el) {
+      const top =
+        getScrollTop() + (el.getBoundingClientRect().top - getScrollRootTop()) - target.anchorDelta
+      return Math.max(0, Math.round(top))
+    }
+  }
+  return target.y
+}
+
+/**
+ * Reaplica la posición durante ~1.2s en lugar de un solo scrollTop: al volver
+ * de otra ruta el alto sigue creciendo (cards, media, banner) y un único
+ * intento se recorta contra un contenido todavía incompleto → salta al tope.
+ * Se cancela en cuanto el usuario toca el scroll. Devuelve el cancel.
+ */
+function restoreFeedScrollY(target: FeedScrollTarget): () => void {
+  if (typeof window === 'undefined') return () => {}
+  let cancelled = false
+  let raf = 0
+  const deadline = Date.now() + 1200
+
+  const cancel = () => {
+    if (cancelled) return
+    cancelled = true
+    cancelAnimationFrame(raf)
+    window.removeEventListener('wheel', cancel)
+    window.removeEventListener('touchstart', cancel)
+    window.removeEventListener('keydown', cancel)
+  }
+
+  window.addEventListener('wheel', cancel, { passive: true })
+  window.addEventListener('touchstart', cancel, { passive: true })
+  window.addEventListener('keydown', cancel)
+
+  const step = () => {
+    if (cancelled) return
+    const desired = desiredScrollTop(target)
+    if (Math.abs(getScrollTop() - desired) > 1) setScrollTop(desired)
+    if (Date.now() >= deadline) {
+      cancel()
+      return
+    }
+    raf = requestAnimationFrame(step)
+  }
+  raf = requestAnimationFrame(step)
+
+  return cancel
 }
 
 type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; url_externa: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
@@ -2340,6 +2436,10 @@ function FeedTab({
   const highlightedItemRef = useRef<FeedItem | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const loadingMoreRef = useRef(false)
+  // Posición a recuperar al montar (volver de un perfil, un post, etc.).
+  const restoreTargetRef = useRef<FeedScrollTarget | null>(null)
+  const cancelRestoreRef = useRef<(() => void) | null>(null)
+  const userMovedRef = useRef(false)
 
   const highlightIdParam = searchParams.get('highlight_id')
   const highlightTypeParam = searchParams.get('highlight_type') as
@@ -2933,7 +3033,11 @@ function FeedTab({
       setLoading(false)
       loadingMoreRef.current = false
       setLoadingMore(false)
-      restoreFeedScrollY()
+      // Con ?highlight_id manda el scroll al post destacado, no la posición previa.
+      restoreTargetRef.current = highlightIdParam ? null : readFeedScrollTarget()
+      if (restoreTargetRef.current) {
+        cancelRestoreRef.current = restoreFeedScrollY(restoreTargetRef.current)
+      }
       // Stale-while-revalidate: muestra cache inmediato Y dispara fetch fresco
       // en background. itemsRef.current.length > 0 hará que load() sea silent.
       itemsRef.current = cached.items
@@ -2961,18 +3065,41 @@ function FeedTab({
     const onVis = () => {
       if (document.visibilityState === 'hidden') flush()
     }
+    const onUserMove = () => {
+      userMovedRef.current = true
+    }
     const scrollRoot = getScrollContainer()
     scrollRoot.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('wheel', onUserMove, { passive: true })
+    window.addEventListener('touchstart', onUserMove, { passive: true })
+    window.addEventListener('keydown', onUserMove)
     window.addEventListener('pagehide', flush)
     document.addEventListener('visibilitychange', onVis)
     return () => {
       scrollRoot.removeEventListener('scroll', onScroll)
+      window.removeEventListener('wheel', onUserMove)
+      window.removeEventListener('touchstart', onUserMove)
+      window.removeEventListener('keydown', onUserMove)
       window.removeEventListener('pagehide', flush)
       document.removeEventListener('visibilitychange', onVis)
       if (timeoutId !== undefined) clearTimeout(timeoutId)
+      cancelRestoreRef.current?.()
       flush()
     }
   }, [])
+
+  // La revalidación en background reemplaza la lista completa (posts nuevos,
+  // o menos items que los cacheados tras paginar) y eso mueve la posición:
+  // se reaplica el ancla una vez, salvo que el usuario ya haya scrolleado.
+  useEffect(() => {
+    if (!freshLoaded) return
+    const target = restoreTargetRef.current
+    if (!target) return
+    restoreTargetRef.current = null
+    if (userMovedRef.current) return
+    cancelRestoreRef.current?.()
+    cancelRestoreRef.current = restoreFeedScrollY(target)
+  }, [freshLoaded])
 
   useEffect(() => {
     if (loading || typeof window === 'undefined') return
@@ -3088,6 +3215,8 @@ function FeedTab({
 
   useEffect(() => {
     if (!highlightId) return
+    cancelRestoreRef.current?.()
+    restoreTargetRef.current = null
     requestAnimationFrame(() => {
       document
         .getElementById(`feed-item-${highlightId}`)
