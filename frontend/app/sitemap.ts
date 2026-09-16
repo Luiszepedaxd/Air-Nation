@@ -1,7 +1,9 @@
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const revalidate = 3600
 
 import type { MetadataRoute } from 'next'
+import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createClient } from '@/lib/supabase/server'
 
 const BASE = 'https://www.airnation.online'
@@ -35,6 +37,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {
     postEntries = []
+  }
+
+  let rankingEventEntries: MetadataRoute.Sitemap = []
+  try {
+    const sb = createPublicSupabaseClient()
+    const { data, error } = await sb
+      .from('ranking_eventos')
+      .select('slug, updated_at')
+      .eq('estado', 'publicado')
+      .order('fecha', { ascending: false })
+
+    if (error) {
+      console.error('[sitemap] ranking:', error.message)
+    } else if (data) {
+      rankingEventEntries = data
+        .filter((row) => row.slug)
+        .map((row) => ({
+          url: `${BASE}/ranking/eventos/${row.slug}`,
+          lastModified: new Date(row.updated_at),
+          changeFrequency: 'monthly' as const,
+          priority: 0.6,
+        }))
+    }
+  } catch {
+    rankingEventEntries = []
   }
 
   let fieldEntries: MetadataRoute.Sitemap = []
@@ -99,6 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...staticEntries,
+    ...rankingEventEntries,
     ...postEntries,
     ...fieldEntries,
     ...teamEntries,
