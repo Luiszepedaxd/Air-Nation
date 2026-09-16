@@ -334,6 +334,10 @@ function readFeedAnchorFromDom(): { id: string; delta: number } | null {
 
 function persistFeedScrollY() {
   if (typeof window === 'undefined') return
+  // Sin cards en el DOM el feed ya se desmontó (el contenedor de scroll vuelve
+  // a 0): guardar en ese momento pisaría con 0 y sin ancla la posición buena
+  // que dejó el último scroll.
+  if (!document.querySelector(`[id^="${FEED_ITEM_DOM_PREFIX}"]`)) return
   try {
     sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(getScrollTop()))
     const anchor = readFeedAnchorFromDom()
@@ -3085,6 +3089,17 @@ function FeedTab({
       if (timeoutId !== undefined) clearTimeout(timeoutId)
       cancelRestoreRef.current?.()
       flush()
+    }
+  }, [])
+
+  // El cleanup de un useEffect corre después de que React quitó las cards del
+  // DOM y el contenedor de scroll ya volvió a 0, así que ahí la posición real
+  // se perdió. El cleanup de layout corre antes de esa mutación: es el que
+  // deja guardado el punto al que hay que volver.
+  useLayoutEffect(() => {
+    return () => {
+      persistFeedScrollY()
+      touchFeedItemsTimestamp()
     }
   }, [])
 
