@@ -824,6 +824,12 @@ export function PostBox({
       let videoMp4Url: string | null = null
       let videoDurationS: number | null = null
       if (pendingVideo) {
+        const VIDEO_MAX_BYTES = 100 * 1024 * 1024
+        if (pendingVideo.file.size > VIDEO_MAX_BYTES) {
+          setPublishError('El video excede el tamaño máximo (100MB).')
+          setPublishing(false)
+          return
+        }
         console.log(
           '[PostBox] enviando video, tamaño:',
           pendingVideo.file.size,
@@ -832,7 +838,13 @@ export function PostBox({
         const v = await uploadVideo(pendingVideo.file)
         videoUrl = v.video_url
         videoMp4Url = v.video_mp4_url ?? null
-        videoDurationS = Math.round(v.duration_s)
+        const serverDur =
+          typeof v.duration_s === 'number' &&
+          Number.isFinite(v.duration_s) &&
+          v.duration_s > 0
+            ? v.duration_s
+            : null
+        videoDurationS = Math.round(serverDur ?? pendingVideo.duration)
       }
 
       const content = text.trim() || null

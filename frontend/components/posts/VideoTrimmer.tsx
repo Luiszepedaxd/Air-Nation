@@ -24,7 +24,7 @@ const jostTitle = {
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const ACCEPT = 'video/mp4,video/quicktime,video/webm'
-const MAX_SEL_SEC = 30
+const MAX_SEL_SEC = 60
 const MIN_GAP_SEC = 0.1
 
 const VIDEO_MIME: Record<string, string> = {
@@ -282,8 +282,16 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
           'libx264',
           '-preset',
           'veryfast',
+          '-b:v',
+          '8M',
+          '-maxrate',
+          '10M',
+          '-bufsize',
+          '16M',
           '-c:a',
           'aac',
+          '-b:a',
+          '128k',
           outName,
         ])
         if (code !== 0) {
@@ -344,7 +352,7 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
       </div>
 
       <p className="text-sm" style={{ color: MUTED }}>
-        El recorte no puede exceder 30 segundos. Los extremos ajustan el tramo
+        El recorte no puede exceder 1 minuto. Los extremos ajustan el tramo
         en bucle mientras se reproduce.
       </p>
 
@@ -457,7 +465,7 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
                 className="text-center text-sm font-bold"
                 style={{ color: ACCENT, ...lato }}
               >
-                El clip no puede superar 30 segundos. Acorta el tramo
+                El clip no puede superar 1 minuto. Acorta el tramo
                 moviendo inicio o fin.
               </p>
             )}
