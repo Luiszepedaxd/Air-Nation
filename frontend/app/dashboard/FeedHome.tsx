@@ -669,6 +669,31 @@ type PostAs =
   | { type: 'team'; id: string; nombre: string; avatar: string | null; slug: string }
   | { type: 'field'; id: string; nombre: string; avatar: string | null; slug: string }
 
+function InlineSpinner({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg
+      className={`${className} animate-spin`}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="3"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  )
+}
+
 export function PostBox({
   userId,
   userAlias,
@@ -708,7 +733,11 @@ export function PostBox({
     previewUrl: string
   } | null>(null)
   const [showVideoTrimmer, setShowVideoTrimmer] = useState(false)
+  const [videoEncoding, setVideoEncoding] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [publishStage, setPublishStage] = useState<
+    null | 'photos' | 'video' | 'post'
+  >(null)
   const [publishError, setPublishError] = useState<string | null>(null)
   const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
   const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
@@ -807,6 +836,7 @@ export function PostBox({
       return
     }
     setPublishing(true)
+    setPublishStage(pendingPhotos.length > 0 ? 'photos' : pendingVideo ? 'video' : 'post')
     try {
       const urls: string[] = []
       for (const p of pendingPhotos) {
@@ -816,6 +846,7 @@ export function PostBox({
           const msg = uploadErr instanceof Error ? uploadErr.message : 'Error desconocido'
           setPublishError(`No se pudo subir una foto: ${msg}. Intenta de nuevo.`)
           setPublishing(false)
+          setPublishStage(null)
           return
         }
       }
@@ -824,10 +855,12 @@ export function PostBox({
       let videoMp4Url: string | null = null
       let videoDurationS: number | null = null
       if (pendingVideo) {
+        setPublishStage('video')
         const VIDEO_MAX_BYTES = 100 * 1024 * 1024
         if (pendingVideo.file.size > VIDEO_MAX_BYTES) {
           setPublishError('El video excede el tamaño máximo (100MB).')
           setPublishing(false)
+          setPublishStage(null)
           return
         }
         console.log(
@@ -847,6 +880,7 @@ export function PostBox({
         videoDurationS = Math.round(serverDur ?? pendingVideo.duration)
       }
 
+      setPublishStage('post')
       const content = text.trim() || null
       const videoFieldsPlayer =
         videoUrl != null && videoDurationS != null
@@ -916,8 +950,16 @@ export function PostBox({
       console.error('[PostBox] handlePublish', e)
     } finally {
       setPublishing(false)
+      setPublishStage(null)
     }
   }
+
+  const publishStageLabel =
+    publishStage === 'photos'
+      ? 'SUBIENDO FOTOS…'
+      : publishStage === 'video'
+        ? 'SUBIENDO VIDEO…'
+        : 'PUBLICANDO…'
 
   if (!expanded) {
     return (
@@ -1120,7 +1162,7 @@ export function PostBox({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={pendingPhotos.length >= 4}
+            disabled={pendingPhotos.length >= 4 || publishing}
             className="p-2 text-[#666666] hover:text-[#111111] disabled:opacity-40"
             aria-label="Añadir fotos"
           >
@@ -1149,7 +1191,8 @@ export function PostBox({
           <button
             type="button"
             onClick={() => setShowVideoTrimmer(true)}
-            className="p-2 text-[#666666] hover:text-[#111111]"
+            disabled={publishing}
+            className="p-2 text-[#666666] hover:text-[#111111] disabled:opacity-40"
             aria-label="Añadir video"
           >
             <svg
@@ -1191,14 +1234,16 @@ export function PostBox({
           <button
             type="button"
             onClick={() => {
+              if (publishing) return
               setExpanded(false)
               setText('')
               setMentions([])
               clearPendingPhotos()
               clearPendingVideo()
             }}
+            disabled={publishing}
             style={jost}
-            className="border border-[#EEEEEE] px-3 py-2 text-[11px] text-[#666666]"
+            className="border border-[#EEEEEE] px-3 py-2 text-[11px] text-[#666666] disabled:cursor-not-allowed disabled:opacity-40"
           >
             CANCELAR
           </button>
@@ -1212,9 +1257,10 @@ export function PostBox({
               publishing
             }
             style={jost}
-            className="bg-[#CC4B37] px-4 py-2 text-[11px] text-white disabled:opacity-50"
+            className="flex items-center gap-2 bg-[#CC4B37] px-4 py-2 text-[11px] text-white disabled:opacity-50"
           >
-            {publishing ? 'PUBLICANDO...' : 'PUBLICAR'}
+            {publishing && <InlineSpinner />}
+            {publishing ? publishStageLabel : 'PUBLICAR'}
           </button>
           </div>
         </div>
@@ -1233,6 +1279,7 @@ export function PostBox({
         <div
           className="fixed inset-0 z-[350] flex items-center justify-center bg-black/50 p-4"
           onMouseDown={(e) => {
+            if (videoEncoding) return
             if (e.target === e.currentTarget) setShowVideoTrimmer(false)
           }}
         >
@@ -1256,9 +1303,14 @@ export function PostBox({
                     previewUrl: URL.createObjectURL(file),
                   }
                 })
+                setVideoEncoding(false)
                 setShowVideoTrimmer(false)
               }}
-              onCancel={() => setShowVideoTrimmer(false)}
+              onCancel={() => {
+                setVideoEncoding(false)
+                setShowVideoTrimmer(false)
+              }}
+              onEncodingChange={setVideoEncoding}
             />
           </div>
         </div>

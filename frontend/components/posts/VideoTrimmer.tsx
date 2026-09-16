@@ -37,7 +37,11 @@ const VIDEO_MIME: Record<string, string> = {
 type Props = {
   onVideoReady: (file: File, durationSeconds: number) => void
   onCancel: () => void
+  /** Avisa al padre cuando ffmpeg está cargando/procesando, para no cerrar el modal. */
+  onEncodingChange?: (encoding: boolean) => void
 }
+
+type EncodePhase = 'idle' | 'loading' | 'processing'
 
 function formatTime(sec: number) {
   if (!Number.isFinite(sec) || sec < 0) return '0:00'
@@ -70,7 +74,7 @@ function clampRange(
   return { start: s, end: e }
 }
 
-export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
+export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props) {
   const fileRef = useRef<HTMLInputElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const trackRef = useRef<HTMLDivElement | null>(null)
@@ -84,7 +88,14 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
   const [endSec, setEndSec] = useState(0)
   const [processErr, setProcessErr] = useState<string | null>(null)
   const [encoding, setEncoding] = useState(false)
+  const [encodePhase, setEncodePhase] = useState<EncodePhase>('idle')
   const [ffProgress, setFfProgress] = useState(0)
+
+  const encodingChangeRef = useRef(onEncodingChange)
+  encodingChangeRef.current = onEncodingChange
+  useEffect(() => {
+    encodingChangeRef.current?.(encoding)
+  }, [encoding])
 
   const selected = useMemo(
     () => Math.max(0, endSec - startSec),
@@ -111,13 +122,15 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
     setEndSec(0)
     setProcessErr(null)
     setEncoding(false)
+    setEncodePhase('idle')
     setFfProgress(0)
   }, [url])
 
   const handleCancel = useCallback(() => {
+    if (encoding) return
     clearAll()
     onCancel()
-  }, [clearAll, onCancel])
+  }, [clearAll, encoding, onCancel])
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProcessErr(null)
@@ -236,11 +249,13 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
     if (overLimit) return
     setProcessErr(null)
     setEncoding(true)
+    setEncodePhase('loading')
     setFfProgress(0)
     const clipLen = endSec - startSec
     if (clipLen < MIN_GAP_SEC) {
       setProcessErr('El clip es demasiado corto')
       setEncoding(false)
+      setEncodePhase('idle')
       return
     }
     const ext = outputExt(file)
@@ -258,6 +273,7 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
         if (Number.isFinite(progress)) setFfProgress(Math.round(progress * 100))
       })
       await ffmpeg.load()
+      setEncodePhase('processing')
       await ffmpeg.writeFile(inName, await fetchFile(file))
       let code = await ffmpeg.exec([
         '-i',
@@ -321,17 +337,24 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
       )
     } finally {
       setEncoding(false)
+      setEncodePhase('idle')
       setFfProgress(0)
     }
   }
 
   const hasVideo = Boolean(url && file)
+  const encodeStatus =
+    encodePhase === 'loading'
+      ? 'Cargando procesador…'
+      : ffProgress > 0
+        ? `Procesando video… ${ffProgress}%`
+        : 'Procesando video…'
   const startPct = totalSec > 0 ? (startSec / totalSec) * 100 : 0
   const endPct = totalSec > 0 ? (endSec / totalSec) * 100 : 0
 
   return (
     <div
-      className="flex w-full max-w-md flex-col gap-4 rounded-xl border p-4 shadow-sm"
+      className="relative flex w-full max-w-md flex-col gap-4 rounded-xl border p-4 shadow-sm"
       style={{ background: BG, borderColor: BORDER, ...lato, color: TEXT }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -344,7 +367,8 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
         <button
           type="button"
           onClick={handleCancel}
-          className="rounded-md border px-3 py-1.5 text-sm font-bold transition active:scale-[0.99]"
+          disabled={encoding}
+          className="rounded-md border px-3 py-1.5 text-sm font-bold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
           style={{ borderColor: BORDER, color: MUTED, ...jostTitle, fontSize: 11 }}
         >
           Cancelar
@@ -492,6 +516,56 @@ export function VideoTrimmer({ onVideoReady, onCancel }: Props) {
               ? `Procesando${ffProgress ? ` ${ffProgress}%` : '…'}`
               : 'Usar este clip'}
           </button>
+        </div>
+      )}
+
+      {encoding && (
+        <div
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl px-6 text-center"
+          style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(2px)' }}
+          role="status"
+          aria-live="polite"
+        >
+          <svg
+            className="h-10 w-10 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{ color: ACCENT }}
+            aria-hidden
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="3"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          <p className="text-sm" style={{ color: TEXT, ...jostTitle, fontSize: 13 }}>
+            {encodeStatus}
+          </p>
+          <div
+            className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full"
+            style={{ background: TRACK_BG }}
+          >
+            <div
+              className="h-full rounded-full transition-[width] duration-200"
+              style={{
+                width: ffProgress > 0 ? `${Math.min(100, ffProgress)}%` : '25%',
+                background: ACCENT,
+                opacity: ffProgress > 0 ? 1 : 0.5,
+              }}
+            />
+          </div>
+          <p className="text-xs" style={{ color: MUTED, ...lato }}>
+            No cierres esta ventana mientras se procesa el video.
+          </p>
         </div>
       )}
     </div>
