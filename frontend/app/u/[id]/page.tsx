@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Suspense, cache } from 'react'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import { getCurrentUser } from '@/lib/supabase/current-user'
 import { createPublicSupabaseClient } from '../supabase-public'
 import { fetchHistorialJugador } from '@/lib/ranking'
 import { PlayerProfileClient } from './PlayerProfileClient'
@@ -37,7 +39,15 @@ function mapTeamRole(rol: string | null | undefined): string | null {
   return null
 }
 
-async function fetchPublicProfile(id: string) {
+/**
+ * Perfil público completo.
+ *
+ * Wrapped in `cache()` so `generateMetadata` and the page component share a
+ * single execution per request instead of running the whole query set twice.
+ * Inside, every query that doesn't depend on another one is issued in parallel:
+ * the profile used to cost ~7 sequential Supabase round-trips before first byte.
+ */
+const fetchPublicProfile = cache(async (id: string) => {
   const supabase = createPublicSupabaseClient()
 
   const { data: row, error } = await supabase
@@ -51,34 +61,115 @@ async function fetchPublicProfile(id: string) {
   if (error) console.error('[u/profile] users query error:', error)
   if (!row || !row.id) return null
 
-  let teamData: {
-    id: string
-    nombre: string
-    slug: string
-    logo_url: string | null
-  } | null = null
-  if (row.team_id) {
-    const { data: team } = await supabase
-      .from('teams')
-      .select('id, nombre, slug, logo_url')
-      .eq('id', row.team_id)
-      .maybeSingle()
-    if (team)
-      teamData = team as {
-        id: string
-        nombre: string
-        slug: string
-        logo_url: string | null
-      }
-  }
+  type TeamRow = { id: string; nombre: string; slug: string; logo_url: string | null }
 
-  let teams_list: PublicUserProfile['teams_list'] = undefined
-  const { data: memberRows } = await supabase
+  const teamPromise: PromiseLike<TeamRow | null> = row.team_id
+    ? supabase
+        .from('teams')
+        .select('id, nombre, slug, logo_url')
+        .eq('id', row.team_id)
+        .maybeSingle()
+        .then(({ data }) => (data as TeamRow | null) ?? null)
+    : Promise.resolve(null)
+
+  const memberRowsPromise = supabase
     .from('team_members')
     .select('rol_plataforma, player_status, team_id, teams(id, nombre, slug, logo_url)')
     .eq('user_id', row.id)
     .eq('status', 'activo')
+    .then(({ data }) => data)
 
+  // Posts + alias de menciones: dos queries encadenadas que corren en paralelo
+  // con el resto de bloques del perfil.
+  const postsPromise: Promise<PlayerPostRow[]> = (async () => {
+    const { data: postsData } = await supabase
+      .from('player_posts')
+      .select(
+        'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
+      )
+      .eq('user_id', id)
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (!postsData) return []
+
+    const mentionIds = new Set<string>()
+    for (const p of postsData as { mentions?: unknown }[]) {
+      const m = p.mentions
+      if (Array.isArray(m)) {
+        for (const uid of m) mentionIds.add(String(uid))
+      }
+    }
+
+    const aliasById = new Map<string, string>()
+    if (mentionIds.size > 0) {
+      const { data: mu } = await supabase
+        .from('users')
+        .select('id, alias')
+        .in('id', Array.from(mentionIds))
+      for (const u of mu ?? []) {
+        const mentionRow = u as { id: string; alias: string | null }
+        if (mentionRow.alias?.trim())
+          aliasById.set(mentionRow.id, mentionRow.alias.trim())
+      }
+    }
+
+    return (postsData as PlayerPostRow[]).map((postRow) => {
+      const mids = postRow.mentions
+      const mentionAliasById: Record<string, string> = {}
+      if (Array.isArray(mids)) {
+        for (const uid of mids) {
+          const sid = String(uid)
+          const al = aliasById.get(sid)
+          if (al) mentionAliasById[sid] = al
+        }
+      }
+      return {
+        ...postRow,
+        ...(Object.keys(mentionAliasById).length > 0
+          ? { mentionAliasById }
+          : {}),
+      }
+    })
+  })()
+
+  const eventsPromise: PromiseLike<PlayerEventRow[]> = supabase
+    .from('event_rsvps')
+    .select('events(id, title, fecha, imagen_url, status)')
+    .eq('user_id', id)
+    .eq('status', 'confirmed')
+    .order('created_at', { ascending: false })
+    .limit(6)
+    .then(({ data }) => {
+      if (!data) return []
+      return (data as unknown as { events: PlayerEventRow | PlayerEventRow[] | null }[])
+        .map((r) => {
+          const e = r.events
+          if (!e) return null
+          return Array.isArray(e) ? e[0] : e
+        })
+        .filter((e): e is PlayerEventRow => e !== null)
+    })
+    // event_rsvps table may not exist yet
+    .then(undefined, () => [] as PlayerEventRow[])
+
+  const replicasPromise: PromiseLike<PublicReplicaRow[]> = supabase
+    .from('arsenal')
+    .select('id, nombre, sistema, mecanismo, condicion, foto_url, verificada, ciudad, estado')
+    .eq('user_id', id)
+    .order('created_at', { ascending: false })
+    .then(({ data }) => (data as PublicReplicaRow[] | null) ?? [])
+
+  const [teamData, memberRows, posts, events, replicas] = await Promise.all([
+    teamPromise,
+    memberRowsPromise,
+    postsPromise,
+    eventsPromise,
+    replicasPromise,
+  ])
+
+  let teams_list: PublicUserProfile['teams_list'] = undefined
   if (memberRows && memberRows.length > 0) {
     const seen = new Set<string>()
     const list: NonNullable<PublicUserProfile['teams_list']> = []
@@ -86,10 +177,7 @@ async function fetchPublicProfile(id: string) {
       rol_plataforma: string | null
       player_status: string | null
       team_id: string
-      teams:
-        | { id: string; nombre: string; slug: string; logo_url: string | null }
-        | { id: string; nombre: string; slug: string; logo_url: string | null }[]
-        | null
+      teams: TeamRow | TeamRow[] | null
     }[]) {
       const raw = mr.teams
       const team = Array.isArray(raw) ? raw[0] : raw
@@ -119,89 +207,8 @@ async function fetchPublicProfile(id: string) {
     teams_list,
   }
 
-  let posts: PlayerPostRow[] = []
-  const { data: postsData } = await supabase
-    .from('player_posts')
-    .select(
-      'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
-    )
-    .eq('user_id', id)
-    .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  if (postsData) {
-    const mentionIds = new Set<string>()
-    for (const p of postsData as { mentions?: unknown }[]) {
-      const m = p.mentions
-      if (Array.isArray(m)) {
-        for (const uid of m) mentionIds.add(String(uid))
-      }
-    }
-    let aliasById = new Map<string, string>()
-    if (mentionIds.size > 0) {
-      const { data: mu } = await supabase
-        .from('users')
-        .select('id, alias')
-        .in('id', Array.from(mentionIds))
-      for (const u of mu ?? []) {
-        const row = u as { id: string; alias: string | null }
-        if (row.alias?.trim()) aliasById.set(row.id, row.alias.trim())
-      }
-    }
-    posts = (postsData as PlayerPostRow[]).map((row) => {
-      const mids = row.mentions
-      const mentionAliasById: Record<string, string> = {}
-      if (Array.isArray(mids)) {
-        for (const uid of mids) {
-          const sid = String(uid)
-          const al = aliasById.get(sid)
-          if (al) mentionAliasById[sid] = al
-        }
-      }
-      return {
-        ...row,
-        ...(Object.keys(mentionAliasById).length > 0
-          ? { mentionAliasById }
-          : {}),
-      }
-    })
-  }
-
-  let events: PlayerEventRow[] = []
-  try {
-    const { data: rsvpData } = await supabase
-      .from('event_rsvps')
-      .select('events(id, title, fecha, imagen_url, status)')
-      .eq('user_id', id)
-      .eq('status', 'confirmed')
-      .order('created_at', { ascending: false })
-      .limit(6)
-
-    if (rsvpData) {
-      events = (rsvpData as unknown as { events: PlayerEventRow | PlayerEventRow[] | null }[])
-        .map((r) => {
-          const e = r.events
-          if (!e) return null
-          return Array.isArray(e) ? e[0] : e
-        })
-        .filter((e): e is PlayerEventRow => e !== null)
-    }
-  } catch {
-    // event_rsvps table may not exist yet
-  }
-
-  let replicas: PublicReplicaRow[] = []
-  const { data: replicasData } = await supabase
-    .from('arsenal')
-    .select('id, nombre, sistema, mecanismo, condicion, foto_url, verificada, ciudad, estado')
-    .eq('user_id', id)
-    .order('created_at', { ascending: false })
-
-  if (replicasData) replicas = replicasData as PublicReplicaRow[]
-
   return { user, posts, events, replicas }
-}
+})
 
 export async function generateMetadata({
   params,
@@ -249,56 +256,106 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
+/**
+ * El historial de ranking son 4 queries encadenadas y solo lo tiene una minoría
+ * de jugadores, así que se transmite por streaming fuera de la ruta crítica en
+ * lugar de retrasar el render del perfil completo.
+ */
+async function RankingJugadorSlot({ userId }: { userId: string }) {
+  const historial = await fetchHistorialJugador(
+    createPublicSupabaseClient(),
+    userId
+  )
+  if (!historial || historial.resultados.length === 0) return null
+  return <RankingJugadorSection historial={historial} />
+}
+
 export default async function PublicProfilePage({
   params,
 }: {
   params: { id: string }
 }) {
-  const result = await fetchPublicProfile(params.id)
+  const supabaseServer = createDashboardSupabaseServerClient()
+  const supabasePublic = createPublicSupabaseClient()
+
+  // El perfil y la sesión no dependen entre sí: una sola espera para ambos.
+  const [result, currentUser] = await Promise.all([
+    fetchPublicProfile(params.id),
+    getCurrentUser(),
+  ])
   if (!result) notFound()
 
   const { user, posts, events, replicas } = result
+  const isViewingOther = !!currentUser && currentUser.id !== user.id
 
-  const supabaseServer = createDashboardSupabaseServerClient()
-  const {
-    data: { user: currentUser },
-  } = await supabaseServer.auth.getUser()
+  // Segunda (y última) ola: todo lo que necesita el id del perfil y/o la sesión.
+  const [
+    viewerRowRes,
+    blocksRes,
+    { count: followersCount },
+    { count: followingCount },
+    followRow,
+    teamMemberRes,
+  ] = await Promise.all([
+    currentUser
+      ? supabaseServer
+          .from('users')
+          .select('app_role')
+          .eq('id', currentUser.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    isViewingOther
+      ? supabaseServer
+          .from('user_blocks')
+          .select('blocker_id, blocked_id')
+          .or(
+            `and(blocker_id.eq.${currentUser!.id},blocked_id.eq.${user.id}),and(blocker_id.eq.${user.id},blocked_id.eq.${currentUser!.id})`
+          )
+      : Promise.resolve({ data: null, error: null }),
+    supabasePublic
+      .from('user_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', user.id),
+    supabasePublic
+      .from('user_follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('follower_id', user.id),
+    currentUser
+      ? supabasePublic
+          .from('user_follows')
+          .select('follower_id')
+          .eq('follower_id', currentUser.id)
+          .eq('following_id', user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    user.team_id
+      ? supabasePublic
+          .from('team_members')
+          .select('rol_plataforma, player_status')
+          .eq('user_id', user.id)
+          .eq('team_id', user.team_id)
+          .eq('status', 'activo')
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
 
-  let isAdmin = false
-  if (currentUser) {
-    const { data: viewerRow } = await supabaseServer
-      .from('users')
-      .select('app_role')
-      .eq('id', currentUser.id)
-      .maybeSingle()
-    isAdmin = viewerRow?.app_role === 'admin'
-  }
-
-  const supabasePublic = createPublicSupabaseClient()
+  const isAdmin =
+    (viewerRowRes.data as { app_role?: string } | null)?.app_role === 'admin'
 
   // Verificar bloqueo bidireccional
   let isBlockedByMe = false
   let amIBlockedByThem = false
-  if (currentUser && currentUser.id !== user.id) {
-    const { data: blocks, error: blocksErr } = await supabaseServer
-      .from('user_blocks')
-      .select('blocker_id, blocked_id')
-      .or(
-        `and(blocker_id.eq.${currentUser.id},blocked_id.eq.${user.id}),and(blocker_id.eq.${user.id},blocked_id.eq.${currentUser.id})`
-      )
-
-    if (blocksErr) {
-      console.error('[u/profile] user_blocks query error:', blocksErr)
+  if ('error' in blocksRes && blocksRes.error) {
+    console.error('[u/profile] user_blocks query error:', blocksRes.error)
+  }
+  for (const b of (blocksRes.data as
+    | { blocker_id: string; blocked_id: string }[]
+    | null) ?? []) {
+    if (b.blocker_id === currentUser!.id && b.blocked_id === user.id) {
+      isBlockedByMe = true
     }
-
-    for (const b of blocks ?? []) {
-      const row = b as { blocker_id: string; blocked_id: string }
-      if (row.blocker_id === currentUser.id && row.blocked_id === user.id) {
-        isBlockedByMe = true
-      }
-      if (row.blocker_id === user.id && row.blocked_id === currentUser.id) {
-        amIBlockedByThem = true
-      }
+    if (b.blocker_id === user.id && b.blocked_id === currentUser!.id) {
+      amIBlockedByThem = true
     }
   }
 
@@ -348,41 +405,6 @@ export default async function PublicProfilePage({
     !!user.foto_portada_url &&
     (replicas.length > 0 || posts.length > 0)
 
-  const [
-    { count: followersCount },
-    { count: followingCount },
-    followRow,
-    teamMemberRes,
-    historialRanking,
-  ] = await Promise.all([
-    supabasePublic
-      .from('user_follows')
-      .select('*', { count: 'exact', head: true })
-      .eq('following_id', user.id),
-    supabasePublic
-      .from('user_follows')
-      .select('*', { count: 'exact', head: true })
-      .eq('follower_id', user.id),
-    currentUser
-      ? supabasePublic
-          .from('user_follows')
-          .select('follower_id')
-          .eq('follower_id', currentUser.id)
-          .eq('following_id', user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    user.team_id
-      ? supabasePublic
-          .from('team_members')
-          .select('rol_plataforma, player_status')
-          .eq('user_id', user.id)
-          .eq('team_id', user.team_id)
-          .eq('status', 'activo')
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    fetchHistorialJugador(supabasePublic, user.id),
-  ])
-
   const teamRole = mapTeamRole(
     teamMemberRes.data?.rol_plataforma as string | undefined
   )
@@ -416,11 +438,11 @@ export default async function PublicProfilePage({
         isBlockedByMe={isBlockedByMe}
       />
 
-      {!isBlockedByMe &&
-        historialRanking &&
-        historialRanking.resultados.length > 0 && (
-          <RankingJugadorSection historial={historialRanking} />
-        )}
+      {!isBlockedByMe && (
+        <Suspense fallback={null}>
+          <RankingJugadorSlot userId={user.id} />
+        </Suspense>
+      )}
 
       {isBlockedByMe ? (
         <div className="mx-auto max-w-[960px] px-4 py-12 md:px-6 md:py-16">

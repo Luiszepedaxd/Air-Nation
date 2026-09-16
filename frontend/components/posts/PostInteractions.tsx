@@ -965,7 +965,7 @@ export function CommentsSection({
               <Link
                 href={`/u/${c.user_id}`}
                 aria-label={`Ver perfil de ${name}`}
-                className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]"
+                className="w-7 h-7 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4] transition-opacity active:opacity-60"
               >
                 {c.user.avatar_url
                   ? <img src={c.user.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -976,7 +976,7 @@ export function CommentsSection({
               </Link>
               <div className="flex-1 min-w-0">
                 <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
-                  <Link href={`/u/${c.user_id}`} className="inline-block max-w-full">
+                  <Link href={`/u/${c.user_id}`} className="inline-block max-w-full transition-opacity active:opacity-60">
                     <p style={jost} className="text-[11px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{name}</p>
                   </Link>
                   <p style={lato} className="text-[13px] text-[#111111] mt-0.5 break-words">{c.content}</p>
@@ -1079,7 +1079,7 @@ export function CommentsSection({
                           <Link
                             href={`/u/${rep.user_id}`}
                             aria-label={`Ver perfil de ${repName}`}
-                            className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4]"
+                            className="w-6 h-6 shrink-0 rounded-full overflow-hidden bg-[#F4F4F4] transition-opacity active:opacity-60"
                           >
                             {rep.user.avatar_url
                               ? <img src={rep.user.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -1090,14 +1090,14 @@ export function CommentsSection({
                           </Link>
                           <div className="flex-1 min-w-0">
                             <div className="bg-[#F4F4F4] px-3 py-2 rounded-[2px]">
-                              <Link href={`/u/${rep.user_id}`} className="inline-block max-w-full">
+                              <Link href={`/u/${rep.user_id}`} className="inline-block max-w-full transition-opacity active:opacity-60">
                                 <p style={jost} className="text-[10px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37] truncate">{repName}</p>
                               </Link>
                               <p style={lato} className="text-[12px] text-[#111111] mt-0.5 break-words">
                                 {rep.reply_to_user_alias && rep.reply_to_user_id && rep.reply_to_user_id !== c.user_id && (
                                   <Link
                                     href={`/u/${rep.reply_to_user_id}`}
-                                    className="font-semibold text-[#CC4B37] hover:underline mr-1"
+                                    className="font-semibold text-[#CC4B37] hover:underline mr-1 transition-opacity active:opacity-60"
                                   >
                                     @{rep.reply_to_user_alias}
                                   </Link>

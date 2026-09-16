@@ -4,17 +4,14 @@ import { ForceUpdateGate } from '@/components/ForceUpdateGate'
 import MobileHeader from '@/components/layout/MobileHeader'
 import { PushNotifManager } from '@/components/PushNotifManager'
 import BetaBanner from '@/components/ui/BetaBanner'
-import { createClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/supabase/current-user'
 
 export default async function AppShell({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   const userId = user?.id
 
   return (

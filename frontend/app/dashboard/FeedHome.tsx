@@ -116,7 +116,7 @@ export function parseContentWithMentions(
         <Link
           key={key++}
           href={`/u/${matched.id}`}
-          className="font-medium text-[#CC4B37] hover:underline"
+          className="font-medium text-[#CC4B37] hover:underline transition-opacity active:opacity-60"
         >
           {mentionText}
         </Link>
@@ -1608,7 +1608,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       {highlighted && <HighlightBadge />}
       <div className="mb-3">
         <div className="flex items-center gap-3">
-          <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
+          <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full transition-opacity active:opacity-60">
             <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
               {item.user.avatar_url
                 ? <img loading="lazy" decoding="async" src={feedAvatarUrl(item.user.avatar_url)} alt="" className="w-full h-full object-cover" />
@@ -1772,7 +1772,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
       </div>
       <div className="mb-3">
         <div className="flex items-center gap-3">
-          <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
+          <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full transition-opacity active:opacity-60">
             <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
               {item.user.avatar_url
                 ? <img loading="lazy" decoding="async" src={feedAvatarUrl(item.user.avatar_url)} alt="" className="w-full h-full object-cover" />
