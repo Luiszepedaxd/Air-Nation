@@ -429,7 +429,7 @@ async function fetchHighlightFeedItem(
     const { data } = await supabase
       .from('player_posts')
       .select(
-        'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+        'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
       )
       .eq('id', postId)
       .eq('published', true)
@@ -823,6 +823,7 @@ export function PostBox({
               video_url: videoUrl,
               video_mp4_url: videoMp4Url,
               video_duration_s: videoDurationS,
+              ...(videoThumbnailUrl ? { thumbnail_url: videoThumbnailUrl } : {}),
             }
           : {}
 
@@ -2270,14 +2271,14 @@ function FeedTab({
           .limit(20),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', false)
@@ -2663,7 +2664,7 @@ function FeedTab({
           ? supabase
               .from('player_posts')
               .select(
-                'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+                'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
               )
               .eq('published', true)
               .eq('pinned', false)
