@@ -2,12 +2,6 @@
 // Regla: lenguaje de jugador, frases cortas, sin términos técnicos.
 
 export type FaqItem = { pregunta: string; respuesta: string }
-export type EjemploRanking = {
-  titulo: string
-  explicacion: string
-  resultado: string
-  real?: boolean
-}
 export type TarjetaTexto = { titulo: string; texto: string }
 
 export const ETIQUETAS = {
@@ -27,7 +21,6 @@ export const ETIQUETAS = {
   resultadosEnVivo: 'RESULTADOS EN VIVO',
   resultadosEnVivoTooltip:
     'Los resultados se registraron en vivo con AirNation durante el evento.',
-  eventoFundador: 'EVENTO FUNDADOR',
   tu: 'TÚ',
   verComoSumo: 'Ver cómo sumó',
   datosDelEvento: 'Datos del evento',
@@ -68,7 +61,7 @@ export const TEXTOS_SOLICITUD = {
   email: 'CORREO (OPCIONAL)',
   emailPlaceholder: 'tu@correo.com',
   organizacion: 'NOMBRE DE TU EVENTO U ORGANIZACIÓN',
-  organizacionPlaceholder: 'Ej. Airsoft Mexican Games',
+  organizacionPlaceholder: '',
   tipoEvento: '¿QUÉ TIPO DE EVENTO HACES?',
   tiposEvento: [
     'Dominguera',
@@ -219,48 +212,6 @@ export const TEXTOS_TRANSPARENCIA: string[] = [
   'Las reglas de cada evento se publican antes de jugar',
 ]
 
-export const EJEMPLOS_RANKING: EjemploRanking[] = [
-  {
-    real: true,
-    titulo: 'AMG Stage 01 CDMX',
-    explicacion:
-      'Circuito nacional (200 puntos) con 6 jugadores. Es un evento chico, así que queda a la mitad: 100 puntos en juego. AMG daba 5 puntos extra por cada ronda ganada.',
-    resultado:
-      'Pitbull quedó 1º y ganó 2 rondas: 100 + 10 = 110 puntos.',
-  },
-  {
-    titulo: 'Torneo de 24 jugadores',
-    explicacion: 'Torneo (100 puntos), evento mediano (75%): 75 puntos en juego.',
-    resultado: 'El 1º gana 75, el 2º 60, el 3º 49, y del 9º al 16º lugar se llevan 23.',
-  },
-  {
-    titulo: 'Torneo de 10 equipos de 5',
-    explicacion: '50 jugadores, evento normal: 100 puntos en juego.',
-    resultado:
-      'Cada integrante del equipo campeón gana 100 puntos. Los del 2º lugar, 80 cada uno.',
-  },
-  {
-    titulo: 'Milsim de 2 días con 160 jugadores',
-    explicacion:
-      'Milsim (150 puntos), evento grande (125%): 188 puntos en juego. Se juega por bandos.',
-    resultado:
-      'Bando ganador: 56 cada uno. Bando perdedor: 28. El MVP se lleva 56 extra.',
-  },
-  {
-    titulo: 'Dominguera de 40 jugadores',
-    explicacion: 'Dominguera (25 puntos), evento normal: 25 puntos en juego.',
-    resultado:
-      'Bando ganador: 8 cada uno. Bando perdedor: 4. MVP: 8 extra. Poquito, pero suma.',
-  },
-  {
-    titulo: 'Si vas a 20 domingueras',
-    explicacion:
-      'En tu tabla solo cuentan 4 domingueras, junto con tus mejores eventos competitivos.',
-    resultado:
-      'Ir a muchos eventos se premia, pero para llegar arriba hay que competir.',
-  },
-]
-
 export const FAQ_JUGADORES: FaqItem[] = [
   {
     pregunta: '¿Cómo entro al ranking?',
@@ -371,7 +322,6 @@ export const TEXTOS_EVENTO = {
     bolsa: number
   ) =>
     `${tipo} (${puntosTipo}) × ${etiquetaTamano.toLowerCase()} (${porcentaje}%) = ${bolsa} puntos en juego.`,
-  comoSeJugo: 'CÓMO SE JUGÓ',
   ordenTitulo: '¿CÓMO SE DECIDIÓ EL ORDEN?',
   ordenNota: 'Lo definió el organizador y lo anunció antes del evento.',
   extraTitulo: 'PUNTOS EXTRA DE ESTE EVENTO',
@@ -426,6 +376,3 @@ export const TEXTOS_PERFIL = {
   pie: 'Cada punto se puede revisar.',
   pieLink: '¿Cómo se ganan? →',
 }
-
-// Compatibilidad con imports existentes
-export const CASOS_RANKING = EJEMPLOS_RANKING

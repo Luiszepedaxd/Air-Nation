@@ -141,12 +141,6 @@ function FichaPuntos({ evento }: { evento: RankingEventoDetalle }) {
           )}
         </p>
       ) : null}
-      <p className="mt-4 inline-block border border-[#EEEEEE] bg-[#FAFAFA] px-3 py-2 text-[12px] font-bold text-[#666666]" style={jost}>
-        {TEXTOS_EVENTO.comoSeJugo}:{' '}
-        <span style={{ ...lato, fontWeight: 600, textTransform: 'none' }}>
-          {MODALIDAD_LABELS[evento.modalidad] ?? evento.modalidad}
-        </span>
-      </p>
     </div>
   )
 }
@@ -363,7 +357,7 @@ export default async function RankingEventoPage({
     <main className="min-h-screen overflow-x-hidden bg-an-bg">
       <Navbar />
 
-      <section className="relative bg-white px-5 pb-12 pt-28 sm:px-8 sm:pb-16 sm:pt-32">
+      <section className="relative bg-[#111111] px-5 pb-10 pt-24 sm:px-8 sm:pb-14 sm:pt-28 lg:pb-14">
         <div className="mx-auto max-w-7xl">
           <nav aria-label="Breadcrumb">
             <Link
@@ -375,32 +369,26 @@ export default async function RankingEventoPage({
           </nav>
 
           <h1
-            className="mt-6 font-display font-black uppercase leading-[0.95] text-[#111111]"
-            style={{ fontSize: 'clamp(1.75rem, 4vw, 3rem)' }}
+            className="mt-6 font-display font-black uppercase leading-[0.95] text-white"
+            style={{ fontSize: 'clamp(2rem, 5vw, 3.75rem)' }}
           >
             {evento.nombre}
           </h1>
 
-          <p className="mt-4 font-body text-[15px] text-[#666666]">
+          <p className="mt-4 font-body text-[15px] text-white/70">
             {formatFechaRanking(evento.fecha)} · {evento.ciudad} ·{' '}
             {TEXTOS_EVENTO.organiza}: {evento.organizador_nombre}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <span className="border border-[#EEEEEE] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#111111]">
+            <span className="border border-white/20 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white">
               {disciplinaLabel}
             </span>
-            <span className="border border-[#EEEEEE] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#666666]">
+            <span className="border border-white/20 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white/80">
               {modalidadLabel}
             </span>
-            {evento.metodo_captura === 'airnation' ? <BadgeCapturaAirNation /> : null}
-            {evento.es_fundador ? (
-              <span
-                className="bg-[#111111] px-2 py-1 text-[7px] font-bold uppercase tracking-wider text-white"
-                style={jost}
-              >
-                {ETIQUETAS.eventoFundador}
-              </span>
+            {evento.metodo_captura === 'airnation' ? (
+              <BadgeCapturaAirNation oscuro />
             ) : null}
           </div>
         </div>

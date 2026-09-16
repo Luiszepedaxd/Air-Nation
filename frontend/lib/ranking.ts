@@ -126,7 +126,7 @@ export const NIVELES_RANKING = [
   {
     nivel: 4,
     nombre: 'Circuito nacional',
-    descripcion: 'Fechas de un circuito nacional, como AMG.',
+    descripcion: 'Fechas de un circuito o liga nacional.',
     puntos: 200,
   },
   {
