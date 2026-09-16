@@ -694,6 +694,47 @@ function InlineSpinner({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   )
 }
 
+async function captureVideoThumbnail(file: File): Promise<string | null> {
+  const url = URL.createObjectURL(file)
+  try {
+    const video = document.createElement('video')
+    video.muted = true
+    video.playsInline = true
+    video.preload = 'auto'
+    video.src = url
+    await new Promise<void>((resolve, reject) => {
+      const onErr = () => reject(new Error('thumb-load'))
+      video.addEventListener('loadeddata', () => resolve(), { once: true })
+      video.addEventListener('error', onErr, { once: true })
+    })
+    const dur = Number.isFinite(video.duration) ? video.duration : 0
+    const seekTo = dur > 0.35 ? Math.min(0.25, dur * 0.1) : 0
+    if (seekTo > 0) {
+      await new Promise<void>((resolve) => {
+        const done = () => resolve()
+        video.addEventListener('seeked', done, { once: true })
+        video.currentTime = seekTo
+      })
+    }
+    const w = video.videoWidth || 320
+    const h = video.videoHeight || 320
+    if (!w || !h) return null
+    const canvas = document.createElement('canvas')
+    const max = 256
+    const scale = Math.min(1, max / Math.max(w, h))
+    canvas.width = Math.max(1, Math.round(w * scale))
+    canvas.height = Math.max(1, Math.round(h * scale))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    return canvas.toDataURL('image/jpeg', 0.82)
+  } catch {
+    return null
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 export function PostBox({
   userId,
   userAlias,
@@ -731,6 +772,7 @@ export function PostBox({
     file: File
     duration: number
     previewUrl: string
+    thumbUrl: string | null
   } | null>(null)
   const [showVideoTrimmer, setShowVideoTrimmer] = useState(false)
   const [videoEncoding, setVideoEncoding] = useState(false)
@@ -1128,13 +1170,21 @@ export function PostBox({
           ))}
           {pendingVideo && (
             <div className="relative h-16 w-16 overflow-hidden bg-[#F4F4F4]">
-              <video
-                src={pendingVideo.previewUrl}
-                muted
-                playsInline
-                className="h-full w-full object-cover"
-                preload="metadata"
-              />
+              {pendingVideo.thumbUrl ? (
+                <img
+                  src={pendingVideo.thumbUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <video
+                  src={pendingVideo.previewUrl}
+                  muted
+                  playsInline
+                  className="h-full w-full object-cover"
+                  preload="metadata"
+                />
+              )}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <svg
                   width="20"
@@ -1299,22 +1349,27 @@ export function PostBox({
           >
             <VideoTrimmer
               onVideoReady={(file, durationSeconds) => {
-                setPendingVideo((prev) => {
-                  if (prev?.previewUrl) {
-                    try {
-                      URL.revokeObjectURL(prev.previewUrl)
-                    } catch {
-                      /* noop */
+                void (async () => {
+                  const previewUrl = URL.createObjectURL(file)
+                  const thumbUrl = await captureVideoThumbnail(file)
+                  setPendingVideo((prev) => {
+                    if (prev?.previewUrl) {
+                      try {
+                        URL.revokeObjectURL(prev.previewUrl)
+                      } catch {
+                        /* noop */
+                      }
                     }
-                  }
-                  return {
-                    file,
-                    duration: durationSeconds,
-                    previewUrl: URL.createObjectURL(file),
-                  }
-                })
-                setVideoEncoding(false)
-                setShowVideoTrimmer(false)
+                    return {
+                      file,
+                      duration: durationSeconds,
+                      previewUrl,
+                      thumbUrl,
+                    }
+                  })
+                  setVideoEncoding(false)
+                  setShowVideoTrimmer(false)
+                })()
               }}
               onCancel={() => {
                 setVideoEncoding(false)
