@@ -960,6 +960,15 @@ export function PostBox({
           : 'SUBIENDO VIDEO…'
         : 'PUBLICANDO…'
 
+  const publishStageHint =
+    publishStage === 'video'
+      ? pendingVideo?.trim
+        ? 'No cierres esta ventana. El recorte en servidor suele tardar unos segundos.'
+        : 'No cierres esta ventana. La subida del video puede tardar un momento.'
+      : publishStage === 'photos'
+        ? 'No cierres esta ventana. Subiendo tus fotos…'
+        : 'No cierres esta ventana.'
+
   if (!expanded) {
     return (
       <div className="mb-4 border border-[#EEEEEE] bg-[#FFFFFF] p-3">
@@ -1277,14 +1286,9 @@ export function PostBox({
             className="flex items-center gap-2 bg-[#CC4B37] px-4 py-2 text-[11px] text-white disabled:opacity-50"
           >
             {publishing && <InlineSpinner />}
-            {publishing ? publishStageLabel : 'PUBLICAR'}
+            {publishing ? 'PUBLICANDO…' : 'PUBLICAR'}
           </button>
           </div>
-          {publishStage === 'video' ? (
-            <p className="mt-2 text-right text-[11px] text-[#777777]" style={lato}>
-              Subiendo el video… el recorte en servidor suele tardar unos segundos.
-            </p>
-          ) : null}
         </div>
       </div>
 
@@ -1348,6 +1352,38 @@ export function PostBox({
               }}
               onEncodingChange={setVideoEncoding}
             />
+          </div>
+        </div>
+      )}
+
+      {publishing && (
+        <div
+          className="fixed inset-0 z-[360] flex items-center justify-center bg-black/50 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label={publishStageLabel}
+        >
+          <div
+            className="flex w-full max-w-sm flex-col items-center justify-center gap-3 rounded-xl px-6 py-8 text-center"
+            style={{
+              background: 'rgba(255,255,255,0.96)',
+              backdropFilter: 'blur(2px)',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <InlineSpinner className="h-10 w-10 text-[#CC4B37]" />
+            <p
+              className="text-[13px] font-extrabold uppercase text-[#333333]"
+              style={jost}
+            >
+              {publishStageLabel}
+            </p>
+            <p className="text-xs text-[#6B6B6B]" style={lato}>
+              {publishStageHint}
+            </p>
           </div>
         </div>
       )}
