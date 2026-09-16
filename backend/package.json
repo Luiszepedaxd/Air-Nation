@@ -26,7 +26,9 @@
     "stress:local:500": "node stress-tests/local-sim-300.js --workers=500",
     "indexnow": "node scripts/indexnow.js",
     "indexnow:todo": "node scripts/indexnow.js --todo",
-    "indexnow:ranking": "node scripts/indexnow.js --ranking"
+    "indexnow:ranking": "node scripts/indexnow.js --ranking",
+    "migrate:stream": "node scripts/migrate-player-posts-to-stream.js",
+    "migrate:stream:dry": "node scripts/migrate-player-posts-to-stream.js --dry-run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1035.0",
