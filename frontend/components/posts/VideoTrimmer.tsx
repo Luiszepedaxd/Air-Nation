@@ -7,6 +7,13 @@ import {
   useRef,
   useState,
 } from 'react'
+import {
+  clipNeedsTrim,
+  createGestureAudioContext,
+  trimErrorMessage,
+  trimWithPlaybackRecorder,
+  withTimeout,
+} from '@/lib/trim-clip'
 
 const BG = '#FFFFFF'
 const BORDER = '#EEEEEE'
@@ -27,17 +34,10 @@ const ACCEPT = 'video/mp4,video/quicktime,video/webm'
 const MAX_SEL_SEC = 60
 const MIN_GAP_SEC = 0.1
 
-const VIDEO_MIME: Record<string, string> = {
-  mp4: 'video/mp4',
-  mov: 'video/quicktime',
-  webm: 'video/webm',
-  m4v: 'video/mp4',
-}
-
 type Props = {
   onVideoReady: (file: File, durationSeconds: number) => void
   onCancel: () => void
-  /** Avisa al padre cuando ffmpeg está cargando/procesando, para no cerrar el modal. */
+  /** Avisa al padre mientras se recorta, para no cerrar el modal. */
   onEncodingChange?: (encoding: boolean) => void
 }
 
@@ -90,12 +90,27 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
   const [encoding, setEncoding] = useState(false)
   const [encodePhase, setEncodePhase] = useState<EncodePhase>('idle')
   const [ffProgress, setFfProgress] = useState(0)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const encodingRef = useRef(false)
 
   const encodingChangeRef = useRef(onEncodingChange)
   encodingChangeRef.current = onEncodingChange
+  encodingRef.current = encoding
   useEffect(() => {
     encodingChangeRef.current?.(encoding)
   }, [encoding])
+
+  useEffect(() => {
+    return () => {
+      const ctx = audioCtxRef.current
+      audioCtxRef.current = null
+      if (ctx && ctx.state !== 'closed') {
+        void ctx.close().catch(() => {
+          /* noop */
+        })
+      }
+    }
+  }, [])
 
   const selected = useMemo(
     () => Math.max(0, endSec - startSec),
@@ -187,6 +202,7 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
   }, [url])
 
   const onTime = () => {
+    if (encodingRef.current) return
     const v = videoRef.current
     if (!v || !Number.isFinite(v.duration)) return
     if (v.currentTime < startSec) v.currentTime = startSec
@@ -230,128 +246,91 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
   }, [activeDrag, clientXToTime])
 
   useEffect(() => {
+    if (encoding) return
     const v = videoRef.current
     if (!v) return
     if (v.currentTime < startSec) v.currentTime = startSec
     if (v.currentTime > endSec) v.currentTime = startSec
-  }, [endSec, startSec])
-
-  const outputExt = (f: File) => {
-    const part = f.name.split('.').pop()
-    if (part) return part.toLowerCase()
-    if (f.type === 'video/webm') return 'webm'
-    if (f.type === 'video/quicktime') return 'mov'
-    return 'mp4'
-  }
+  }, [endSec, encoding, startSec])
 
   const handleUseClip = async () => {
     if (!file || !url || !totalSec) return
     if (overLimit) return
     setProcessErr(null)
-    setEncoding(true)
-    setEncodePhase('loading')
-    setFfProgress(0)
     const clipLen = endSec - startSec
     if (clipLen < MIN_GAP_SEC) {
       setProcessErr('El clip es demasiado corto')
-      setEncoding(false)
-      setEncodePhase('idle')
       return
     }
     // Keep export under the product max so keyframe/stream-copy drift
     // does not probe >60s and get rejected on upload.
     const exportLen = Math.min(clipLen, Math.max(MIN_GAP_SEC, MAX_SEL_SEC - 0.05))
-    const ext = outputExt(file)
-    const inName = `in.${ext}`
-    const outName = `out.${ext}`
-    const startStr = startSec.toFixed(3)
-    const durStr = exportLen.toFixed(3)
-    const mime = VIDEO_MIME[ext] || file.type || 'video/mp4'
+    const clipDuration = Math.round(exportLen * 1000) / 1000
+    const onProgress = (pct: number) => {
+      if (Number.isFinite(pct)) setFfProgress(Math.max(0, Math.min(100, pct)))
+    }
+
+    // AudioContext must start in the click call stack (autoplay policy).
+    let audioCtx = audioCtxRef.current
+    if (!audioCtx || audioCtx.state === 'closed') {
+      audioCtx = createGestureAudioContext()
+      audioCtxRef.current = audioCtx
+    } else {
+      void audioCtx.resume()
+    }
+    videoRef.current?.pause()
+
+    encodingRef.current = true
+    setEncoding(true)
+    setEncodePhase('loading')
+    setFfProgress(6)
 
     try {
-      const { FFmpeg } = await import('@ffmpeg/ffmpeg')
-      const { fetchFile } = await import('@ffmpeg/util')
-      const ffmpeg = new FFmpeg()
-      ffmpeg.on('progress', ({ progress }) => {
-        if (Number.isFinite(progress)) setFfProgress(Math.round(progress * 100))
-      })
-      await ffmpeg.load()
+      if (!clipNeedsTrim(startSec, endSec, totalSec, MAX_SEL_SEC)) {
+        setEncodePhase('processing')
+        onProgress(100)
+        onVideoReady(file, clipDuration)
+        return
+      }
+
       setEncodePhase('processing')
-      await ffmpeg.writeFile(inName, await fetchFile(file))
-      let code = await ffmpeg.exec([
-        '-i',
-        inName,
-        '-ss',
-        startStr,
-        '-t',
-        durStr,
-        '-c',
-        'copy',
-        outName,
-      ])
-      if (code !== 0) {
-        code = await ffmpeg.exec([
-          '-i',
-          inName,
-          '-ss',
-          startStr,
-          '-t',
-          durStr,
-          '-c:v',
-          'libx264',
-          '-preset',
-          'veryfast',
-          '-b:v',
-          '8M',
-          '-maxrate',
-          '10M',
-          '-bufsize',
-          '16M',
-          '-c:a',
-          'aac',
-          '-b:a',
-          '128k',
-          outName,
-        ])
-        if (code !== 0) {
-          setProcessErr('No se pudo recodificar el video. Prueba con otro archivo.')
-          return
-        }
-      }
-      const data = await ffmpeg.readFile(outName)
-      const raw =
-        data instanceof Uint8Array
-          ? data
-          : new Uint8Array(data as unknown as ArrayBuffer)
-      const blob = new Blob([new Uint8Array(raw)], { type: mime })
-      const outFile = new File([blob], `clip.${ext}`, { type: mime })
-      const clipDuration = Math.round(exportLen * 1000) / 1000
-      onVideoReady(outFile, clipDuration)
-      try {
-        await ffmpeg.deleteFile(inName)
-        await ffmpeg.deleteFile(outName)
-      } catch {
-        /* noop */
-      }
-      ffmpeg.terminate()
-    } catch (e) {
-      setProcessErr(
-        e instanceof Error ? e.message : 'Error al procesar el video'
+      const recordTimeoutMs = Math.max(45_000, exportLen * 2500 + 25_000)
+      const outFile = await withTimeout(
+        trimWithPlaybackRecorder({
+          srcUrl: url,
+          startSec,
+          durationSec: exportLen,
+          onProgress,
+          audioCtx,
+          sourceVideo: videoRef.current,
+        }),
+        recordTimeoutMs,
+        'El recorte tardó demasiado. Inténtalo de nuevo y no salgas de esta pantalla.'
       )
+      onVideoReady(outFile, clipDuration)
+    } catch (e) {
+      setProcessErr(trimErrorMessage(e))
     } finally {
+      encodingRef.current = false
       setEncoding(false)
       setEncodePhase('idle')
       setFfProgress(0)
+      const preview = videoRef.current
+      if (preview && url) {
+        preview.play().catch(() => {
+          /* preview loop is optional */
+        })
+      }
     }
   }
 
   const hasVideo = Boolean(url && file)
   const encodeStatus =
     encodePhase === 'loading'
-      ? 'Cargando procesador…'
+      ? 'Preparando recorte…'
       : ffProgress > 0
-        ? `Procesando video… ${ffProgress}%`
-        : 'Procesando video…'
+        ? `Recortando video… ${ffProgress}%`
+        : 'Recortando video…'
   const startPct = totalSec > 0 ? (startSec / totalSec) * 100 : 0
   const endPct = totalSec > 0 ? (endSec / totalSec) * 100 : 0
 
@@ -560,14 +539,15 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
             <div
               className="h-full rounded-full transition-[width] duration-200"
               style={{
-                width: ffProgress > 0 ? `${Math.min(100, ffProgress)}%` : '25%',
+                width: `${Math.min(100, Math.max(6, ffProgress))}%`,
                 background: ACCENT,
                 opacity: ffProgress > 0 ? 1 : 0.5,
               }}
             />
           </div>
           <p className="text-xs" style={{ color: MUTED, ...lato }}>
-            No cierres esta ventana mientras se procesa el video.
+            Puede tardar lo mismo que el clip (hasta 1 min). No cierres esta
+            ventana.
           </p>
         </div>
       )}

@@ -584,25 +584,36 @@ function InlineSpinner({ className = 'h-3.5 w-3.5' }: { className?: string }) {
 
 async function captureVideoThumbnail(file: File): Promise<string | null> {
   const url = URL.createObjectURL(file)
-  try {
-    const video = document.createElement('video')
-    video.muted = true
-    video.playsInline = true
-    video.preload = 'auto'
-    video.src = url
-    await new Promise<void>((resolve, reject) => {
-      const onErr = () => reject(new Error('thumb-load'))
-      video.addEventListener('loadeddata', () => resolve(), { once: true })
+  const video = document.createElement('video')
+  video.muted = true
+  video.playsInline = true
+  video.preload = 'auto'
+  video.src = url
+  const wait = (event: string, ms: number) =>
+    new Promise<void>((resolve, reject) => {
+      const t = window.setTimeout(() => reject(new Error('thumb-timeout')), ms)
+      const onOk = () => {
+        window.clearTimeout(t)
+        resolve()
+      }
+      const onErr = () => {
+        window.clearTimeout(t)
+        reject(new Error('thumb-load'))
+      }
+      video.addEventListener(event, onOk, { once: true })
       video.addEventListener('error', onErr, { once: true })
     })
+  try {
+    await wait('loadeddata', 8000)
     const dur = Number.isFinite(video.duration) ? video.duration : 0
     const seekTo = dur > 0.35 ? Math.min(0.25, dur * 0.1) : 0
     if (seekTo > 0) {
-      await new Promise<void>((resolve) => {
-        const done = () => resolve()
-        video.addEventListener('seeked', done, { once: true })
-        video.currentTime = seekTo
-      })
+      video.currentTime = seekTo
+      try {
+        await wait('seeked', 4000)
+      } catch {
+        /* draw whatever frame we have */
+      }
     }
     const w = video.videoWidth || 320
     const h = video.videoHeight || 320
@@ -619,6 +630,12 @@ async function captureVideoThumbnail(file: File): Promise<string | null> {
   } catch {
     return null
   } finally {
+    video.removeAttribute('src')
+    try {
+      video.load()
+    } catch {
+      /* noop */
+    }
     URL.revokeObjectURL(url)
   }
 }
@@ -1251,7 +1268,12 @@ export function PostBox({
               onVideoReady={(file, durationSeconds) => {
                 void (async () => {
                   const previewUrl = URL.createObjectURL(file)
-                  const thumbUrl = await captureVideoThumbnail(file)
+                  let thumbUrl: string | null = null
+                  try {
+                    thumbUrl = await captureVideoThumbnail(file)
+                  } catch {
+                    thumbUrl = null
+                  }
                   setPendingVideo((prev) => {
                     if (prev?.previewUrl) {
                       try {
