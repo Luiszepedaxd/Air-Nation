@@ -63,12 +63,6 @@ const PAGE_DESCRIPTION =
 
 const REGLA_ICONOS = [Trophy, FileCheck, Scale, Flag, Lock, ShieldCheck] as const
 
-const HERO_GRID_STYLE = {
-  backgroundImage:
-    'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
-  backgroundSize: '48px 48px',
-}
-
 const jostSub = {
   fontFamily: "'Jost', sans-serif",
   fontWeight: 800,
@@ -194,20 +188,7 @@ export default async function RankingPage() {
       <Navbar />
 
       {/* HERO */}
-      <section
-        className="relative overflow-hidden border-b-4 border-[#CC4B37] bg-[#111111] px-5 pb-14 pt-24 sm:px-8 sm:pb-16 sm:pt-28"
-        style={HERO_GRID_STYLE}
-      >
-        <div
-          className="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 select-none font-display font-black leading-none text-transparent lg:block"
-          style={{
-            fontSize: '22rem',
-            WebkitTextStroke: '2px rgba(204,75,55,0.35)',
-          }}
-          aria-hidden
-        >
-          1
-        </div>
+      <section className="relative overflow-hidden border-b-4 border-[#CC4B37] bg-[#111111] px-5 pb-14 pt-24 sm:px-8 sm:pb-16 sm:pt-28">
         <div className="relative mx-auto max-w-7xl">
           <RevealOnScroll>
             <div className="max-w-3xl">

@@ -46,7 +46,7 @@ export const HERO_RANKING = {
   titulo: 'RANKING NACIONAL',
   subtitulo:
     'Juega, suma puntos y compite por ser el número 1 del airsoft en México.',
-  botonTabla: 'VER TABLA',
+  botonTabla: 'VER CLASIFICACIÓN',
   botonOrganizador: 'SOY ORGANIZADOR',
 }
 
