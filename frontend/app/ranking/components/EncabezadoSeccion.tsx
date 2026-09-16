@@ -6,8 +6,6 @@ type Props = {
   titulo: ReactNode
   subtitulo?: string
   oscuro?: boolean
-  /** Eyebrow claro sobre fondo rojo (#CC4B37) */
-  eyebrowSobreRojo?: boolean
 }
 
 export function EncabezadoSeccion({
@@ -16,14 +14,11 @@ export function EncabezadoSeccion({
   titulo,
   subtitulo,
   oscuro,
-  eyebrowSobreRojo,
 }: Props) {
   const tituloClass = oscuro ? 'text-white' : 'text-[#111111]'
   const subClass = oscuro ? 'text-white/70' : 'text-[#666666]'
-  const eyebrowClass = eyebrowSobreRojo
-    ? 'text-white/80'
-    : 'text-[#CC4B37]'
-  const lineClass = eyebrowSobreRojo ? 'bg-white/50' : 'bg-[#CC4B37]'
+  const eyebrowClass = 'text-[#CC4B37]'
+  const lineClass = 'bg-[#CC4B37]'
 
   return (
     <header className="mb-10 max-w-3xl">

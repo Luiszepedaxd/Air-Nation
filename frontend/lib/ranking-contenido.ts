@@ -107,13 +107,19 @@ export const PASOS_RANKING: TarjetaTexto[] = [
 ]
 
 export const TEXTOS_TABLA = {
-  titulo: 'LA TABLA',
+  eyebrow: 'CLASIFICACIÓN',
+  titulo: 'ASÍ VA LA TEMPORADA',
+  subtitulo: 'Los mejores jugadores del Ranking Nacional hasta hoy.',
   nota: (maxResultados: number, maxRecreativos: number) =>
     `Cuentan tus ${maxResultados} mejores eventos de la temporada (máximo ${maxRecreativos} domingueras).`,
 }
 
 export const TEXTOS_EVENTOS = {
-  titulo: 'EVENTOS QUE CUENTAN',
+  eyebrow: 'EVENTOS',
+  titulo: 'EVENTOS QUE YA SUMARON',
+  subtitulo:
+    'Estos eventos ya repartieron puntos para el Ranking Nacional. ¿El tuyo es el siguiente?',
+  linkOrganizar: 'Haz que tu evento sume →',
   jugadores: (n: number) => `${n} jugadores`,
   puntosEnJuego: (n: number) => `${n} puntos en juego`,
 }
@@ -143,49 +149,53 @@ export const TEXTOS_PUNTOS = {
   extraTitulo: 'PUNTOS EXTRA',
   extraTexto:
     'MVP, objetivos, rondas ganadas… Cada organizador decide y lo anuncia antes del evento. Nadie puede recibir en extras más del 30% de los puntos en juego.',
+  ordenMenosAMas: 'De menos a más puntos',
+  ordenMasAMenos: 'Del 1er lugar al último',
+}
+
+export const TEXTOS_REGLAS = {
+  eyebrow: 'REGLAS',
+  titulo: 'REGLAS CLARAS',
+  subtitulo: 'Lo básico para competir parejo.',
 }
 
 export const REGLAS_EN_CORTO: TarjetaTexto[] = [
   {
-    titulo: 'Tus mejores eventos',
+    titulo: 'Cuentan tus mejores eventos',
     texto:
-      'En la tabla cuentan tus 10 mejores resultados de la temporada, y de esos máximo 4 domingueras. Todos tus eventos quedan en tu historial.',
+      'En cada temporada suman tus 10 mejores resultados (máximo 4 domingueras). La tabla empieza de cero cada temporada y tu historial se queda en tu perfil.',
   },
   {
-    titulo: 'Reglas claras desde antes',
+    titulo: 'Todo se avisa antes de jugar',
     texto:
-      'Cada organizador explica cómo decide los lugares antes de que empiece el evento. No se vale cambiar reglas a medio juego.',
+      'Cada organizador publica cómo decide los lugares y qué puntos extra da antes de que empiece el evento. No se cambian reglas a medio juego.',
   },
   {
-    titulo: 'Si hay empate',
+    titulo: '¿Empate? Así se decide',
     texto:
-      'Gana quien tenga más primeros lugares. Si siguen empatados: quien jugó más eventos completos, luego quien quedó mejor en su evento más importante y al final quien jugó más reciente.',
+      'Gana quien tenga más primeros lugares. Si siguen igual: quien jugó más eventos completos, luego quien quedó mejor en su evento más importante y al final quien jugó más reciente.',
   },
   {
-    titulo: '¿Algo está mal?',
+    titulo: '¿Ves un error? Avísanos',
     texto:
-      'Tienes 3 días desde que se publican los resultados para avisarnos. El organizador revisa y AirNation decide.',
+      'Tienes 3 días desde que se publican los resultados. El organizador lo revisa y AirNation decide.',
   },
   {
-    titulo: 'Nadie compra puntos',
+    titulo: 'Los puntos no se compran',
     texto:
-      'Pagar no le da más puntos a ningún evento. El tipo de evento lo revisa AirNation con reglas públicas.',
+      'Pagar nunca le da más puntos a un evento. Cuánto vale cada evento se decide con reglas públicas, iguales para todos.',
   },
   {
-    titulo: 'Tus datos, seguros',
+    titulo: 'Tus datos están protegidos',
     texto:
       'En el ranking solo se ve tu nombre, tu ciudad y tus resultados. Tus datos de contacto nunca se comparten.',
-  },
-  {
-    titulo: 'Temporadas',
-    texto:
-      'La tabla empieza de cero cada temporada, pero tu historial se queda para siempre en tu perfil.',
   },
 ]
 
 export const TEXTOS_ORGANIZADORES = {
   eyebrow: 'PARA ORGANIZADORES',
-  titulo: '¿VAS A HACER UN EVENTO? QUE CUENTE PARA EL RANKING.',
+  titulo: '¿ORGANIZAS EVENTOS?',
+  subtitulo: 'Haz que tus resultados sumen al Ranking Nacional.',
   beneficios: [
     'Tus jugadores ganan puntos oficiales y tienen un motivo más para ir.',
     'Página de resultados de tu evento, clara y fácil de compartir.',
@@ -206,11 +216,14 @@ export const TEXTOS_ORGANIZADORES = {
   cta: 'QUIERO QUE MI EVENTO CUENTE',
 }
 
-export const TEXTOS_TRANSPARENCIA: string[] = [
-  'Tienes 3 días para avisarnos si algo está mal',
-  'Tus datos de contacto nunca se comparten',
-  'Las reglas de cada evento se publican antes de jugar',
-]
+export const TEXTOS_FAQ = {
+  eyebrow: 'FAQ',
+  titulo: 'PREGUNTAS FRECUENTES',
+  tabJugadores: 'SI JUEGAS',
+  tabOrganizadores: 'SI ORGANIZAS',
+  verTodas: (n: number) => `VER TODAS (${n})`,
+  verMenos: 'VER MENOS',
+}
 
 export const FAQ_JUGADORES: FaqItem[] = [
   {
