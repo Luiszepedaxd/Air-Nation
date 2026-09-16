@@ -156,6 +156,7 @@ type FeedItem =
       fotos_urls: string[] | null
       video_url?: string | null
       video_mp4_url?: string | null
+      thumbnail_url?: string | null
       video_duration_s?: number | null
       mentions?: string[]
       mentionAliasById?: Record<string, string>
@@ -172,6 +173,7 @@ type FeedItem =
       fotos_urls: string[] | null
       video_url?: string | null
       video_mp4_url?: string | null
+      thumbnail_url?: string | null
       video_duration_s?: number | null
       mentions?: string[]
       mentionAliasById?: Record<string, string>
@@ -427,7 +429,7 @@ async function fetchHighlightFeedItem(
     const { data } = await supabase
       .from('player_posts')
       .select(
-        'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+        'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
       )
       .eq('id', postId)
       .eq('published', true)
@@ -446,6 +448,7 @@ async function fetchHighlightFeedItem(
       fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
       video_url: (r.video_url as string | null) ?? null,
       video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+      thumbnail_url: (r.thumbnail_url as string | null) ?? null,
       video_duration_s:
         r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
           ? Number(r.video_duration_s)
@@ -781,6 +784,7 @@ export function PostBox({
 
       let videoUrl: string | null = null
       let videoMp4Url: string | null = null
+      let videoThumbnailUrl: string | null = null
       let videoDurationS: number | null = null
       if (pendingVideo) {
         setPublishStage('video')
@@ -801,6 +805,7 @@ export function PostBox({
         })
         videoUrl = v.video_url
         videoMp4Url = v.video_mp4_url ?? null
+        videoThumbnailUrl = v.thumbnail_url ?? null
         const serverDur =
           typeof v.duration_s === 'number' &&
           Number.isFinite(v.duration_s) &&
@@ -814,7 +819,12 @@ export function PostBox({
       const content = text.trim() || null
       const videoFieldsPlayer =
         videoUrl != null && videoDurationS != null
-          ? { video_url: videoUrl, video_mp4_url: videoMp4Url, video_duration_s: videoDurationS }
+          ? {
+              video_url: videoUrl,
+              video_mp4_url: videoMp4Url,
+              video_duration_s: videoDurationS,
+              ...(videoThumbnailUrl ? { thumbnail_url: videoThumbnailUrl } : {}),
+            }
           : {}
 
       if (postAs.type === 'player') {
@@ -1208,6 +1218,11 @@ export function PostBox({
             {publishing ? publishStageLabel : 'PUBLICAR'}
           </button>
           </div>
+          {publishStage === 'video' ? (
+            <p className="mt-2 text-right text-[11px] text-[#777777]" style={lato}>
+              Procesando el video… puede tardar unos segundos.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -1455,7 +1470,13 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
+          {item.video_url ? (
+            <FeedInlineVideo
+              src={item.video_url}
+              videoMp4Url={item.video_mp4_url}
+              poster={item.thumbnail_url}
+            />
+          ) : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1474,7 +1495,13 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             />
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
+          {item.video_url ? (
+            <FeedInlineVideo
+              src={item.video_url}
+              videoMp4Url={item.video_mp4_url}
+              poster={item.thumbnail_url}
+            />
+          ) : null}
         </>
       )}
       <PostActions
@@ -1591,7 +1618,13 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             </Link>
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
+          {item.video_url ? (
+            <FeedInlineVideo
+              src={item.video_url}
+              videoMp4Url={item.video_mp4_url}
+              poster={item.thumbnail_url}
+            />
+          ) : null}
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1610,7 +1643,13 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             />
           )}
           {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? <FeedInlineVideo src={item.video_url} videoMp4Url={item.video_mp4_url} /> : null}
+          {item.video_url ? (
+            <FeedInlineVideo
+              src={item.video_url}
+              videoMp4Url={item.video_mp4_url}
+              poster={item.thumbnail_url}
+            />
+          ) : null}
         </>
       )}
       <PostActions
@@ -2232,14 +2271,14 @@ function FeedTab({
           .limit(20),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', false)
@@ -2368,6 +2407,7 @@ function FeedTab({
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           video_url: (r.video_url as string | null) ?? null,
           video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+          thumbnail_url: (r.thumbnail_url as string | null) ?? null,
           video_duration_s:
             r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
               ? Number(r.video_duration_s)
@@ -2394,6 +2434,7 @@ function FeedTab({
           fotos_urls: Array.isArray(r.fotos_urls) ? r.fotos_urls as string[] : null,
           video_url: (r.video_url as string | null) ?? null,
           video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+          thumbnail_url: (r.thumbnail_url as string | null) ?? null,
           video_duration_s:
             r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
               ? Number(r.video_duration_s)
@@ -2623,7 +2664,7 @@ function FeedTab({
           ? supabase
               .from('player_posts')
               .select(
-                'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+                'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
               )
               .eq('published', true)
               .eq('pinned', false)
@@ -2702,6 +2743,7 @@ function FeedTab({
           fotos_urls: Array.isArray(r.fotos_urls) ? (r.fotos_urls as string[]) : null,
           video_url: (r.video_url as string | null) ?? null,
           video_mp4_url: (r.video_mp4_url as string | null) ?? null,
+          thumbnail_url: (r.thumbnail_url as string | null) ?? null,
           video_duration_s:
             r.video_duration_s != null && Number.isFinite(Number(r.video_duration_s))
               ? Number(r.video_duration_s)

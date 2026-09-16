@@ -47,13 +47,18 @@ export async function uploadFile(file: File): Promise<string> {
 }
 
 export type VideoUploadResult = {
+  /** Manifiesto HLS de Cloudflare Stream (o MP4 legacy en posts antiguos). */
   video_url: string
   video_mp4_url: string | null
   thumbnail_url: string | null
   duration_s: number
+  stream_uid?: string | null
 }
 
-/** Sube un video a R2 (POST /upload/video). Opcionalmente reporta duración del cliente. */
+/**
+ * Sube un video a Cloudflare Stream (POST /upload/video).
+ * Opcionalmente reporta la duración medida en el cliente.
+ */
 export async function uploadVideo(
   file: File,
   opts?: { durationSeconds?: number; timeoutMs?: number }
@@ -94,6 +99,7 @@ export async function uploadVideo(
     video_mp4_url?: string | null
     thumbnail_url?: string | null
     duration_s?: number
+    stream_uid?: string | null
     error?: string
   }
   if (!res.ok) {
@@ -107,5 +113,6 @@ export async function uploadVideo(
     video_mp4_url: json.video_mp4_url ?? null,
     thumbnail_url: json.thumbnail_url ?? null,
     duration_s: typeof json.duration_s === 'number' ? json.duration_s : 0,
+    stream_uid: json.stream_uid ?? null,
   }
 }

@@ -17,6 +17,8 @@ type PlayerPost = {
   published: boolean
   created_at: string
   video_url?: string | null
+  video_mp4_url?: string | null
+  thumbnail_url?: string | null
 }
 
 function normalizeFotoUrls(raw: unknown): string[] {
@@ -76,7 +78,9 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
     setLoading(true)
     const { data, error } = await supabase
       .from('player_posts')
-      .select('id, user_id, content, fotos_urls, video_url, published, created_at')
+      .select(
+        'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, published, created_at'
+      )
       .eq('user_id', userId)
       .eq('published', true)
       .order('created_at', { ascending: false })
@@ -171,9 +175,11 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                     </p>
                   ) : null}
                   {urls.length > 0 && <PhotoGrid urls={urls} />}
-                  {(post as PlayerPost & { video_url?: string | null }).video_url ? (
+                  {post.video_url ? (
                     <FeedInlineVideo
-                      src={(post as PlayerPost & { video_url?: string | null }).video_url!}
+                      src={post.video_url}
+                      videoMp4Url={post.video_mp4_url}
+                      poster={post.thumbnail_url}
                     />
                   ) : null}
                   <PostActions

@@ -100,10 +100,27 @@ function capturePoster(video: HTMLVideoElement, key: string): string | null {
 
 let slotSeq = 0
 
+/** HLS: manifiesto .m3u8 propio o de Cloudflare Stream. */
+function isHlsUrl(url: string): boolean {
+  if (!url) return false
+  const clean = url.split('?')[0].toLowerCase()
+  if (clean.endsWith('.m3u8')) return true
+  return (
+    clean.includes('m3u8') &&
+    (clean.includes('videodelivery.net') || clean.includes('cloudflarestream.com'))
+  )
+}
+
+function supportsNativeHls(video: HTMLVideoElement): boolean {
+  return Boolean(video.canPlayType('application/vnd.apple.mpegurl'))
+}
+
 /**
  * Video estilo reel (9:16 por defecto; 16:9 si horizontal).
- * No descarga el MP4 hasta estar cerca del viewport; tope de concurrencia;
- * libera src al alejarse; cachea poster en memoria.
+ * HLS (Cloudflare Stream) vía nativo en Safari/iOS o hls.js en el resto;
+ * MP4 progresivo para los videos legacy de R2.
+ * No descarga nada hasta estar cerca del viewport; tope de concurrencia;
+ * libera el src al alejarse; cachea poster en memoria.
  */
 export function FeedInlineVideo({
   src,
@@ -121,8 +138,12 @@ export function FeedInlineVideo({
   const unloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const nearRef = useRef(false)
   const visibleRef = useRef(false)
+  const hlsRef = useRef<{ destroy: () => void } | null>(null)
+  /** URL efectivamente cargada en el <video> (con hls.js el src es un blob). */
+  const loadedRef = useRef<string | null>(null)
 
-  const mediaUrl = videoMp4Url ?? src
+  const hls = isHlsUrl(src)
+  const mediaUrl = hls ? src : videoMp4Url ?? src
   const [videoError, setVideoError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [isMuted, setIsMuted] = useState(true)
@@ -152,6 +173,11 @@ export function FeedInlineVideo({
 
   const detachSrc = () => {
     const el = videoRef.current
+    loadedRef.current = null
+    if (hlsRef.current) {
+      hlsRef.current.destroy()
+      hlsRef.current = null
+    }
     if (!el) return
     el.pause()
     el.removeAttribute('src')
@@ -178,9 +204,32 @@ export function FeedInlineVideo({
       releaseRef.current = release
     }
 
-    if (el.getAttribute('src') !== mediaUrl) {
+    if (loadedRef.current !== mediaUrl) {
       el.preload = 'metadata'
-      el.src = mediaUrl
+      if (hls && !supportsNativeHls(el)) {
+        const { default: Hls } = await import('hls.js')
+        if (!nearRef.current) {
+          if (releaseRef.current) {
+            releaseRef.current()
+            releaseRef.current = null
+          }
+          return
+        }
+        if (Hls.isSupported()) {
+          const instance = new Hls({ capLevelToPlayerSize: true })
+          instance.on(Hls.Events.ERROR, (_evt, data) => {
+            if (data.fatal) setVideoError(true)
+          })
+          instance.loadSource(mediaUrl)
+          instance.attachMedia(el)
+          hlsRef.current = instance
+        } else {
+          el.src = mediaUrl
+        }
+      } else {
+        el.src = mediaUrl
+      }
+      loadedRef.current = mediaUrl
       setArmed(true)
     }
 
@@ -225,7 +274,7 @@ export function FeedInlineVideo({
           const el = videoRef.current
           if (!el) continue
           if (entry.isIntersecting) {
-            if (el.getAttribute('src')) {
+            if (loadedRef.current) {
               void el.play().catch(() => {})
             } else if (nearRef.current) {
               void armAndMaybePlay()
@@ -260,7 +309,7 @@ export function FeedInlineVideo({
   const togglePlayPause = () => {
     const el = videoRef.current
     if (!el) return
-    if (!el.getAttribute('src')) {
+    if (!loadedRef.current) {
       nearRef.current = true
       void armAndMaybePlay()
       return

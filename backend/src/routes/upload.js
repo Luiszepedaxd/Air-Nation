@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
-const { uploadToCloudflare, uploadVideoToR2 } = require("../services/cloudflare");
+const { uploadToCloudflare, uploadVideoToStream } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
 
 try {
@@ -108,8 +108,14 @@ router.get("/video/health", (req, res) => {
   try {
     return res.status(200).json({
       ok: true,
+      cloudflare_account_id: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID),
+      cloudflare_api_token: Boolean(process.env.CLOUDFLARE_API_TOKEN),
       cf_account_id: Boolean(process.env.CF_ACCOUNT_ID),
       cf_stream_token: Boolean(process.env.CF_STREAM_API_TOKEN),
+      stream_ready: Boolean(
+        (process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_ID) &&
+          (process.env.CF_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN)
+      ),
       video_max_duration_sec: VIDEO_MAX_DURATION_SEC,
       video_max_bytes: VIDEO_MAX_BYTES,
     });
@@ -218,16 +224,36 @@ router.post("/video", requireAuth, (req, res) => {
         duration_s = VIDEO_MAX_DURATION_SEC;
       }
 
-      const video_url = await uploadVideoToR2(
+      const stream = await uploadVideoToStream(
         req.file.buffer,
         req.file.originalname || "video.mp4",
-        req.file.mimetype
+        req.file.mimetype,
+        // Mismo margen que aceptamos arriba: un trim por keyframes puede
+        // quedar unas décimas sobre 60s y Stream rechaza lo que exceda el tope.
+        { maxDurationSeconds: VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC }
       );
+      if (!stream.video_url) {
+        return res
+          .status(502)
+          .json({ error: "Cloudflare Stream no devolvió una URL de reproducción" });
+      }
+      // Stream mide la duración real tras codificar: preferirla cuando existe.
+      if (
+        stream.duration_s != null &&
+        stream.duration_s > 0 &&
+        stream.duration_s <= VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+      ) {
+        duration_s = Math.min(
+          Math.round(stream.duration_s * 1000) / 1000,
+          VIDEO_MAX_DURATION_SEC
+        );
+      }
       return res.status(200).json({
-        video_url,
-        video_mp4_url: video_url,
-        thumbnail_url: null,
+        video_url: stream.video_url,
+        video_mp4_url: stream.video_mp4_url,
+        thumbnail_url: stream.thumbnail_url,
         duration_s,
+        stream_uid: stream.stream_uid,
       });
     } catch (e) {
       console.error("[upload/video] error:", e?.message, e?.stack);
