@@ -258,11 +258,14 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
       setEncodePhase('idle')
       return
     }
+    // Keep export under the product max so keyframe/stream-copy drift
+    // does not probe >60s and get rejected on upload.
+    const exportLen = Math.min(clipLen, Math.max(MIN_GAP_SEC, MAX_SEL_SEC - 0.05))
     const ext = outputExt(file)
     const inName = `in.${ext}`
     const outName = `out.${ext}`
     const startStr = startSec.toFixed(3)
-    const durStr = clipLen.toFixed(3)
+    const durStr = exportLen.toFixed(3)
     const mime = VIDEO_MIME[ext] || file.type || 'video/mp4'
 
     try {
@@ -322,7 +325,7 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
           : new Uint8Array(data as unknown as ArrayBuffer)
       const blob = new Blob([new Uint8Array(raw)], { type: mime })
       const outFile = new File([blob], `clip.${ext}`, { type: mime })
-      const clipDuration = Math.round(clipLen * 1000) / 1000
+      const clipDuration = Math.round(exportLen * 1000) / 1000
       onVideoReady(outFile, clipDuration)
       try {
         await ffmpeg.deleteFile(inName)

@@ -153,15 +153,17 @@ router.post("/video", requireAuth, (req, res) => {
     }
     try {
       // Soft-fail probe with timeout: never hang POST /upload/video.
-      // Prefer ffprobe; fall back to client-reported duration_s from the form.
-      let duration_s = 0;
+      // Stream-copy trims often probe slightly over requested -t (keyframe drift),
+      // so trust the trimmer-reported duration when it is within the product max.
+      const DURATION_SLACK_SEC = 2;
+      let probed_s = 0;
       try {
         const probed = await probeDurationSeconds(
           req.file.buffer,
           req.file.originalname || "video.mp4"
         );
         if (probed != null) {
-          duration_s = Math.round(probed * 1000) / 1000;
+          probed_s = Math.round(probed * 1000) / 1000;
         }
       } catch (probeErr) {
         console.error(
@@ -170,20 +172,50 @@ router.post("/video", requireAuth, (req, res) => {
         );
       }
 
-      if (!(duration_s > 0)) {
-        const rawClient =
-          req.body && req.body.duration_s != null
-            ? Number(req.body.duration_s)
-            : NaN;
-        if (Number.isFinite(rawClient) && rawClient > 0) {
-          duration_s = Math.round(rawClient * 1000) / 1000;
-        }
+      const rawClient =
+        req.body && req.body.duration_s != null
+          ? Number(req.body.duration_s)
+          : NaN;
+      const client_s =
+        Number.isFinite(rawClient) && rawClient > 0
+          ? Math.round(rawClient * 1000) / 1000
+          : 0;
+
+      const clientWithinMax =
+        client_s > 0 && client_s <= VIDEO_MAX_DURATION_SEC + 0.05;
+
+      let duration_s = 0;
+      if (clientWithinMax) {
+        duration_s = client_s;
+      } else if (probed_s > 0) {
+        duration_s = probed_s;
+      } else if (client_s > 0) {
+        duration_s = client_s;
       }
 
-      if (duration_s > VIDEO_MAX_DURATION_SEC + 0.05) {
+      const limitForReject = clientWithinMax
+        ? VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+        : VIDEO_MAX_DURATION_SEC + 0.05;
+      const measured = probed_s > 0 ? probed_s : duration_s;
+      if (!clientWithinMax && measured > limitForReject) {
         return res.status(400).json({
           error: `El video no puede durar más de ${VIDEO_MAX_DURATION_SEC} segundos (1 minuto).`,
         });
+      }
+      if (
+        clientWithinMax &&
+        probed_s > VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+      ) {
+        // Clip claimed <=60s from trimmer but file is clearly longer — reject.
+        return res.status(400).json({
+          error: `El video no puede durar más de ${VIDEO_MAX_DURATION_SEC} segundos (1 minuto).`,
+        });
+      }
+      if (
+        duration_s > VIDEO_MAX_DURATION_SEC &&
+        duration_s <= VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+      ) {
+        duration_s = VIDEO_MAX_DURATION_SEC;
       }
 
       const video_url = await uploadVideoToR2(
