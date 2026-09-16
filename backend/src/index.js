@@ -19,6 +19,7 @@ const stripeRouter = require("./routes/stripe");
 const credencialesRouter = require("./routes/credenciales");
 const searchRouter = require('./routes/search')
 const tournamentsRouter = require("./routes/tournaments");
+const { iniciarJobIndexNow } = require("./jobs/indexnow");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -87,4 +88,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`AirNation API corriendo en http://localhost:${PORT}`);
+  iniciarJobIndexNow();
 });

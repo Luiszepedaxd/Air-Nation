@@ -9,13 +9,52 @@ import { createClient } from '@/lib/supabase/server'
 const BASE = 'https://www.airnation.online'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  let rankingEventEntries: MetadataRoute.Sitemap = []
+  let rankingLastModified: Date | undefined
+
+  try {
+    const sb = createPublicSupabaseClient()
+    const { data, error } = await sb
+      .from('ranking_eventos')
+      .select('slug, updated_at')
+      .eq('estado', 'publicado')
+      .order('fecha', { ascending: false })
+
+    if (error) {
+      console.error('[sitemap] ranking:', error.message)
+    } else if (data) {
+      const rows = data.filter((row) => row.slug)
+      for (const row of rows) {
+        if (row.updated_at) {
+          const d = new Date(row.updated_at)
+          if (!rankingLastModified || d > rankingLastModified) {
+            rankingLastModified = d
+          }
+        }
+      }
+      rankingEventEntries = rows.map((row) => ({
+        url: `${BASE}/ranking/eventos/${row.slug}`,
+        lastModified: new Date(row.updated_at),
+        changeFrequency: 'monthly' as const,
+        priority: 0.6,
+      }))
+    }
+  } catch {
+    rankingEventEntries = []
+  }
+
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, priority: 1, changeFrequency: 'weekly' },
     { url: `${BASE}/blog`, priority: 0.9, changeFrequency: 'daily' },
     { url: `${BASE}/campos`, priority: 0.9, changeFrequency: 'daily' },
     { url: `${BASE}/equipos`, priority: 0.8, changeFrequency: 'daily' },
     { url: `${BASE}/eventos`, priority: 0.8, changeFrequency: 'daily' },
-    { url: `${BASE}/ranking`, priority: 0.8, changeFrequency: 'weekly' },
+    {
+      url: `${BASE}/ranking`,
+      priority: 0.8,
+      changeFrequency: 'weekly',
+      ...(rankingLastModified ? { lastModified: rankingLastModified } : {}),
+    },
   ]
 
   let postEntries: MetadataRoute.Sitemap = []
@@ -37,31 +76,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {
     postEntries = []
-  }
-
-  let rankingEventEntries: MetadataRoute.Sitemap = []
-  try {
-    const sb = createPublicSupabaseClient()
-    const { data, error } = await sb
-      .from('ranking_eventos')
-      .select('slug, updated_at')
-      .eq('estado', 'publicado')
-      .order('fecha', { ascending: false })
-
-    if (error) {
-      console.error('[sitemap] ranking:', error.message)
-    } else if (data) {
-      rankingEventEntries = data
-        .filter((row) => row.slug)
-        .map((row) => ({
-          url: `${BASE}/ranking/eventos/${row.slug}`,
-          lastModified: new Date(row.updated_at),
-          changeFrequency: 'monthly' as const,
-          priority: 0.6,
-        }))
-    }
-  } catch {
-    rankingEventEntries = []
   }
 
   let fieldEntries: MetadataRoute.Sitemap = []

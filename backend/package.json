@@ -25,6 +25,7 @@
     "stress:local": "node stress-tests/local-sim-300.js",
     "stress:local:500": "node stress-tests/local-sim-300.js --workers=500",
     "indexnow": "node scripts/indexnow.js",
+    "indexnow:todo": "node scripts/indexnow.js --todo",
     "indexnow:ranking": "node scripts/indexnow.js --ranking"
   },
   "dependencies": {
