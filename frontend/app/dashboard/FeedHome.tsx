@@ -823,7 +823,6 @@ export function PostBox({
               video_url: videoUrl,
               video_mp4_url: videoMp4Url,
               video_duration_s: videoDurationS,
-              ...(videoThumbnailUrl ? { thumbnail_url: videoThumbnailUrl } : {}),
             }
           : {}
 
