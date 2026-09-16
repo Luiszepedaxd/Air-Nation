@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
-import { FeedInlineVideo, parseContentWithMentions } from '@/app/dashboard/FeedHome'
+import { PostMedia } from '@/components/posts/PhotoGrid'
+import { parseContentWithMentions } from '@/app/dashboard/FeedHome'
 import { supabase } from '@/lib/supabase'
 import type { EventFeedPostRow } from '../page'
 import { EventoPostBoxMini } from './EventoPostBoxMini'
@@ -236,13 +236,14 @@ export function EventoPostsTab({
                   </p>
                 ) : null}
 
-                {fotos.length > 0 ? <PhotoGrid urls={fotos} /> : null}
-                {post.video_url ? (
-                  <FeedInlineVideo
-                    src={post.video_url}
-                    videoMp4Url={post.video_mp4_url}
-                  />
-                ) : null}
+                <PostMedia
+                  urls={fotos}
+                  video={
+                    post.video_url
+                      ? { src: post.video_url, videoMp4Url: post.video_mp4_url }
+                      : null
+                  }
+                />
               </article>
             )
           })}

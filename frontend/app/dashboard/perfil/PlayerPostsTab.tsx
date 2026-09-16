@@ -1,11 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostMedia } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
-import { PostBox, FeedInlineVideo } from '@/app/dashboard/FeedHome'
+import { PostBox } from '@/app/dashboard/FeedHome'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -174,14 +174,18 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
                       {post.content.trim()}
                     </p>
                   ) : null}
-                  {urls.length > 0 && <PhotoGrid urls={urls} />}
-                  {post.video_url ? (
-                    <FeedInlineVideo
-                      src={post.video_url}
-                      videoMp4Url={post.video_mp4_url}
-                      poster={post.thumbnail_url}
-                    />
-                  ) : null}
+                  <PostMedia
+                    urls={urls}
+                    video={
+                      post.video_url
+                        ? {
+                            src: post.video_url,
+                            videoMp4Url: post.video_mp4_url,
+                            poster: post.thumbnail_url,
+                          }
+                        : null
+                    }
+                  />
                   <PostActions
                     postType="player"
                     postId={post.id}

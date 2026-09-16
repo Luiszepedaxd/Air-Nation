@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostMedia } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import {
@@ -1459,7 +1459,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
           className="mb-3"
         />
       )}
-      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+      <PostMedia urls={fotos} />
       <PostActions
         postType="team"
         postId={item.id}
@@ -1576,14 +1576,18 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               />
             </Link>
           )}
-          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <FeedInlineVideo
-              src={item.video_url}
-              videoMp4Url={item.video_mp4_url}
-              poster={item.thumbnail_url}
-            />
-          ) : null}
+          <PostMedia
+            urls={fotos}
+            video={
+              item.video_url
+                ? {
+                    src: item.video_url,
+                    videoMp4Url: item.video_mp4_url,
+                    poster: item.thumbnail_url,
+                  }
+                : null
+            }
+          />
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1601,14 +1605,18 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               className="mb-3"
             />
           )}
-          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <FeedInlineVideo
-              src={item.video_url}
-              videoMp4Url={item.video_mp4_url}
-              poster={item.thumbnail_url}
-            />
-          ) : null}
+          <PostMedia
+            urls={fotos}
+            video={
+              item.video_url
+                ? {
+                    src: item.video_url,
+                    videoMp4Url: item.video_mp4_url,
+                    poster: item.thumbnail_url,
+                  }
+                : null
+            }
+          />
         </>
       )}
       <PostActions
@@ -1724,14 +1732,18 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               />
             </Link>
           )}
-          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <FeedInlineVideo
-              src={item.video_url}
-              videoMp4Url={item.video_mp4_url}
-              poster={item.thumbnail_url}
-            />
-          ) : null}
+          <PostMedia
+            urls={fotos}
+            video={
+              item.video_url
+                ? {
+                    src: item.video_url,
+                    videoMp4Url: item.video_mp4_url,
+                    poster: item.thumbnail_url,
+                  }
+                : null
+            }
+          />
           <Link
             href={`/replicas/${item.replica_id}`}
             className="block text-[12px] text-[#888888] mt-2 hover:underline"
@@ -1749,14 +1761,18 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
               className="mb-3"
             />
           )}
-          {fotos.length > 0 && <PhotoGrid urls={fotos} />}
-          {item.video_url ? (
-            <FeedInlineVideo
-              src={item.video_url}
-              videoMp4Url={item.video_mp4_url}
-              poster={item.thumbnail_url}
-            />
-          ) : null}
+          <PostMedia
+            urls={fotos}
+            video={
+              item.video_url
+                ? {
+                    src: item.video_url,
+                    videoMp4Url: item.video_mp4_url,
+                    poster: item.thumbnail_url,
+                  }
+                : null
+            }
+          />
         </>
       )}
       <PostActions
@@ -1861,7 +1877,7 @@ function FieldPostCard({
           className="mb-3"
         />
       )}
-      {fotos.length > 0 && <PhotoGrid urls={fotos} />}
+      <PostMedia urls={fotos} />
       <PostActions
         postType="field"
         postId={item.id}

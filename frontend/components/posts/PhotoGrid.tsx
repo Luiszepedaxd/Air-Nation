@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useState, useEffect, useRef, type TouchEvent, type UIEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
+import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
 
 function FeedImg({
   url,
@@ -178,133 +179,98 @@ export function Lightbox({ urls, startIndex, onClose }: {
   )
 }
 
+export type PostMediaVideo = {
+  src: string
+  videoMp4Url?: string | null
+  poster?: string | null
+}
+
+/**
+ * Horizontal snap carousel for feed photos (and optional video slide).
+ * Each slide is exactly the container width — neighbors stay clipped.
+ */
 export function PhotoGrid({
   urls,
   priorityCount = 1,
+  video = null,
 }: {
   urls: string[]
   /** First N slides load eager (above-the-fold). */
   priorityCount?: number
+  /** Optional video rendered as the last carousel slide. */
+  video?: PostMediaVideo | null
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [current, setCurrent] = useState(0)
-  const [dragging, setDragging] = useState(false)
-  const trackRef = useRef<HTMLDivElement>(null)
-  const dragStartX = useRef(0)
-  const dragOffsetX = useRef(0)
-  const baseOffset = useRef(0)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const dragMoved = useRef(false)
+  const pointerStart = useRef<{ x: number; y: number; scroll: number } | null>(null)
 
-  if (!urls.length) return null
+  const photos = urls.filter(Boolean)
+  const hasVideo = Boolean(video?.src)
+  const slideCount = photos.length + (hasVideo ? 1 : 0)
 
-  const count = urls.length
+  if (slideCount === 0) return null
 
-  const slideWidth = () => {
-    const track = trackRef.current
-    if (!track || !track.children[0]) return 0
-    return (track.children[0] as HTMLElement).offsetWidth
-  }
-
-  const setTrackX = (x: number, animated: boolean) => {
-    const track = trackRef.current
-    if (!track) return
-    track.style.transition = animated
-      ? 'transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-      : 'none'
-    track.style.transform = `translateX(${x}px)`
-  }
-
-  const goTo = (idx: number, animated = true) => {
-    const clamped = Math.max(0, Math.min(idx, count - 1))
-    setCurrent(clamped)
-    setTrackX(-clamped * slideWidth(), animated)
+  const onScroll = (e: UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    const w = el.clientWidth
+    if (w <= 0) return
+    const next = Math.round(el.scrollLeft / w)
+    setCurrent(Math.max(0, Math.min(next, slideCount - 1)))
   }
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (count <= 1) return
-    const track = trackRef.current
-    if (!track) return
-    track.setPointerCapture(e.pointerId)
-    setDragging(false)
-    dragStartX.current = e.clientX
-    dragOffsetX.current = 0
-    baseOffset.current = -current * slideWidth()
-    setTrackX(baseOffset.current, false)
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    const el = scrollerRef.current
+    if (!el) return
+    dragMoved.current = false
+    pointerStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scroll: el.scrollLeft,
+    }
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (count <= 1) return
-    const delta = e.clientX - dragStartX.current
-    if (Math.abs(delta) > 5) setDragging(true)
-    dragOffsetX.current = delta
-
-    const w = slideWidth()
-    const maxOffset = 0
-    const minOffset = -(count - 1) * w
-    const raw = baseOffset.current + delta
-    const resistance = 0.2
-    let clamped = raw
-    if (raw > maxOffset) clamped = maxOffset + (raw - maxOffset) * resistance
-    if (raw < minOffset) clamped = minOffset + (raw - minOffset) * resistance
-
-    setTrackX(clamped, false)
+    const start = pointerStart.current
+    if (!start) return
+    if (Math.abs(e.clientX - start.x) > 8 || Math.abs(e.clientY - start.y) > 8) {
+      dragMoved.current = true
+    }
   }
 
   const onPointerUp = () => {
-    if (count <= 1) return
-    const w = slideWidth()
-    const delta = dragOffsetX.current
-    const threshold = w * 0.2
-    if (delta < -threshold && current < count - 1) {
-      goTo(current + 1)
-    } else if (delta > threshold && current > 0) {
-      goTo(current - 1)
-    } else {
-      goTo(current)
-    }
-    setTimeout(() => setDragging(false), 10)
+    pointerStart.current = null
   }
 
   return (
     <>
       {lightboxIndex !== null && (
         <Lightbox
-          urls={urls}
+          urls={photos}
           startIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
         />
       )}
 
-      <div className="w-full select-none overflow-hidden">
+      <div className="w-full min-w-0 select-none">
         <div
-          ref={trackRef}
-          className="flex touch-pan-y"
-          style={{
-            willChange: 'transform',
-            cursor: 'default',
-          }}
-          onPointerDown={(e) => {
-            if (e.pointerType === 'mouse') return
-            onPointerDown(e)
-          }}
-          onPointerMove={(e) => {
-            if (e.pointerType === 'mouse') return
-            onPointerMove(e)
-          }}
-          onPointerUp={(e) => {
-            if (e.pointerType === 'mouse') return
-            onPointerUp()
-          }}
-          onPointerCancel={(e) => {
-            if (e.pointerType === 'mouse') return
-            onPointerUp()
-          }}
+          ref={scrollerRef}
+          className="scrollbar-hide flex w-full snap-x snap-mandatory flex-nowrap overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+          onScroll={onScroll}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         >
-          {urls.map((url, i) => (
+          {photos.map((url, i) => (
             <div
-              key={i}
-              className="aspect-square w-full shrink-0 overflow-hidden bg-[#F4F4F4]"
+              key={`photo-${i}`}
+              className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] snap-center snap-always overflow-hidden bg-[#F4F4F4]"
               onClick={() => {
-                if (!dragging) setLightboxIndex(i)
+                if (!dragMoved.current) setLightboxIndex(i)
               }}
             >
               <FeedImg
@@ -314,11 +280,25 @@ export function PhotoGrid({
               />
             </div>
           ))}
+
+          {hasVideo && video ? (
+            <div
+              key="video"
+              className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] snap-center snap-always overflow-hidden bg-black"
+            >
+              <FeedInlineVideo
+                src={video.src}
+                videoMp4Url={video.videoMp4Url}
+                poster={video.poster}
+                forceSquare
+              />
+            </div>
+          ) : null}
         </div>
 
-        {count > 1 && (
+        {slideCount > 1 && (
           <div className="mt-2 flex items-center justify-center gap-1.5">
-            {urls.map((_, i) => (
+            {Array.from({ length: slideCount }).map((_, i) => (
               <div
                 key={i}
                 className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -330,5 +310,44 @@ export function PhotoGrid({
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * Feed media block: photos and/or video in one intentional layout.
+ * - photos only → horizontal snap carousel
+ * - video only → inline video
+ * - both → single carousel with video as last slide (no vertical stack)
+ */
+export function PostMedia({
+  urls,
+  video,
+  priorityCount = 1,
+}: {
+  urls?: string[] | null
+  video?: PostMediaVideo | null
+  priorityCount?: number
+}) {
+  const photos = (urls ?? []).filter(Boolean)
+  const hasVideo = Boolean(video?.src)
+
+  if (photos.length === 0 && !hasVideo) return null
+
+  if (photos.length === 0 && hasVideo && video) {
+    return (
+      <FeedInlineVideo
+        src={video.src}
+        videoMp4Url={video.videoMp4Url}
+        poster={video.poster}
+      />
+    )
+  }
+
+  return (
+    <PhotoGrid
+      urls={photos}
+      priorityCount={priorityCount}
+      video={hasVideo ? video : null}
+    />
   )
 }

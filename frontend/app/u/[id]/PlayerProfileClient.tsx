@@ -5,12 +5,11 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   clearFeedSessionCache,
-  FeedInlineVideo,
   PostBox,
 } from '@/app/dashboard/FeedHome'
 import { PostContent } from '@/components/feed/PostContent'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostMedia } from '@/components/posts/PhotoGrid'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { adminDeletePlayerPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
@@ -297,10 +296,10 @@ function PostsPanel({
                 className="mb-3"
               />
             ) : null}
-            {urls.length > 0 && <PhotoGrid urls={urls} />}
-            {post.video_url ? (
-              <FeedInlineVideo src={post.video_url} />
-            ) : null}
+            <PostMedia
+              urls={urls}
+              video={post.video_url ? { src: post.video_url } : null}
+            />
             <PostActions
               postType="player"
               postId={post.id}

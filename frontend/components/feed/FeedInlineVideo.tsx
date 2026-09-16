@@ -126,10 +126,13 @@ export function FeedInlineVideo({
   src,
   videoMp4Url,
   poster,
+  forceSquare = false,
 }: {
   src: string
   videoMp4Url?: string | null
   poster?: string | null
+  /** Match photo carousel slides (1:1) instead of tall 9/16. */
+  forceSquare?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -153,8 +156,15 @@ export function FeedInlineVideo({
     () => poster || posterCache.get(mediaUrl) || null
   )
 
-  const aspectClass =
-    isLandscape === true ? 'aspect-video' : 'aspect-[9/16]'
+  // Default square (feed-friendly) until metadata loads; avoid tall 9/16 flash.
+  // Portrait → 4/5; landscape → 16/9; forceSquare keeps 1:1 inside carousels.
+  const aspectClass = forceSquare
+    ? 'aspect-square'
+    : isLandscape === true
+      ? 'aspect-video'
+      : isLandscape === false
+        ? 'aspect-[4/5]'
+        : 'aspect-square'
 
   useEffect(() => {
     if (poster) setPosterUrl(poster)
