@@ -6,6 +6,11 @@ import {
   useState,
   type MouseEvent,
 } from 'react'
+import {
+  getFeedAudioMuted,
+  setFeedAudioMuted,
+  subscribeFeedAudioMuted,
+} from '@/lib/feed-audio-preference'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -149,7 +154,7 @@ export function FeedInlineVideo({
   const mediaUrl = hls ? src : videoMp4Url ?? src
   const [videoError, setVideoError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
-  const [isMuted, setIsMuted] = useState(true)
+  const [isMuted, setIsMuted] = useState(() => getFeedAudioMuted())
   const [isLandscape, setIsLandscape] = useState<boolean | null>(null)
   const [armed, setArmed] = useState(false)
   const [posterUrl, setPosterUrl] = useState<string | null>(
@@ -170,6 +175,16 @@ export function FeedInlineVideo({
     if (poster) setPosterUrl(poster)
     else if (posterCache.has(mediaUrl)) setPosterUrl(posterCache.get(mediaUrl)!)
   }, [poster, mediaUrl])
+
+  // Preferencia de mute a nivel de sesión (en memoria; se reinicia en reload).
+  useEffect(() => {
+    setIsMuted(getFeedAudioMuted())
+    return subscribeFeedAudioMuted((muted) => {
+      setIsMuted(muted)
+      const el = videoRef.current
+      if (el) el.muted = muted
+    })
+  }, [])
 
   // Retry automático cada 15s hasta 8 veces
   useEffect(() => {
@@ -198,6 +213,31 @@ export function FeedInlineVideo({
       releaseRef.current = null
     }
     cancelQueued(slotIdRef.current)
+  }
+
+  /**
+   * Best-effort play honoring session mute preference.
+   * Autoplay with sound may be blocked until a user gesture: try unmuted play;
+   * if play() rejects, fall back to muted for this attempt but keep the session
+   * preference unmuted so after the first unmute gesture subsequent plays honor it.
+   */
+  const playWithAudioPreference = async (el: HTMLVideoElement) => {
+    const preferMuted = getFeedAudioMuted()
+    el.muted = preferMuted
+    setIsMuted(preferMuted)
+    try {
+      await el.play()
+    } catch {
+      if (!preferMuted) {
+        el.muted = true
+        setIsMuted(true) // UI only; session preference stays unmuted
+        try {
+          await el.play()
+        } catch {
+          /* autoplay bloqueado incluso muteado */
+        }
+      }
+    }
   }
 
   const armAndMaybePlay = async () => {
@@ -244,9 +284,7 @@ export function FeedInlineVideo({
     }
 
     if (visibleRef.current) {
-      void el.play().catch(() => {
-        /* autoplay bloqueado */
-      })
+      void playWithAudioPreference(el)
     }
   }
 
@@ -285,7 +323,7 @@ export function FeedInlineVideo({
           if (!el) continue
           if (entry.isIntersecting) {
             if (loadedRef.current) {
-              void el.play().catch(() => {})
+              void playWithAudioPreference(el)
             } else if (nearRef.current) {
               void armAndMaybePlay()
             }
@@ -324,13 +362,21 @@ export function FeedInlineVideo({
       void armAndMaybePlay()
       return
     }
-    if (el.paused) void el.play()
+    if (el.paused) void playWithAudioPreference(el)
     else el.pause()
   }
 
   const toggleMute = (e: MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
-    setIsMuted((m) => !m)
+    const next = !isMuted
+    setFeedAudioMuted(next)
+    setIsMuted(next)
+    const el = videoRef.current
+    if (el) {
+      el.muted = next
+      // Unmute es un gesto de usuario: desbloquea autoplay con sonido.
+      if (!next) void el.play().catch(() => {})
+    }
   }
 
   if (videoError) {
@@ -375,7 +421,7 @@ export function FeedInlineVideo({
             if (p) setPosterUrl(p)
           }
           if (visibleRef.current) {
-            void e.currentTarget.play().catch(() => {})
+            void playWithAudioPreference(e.currentTarget)
           }
         }}
         onError={() => {
