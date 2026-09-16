@@ -6,15 +6,12 @@ const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const { uploadToCloudflare, uploadVideoToStream } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
+const {
+  ensureFfmpegPaths,
+  trimVideoBuffer,
+} = require("../lib/videoTrim");
 
-try {
-  const ffprobeInstaller = require("@ffprobe-installer/ffprobe");
-  if (ffprobeInstaller && ffprobeInstaller.path) {
-    ffmpeg.setFfprobePath(ffprobeInstaller.path);
-  }
-} catch (_) {
-  /* system ffprobe may still be available */
-}
+ensureFfmpegPaths();
 
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -29,14 +26,28 @@ const videoMimes = new Set([
   "audio/x-wav",
   "audio/mp4",
 ]);
-const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+
+/** Strip ";codecs=…" so MediaRecorder / Safari mime strings still pass. */
+function baseMime(mimetype) {
+  return String(mimetype || "")
+    .split(";")[0]
+    .trim()
+    .toLowerCase();
+}
+
+function isAllowedVideoMime(mimetype) {
+  return videoMimes.has(baseMime(mimetype));
+}
+
+/** Source videos for server trim can be long phone recordings. */
+const VIDEO_MAX_BYTES = 250 * 1024 * 1024;
 const VIDEO_MAX_DURATION_SEC = 60;
 
 const uploadVideo = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: VIDEO_MAX_BYTES },
   fileFilter: (req, file, cb) => {
-    if (videoMimes.has(file.mimetype)) {
+    if (isAllowedVideoMime(file.mimetype)) {
       cb(null, true);
     } else {
       cb(
@@ -102,6 +113,12 @@ function probeDurationSeconds(buffer, originalname) {
   });
 }
 
+function parsePositiveNumber(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 1000) / 1000;
+}
+
 const router = express.Router();
 
 router.get("/video/health", (req, res) => {
@@ -118,6 +135,7 @@ router.get("/video/health", (req, res) => {
       ),
       video_max_duration_sec: VIDEO_MAX_DURATION_SEC,
       video_max_bytes: VIDEO_MAX_BYTES,
+      server_trim: true,
     });
   } catch (e) {
     console.error("[upload/video/health]", e);
@@ -150,7 +168,9 @@ router.post("/video", requireAuth, (req, res) => {
   uploadVideo.single("file")(req, res, async (err) => {
     if (err) {
       if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
-        return res.status(400).json({ error: "El archivo excede el tamaño máximo (100MB)" });
+        return res
+          .status(400)
+          .json({ error: "El archivo excede el tamaño máximo (250MB)" });
       }
       return res.status(400).json({ error: err.message });
     }
@@ -158,16 +178,64 @@ router.post("/video", requireAuth, (req, res) => {
       return res.status(400).json({ error: "No se recibió ningún archivo" });
     }
     try {
+      const DURATION_SLACK_SEC = 2;
+      const body = req.body || {};
+
+      // Optional server-side trim window (preferred over client MediaRecorder).
+      const trimStart = parsePositiveNumber(body.trim_start_s ?? body.start_s);
+      const trimDuration = parsePositiveNumber(
+        body.trim_duration_s ?? body.clip_duration_s
+      );
+      // Client only sends trim_* when the selected window needs cutting.
+      const wantsTrim =
+        trimStart != null && trimDuration != null && trimDuration > 0;
+
+      let uploadBuffer = req.file.buffer;
+      let uploadName = req.file.originalname || "video.mp4";
+      let uploadMime = baseMime(req.file.mimetype) || "video/mp4";
+
+      if (wantsTrim && trimDuration > VIDEO_MAX_DURATION_SEC + 0.05) {
+        return res.status(400).json({
+          error: `El video no puede durar más de ${VIDEO_MAX_DURATION_SEC} segundos (1 minuto).`,
+        });
+      }
+
+      if (wantsTrim) {
+        const safeDur = Math.min(trimDuration, VIDEO_MAX_DURATION_SEC);
+        console.log(
+          `[upload/video] server trim start=${trimStart}s duration=${safeDur}s srcBytes=${uploadBuffer.length}`
+        );
+        try {
+          const trimmed = await trimVideoBuffer(
+            uploadBuffer,
+            uploadName,
+            trimStart,
+            safeDur
+          );
+          uploadBuffer = trimmed.buffer;
+          uploadName = trimmed.filename;
+          uploadMime = trimmed.mimetype;
+          console.log(
+            `[upload/video] trim ok outBytes=${uploadBuffer.length} mime=${uploadMime}`
+          );
+        } catch (trimErr) {
+          console.error(
+            "[upload/video] trim failed:",
+            trimErr && trimErr.message ? trimErr.message : trimErr
+          );
+          return res.status(500).json({
+            error:
+              "No se pudo recortar el video en el servidor. Inténtalo de nuevo o prueba otro archivo.",
+          });
+        }
+      }
+
       // Soft-fail probe with timeout: never hang POST /upload/video.
       // Stream-copy trims often probe slightly over requested -t (keyframe drift),
       // so trust the trimmer-reported duration when it is within the product max.
-      const DURATION_SLACK_SEC = 2;
       let probed_s = 0;
       try {
-        const probed = await probeDurationSeconds(
-          req.file.buffer,
-          req.file.originalname || "video.mp4"
-        );
+        const probed = await probeDurationSeconds(uploadBuffer, uploadName);
         if (probed != null) {
           probed_s = Math.round(probed * 1000) / 1000;
         }
@@ -179,13 +247,13 @@ router.post("/video", requireAuth, (req, res) => {
       }
 
       const rawClient =
-        req.body && req.body.duration_s != null
-          ? Number(req.body.duration_s)
-          : NaN;
+        body.duration_s != null ? Number(body.duration_s) : NaN;
       const client_s =
         Number.isFinite(rawClient) && rawClient > 0
           ? Math.round(rawClient * 1000) / 1000
-          : 0;
+          : wantsTrim && trimDuration
+            ? Math.min(trimDuration, VIDEO_MAX_DURATION_SEC)
+            : 0;
 
       const clientWithinMax =
         client_s > 0 && client_s <= VIDEO_MAX_DURATION_SEC + 0.05;
@@ -225,9 +293,9 @@ router.post("/video", requireAuth, (req, res) => {
       }
 
       const stream = await uploadVideoToStream(
-        req.file.buffer,
-        req.file.originalname || "video.mp4",
-        req.file.mimetype,
+        uploadBuffer,
+        uploadName,
+        uploadMime,
         // Mismo margen que aceptamos arriba: un trim por keyframes puede
         // quedar unas décimas sobre 60s y Stream rechaza lo que exceda el tope.
         { maxDurationSeconds: VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC }
@@ -254,6 +322,7 @@ router.post("/video", requireAuth, (req, res) => {
         thumbnail_url: stream.thumbnail_url,
         duration_s,
         stream_uid: stream.stream_uid,
+        trimmed: Boolean(wantsTrim),
       });
     } catch (e) {
       console.error("[upload/video] error:", e?.message, e?.stack);

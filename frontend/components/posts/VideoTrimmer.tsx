@@ -9,10 +9,8 @@ import {
 } from 'react'
 import {
   clipNeedsTrim,
-  createGestureAudioContext,
   trimErrorMessage,
-  trimWithPlaybackRecorder,
-  withTimeout,
+  type TrimWindow,
 } from '@/lib/trim-clip'
 
 const BG = '#FFFFFF'
@@ -35,13 +33,17 @@ const MAX_SEL_SEC = 60
 const MIN_GAP_SEC = 0.1
 
 type Props = {
-  onVideoReady: (file: File, durationSeconds: number) => void
+  onVideoReady: (
+    file: File,
+    durationSeconds: number,
+    trim?: TrimWindow | null
+  ) => void
   onCancel: () => void
-  /** Avisa al padre mientras se recorta, para no cerrar el modal. */
+  /** Avisa al padre mientras se prepara el clip, para no cerrar el modal. */
   onEncodingChange?: (encoding: boolean) => void
 }
 
-type EncodePhase = 'idle' | 'loading' | 'processing'
+type EncodePhase = 'idle' | 'preparing'
 
 function formatTime(sec: number) {
   if (!Number.isFinite(sec) || sec < 0) return '0:00'
@@ -89,8 +91,6 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
   const [processErr, setProcessErr] = useState<string | null>(null)
   const [encoding, setEncoding] = useState(false)
   const [encodePhase, setEncodePhase] = useState<EncodePhase>('idle')
-  const [ffProgress, setFfProgress] = useState(0)
-  const audioCtxRef = useRef<AudioContext | null>(null)
   const encodingRef = useRef(false)
 
   const encodingChangeRef = useRef(onEncodingChange)
@@ -99,18 +99,6 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
   useEffect(() => {
     encodingChangeRef.current?.(encoding)
   }, [encoding])
-
-  useEffect(() => {
-    return () => {
-      const ctx = audioCtxRef.current
-      audioCtxRef.current = null
-      if (ctx && ctx.state !== 'closed') {
-        void ctx.close().catch(() => {
-          /* noop */
-        })
-      }
-    }
-  }, [])
 
   const selected = useMemo(
     () => Math.max(0, endSec - startSec),
@@ -138,7 +126,6 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
     setProcessErr(null)
     setEncoding(false)
     setEncodePhase('idle')
-    setFfProgress(0)
   }, [url])
 
   const handleCancel = useCallback(() => {
@@ -266,55 +253,25 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
     // does not probe >60s and get rejected on upload.
     const exportLen = Math.min(clipLen, Math.max(MIN_GAP_SEC, MAX_SEL_SEC - 0.05))
     const clipDuration = Math.round(exportLen * 1000) / 1000
-    const onProgress = (pct: number) => {
-      if (Number.isFinite(pct)) setFfProgress(Math.max(0, Math.min(100, pct)))
-    }
 
-    // AudioContext must start in the click call stack (autoplay policy).
-    let audioCtx = audioCtxRef.current
-    if (!audioCtx || audioCtx.state === 'closed') {
-      audioCtx = createGestureAudioContext()
-      audioCtxRef.current = audioCtx
-    } else {
-      void audioCtx.resume()
-    }
     videoRef.current?.pause()
 
     encodingRef.current = true
     setEncoding(true)
-    setEncodePhase('loading')
-    setFfProgress(6)
+    setEncodePhase('preparing')
 
     try {
-      if (!clipNeedsTrim(startSec, endSec, totalSec, MAX_SEL_SEC)) {
-        setEncodePhase('processing')
-        onProgress(100)
-        onVideoReady(file, clipDuration)
-        return
-      }
-
-      setEncodePhase('processing')
-      const recordTimeoutMs = Math.max(45_000, exportLen * 2500 + 25_000)
-      const outFile = await withTimeout(
-        trimWithPlaybackRecorder({
-          srcUrl: url,
-          startSec,
-          durationSec: exportLen,
-          onProgress,
-          audioCtx,
-          sourceVideo: videoRef.current,
-        }),
-        recordTimeoutMs,
-        'El recorte tardó demasiado. Inténtalo de nuevo y no salgas de esta pantalla.'
-      )
-      onVideoReady(outFile, clipDuration)
+      const needsTrim = clipNeedsTrim(startSec, endSec, totalSec, MAX_SEL_SEC)
+      const trim: TrimWindow | null = needsTrim
+        ? { startSec, durationSec: exportLen }
+        : null
+      // Original file + trim window → backend ffmpeg (seconds). No real-time record.
+      onVideoReady(file, clipDuration, trim)
     } catch (e) {
       setProcessErr(trimErrorMessage(e))
-    } finally {
       encodingRef.current = false
       setEncoding(false)
       setEncodePhase('idle')
-      setFfProgress(0)
       const preview = videoRef.current
       if (preview && url) {
         preview.play().catch(() => {
@@ -325,12 +282,7 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
   }
 
   const hasVideo = Boolean(url && file)
-  const encodeStatus =
-    encodePhase === 'loading'
-      ? 'Preparando recorte…'
-      : ffProgress > 0
-        ? `Recortando video… ${ffProgress}%`
-        : 'Recortando video…'
+  const encodeStatus = 'Preparando clip…'
   const startPct = totalSec > 0 ? (startSec / totalSec) * 100 : 0
   const endPct = totalSec > 0 ? (endSec / totalSec) * 100 : 0
 
@@ -358,8 +310,8 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
       </div>
 
       <p className="text-sm" style={{ color: MUTED }}>
-        El recorte no puede exceder 1 minuto. Los extremos ajustan el tramo
-        en bucle mientras se reproduce.
+        Elige hasta 1 minuto. El recorte se aplica al publicar (segundos en el
+        servidor), no hace falta esperar la duración del clip.
       </p>
 
       <input
@@ -494,14 +446,12 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
             className="w-full rounded-lg py-3 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: ACCENT, ...jostTitle }}
           >
-            {encoding
-              ? `Procesando${ffProgress ? ` ${ffProgress}%` : '…'}`
-              : 'Usar este clip'}
+            {encoding ? 'Preparando…' : 'Usar este clip'}
           </button>
         </div>
       )}
 
-      {encoding && (
+      {encoding && encodePhase === 'preparing' && (
         <div
           className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-xl px-6 text-center"
           style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(2px)' }}
@@ -532,22 +482,8 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
           <p className="text-sm" style={{ color: TEXT, ...jostTitle, fontSize: 13 }}>
             {encodeStatus}
           </p>
-          <div
-            className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full"
-            style={{ background: TRACK_BG }}
-          >
-            <div
-              className="h-full rounded-full transition-[width] duration-200"
-              style={{
-                width: `${Math.min(100, Math.max(6, ffProgress))}%`,
-                background: ACCENT,
-                opacity: ffProgress > 0 ? 1 : 0.5,
-              }}
-            />
-          </div>
           <p className="text-xs" style={{ color: MUTED, ...lato }}>
-            Puede tardar lo mismo que el clip (hasta 1 min). No cierres esta
-            ventana.
+            Listo en un momento. El corte fino ocurre al publicar.
           </p>
         </div>
       )}

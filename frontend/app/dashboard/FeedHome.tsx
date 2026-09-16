@@ -582,12 +582,23 @@ function InlineSpinner({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   )
 }
 
-async function captureVideoThumbnail(file: File): Promise<string | null> {
+async function captureVideoThumbnail(
+  file: File,
+  seekSec?: number
+): Promise<string | null> {
   const url = URL.createObjectURL(file)
   const video = document.createElement('video')
   video.muted = true
   video.playsInline = true
+  video.setAttribute('playsinline', 'true')
+  video.setAttribute('webkit-playsinline', 'true')
   video.preload = 'auto'
+  // Avoid CORS taint on canvas for object URLs in some WebViews.
+  try {
+    video.crossOrigin = 'anonymous'
+  } catch {
+    /* noop */
+  }
   video.src = url
   const wait = (event: string, ms: number) =>
     new Promise<void>((resolve, reject) => {
@@ -606,7 +617,12 @@ async function captureVideoThumbnail(file: File): Promise<string | null> {
   try {
     await wait('loadeddata', 8000)
     const dur = Number.isFinite(video.duration) ? video.duration : 0
-    const seekTo = dur > 0.35 ? Math.min(0.25, dur * 0.1) : 0
+    const seekTo =
+      seekSec != null && Number.isFinite(seekSec) && seekSec >= 0
+        ? Math.min(seekSec, Math.max(0, dur - 0.05))
+        : dur > 0.35
+          ? Math.min(0.25, dur * 0.1)
+          : 0
     if (seekTo > 0) {
       video.currentTime = seekTo
       try {
@@ -678,6 +694,8 @@ export function PostBox({
     duration: number
     previewUrl: string
     thumbUrl: string | null
+    /** Present when backend must ffmpeg-cut before Stream upload. */
+    trim?: { startSec: number; durationSec: number } | null
   } | null>(null)
   const [showVideoTrimmer, setShowVideoTrimmer] = useState(false)
   const [videoEncoding, setVideoEncoding] = useState(false)
@@ -805,9 +823,9 @@ export function PostBox({
       let videoDurationS: number | null = null
       if (pendingVideo) {
         setPublishStage('video')
-        const VIDEO_MAX_BYTES = 100 * 1024 * 1024
+        const VIDEO_MAX_BYTES = 250 * 1024 * 1024
         if (pendingVideo.file.size > VIDEO_MAX_BYTES) {
-          setPublishError('El video excede el tamaño máximo (100MB).')
+          setPublishError('El video excede el tamaño máximo (250MB).')
           setPublishing(false)
           setPublishStage(null)
           return
@@ -815,11 +833,26 @@ export function PostBox({
         console.log(
           '[PostBox] enviando video, tamaño:',
           pendingVideo.file.size,
-          'bytes'
+          'bytes',
+          'trim:',
+          pendingVideo.trim ?? null
         )
-        const v = await uploadVideo(pendingVideo.file, {
-          durationSeconds: pendingVideo.duration,
-        })
+        let v
+        try {
+          v = await uploadVideo(pendingVideo.file, {
+            durationSeconds: pendingVideo.duration,
+            trim: pendingVideo.trim ?? null,
+          })
+        } catch (uploadErr) {
+          const msg =
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : 'Error desconocido'
+          setPublishError(`No se pudo subir el video: ${msg}`)
+          setPublishing(false)
+          setPublishStage(null)
+          return
+        }
         videoUrl = v.video_url
         videoMp4Url = v.video_mp4_url ?? null
         videoThumbnailUrl = v.thumbnail_url ?? null
@@ -922,7 +955,9 @@ export function PostBox({
     publishStage === 'photos'
       ? 'SUBIENDO FOTOS…'
       : publishStage === 'video'
-        ? 'SUBIENDO VIDEO…'
+        ? pendingVideo?.trim
+          ? 'SUBIENDO Y RECORTANDO VIDEO…'
+          : 'SUBIENDO VIDEO…'
         : 'PUBLICANDO…'
 
   if (!expanded) {
@@ -1089,14 +1124,23 @@ export function PostBox({
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <video
-                  src={pendingVideo.previewUrl}
-                  muted
-                  playsInline
-                  className="h-full w-full object-cover"
-                  preload="metadata"
-                />
+                /* Never use <video> here: failed blobs show literal "Load failed". */
+                <div
+                  className="flex h-full w-full items-center justify-center bg-[#222222]"
+                  aria-hidden
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="text-white/80"
+                  >
+                    <path d="M8 5v14l11-7L8 5z" />
+                  </svg>
+                </div>
               )}
+              {pendingVideo.thumbUrl ? (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <svg
                   width="20"
@@ -1109,6 +1153,7 @@ export function PostBox({
                   <path d="M8 5v14l11-7L8 5z" />
                 </svg>
               </div>
+              ) : null}
               <button
                 type="button"
                 onClick={clearPendingVideo}
@@ -1237,7 +1282,7 @@ export function PostBox({
           </div>
           {publishStage === 'video' ? (
             <p className="mt-2 text-right text-[11px] text-[#777777]" style={lato}>
-              Procesando el video… puede tardar unos segundos.
+              Subiendo el video… el recorte en servidor suele tardar unos segundos.
             </p>
           ) : null}
         </div>
@@ -1265,12 +1310,15 @@ export function PostBox({
             onMouseDown={(e) => e.stopPropagation()}
           >
             <VideoTrimmer
-              onVideoReady={(file, durationSeconds) => {
+              onVideoReady={(file, durationSeconds, trim) => {
                 void (async () => {
                   const previewUrl = URL.createObjectURL(file)
                   let thumbUrl: string | null = null
                   try {
-                    thumbUrl = await captureVideoThumbnail(file)
+                    thumbUrl = await captureVideoThumbnail(
+                      file,
+                      trim?.startSec
+                    )
                   } catch {
                     thumbUrl = null
                   }
@@ -1287,6 +1335,7 @@ export function PostBox({
                       duration: durationSeconds,
                       previewUrl,
                       thumbUrl,
+                      trim: trim ?? null,
                     }
                   })
                   setVideoEncoding(false)

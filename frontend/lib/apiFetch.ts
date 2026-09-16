@@ -61,7 +61,12 @@ export type VideoUploadResult = {
  */
 export async function uploadVideo(
   file: File,
-  opts?: { durationSeconds?: number; timeoutMs?: number }
+  opts?: {
+    durationSeconds?: number
+    /** Server-side ffmpeg window (preferred over client MediaRecorder). */
+    trim?: { startSec: number; durationSec: number } | null
+    timeoutMs?: number
+  }
 ): Promise<VideoUploadResult> {
   const formData = new FormData()
   formData.append('file', file, file.name)
@@ -72,8 +77,20 @@ export async function uploadVideo(
   ) {
     formData.append('duration_s', String(opts.durationSeconds))
   }
+  const trim = opts?.trim
+  if (
+    trim &&
+    Number.isFinite(trim.startSec) &&
+    Number.isFinite(trim.durationSec) &&
+    trim.durationSec > 0
+  ) {
+    formData.append('trim_start_s', String(trim.startSec))
+    formData.append('trim_duration_s', String(trim.durationSec))
+  }
 
-  const timeoutMs = opts?.timeoutMs ?? 120_000
+  // Large source + server trim + Stream ready can exceed 2 minutes.
+  const timeoutMs =
+    opts?.timeoutMs ?? (trim ? 300_000 : 180_000)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response
@@ -103,7 +120,7 @@ export async function uploadVideo(
     error?: string
   }
   if (!res.ok) {
-    throw new Error(json.error || 'Error al subir el video')
+    throw new Error(json.error || 'No se pudo subir el video')
   }
   if (!json.video_url) {
     throw new Error('Respuesta inválida del servidor (video)')
