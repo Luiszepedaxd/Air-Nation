@@ -23,7 +23,9 @@
     "stress:sim300:light": "node stress-tests/tournament-sim-300.js --auth-users=10 --workers=300",
     "stress:sim300:noclean": "node stress-tests/tournament-sim-300.js --no-cleanup",
     "stress:local": "node stress-tests/local-sim-300.js",
-    "stress:local:500": "node stress-tests/local-sim-300.js --workers=500"
+    "stress:local:500": "node stress-tests/local-sim-300.js --workers=500",
+    "indexnow": "node scripts/indexnow.js",
+    "indexnow:ranking": "node scripts/indexnow.js --ranking"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1035.0",
