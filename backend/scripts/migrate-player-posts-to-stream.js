@@ -287,7 +287,8 @@ async function migrateOne(supabase, item, dryRun) {
     stream.duration_s != null &&
     stream.duration_s > 0
   ) {
-    patch.video_duration_s = Math.round(stream.duration_s * 1000) / 1000
+    // video_duration_s es smallint en Supabase — no aceptar decimales (ej. 29.9).
+    patch.video_duration_s = Math.max(1, Math.round(Number(stream.duration_s)))
   }
 
   const { error: updErr } = await supabase.from(table).update(patch).eq('id', id)
