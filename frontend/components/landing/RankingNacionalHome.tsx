@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { RevealOnScroll } from '@/components/animations/RevealOnScroll'
+import { BotonSolicitudEvento } from '@/app/ranking/components/SolicitudEventoModal'
 import { TablaRanking } from '@/app/ranking/components/TablaRanking'
 import { fetchTablaRanking, fetchTemporadaActiva } from '@/lib/ranking'
 import { TEXTOS_HOME } from '@/lib/ranking-contenido'
@@ -82,12 +83,12 @@ export default async function RankingNacionalHome() {
                 {' · '}
                 {TEXTOS_HOME.orgPrecioDespues}
               </p>
-              <Link
-                href="/ranking#organizadores"
+              <BotonSolicitudEvento
+                origen="home"
                 className="mt-8 inline-flex w-full items-center justify-center bg-[#CC4B37] px-6 py-4 font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90 sm:w-auto"
               >
                 {TEXTOS_HOME.orgCta}
-              </Link>
+              </BotonSolicitudEvento>
               <Link
                 href="/ranking#puntos"
                 className="group mt-5 inline-flex items-center gap-2 font-body text-[0.7rem] font-bold uppercase tracking-[0.18em] text-white/60 hover:text-white"

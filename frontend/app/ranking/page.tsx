@@ -5,7 +5,6 @@ import Navbar from '@/components/landing/Navbar'
 import Footer from '@/components/landing/Footer'
 import { RevealOnScroll } from '@/components/animations/RevealOnScroll'
 import {
-  CONTACTO_ORGANIZADORES,
   DISCIPLINA_LABELS,
   FACTORES_TAMANO,
   NIVELES_RANKING,
@@ -33,6 +32,7 @@ import {
   TEXTOS_TRANSPARENCIA,
 } from '@/lib/ranking-contenido'
 import { BadgeCapturaAirNation } from './components/BadgeCapturaAirNation'
+import { BotonSolicitudEvento } from './components/SolicitudEventoModal'
 import { TablaRanking } from './components/TablaRanking'
 
 export const revalidate = 300
@@ -139,9 +139,6 @@ export default async function RankingPage() {
       ])
     : [[], []]
 
-  const jugadoresEnTabla = filas.length
-  const eventosQueCuentan = eventos.length
-
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -164,7 +161,7 @@ export default async function RankingPage() {
       <Navbar />
 
       {/* HERO */}
-      <section className="relative bg-[#111111] px-5 pb-16 pt-28 sm:px-8 sm:pb-20 sm:pt-32">
+      <section className="relative bg-[#111111] px-5 pb-12 pt-24 sm:px-8 sm:pb-14 sm:pt-28">
         <div className="mx-auto max-w-7xl">
           <RevealOnScroll>
             <div className="max-w-3xl">
@@ -188,34 +185,7 @@ export default async function RankingPage() {
                 {HERO_RANKING.subtitulo}
               </p>
 
-              <div className="mt-10 grid gap-4 sm:grid-cols-3">
-                <div className="border border-white/10 bg-white/5 px-4 py-4">
-                  <p className="font-display text-2xl font-black tabular-nums text-white">
-                    {temporada ? jugadoresEnTabla : '—'}
-                  </p>
-                  <p className="mt-1 font-body text-[0.7rem] uppercase tracking-[0.12em] text-white/60">
-                    {HERO_RANKING.statJugadores}
-                  </p>
-                </div>
-                <div className="border border-white/10 bg-white/5 px-4 py-4">
-                  <p className="font-display text-2xl font-black tabular-nums text-white">
-                    {temporada ? eventosQueCuentan : '—'}
-                  </p>
-                  <p className="mt-1 font-body text-[0.7rem] uppercase tracking-[0.12em] text-white/60">
-                    {HERO_RANKING.statEventos}
-                  </p>
-                </div>
-                <div className="border border-[#CC4B37]/40 bg-[#CC4B37]/10 px-4 py-4">
-                  <p className="font-display text-lg font-black uppercase text-[#CC4B37]">
-                    Gratis
-                  </p>
-                  <p className="mt-1 font-body text-[0.7rem] uppercase tracking-[0.12em] text-white/60">
-                    {HERO_RANKING.statGratis}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#tabla"
                   className="inline-flex items-center justify-center bg-[#CC4B37] px-8 py-[1.1rem] font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90"
@@ -629,12 +599,10 @@ export default async function RankingPage() {
                 <p className="mt-4 font-body text-[14px] leading-relaxed text-white/70">
                   {TEXTOS_ORGANIZADORES.fundador}
                 </p>
-                <a
-                  href={CONTACTO_ORGANIZADORES}
+                <BotonSolicitudEvento
+                  origen="ranking"
                   className="mt-8 inline-flex w-full items-center justify-center bg-[#CC4B37] px-6 py-4 font-body text-[0.75rem] font-bold uppercase tracking-[0.18em] text-white transition-opacity hover:opacity-90 sm:w-auto"
-                >
-                  {TEXTOS_ORGANIZADORES.cta}
-                </a>
+                />
               </div>
             </RevealOnScroll>
           </div>

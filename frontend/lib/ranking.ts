@@ -216,8 +216,6 @@ export const PRECIO_TARIFA_ESTANDAR = 29
 export const DIAS_PAGO_TARIFA_AIRNATION = 7
 export const FECHA_FIN_GRATIS_TEXTO = '28 de febrero de 2027'
 export const TOPE_BONO_PORCENTAJE = 30
-export const CONTACTO_ORGANIZADORES =
-  'mailto:info@airnation.online?subject=Quiero%20que%20mi%20evento%20cuente%20en%20el%20Ranking%20Nacional'
 
 export function factorPorJugadores(n: number): number {
   if (n < 6) return 0

@@ -77,4 +77,43 @@ export const api = {
       };
     },
   },
+
+  ranking: {
+    solicitarEvento: async (body: {
+      nombre: string;
+      whatsapp: string;
+      email?: string | null;
+      organizacion: string;
+      tipo_evento: string;
+      ciudad: string;
+      jugadores_esperados?: string | null;
+      fecha_aproximada?: string | null;
+      mensaje?: string | null;
+      user_id?: string | null;
+      origen?: string | null;
+      sitio_web?: string;
+    }): Promise<{ success: boolean; error?: string; id?: string }> => {
+      const res = await fetch(`${BASE_URL}/ranking/solicitudes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+        id?: string;
+      };
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data.error || `Error ${res.status}`,
+        };
+      }
+      return {
+        success: data.success === true,
+        error: data.error,
+        id: data.id,
+      };
+    },
+  },
 };

@@ -37,6 +37,7 @@ import {
   type RankingFila,
   type RankingTemporada,
 } from '@/lib/ranking'
+import { SolicitudEventoModal } from '@/app/ranking/components/SolicitudEventoModal'
 import { TEXTOS_FEED } from '@/lib/ranking-contenido'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
@@ -3228,27 +3229,36 @@ function EventosTab({
 }
 
 function OrganizadoresRankingBanner() {
+  const [modalOpen, setModalOpen] = useState(false)
   return (
-    <Link
-      href="/ranking#organizadores"
-      style={jost}
-      className="mb-4 flex items-center justify-between bg-[#CC4B37] px-4 py-4"
-    >
-      <div>
-        <p className="text-[12px] font-extrabold uppercase tracking-wide text-[#FFFFFF]">
-          {TEXTOS_FEED.bannerTitulo}
-        </p>
-        <p
-          className="mt-0.5 text-[11px] font-normal uppercase tracking-wide text-white/75"
-          style={{ fontFamily: "'Lato', sans-serif", textTransform: 'none', fontWeight: 400 }}
-        >
-          {TEXTOS_FEED.bannerTexto}
-        </p>
-      </div>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginLeft: 12 }}>
-        <path d="M5 12h14M13 6l6 6-6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    </Link>
+    <>
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        style={jost}
+        className="mb-4 flex w-full items-center justify-between bg-[#CC4B37] px-4 py-4 text-left"
+      >
+        <div>
+          <p className="text-[12px] font-extrabold uppercase tracking-wide text-[#FFFFFF]">
+            {TEXTOS_FEED.bannerTitulo}
+          </p>
+          <p
+            className="mt-0.5 text-[11px] font-normal uppercase tracking-wide text-white/75"
+            style={{ fontFamily: "'Lato', sans-serif", textTransform: 'none', fontWeight: 400 }}
+          >
+            {TEXTOS_FEED.bannerTexto}
+          </p>
+        </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginLeft: 12 }}>
+          <path d="M5 12h14M13 6l6 6-6 6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      <SolicitudEventoModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        origen="feed"
+      />
+    </>
   )
 }
 

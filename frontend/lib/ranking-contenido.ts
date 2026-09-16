@@ -53,12 +53,47 @@ export const HERO_RANKING = {
   titulo: 'RANKING NACIONAL',
   subtitulo:
     'Juega, suma puntos y compite por ser el número 1 del airsoft en México.',
-  statJugadores: 'jugadores en la tabla',
-  statEventos: 'eventos que cuentan',
-  statGratis: 'Gratis para jugadores',
   botonTabla: 'VER TABLA',
   botonOrganizador: 'SOY ORGANIZADOR',
 }
+
+export const TEXTOS_SOLICITUD = {
+  titulo: 'QUE TU EVENTO CUENTE',
+  intro:
+    'Déjanos tus datos y te contactamos por WhatsApp para sumar tu evento al Ranking Nacional. Es gratis hasta el 28 de febrero de 2027.',
+  nombre: 'TU NOMBRE',
+  nombrePlaceholder: '¿Cómo te llamas?',
+  whatsapp: 'WHATSAPP',
+  whatsappPlaceholder: '10 dígitos',
+  email: 'CORREO (OPCIONAL)',
+  emailPlaceholder: 'tu@correo.com',
+  organizacion: 'NOMBRE DE TU EVENTO U ORGANIZACIÓN',
+  organizacionPlaceholder: 'Ej. Airsoft Mexican Games',
+  tipoEvento: '¿QUÉ TIPO DE EVENTO HACES?',
+  tiposEvento: [
+    'Dominguera',
+    'Torneo',
+    'Speedsoft',
+    'Milsim o evento grande',
+    'Circuito',
+    'Otro',
+  ],
+  ciudad: 'CIUDAD',
+  ciudadPlaceholder: '¿Dónde se juega?',
+  jugadores: '¿CUÁNTOS JUGADORES ESPERAS?',
+  jugadoresOpciones: ['Menos de 15', '15 a 40', '40 a 100', 'Más de 100'],
+  fecha: '¿CUÁNDO ES TU PRÓXIMO EVENTO? (OPCIONAL)',
+  fechaPlaceholder: 'Ej. noviembre o 15 de diciembre',
+  mensaje: '¿ALGO MÁS QUE QUIERAS CONTARNOS? (OPCIONAL)',
+  mensajePlaceholder: 'Formato, reglas, dudas…',
+  enviar: 'ENVIAR SOLICITUD',
+  enviando: 'ENVIANDO…',
+  errorCampos: 'Revisa los campos marcados.',
+  errorGeneral: 'No se pudo enviar. Intenta de nuevo.',
+  exitoTitulo: '¡LISTO!',
+  exitoTexto: 'Recibimos tu solicitud. Te escribimos pronto por WhatsApp.',
+  cerrar: 'CERRAR',
+} as const
 
 export const PASOS_RANKING: TarjetaTexto[] = [
   {
