@@ -79,7 +79,7 @@ export function PlayerPostsTab({ userId }: { userId: string }) {
     const { data, error } = await supabase
       .from('player_posts')
       .select(
-        'id, user_id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, published, created_at'
+        'id, user_id, content, fotos_urls, video_url, video_mp4_url, published, created_at'
       )
       .eq('user_id', userId)
       .eq('published', true)

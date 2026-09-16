@@ -103,7 +103,7 @@ export default async function PerfilPage({
     supabase
       .from('player_posts')
       .select(
-        'id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, created_at'
+        'id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, created_at'
       )
       .eq('user_id', authUser.id)
       .eq('published', true)
