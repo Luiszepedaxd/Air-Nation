@@ -5,6 +5,7 @@ export const revalidate = 3600
 import type { MetadataRoute } from 'next'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createClient } from '@/lib/supabase/server'
+import { MIN_CARACTERES_EQUIPO_INDEXABLE } from '@/lib/seo'
 
 const BASE = 'https://www.airnation.online'
 
@@ -43,10 +44,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     rankingEventEntries = []
   }
 
+  let fieldEntries: MetadataRoute.Sitemap = []
+  try {
+    const sb = createPublicSupabaseClient()
+    const { data, error } = await sb
+      .from('fields')
+      .select('slug, created_at')
+      .eq('status', 'aprobado')
+    if (error) {
+      console.error('[sitemap] campos:', error.message)
+    } else if (data) {
+      fieldEntries = data
+        .filter((row) => row.slug)
+        .map((row) => ({
+          url: `${BASE}/campos/${row.slug}`,
+          lastModified: new Date(row.created_at),
+          changeFrequency: 'monthly' as const,
+          priority: 0.7,
+        }))
+    }
+  } catch {
+    fieldEntries = []
+  }
+
   const staticEntries: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, priority: 1, changeFrequency: 'weekly' },
     { url: `${BASE}/blog`, priority: 0.9, changeFrequency: 'daily' },
     { url: `${BASE}/campos`, priority: 0.9, changeFrequency: 'daily' },
+    ...fieldEntries,
     { url: `${BASE}/equipos`, priority: 0.8, changeFrequency: 'daily' },
     { url: `${BASE}/eventos`, priority: 0.8, changeFrequency: 'daily' },
     {
@@ -78,36 +103,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     postEntries = []
   }
 
-  let fieldEntries: MetadataRoute.Sitemap = []
-  try {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('fields')
-      .select('slug, created_at')
-      .eq('status', 'approved')
-    if (!error && data) {
-      fieldEntries = data
-        .filter((row) => row.slug)
-        .map((row) => ({
-          url: `${BASE}/campos/${row.slug}`,
-          lastModified: new Date(row.created_at),
-          changeFrequency: 'weekly' as const,
-          priority: 0.7,
-        }))
-    }
-  } catch {
-    fieldEntries = []
-  }
-
   let teamEntries: MetadataRoute.Sitemap = []
   try {
     const supabase = createClient()
     const { data, error } = await supabase
       .from('teams')
-      .select('slug, created_at')
+      .select('slug, created_at, descripcion')
+      .eq('status', 'activo')
     if (!error && data) {
       teamEntries = data
-        .filter((row) => row.slug)
+        .filter((row) => {
+          if (!row.slug) return false
+          const desc = (row.descripcion ?? '').trim()
+          return desc.length >= MIN_CARACTERES_EQUIPO_INDEXABLE
+        })
         .map((row) => ({
           url: `${BASE}/equipos/${row.slug}`,
           lastModified: new Date(row.created_at),
@@ -142,7 +151,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticEntries,
     ...rankingEventEntries,
     ...postEntries,
-    ...fieldEntries,
     ...teamEntries,
     ...eventEntries,
   ]

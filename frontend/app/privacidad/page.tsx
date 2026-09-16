@@ -6,12 +6,25 @@ const jost = {
   textTransform: 'uppercase' as const,
 } as const
 
+const PRIVACIDAD_DESCRIPTION =
+  'Aviso de privacidad de AirNation: qué datos personales recopilamos, para qué los usamos, cómo los protegemos y cómo ejercer tus derechos ARCO en México.'
+
 export const metadata: Metadata = {
   title: 'Aviso de Privacidad | AirNation',
-  description:
-    'Conoce cómo AirNation protege y trata tus datos personales conforme a la LFPDPPP.',
+  description: PRIVACIDAD_DESCRIPTION,
   alternates: {
     canonical: 'https://www.airnation.online/privacidad',
+  },
+  openGraph: {
+    title: 'Aviso de Privacidad | AirNation',
+    description: PRIVACIDAD_DESCRIPTION,
+    url: 'https://www.airnation.online/privacidad',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Aviso de Privacidad | AirNation',
+    description: PRIVACIDAD_DESCRIPTION,
   },
 }
 

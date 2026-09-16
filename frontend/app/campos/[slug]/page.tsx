@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { ajustarDescripcion, unirPartes } from '@/lib/seo'
 import { cache } from 'react'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
@@ -168,24 +169,40 @@ export async function generateMetadata({
   if (!field) {
     return { title: 'Campo — AirNation' }
   }
-  const desc =
-    field.descripcion?.trim() ||
-    `Campo de airsoft en ${field.ciudad || 'México'} — AirNation`
+  const descripcionPropia = field.descripcion?.trim() ?? ''
+  const ubicacion = unirPartes([field.ciudad])
+  const title = `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`
+  const description =
+    descripcionPropia.length >= 100
+      ? ajustarDescripcion(
+          `${field.nombre}, campo de airsoft${ubicacion ? ` en ${ubicacion}` : ''}. ${descripcionPropia}`
+        )
+      : ajustarDescripcion(
+          `${field.nombre} es un campo de airsoft${ubicacion ? ` en ${ubicacion}` : ''}. Consulta ubicación, horarios, precios, tipo de terreno y próximos eventos en AirNation, la comunidad de airsoft en México.`
+        )
 
   return {
-    title: `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`,
-    description: desc,
+    title,
+    description,
     alternates: {
       canonical: `https://www.airnation.online/campos/${field.slug}`,
     },
     openGraph: {
-      title: `${field.nombre} — Campo de Airsoft en ${field.ciudad ?? 'México'} | AirNation`,
-      description: desc,
+      title,
+      description,
       url: `https://www.airnation.online/campos/${field.slug}`,
       type: 'website',
       images: field.foto_portada_url
         ? [{ url: field.foto_portada_url, width: 1200, height: 630 }]
         : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: field.foto_portada_url
+        ? [field.foto_portada_url]
+        : ['https://www.airnation.online/og-default.jpg'],
     },
   }
 }

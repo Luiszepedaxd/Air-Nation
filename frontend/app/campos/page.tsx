@@ -6,12 +6,25 @@ import type { CampoListRow } from './types'
 
 export const revalidate = 60
 
+const CAMPOS_DESCRIPTION =
+  'Encuentra campos de airsoft y gotcha en México. Consulta ubicación, horarios, precios y tipo de terreno, y descubre dónde jugar cerca de ti con AirNation.'
+
 export const metadata: Metadata = {
   title: 'Campos de airsoft en México — AirNation',
-  description:
-    'Encuentra campos de airsoft cerca de ti en México. Guadalajara, CDMX, Monterrey y más.',
+  description: CAMPOS_DESCRIPTION,
   alternates: {
     canonical: 'https://www.airnation.online/campos',
+  },
+  openGraph: {
+    title: 'Campos de airsoft en México — AirNation',
+    description: CAMPOS_DESCRIPTION,
+    url: 'https://www.airnation.online/campos',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Campos de airsoft en México — AirNation',
+    description: CAMPOS_DESCRIPTION,
   },
 }
 

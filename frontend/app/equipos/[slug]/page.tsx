@@ -1,5 +1,10 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import {
+  ajustarDescripcion,
+  MIN_CARACTERES_EQUIPO_INDEXABLE,
+  unirPartes,
+} from '@/lib/seo'
 import { cache } from 'react'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
@@ -354,24 +359,42 @@ export async function generateMetadata({
     return { title: 'AirNation' }
   }
 
-  const desc =
-    team.descripcion?.trim() ||
-    `Equipo de airsoft en ${team.ciudad || 'México'} — AirNation`
+  const descripcionPropia = team.descripcion?.trim() ?? ''
+  const ubicacion = unirPartes([team.ciudad])
+  const title = `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`
+  const description =
+    descripcionPropia.length >= 100
+      ? ajustarDescripcion(`${team.nombre}: ${descripcionPropia}`)
+      : ajustarDescripcion(
+          `${team.nombre} es un equipo de airsoft${ubicacion ? ` de ${ubicacion}` : ''}. Conoce a sus integrantes, su historia y los eventos en los que participa en AirNation, la comunidad de airsoft en México.`
+        )
+
+  const indexable =
+    descripcionPropia.length >= MIN_CARACTERES_EQUIPO_INDEXABLE
 
   return {
-    title: `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`,
-    description: desc,
+    title,
+    description,
+    ...(indexable ? {} : { robots: { index: false, follow: true } }),
     alternates: {
       canonical: `https://www.airnation.online/equipos/${team.slug}`,
     },
     openGraph: {
-      title: `${team.nombre} — Equipo de Airsoft en ${team.ciudad ?? 'México'} | AirNation`,
-      description: desc,
+      title,
+      description,
       url: `https://www.airnation.online/equipos/${team.slug}`,
       type: 'website',
       images: team.foto_portada_url
         ? [{ url: team.foto_portada_url, width: 1200, height: 630 }]
         : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: team.foto_portada_url
+        ? [team.foto_portada_url]
+        : ['https://www.airnation.online/og-default.jpg'],
     },
   }
 }
