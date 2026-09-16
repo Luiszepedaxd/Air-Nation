@@ -9,7 +9,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent,
   type ReactNode,
 } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
@@ -30,6 +29,8 @@ import { CropModal } from '@/components/posts/CropModal'
 import { MentionInput } from '@/components/posts/MentionInput'
 import { VideoTrimmer } from '@/components/posts/VideoTrimmer'
 import { PostContent } from '@/components/feed/PostContent'
+import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
+import { feedAvatarUrl } from '@/lib/media-url'
 import { TablaRanking } from '@/app/ranking/components/TablaRanking'
 import {
   fetchTablaRanking,
@@ -44,149 +45,8 @@ const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-/** Video estilo reel (9:16 por defecto; 16:9 si el archivo es horizontal). Tap: play/pause. */
-export function FeedInlineVideo({
-  src,
-  videoMp4Url,
-}: {
-  src: string
-  videoMp4Url?: string | null
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const [videoError, setVideoError] = useState(false)
-  const [retryCount, setRetryCount] = useState(0)
-  const [isMuted, setIsMuted] = useState(true)
-  const [isLandscape, setIsLandscape] = useState<boolean | null>(null)
-
-  const aspectClass =
-    isLandscape === true ? 'aspect-video' : 'aspect-[9/16]'
-
-  // Retry automático cada 15s hasta 8 veces
-  useEffect(() => {
-    if (!videoError || retryCount >= 8) return
-    const timer = setTimeout(() => {
-      setVideoError(false)
-      setRetryCount((n) => n + 1)
-    }, 15_000)
-    return () => clearTimeout(timer)
-  }, [videoError, retryCount])
-
-  useEffect(() => {
-    if (retryCount === 0) return
-    videoRef.current?.load()
-  }, [retryCount])
-
-  // Autoplay solo cuando el video entra al viewport
-  useEffect(() => {
-    const el = videoRef.current
-    const wrap = wrapRef.current
-    if (!el || !wrap) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            void el.play().catch(() => {
-              /* bloqueado por browser, ok */
-            })
-          } else {
-            el.pause()
-          }
-        }
-      },
-      { threshold: 0.4 }
-    )
-    observer.observe(wrap)
-    return () => observer.disconnect()
-  }, [videoError])
-
-  const togglePlayPause = () => {
-    const el = videoRef.current
-    if (!el) return
-    if (el.paused) void el.play()
-    else el.pause()
-  }
-
-  const toggleMute = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation()
-    setIsMuted((m) => !m)
-  }
-
-  if (videoError) {
-    return (
-      <div
-        className={`flex w-full flex-col items-center justify-center bg-black ${aspectClass}`}
-      >
-        <p className="mt-3 text-center text-sm text-white" style={lato}>
-          {retryCount >= 8 ? 'No se pudo cargar el video.' : 'Procesando video…'}
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      ref={wrapRef}
-      className={`relative block w-full overflow-hidden bg-black ${aspectClass}`}
-    >
-      <video
-        ref={videoRef}
-        src={videoMp4Url ?? src}
-        width="100%"
-        height="100%"
-        className="absolute inset-0 h-full w-full cursor-pointer object-cover"
-        autoPlay
-        muted={isMuted}
-        playsInline
-        loop
-        onClick={togglePlayPause}
-        onLoadedMetadata={(e) => {
-          const v = e.currentTarget
-          setIsLandscape(v.videoWidth > v.videoHeight)
-        }}
-        onError={() => setVideoError(true)}
-      />
-      <button
-        type="button"
-        onClick={toggleMute}
-        className="absolute bottom-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-        aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
-      >
-        {isMuted ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M11 5L6 9H4v6h2l5 4V5z"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M15 9l6 6M21 9l-6 6"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
-        ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M11 5L6 9H4v6h2l5 4V5z"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M15.5 9.5a4 4 0 010 5M17 7a7 7 0 010 10"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
-        )}
-      </button>
-    </div>
-  )
-}
+/** Re-export para perfiles / eventos que importan desde FeedHome. */
+export { FeedInlineVideo }
 
 type Tab = 'feed' | 'eventos' | 'ranking' | 'equipos' | 'noticias' | 'videos'
 
@@ -364,7 +224,7 @@ type FeedItem =
 const FEED_SCROLL_Y_KEY = 'feed_scroll_y'
 const FEED_ITEMS_CACHE_KEY = 'feed_items_cache'
 const FEED_ITEMS_TS_KEY = 'feed_items_ts'
-const FEED_CACHE_MAX_MS = 5 * 60 * 1000
+const FEED_CACHE_MAX_MS = 30 * 60 * 1000
 
 type FeedTabSessionPayload = {
   items: FeedItem[]
@@ -434,6 +294,31 @@ function touchFeedItemsTimestamp() {
   } catch {
     /* ignore */
   }
+}
+
+function persistFeedScrollY() {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(getScrollTop()))
+  } catch {
+    /* ignore */
+  }
+}
+
+function restoreFeedScrollY() {
+  if (typeof window === 'undefined') return
+  const yRaw = sessionStorage.getItem(FEED_SCROLL_Y_KEY)
+  const y = yRaw != null ? Number(yRaw) : 0
+  const top = Number.isFinite(y) && y >= 0 ? y : 0
+  const apply = () => {
+    const container = getScrollContainer()
+    if (container instanceof Window) container.scrollTo(0, top)
+    else container.scrollTop = top
+  }
+  requestAnimationFrame(() => {
+    apply()
+    requestAnimationFrame(apply)
+  })
 }
 
 type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; url_externa: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
@@ -542,7 +427,7 @@ async function fetchHighlightFeedItem(
     const { data } = await supabase
       .from('player_posts')
       .select(
-        'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+        'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
       )
       .eq('id', postId)
       .eq('published', true)
@@ -1406,7 +1291,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         <Link href={`/equipos/${item.team.slug}`}>
           <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0">
             {item.team.logo_url
-              ? <img loading="lazy" decoding="async" src={item.team.logo_url} alt="" className="w-full h-full object-cover" />
+              ? <img loading="lazy" decoding="async" src={feedAvatarUrl(item.team.logo_url, 80)} alt="" className="w-full h-full object-cover" />
               : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{item.team.nombre[0]}</div>
             }
           </div>
@@ -1504,7 +1389,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
             <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
               {item.user.avatar_url
-                ? <img loading="lazy" decoding="async" src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <img loading="lazy" decoding="async" src={feedAvatarUrl(item.user.avatar_url)} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
               }
             </div>
@@ -1648,7 +1533,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
           <Link href={`/u/${item.user_id}`} className="flex min-w-0 flex-1 items-center gap-3 max-w-full">
             <div className="w-9 h-9 bg-[#F4F4F4] overflow-hidden shrink-0 rounded-full">
               {item.user.avatar_url
-                ? <img loading="lazy" decoding="async" src={item.user.avatar_url} alt="" className="w-full h-full object-cover" />
+                ? <img loading="lazy" decoding="async" src={feedAvatarUrl(item.user.avatar_url)} alt="" className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-[#CC4B37] text-sm font-bold" style={jost}>{name[0].toUpperCase()}</div>
               }
             </div>
@@ -2347,14 +2232,14 @@ function FeedTab({
           .limit(20),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', true)
           .limit(1),
         supabase.from('player_posts')
           .select(
-            'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+            'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
           )
           .eq('published', true)
           .eq('pinned', false)
@@ -2738,7 +2623,7 @@ function FeedTab({
           ? supabase
               .from('player_posts')
               .select(
-                'id, user_id, content, fotos_urls, video_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
+                'id, user_id, content, fotos_urls, video_url, video_mp4_url, video_duration_s, replica_id, mentions, created_at, pinned, users(alias, nombre, avatar_url, foto_portada_url, team_id)'
               )
               .eq('published', true)
               .eq('pinned', false)
@@ -2883,17 +2768,7 @@ function FeedTab({
       setLoading(false)
       loadingMoreRef.current = false
       setLoadingMore(false)
-      const yRaw = sessionStorage.getItem(FEED_SCROLL_Y_KEY)
-      const y = yRaw != null ? Number(yRaw) : 0
-      requestAnimationFrame(() => {
-        const top = Number.isFinite(y) && y >= 0 ? y : 0
-        const container = getScrollContainer()
-        if (container instanceof Window) {
-          container.scrollTo(0, top)
-        } else {
-          container.scrollTop = top
-        }
-      })
+      restoreFeedScrollY()
       // Stale-while-revalidate: muestra cache inmediato Y dispara fetch fresco
       // en background. itemsRef.current.length > 0 hará que load() sea silent.
       itemsRef.current = cached.items
@@ -2910,18 +2785,27 @@ function FeedTab({
     const onScroll = () => {
       if (timeoutId !== undefined) clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
-        try {
-          sessionStorage.setItem(FEED_SCROLL_Y_KEY, String(getScrollTop()))
-        } catch {
-          /* ignore */
-        }
+        persistFeedScrollY()
+        touchFeedItemsTimestamp()
       }, 150)
+    }
+    const flush = () => {
+      persistFeedScrollY()
+      touchFeedItemsTimestamp()
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') flush()
     }
     const scrollRoot = getScrollContainer()
     scrollRoot.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       scrollRoot.removeEventListener('scroll', onScroll)
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVis)
       if (timeoutId !== undefined) clearTimeout(timeoutId)
+      flush()
     }
   }, [])
 

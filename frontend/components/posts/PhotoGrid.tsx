@@ -1,6 +1,49 @@
 'use client'
 
 import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
+
+function FeedImg({
+  url,
+  priority,
+  className,
+}: {
+  url: string
+  priority?: boolean
+  className?: string
+}) {
+  const meta = feedPhotoSrcSet(url)
+  const [src, setSrc] = useState(meta.src)
+  const [srcSet, setSrcSet] = useState(meta.srcSet)
+  const fellBack = useRef(false)
+
+  useEffect(() => {
+    const next = feedPhotoSrcSet(url)
+    setSrc(next.src)
+    setSrcSet(next.srcSet)
+    fellBack.current = false
+  }, [url])
+
+  return (
+    <img
+      src={src}
+      srcSet={srcSet || undefined}
+      sizes={meta.sizes}
+      alt=""
+      className={className}
+      draggable={false}
+      loading={priority ? 'eager' : 'lazy'}
+      decoding="async"
+      {...(priority ? { fetchPriority: 'high' as const } : {})}
+      onError={() => {
+        if (fellBack.current) return
+        fellBack.current = true
+        setSrc(meta.original)
+        setSrcSet('')
+      }}
+    />
+  )
+}
 
 export function Lightbox({ urls, startIndex, onClose }: {
   urls: string[]
@@ -11,6 +54,8 @@ export function Lightbox({ urls, startIndex, onClose }: {
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
   const dragging = useRef(false)
+  const [lbSrc, setLbSrc] = useState(() => lightboxImageUrl(urls[startIndex] ?? ''))
+  const lbFellBack = useRef(false)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -21,6 +66,12 @@ export function Lightbox({ urls, startIndex, onClose }: {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [urls.length, onClose])
+
+  useEffect(() => {
+    const raw = urls[idx] ?? ''
+    setLbSrc(lightboxImageUrl(raw))
+    lbFellBack.current = false
+  }, [idx, urls])
 
   const onTouchStart = (e: TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
@@ -42,11 +93,9 @@ export function Lightbox({ urls, startIndex, onClose }: {
     const absDy = Math.abs(dy)
 
     if (absDx > absDy && absDx > 40) {
-      // swipe horizontal
       if (dx < 0) setIdx(i => Math.min(i + 1, urls.length - 1))
       else setIdx(i => Math.max(i - 1, 0))
     } else if (absDy > absDx && absDy > 80) {
-      // swipe vertical hacia abajo → cerrar
       if (dy > 0) onClose()
     }
 
@@ -58,6 +107,8 @@ export function Lightbox({ urls, startIndex, onClose }: {
     if (!dragging.current) onClose()
   }
 
+  const original = urls[idx] ?? ''
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 touch-none"
@@ -66,7 +117,6 @@ export function Lightbox({ urls, startIndex, onClose }: {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Botón cerrar */}
       <button
         onClick={e => { e.stopPropagation(); onClose() }}
         className="absolute top-4 right-4 text-white p-2 z-10"
@@ -77,7 +127,6 @@ export function Lightbox({ urls, startIndex, onClose }: {
         </svg>
       </button>
 
-      {/* Flecha anterior — solo desktop */}
       {urls.length > 1 && idx > 0 && (
         <button
           onClick={e => { e.stopPropagation(); setIdx(i => i - 1) }}
@@ -89,14 +138,19 @@ export function Lightbox({ urls, startIndex, onClose }: {
         </button>
       )}
 
-      {/* Imagen — SIN stopPropagation en touch */}
       <img
-        src={urls[idx]}
+        src={lbSrc}
         alt=""
+        loading="eager"
+        decoding="async"
         className="max-h-[90vh] max-w-[95vw] object-contain select-none pointer-events-none"
+        onError={() => {
+          if (lbFellBack.current || !original) return
+          lbFellBack.current = true
+          setLbSrc(original)
+        }}
       />
 
-      {/* Flecha siguiente — solo desktop */}
       {urls.length > 1 && idx < urls.length - 1 && (
         <button
           onClick={e => { e.stopPropagation(); setIdx(i => i + 1) }}
@@ -108,7 +162,6 @@ export function Lightbox({ urls, startIndex, onClose }: {
         </button>
       )}
 
-      {/* Dots indicadores */}
       {urls.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
           {urls.map((_, i) => (
@@ -125,7 +178,14 @@ export function Lightbox({ urls, startIndex, onClose }: {
   )
 }
 
-export function PhotoGrid({ urls }: { urls: string[] }) {
+export function PhotoGrid({
+  urls,
+  priorityCount = 1,
+}: {
+  urls: string[]
+  /** First N slides load eager (above-the-fold). */
+  priorityCount?: number
+}) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [current, setCurrent] = useState(0)
   const [dragging, setDragging] = useState(false)
@@ -247,11 +307,10 @@ export function PhotoGrid({ urls }: { urls: string[] }) {
                 if (!dragging) setLightboxIndex(i)
               }}
             >
-              <img
-                src={url}
-                alt=""
+              <FeedImg
+                url={url}
+                priority={i < priorityCount}
                 className="h-full w-full object-cover object-center pointer-events-none"
-                draggable={false}
               />
             </div>
           ))}
