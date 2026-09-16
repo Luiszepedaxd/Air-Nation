@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, type TouchEvent, type UIEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
 import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
 
@@ -186,8 +186,9 @@ export type PostMediaVideo = {
 }
 
 /**
- * Horizontal snap carousel for feed photos (and optional video slide).
- * Each slide is exactly the container width — neighbors stay clipped.
+ * Horizontal carousel for feed photos (and optional video slide).
+ * Uses transform (not overflow-x scroll) so vertical feed scroll still
+ * works when the finger starts on a photo — only horizontal locks the axis.
  */
 export function PhotoGrid({
   urls,
@@ -202,9 +203,11 @@ export function PhotoGrid({
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const [current, setCurrent] = useState(0)
-  const scrollerRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
   const dragMoved = useRef(false)
-  const pointerStart = useRef<{ x: number; y: number; scroll: number } | null>(null)
+  const axisLock = useRef<'x' | 'y' | null>(null)
+  const pointerStart = useRef<{ x: number; y: number; base: number } | null>(null)
 
   const photos = urls.filter(Boolean)
   const hasVideo = Boolean(video?.src)
@@ -212,36 +215,101 @@ export function PhotoGrid({
 
   if (slideCount === 0) return null
 
-  const onScroll = (e: UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget
-    const w = el.clientWidth
-    if (w <= 0) return
-    const next = Math.round(el.scrollLeft / w)
-    setCurrent(Math.max(0, Math.min(next, slideCount - 1)))
+  const slideWidth = () => viewportRef.current?.clientWidth ?? 0
+
+  const setTrackX = (x: number, animated: boolean) => {
+    const track = trackRef.current
+    if (!track) return
+    track.style.transition = animated
+      ? 'transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+      : 'none'
+    track.style.transform = `translate3d(${x}px,0,0)`
+  }
+
+  const goTo = (idx: number, animated = true) => {
+    const clamped = Math.max(0, Math.min(idx, slideCount - 1))
+    setCurrent(clamped)
+    setTrackX(-clamped * slideWidth(), animated)
   }
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (slideCount <= 1) return
     if (e.pointerType === 'mouse' && e.button !== 0) return
-    const el = scrollerRef.current
-    if (!el) return
+    const track = trackRef.current
+    if (!track) return
+    try {
+      track.setPointerCapture(e.pointerId)
+    } catch {
+      /* noop */
+    }
     dragMoved.current = false
+    axisLock.current = null
     pointerStart.current = {
       x: e.clientX,
       y: e.clientY,
-      scroll: el.scrollLeft,
+      base: -current * slideWidth(),
     }
+    setTrackX(-current * slideWidth(), false)
   }
 
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const start = pointerStart.current
-    if (!start) return
-    if (Math.abs(e.clientX - start.x) > 8 || Math.abs(e.clientY - start.y) > 8) {
-      dragMoved.current = true
+    if (!start || slideCount <= 1) return
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+
+    if (axisLock.current == null) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return
+      // Vertical intent → release and let the feed scroll.
+      if (Math.abs(dy) > Math.abs(dx)) {
+        axisLock.current = 'y'
+        pointerStart.current = null
+        try {
+          trackRef.current?.releasePointerCapture(e.pointerId)
+        } catch {
+          /* noop */
+        }
+        goTo(current, true)
+        return
+      }
+      axisLock.current = 'x'
     }
+
+    if (axisLock.current !== 'x') return
+
+    dragMoved.current = true
+    e.preventDefault()
+    const w = slideWidth()
+    const maxOffset = 0
+    const minOffset = -(slideCount - 1) * w
+    const raw = start.base + dx
+    const resistance = 0.25
+    let clamped = raw
+    if (raw > maxOffset) clamped = maxOffset + (raw - maxOffset) * resistance
+    if (raw < minOffset) clamped = minOffset + (raw - minOffset) * resistance
+    setTrackX(clamped, false)
   }
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const start = pointerStart.current
+    const lock = axisLock.current
     pointerStart.current = null
+    axisLock.current = null
+    if (slideCount <= 1 || !start || lock !== 'x') {
+      setTimeout(() => {
+        dragMoved.current = false
+      }, 10)
+      return
+    }
+    const dx = e.clientX - start.x
+    const w = slideWidth()
+    const threshold = Math.max(40, w * 0.18)
+    if (dx < -threshold && current < slideCount - 1) goTo(current + 1)
+    else if (dx > threshold && current > 0) goTo(current - 1)
+    else goTo(current)
+    setTimeout(() => {
+      dragMoved.current = false
+    }, 10)
   }
 
   return (
@@ -256,44 +324,49 @@ export function PhotoGrid({
 
       <div className="w-full min-w-0 select-none">
         <div
-          ref={scrollerRef}
-          className="scrollbar-hide flex w-full snap-x snap-mandatory flex-nowrap overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-          onScroll={onScroll}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          ref={viewportRef}
+          className="w-full overflow-hidden"
+          style={{ touchAction: 'pan-y' }}
         >
-          {photos.map((url, i) => (
-            <div
-              key={`photo-${i}`}
-              className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] snap-center snap-always overflow-hidden bg-[#F4F4F4]"
-              onClick={() => {
-                if (!dragMoved.current) setLightboxIndex(i)
-              }}
-            >
-              <FeedImg
-                url={url}
-                priority={i < priorityCount}
-                className="h-full w-full object-cover object-center pointer-events-none"
-              />
-            </div>
-          ))}
+          <div
+            ref={trackRef}
+            className="flex flex-nowrap will-change-transform"
+            style={{ transform: `translate3d(${-current * 100}%,0,0)` }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            {photos.map((url, i) => (
+              <div
+                key={`photo-${i}`}
+                className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-[#F4F4F4]"
+                onClick={() => {
+                  if (!dragMoved.current) setLightboxIndex(i)
+                }}
+              >
+                <FeedImg
+                  url={url}
+                  priority={i < priorityCount}
+                  className="pointer-events-none h-full w-full object-cover object-center"
+                />
+              </div>
+            ))}
 
-          {hasVideo && video ? (
-            <div
-              key="video"
-              className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] snap-center snap-always overflow-hidden bg-black"
-            >
-              <FeedInlineVideo
-                src={video.src}
-                videoMp4Url={video.videoMp4Url}
-                poster={video.poster}
-                forceSquare
-              />
-            </div>
-          ) : null}
+            {hasVideo && video ? (
+              <div
+                key="video"
+                className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-black"
+              >
+                <FeedInlineVideo
+                  src={video.src}
+                  videoMp4Url={video.videoMp4Url}
+                  poster={video.poster}
+                  forceSquare
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {slideCount > 1 && (
