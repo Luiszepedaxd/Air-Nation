@@ -836,6 +836,7 @@ export function PostBox({
       return
     }
     setPublishing(true)
+    setPublishError(null)
     setPublishStage(pendingPhotos.length > 0 ? 'photos' : pendingVideo ? 'video' : 'post')
     try {
       const urls: string[] = []
@@ -868,7 +869,9 @@ export function PostBox({
           pendingVideo.file.size,
           'bytes'
         )
-        const v = await uploadVideo(pendingVideo.file)
+        const v = await uploadVideo(pendingVideo.file, {
+          durationSeconds: pendingVideo.duration,
+        })
         videoUrl = v.video_url
         videoMp4Url = v.video_mp4_url ?? null
         const serverDur =
@@ -948,6 +951,13 @@ export function PostBox({
       onPublished()
     } catch (e) {
       console.error('[PostBox] handlePublish', e)
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === 'object' && e && 'message' in e
+            ? String((e as { message: unknown }).message)
+            : 'No se pudo publicar. Intenta de nuevo.'
+      setPublishError(msg || 'No se pudo publicar. Intenta de nuevo.')
     } finally {
       setPublishing(false)
       setPublishStage(null)

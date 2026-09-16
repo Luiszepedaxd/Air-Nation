@@ -53,11 +53,42 @@ export type VideoUploadResult = {
   duration_s: number
 }
 
-/** Sube un video a Cloudflare Stream (POST /upload/video). */
-export async function uploadVideo(file: File): Promise<VideoUploadResult> {
+/** Sube un video a R2 (POST /upload/video). Opcionalmente reporta duración del cliente. */
+export async function uploadVideo(
+  file: File,
+  opts?: { durationSeconds?: number; timeoutMs?: number }
+): Promise<VideoUploadResult> {
   const formData = new FormData()
   formData.append('file', file, file.name)
-  const res = await apiFetch('/upload/video', { method: 'POST', body: formData })
+  if (
+    opts?.durationSeconds != null &&
+    Number.isFinite(opts.durationSeconds) &&
+    opts.durationSeconds > 0
+  ) {
+    formData.append('duration_s', String(opts.durationSeconds))
+  }
+
+  const timeoutMs = opts?.timeoutMs ?? 120_000
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  let res: Response
+  try {
+    res = await apiFetch('/upload/video', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    })
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error(
+        'La subida del video tardó demasiado. Revisa tu conexión e intenta de nuevo.'
+      )
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
+
   const json = (await res.json()) as {
     video_url?: string
     video_mp4_url?: string | null

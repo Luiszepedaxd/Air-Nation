@@ -62,35 +62,44 @@ const upload = multer({
 
 /**
  * Probe media duration (seconds) via ffprobe. Writes buffer to a temp file.
+ * Hard-timeout so a missing/broken ffprobe never hangs POST /upload/video.
  * @returns {Promise<number|null>}
  */
+const FFPROBE_TIMEOUT_MS = 15000;
+
 function probeDurationSeconds(buffer, originalname) {
   const ext = path.extname(originalname || "") || ".mp4";
   const tmpPath = path.join(
     os.tmpdir(),
     `airnation-video-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`
   );
-  return fs.promises
-    .writeFile(tmpPath, buffer)
-    .then(
-      () =>
-        new Promise((resolve, reject) => {
-          ffmpeg.ffprobe(tmpPath, (err, data) => {
-            if (err) return reject(err);
-            const raw =
-              data && data.format && data.format.duration != null
-                ? Number(data.format.duration)
-                : NaN;
-            if (!Number.isFinite(raw) || raw <= 0) {
-              return resolve(null);
-            }
-            resolve(raw);
-          });
-        })
-    )
-    .finally(() => {
-      fs.promises.unlink(tmpPath).catch(() => {});
-    });
+
+  const probePromise = fs.promises.writeFile(tmpPath, buffer).then(
+    () =>
+      new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(tmpPath, (err, data) => {
+          if (err) return reject(err);
+          const raw =
+            data && data.format && data.format.duration != null
+              ? Number(data.format.duration)
+              : NaN;
+          if (!Number.isFinite(raw) || raw <= 0) {
+            return resolve(null);
+          }
+          resolve(raw);
+        });
+      })
+  );
+
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`ffprobe timeout after ${FFPROBE_TIMEOUT_MS}ms`));
+    }, FFPROBE_TIMEOUT_MS);
+  });
+
+  return Promise.race([probePromise, timeoutPromise]).finally(() => {
+    fs.promises.unlink(tmpPath).catch(() => {});
+  });
 }
 
 const router = express.Router();
@@ -143,6 +152,8 @@ router.post("/video", requireAuth, (req, res) => {
       return res.status(400).json({ error: "No se recibió ningún archivo" });
     }
     try {
+      // Soft-fail probe with timeout: never hang POST /upload/video.
+      // Prefer ffprobe; fall back to client-reported duration_s from the form.
       let duration_s = 0;
       try {
         const probed = await probeDurationSeconds(
@@ -154,13 +165,19 @@ router.post("/video", requireAuth, (req, res) => {
         }
       } catch (probeErr) {
         console.error(
-          "[upload/video] ffprobe error:",
+          "[upload/video] ffprobe skipped:",
           probeErr && probeErr.message ? probeErr.message : probeErr
         );
-        return res.status(400).json({
-          error:
-            "No se pudo verificar la duración del video. Prueba con otro archivo.",
-        });
+      }
+
+      if (!(duration_s > 0)) {
+        const rawClient =
+          req.body && req.body.duration_s != null
+            ? Number(req.body.duration_s)
+            : NaN;
+        if (Number.isFinite(rawClient) && rawClient > 0) {
+          duration_s = Math.round(rawClient * 1000) / 1000;
+        }
       }
 
       if (duration_s > VIDEO_MAX_DURATION_SEC + 0.05) {
