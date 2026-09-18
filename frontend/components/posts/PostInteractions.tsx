@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { sendPushNotif } from '@/lib/sendPushNotif'
 import { notifyNotifUpdated } from '@/lib/user-notifications'
+import {
+  engagementKey,
+  fetchPostEngagements,
+  type PostEngagementType,
+} from '@/lib/post-engagements'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -20,17 +25,7 @@ function formatRelativeTime(iso: string): string {
   } catch { return '' }
 }
 
-type FeedPostType =
-  | 'player'
-  | 'team'
-  | 'field'
-  | 'blog'
-  | 'new_team'
-  | 'noticia'
-  | 'event'
-  | 'video'
-  | 'replica'
-  | 'listing'
+type FeedPostType = PostEngagementType
 
 type PostComment = {
   id: string
@@ -317,6 +312,9 @@ export function PostActions({
   shareUrl,
   shareTitle,
   postHref,
+  initialLikeCount,
+  initialCommentCount,
+  initialLiked,
 }: {
   postType: FeedPostType
   postId: string
@@ -327,47 +325,42 @@ export function PostActions({
   shareUrl: string
   shareTitle: string
   postHref: string
+  initialLikeCount?: number
+  initialCommentCount?: number
+  initialLiked?: boolean
 }) {
-  const [likeCount, setLikeCount] = useState(0)
-  const [liked, setLiked] = useState(false)
-  const [commentCount, setCommentCount] = useState(0)
+  const [likeCount, setLikeCount] = useState(initialLikeCount ?? 0)
+  const [liked, setLiked] = useState(initialLiked ?? false)
+  const [commentCount, setCommentCount] = useState(initialCommentCount ?? 0)
   const [showComments, setShowComments] = useState(false)
   const [copying, setCopying] = useState(false)
   const [showLikesModal, setShowLikesModal] = useState(false)
+  const hasInitialCounts = initialLikeCount != null && initialCommentCount != null
+
+  useEffect(() => {
+    if (initialLikeCount != null) setLikeCount(initialLikeCount)
+    if (initialCommentCount != null) setCommentCount(initialCommentCount)
+    if (initialLiked != null) setLiked(initialLiked)
+  }, [initialLikeCount, initialCommentCount, initialLiked])
 
   useEffect(() => {
     if (!postId) return
+    if (hasInitialCounts) return
     let cancelled = false
     ;(async () => {
-      const [{ count: lc }, { count: cc }] = await Promise.all([
-        supabase.from('post_reactions')
-          .select('*', { count: 'exact', head: true })
-          .eq('post_type', postType)
-          .eq('post_id', postId),
-        supabase.from('post_comments')
-          .select('*', { count: 'exact', head: true })
-          .eq('post_type', postType)
-          .eq('post_id', postId),
-      ])
-      if (cancelled) return
-      setLikeCount(lc ?? 0)
-      setCommentCount(cc ?? 0)
-
-      if (currentUserId) {
-        const { data } = await supabase
-          .from('post_reactions')
-          .select('id')
-          .eq('post_type', postType)
-          .eq('post_id', postId)
-          .eq('user_id', currentUserId)
-          .maybeSingle()
-        if (!cancelled) setLiked(!!data)
-      } else if (!cancelled) {
-        setLiked(false)
-      }
+      const map = await fetchPostEngagements(
+        [{ postType, postId }],
+        currentUserId
+      )
+      if (cancelled || !map) return
+      const eng = map.get(engagementKey(postType, postId))
+      if (!eng) return
+      setLikeCount(eng.likeCount)
+      setCommentCount(eng.commentCount)
+      setLiked(eng.likedByMe)
     })()
     return () => { cancelled = true }
-  }, [postId, postType, currentUserId])
+  }, [postId, postType, currentUserId, hasInitialCounts])
 
   const handleLike = async () => {
     if (!currentUserId) return

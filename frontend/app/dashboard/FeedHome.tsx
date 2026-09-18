@@ -40,6 +40,14 @@ import {
 } from '@/lib/ranking'
 import { SolicitudEventoModal } from '@/app/ranking/components/SolicitudEventoModal'
 import { TEXTOS_FEED } from '@/lib/ranking-contenido'
+import {
+  attachEngagements,
+  attachEngagementsByType,
+  feedEngagementProps,
+  fetchPostEngagements,
+  type FeedEngagementFields,
+  type PostEngagementKey,
+} from '@/lib/post-engagements'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -145,7 +153,7 @@ export function parseContentWithMentions(
 }
 
 // Tipos de items del feed
-type FeedItem =
+type FeedItem = FeedEngagementFields & (
   | { kind: 'team_post'; id: string; team_id: string; post_owner_id: string | null; content: string | null; mentioned_user_ids?: string[] | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
   | {
       kind: 'pinned_post'
@@ -222,6 +230,7 @@ type FeedItem =
       total_players: number
       top3: { name: string; team_name: string | null; score: number }[]
     }
+)
 
 const FEED_SCROLL_Y_KEY = 'feed_scroll_y'
 const FEED_SCROLL_ANCHOR_KEY = 'feed_scroll_anchor'
@@ -423,10 +432,10 @@ function restoreFeedScrollY(target: FeedScrollTarget): () => void {
   return cancel
 }
 
-type EventItem = { id: string; title: string; fecha: string; imagen_url: string | null; url_externa: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
+type EventItem = FeedEngagementFields & { id: string; title: string; fecha: string; imagen_url: string | null; url_externa: string | null; field_foto: string | null; field_nombre: string | null; field_ciudad: string | null }
 type TeamPostItem = { id: string; content: string | null; fotos_urls: string[] | null; created_at: string; team: { nombre: string; slug: string; logo_url: string | null } }
-type NoticiaItem = { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
-type VideoItem = { id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
+type NoticiaItem = FeedEngagementFields & { id: string; title: string; slug: string; excerpt: string | null; cover_url: string | null; category: string | null; created_at: string }
+type VideoItem = FeedEngagementFields & { id: string; title: string; youtube_url: string; thumbnail_url: string | null; created_at: string }
 
 type FieldPostItem = {
   id: string
@@ -523,8 +532,18 @@ async function fetchMentionAliasMap(
 async function fetchHighlightFeedItem(
   postId: string,
   postType: 'player' | 'team' | 'field',
-  blockedIds: Set<string>
+  blockedIds: Set<string>,
+  currentUserId: string | null
 ): Promise<FeedItem | null> {
+  const attach = async (item: FeedItem | null): Promise<FeedItem | null> => {
+    if (!item) return null
+    const map = await fetchPostEngagements(
+      [{ postType, postId: item.id }],
+      currentUserId
+    )
+    return attachEngagements([item], map)[0] ?? item
+  }
+
   if (postType === 'player') {
     const { data } = await supabase
       .from('player_posts')
@@ -559,9 +578,11 @@ async function fetchHighlightFeedItem(
       created_at: String(r.created_at),
       user: mapJoinedUserForPlayerPost(u ? (u as Record<string, unknown>) : null),
     }
-    return r.pinned
-      ? { kind: 'pinned_post' as const, ...base }
-      : { kind: 'player_post' as const, ...base }
+    return attach(
+      r.pinned
+        ? { kind: 'pinned_post' as const, ...base }
+        : { kind: 'player_post' as const, ...base }
+    )
   }
 
   if (postType === 'team') {
@@ -577,7 +598,7 @@ async function fetchHighlightFeedItem(
     if (ownerId && blockedIds.has(ownerId)) return null
     const t = Array.isArray(r.teams) ? r.teams[0] : r.teams
     if (!t) return null
-    return {
+    return attach({
       kind: 'team_post',
       id: String(r.id),
       team_id: String(r.team_id ?? ''),
@@ -590,7 +611,7 @@ async function fetchHighlightFeedItem(
         slug: String((t as Record<string, unknown>).slug ?? ''),
         logo_url: (t as Record<string, unknown>).logo_url as string | null,
       },
-    }
+    })
   }
 
   const { data } = await supabase
@@ -603,7 +624,7 @@ async function fetchHighlightFeedItem(
   const ownerId = r.created_by ? String(r.created_by) : null
   if (ownerId && blockedIds.has(ownerId)) return null
   const f = Array.isArray(r.fields) ? r.fields[0] : r.fields
-  return {
+  return attach({
     kind: 'field_post',
     id: String(r.id),
     content: (r.content as string | null) ?? null,
@@ -618,7 +639,7 @@ async function fetchHighlightFeedItem(
         ? ((f as Record<string, unknown>).foto_portada_url as string | null)
         : null,
     },
-  }
+  })
 }
 
 function HighlightBadge() {
@@ -1561,6 +1582,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
       )}
       <PostMedia urls={fotos} />
       <PostActions
+        {...feedEngagementProps(item)}
         postType="team"
         postId={item.id}
         postOwnerId={item.post_owner_id}
@@ -1720,6 +1742,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         </>
       )}
       <PostActions
+        {...feedEngagementProps(item)}
         postType="player"
         postId={item.id}
         postOwnerId={item.post_owner_id}
@@ -1876,6 +1899,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         </>
       )}
       <PostActions
+        {...feedEngagementProps(item)}
         postType="player"
         postId={item.id}
         postOwnerId={item.post_owner_id}
@@ -1979,6 +2003,7 @@ function FieldPostCard({
       )}
       <PostMedia urls={fotos} />
       <PostActions
+        {...feedEngagementProps(item)}
         postType="field"
         postId={item.id}
         postOwnerId={item.post_owner_id}
@@ -2046,6 +2071,7 @@ function TournamentResultCard({
       </Link>
       <div className="px-3">
         <PostActions
+          {...feedEngagementProps(item)}
           postType="event"
           postId={item.id}
           postOwnerId={null}
@@ -2109,6 +2135,7 @@ function EventCard({
       </Link>
       <div className="px-3">
         <PostActions
+          {...feedEngagementProps(item)}
           postType="event"
           postId={item.id}
           postOwnerId={null}
@@ -2164,6 +2191,7 @@ function NewTeamCard({
       </Link>
       <div className="px-3">
         <PostActions
+          {...feedEngagementProps(item)}
           postType="new_team"
           postId={item.id}
           postOwnerId={null}
@@ -2236,6 +2264,7 @@ function VideoCard({
       </div>
       <div className="px-3">
         <PostActions
+          {...feedEngagementProps(item)}
           postType="video"
           postId={item.id}
           postOwnerId={null}
@@ -2291,6 +2320,7 @@ function NoticiaFeedCard({
       </Link>
       <div className="px-3">
         <PostActions
+          {...feedEngagementProps(item)}
           postType="noticia"
           postId={item.id}
           postOwnerId={null}
@@ -2585,24 +2615,51 @@ function FeedTab({
           for (const id of m) mentionIdSet.add(String(id))
         }
       }
-      let mentionAliasByUserId = new Map<string, string>()
-      if (mentionIdSet.size > 0) {
-        try {
-          const { data: mu, error: muErr } = await supabase
-            .from('users')
-            .select('id, alias')
-            .in('id', Array.from(mentionIdSet))
-          if (muErr) {
-            console.error('[FeedTab] users (mention aliases):', muErr.message, muErr)
-          }
-          for (const u of mu ?? []) {
-            const ur = u as { id: string; alias: string | null }
-            if (ur.alias?.trim()) mentionAliasByUserId.set(ur.id, ur.alias.trim())
-          }
-        } catch (e) {
-          console.error('[FeedTab] mention alias fetch failed', e)
+
+      const engagementKeys: PostEngagementKey[] = []
+      const pushEngagement = (
+        rows: unknown[] | null | undefined,
+        postType: PostEngagementKey['postType']
+      ) => {
+        for (const row of rows ?? []) {
+          const id = (row as Record<string, unknown>).id
+          if (id != null) engagementKeys.push({ postType, postId: String(id) })
         }
       }
+      pushEngagement(teamPostsRes.data, 'team')
+      pushEngagement(pinnedPlayerPostRes.data, 'player')
+      pushEngagement(playerPostsRes.data, 'player')
+      pushEngagement(fieldPostsRes.data, 'field')
+      pushEngagement(eventsRes.data, 'event')
+      pushEngagement(teamsRes.data, 'new_team')
+      pushEngagement(videosRes.data, 'video')
+      pushEngagement(noticiasRes.data, 'noticia')
+      pushEngagement(tournamentsRes.data, 'event')
+
+      const [mentionAliasByUserId, engagementMap] = await Promise.all([
+        (async () => {
+          const aliases = new Map<string, string>()
+          if (mentionIdSet.size === 0) return aliases
+          try {
+            const { data: mu, error: muErr } = await supabase
+              .from('users')
+              .select('id, alias')
+              .in('id', Array.from(mentionIdSet))
+            if (muErr) {
+              console.error('[FeedTab] users (mention aliases):', muErr.message, muErr)
+              return aliases
+            }
+            for (const u of mu ?? []) {
+              const ur = u as { id: string; alias: string | null }
+              if (ur.alias?.trim()) aliases.set(ur.id, ur.alias.trim())
+            }
+          } catch (e) {
+            console.error('[FeedTab] mention alias fetch failed', e)
+          }
+          return aliases
+        })(),
+        fetchPostEngagements(engagementKeys, currentUserId),
+      ])
 
       const feedItems: FeedItem[] = []
 
@@ -2832,7 +2889,7 @@ function FeedTab({
           combined = [highlightedItemRef.current, ...combined]
         }
       }
-      setItems(combined)
+      setItems(attachEngagements(combined, engagementMap))
 
       const teamData = teamPostsRes.data ?? []
       const playerData = playerPostsRes.data ?? []
@@ -2911,24 +2968,40 @@ function FeedTab({
           for (const id of m) loadMoreMentionIds.add(String(id))
         }
       }
-      let loadMoreAliasByUserId = new Map<string, string>()
-      if (loadMoreMentionIds.size > 0) {
-        try {
-          const { data: mu, error: muErr } = await supabase
-            .from('users')
-            .select('id, alias')
-            .in('id', Array.from(loadMoreMentionIds))
-          if (muErr) {
-            console.error('[FeedTab loadMore] users (mention aliases):', muErr.message, muErr)
+      const loadMoreEngagementKeys: PostEngagementKey[] = [
+        ...teamRows.map((r) => ({
+          postType: 'team' as const,
+          postId: String((r as Record<string, unknown>).id),
+        })),
+        ...playerRows.map((r) => ({
+          postType: 'player' as const,
+          postId: String((r as Record<string, unknown>).id),
+        })),
+      ]
+      const [loadMoreAliasByUserId, loadMoreEngagementMap] = await Promise.all([
+        (async () => {
+          const aliases = new Map<string, string>()
+          if (loadMoreMentionIds.size === 0) return aliases
+          try {
+            const { data: mu, error: muErr } = await supabase
+              .from('users')
+              .select('id, alias')
+              .in('id', Array.from(loadMoreMentionIds))
+            if (muErr) {
+              console.error('[FeedTab loadMore] users (mention aliases):', muErr.message, muErr)
+              return aliases
+            }
+            for (const u of mu ?? []) {
+              const ur = u as { id: string; alias: string | null }
+              if (ur.alias?.trim()) aliases.set(ur.id, ur.alias.trim())
+            }
+          } catch (e) {
+            console.error('[FeedTab loadMore] mention alias fetch failed', e)
           }
-          for (const u of mu ?? []) {
-            const ur = u as { id: string; alias: string | null }
-            if (ur.alias?.trim()) loadMoreAliasByUserId.set(ur.id, ur.alias.trim())
-          }
-        } catch (e) {
-          console.error('[FeedTab loadMore] mention alias fetch failed', e)
-        }
-      }
+          return aliases
+        })(),
+        fetchPostEngagements(loadMoreEngagementKeys, currentUserId),
+      ])
 
       if (teamRows.length === 0 && playerRows.length === 0) {
         setHasMore(false)
@@ -3019,7 +3092,10 @@ function FeedTab({
         setCursorPlayerPosts(String(last.created_at))
       }
 
-      setItems((prev) => [...prev, ...filteredNewItems])
+      setItems((prev) => [
+        ...prev,
+        ...attachEngagements(filteredNewItems, loadMoreEngagementMap),
+      ])
     } finally {
       loadingMoreRef.current = false
       setLoadingMore(false)
@@ -3205,7 +3281,8 @@ function FeedTab({
       const fetched = await fetchHighlightFeedItem(
         highlightIdParam,
         highlightTypeParam,
-        blockedIds
+        blockedIds,
+        currentUserId
       )
       if (!fetched) return
       highlightedItemRef.current = fetched
@@ -3473,7 +3550,7 @@ function EventosTab({
 
       setHasOwnActiveEvent((myEventResult.data ?? []).length > 0)
 
-      setItems((eventsResult.data ?? []).map(row => {
+      const mapped: EventItem[] = (eventsResult.data ?? []).map(row => {
         const r = row as Record<string, unknown>
         const f = Array.isArray(r.fields) ? r.fields[0] : r.fields
         return {
@@ -3486,7 +3563,12 @@ function EventosTab({
           field_nombre: f ? String((f as Record<string, unknown>).nombre ?? '') || null : null,
           field_ciudad: f ? String((f as Record<string, unknown>).ciudad ?? '') || null : null,
         }
-      }))
+      })
+      const engagementMap = await fetchPostEngagements(
+        mapped.map((item) => ({ postType: 'event' as const, postId: item.id })),
+        currentUserId
+      )
+      setItems(attachEngagementsByType(mapped, 'event', engagementMap))
       setLoading(false)
     }
     void load()
@@ -3532,6 +3614,7 @@ function EventosTab({
             </Link>
             <div className="px-3">
               <PostActions
+                {...feedEngagementProps(item)}
                 postType="event"
                 postId={item.id}
                 postOwnerId={null}
@@ -3911,11 +3994,16 @@ function NoticiasTab({
         .eq('published', true)
         .order('created_at', { ascending: false })
         .limit(20)
-      setItems((data ?? []) as NoticiaItem[])
+      const mapped = (data ?? []) as NoticiaItem[]
+      const engagementMap = await fetchPostEngagements(
+        mapped.map((item) => ({ postType: 'noticia' as const, postId: item.id })),
+        currentUserId
+      )
+      setItems(attachEngagementsByType(mapped, 'noticia', engagementMap))
       setLoading(false)
     }
     void load()
-  }, [])
+  }, [currentUserId])
 
   if (loading) return <div className="flex flex-col gap-3">{[0, 1, 2].map(i => <div key={i} className="h-24 border border-[#EEEEEE] animate-pulse" />)}</div>
   if (!items.length) return <p style={lato} className="py-12 text-center text-[13px] text-[#999999]">No hay noticias aún</p>
@@ -3944,6 +4032,7 @@ function NoticiasTab({
           </Link>
           <div className="px-3">
             <PostActions
+              {...feedEngagementProps(item)}
               postType="noticia"
               postId={item.id}
               postOwnerId={null}
@@ -3980,11 +4069,16 @@ function VideosTab({
         .eq('published', true)
         .order('created_at', { ascending: false })
         .limit(20)
-      setItems((data ?? []) as VideoItem[])
+      const mapped = (data ?? []) as VideoItem[]
+      const engagementMap = await fetchPostEngagements(
+        mapped.map((item) => ({ postType: 'video' as const, postId: item.id })),
+        currentUserId
+      )
+      setItems(attachEngagementsByType(mapped, 'video', engagementMap))
       setLoading(false)
     }
     void load()
-  }, [])
+  }, [currentUserId])
 
   if (loading) return (
     <div className="flex flex-col gap-3">
