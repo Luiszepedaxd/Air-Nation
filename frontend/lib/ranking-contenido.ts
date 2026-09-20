@@ -277,7 +277,7 @@ export const FAQ_ORGANIZADORES: FaqItem[] = [
   {
     pregunta: '¿Cuánto cuesta?',
     respuesta:
-      'Gratis hasta el 28 de febrero de 2027. Después: $19 por jugador si registras tus resultados en AirNation, o $29 si nos los mandas por otro medio.',
+      'Gratis hasta el 28 de febrero de 2027. Después: $9 por jugador si registras tus resultados en AirNation, o $29 si nos los mandas por otro medio.',
   },
   {
     pregunta: '¿Por qué es más barato usando AirNation?',
@@ -287,7 +287,7 @@ export const FAQ_ORGANIZADORES: FaqItem[] = [
   {
     pregunta: '¿Qué es ser organizador fundador?',
     respuesta:
-      'Si haces al menos un evento del ranking antes de marzo de 2027, mantienes los precios de $19 y $29 durante todo 2027, aunque suban para los demás.',
+      'Si haces al menos un evento del ranking antes de marzo de 2027, mantienes los precios de $9 y $29 durante todo 2027, aunque suban para los demás.',
   },
   {
     pregunta: '¿Quién decide cuánto vale mi evento?',
@@ -365,7 +365,7 @@ export const TEXTOS_HOME = {
     'Árbitros y resultados en vivo con AirNation',
   ],
   orgPrecio: 'Gratis hasta el 28 de febrero',
-  orgPrecioDespues: 'después, desde $19 por jugador',
+  orgPrecioDespues: 'después, desde $9 por jugador',
   orgCta: 'QUIERO QUE MI EVENTO CUENTE',
   orgLink: '¿Cómo se ganan los puntos? →',
 }

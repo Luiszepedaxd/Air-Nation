@@ -211,7 +211,7 @@ export const MODALIDAD_LABELS: Record<string, string> = {
   facciones: 'Por bandos',
 }
 
-export const PRECIO_TARIFA_AIRNATION = 19
+export const PRECIO_TARIFA_AIRNATION = 9
 export const PRECIO_TARIFA_ESTANDAR = 29
 export const DIAS_PAGO_TARIFA_AIRNATION = 7
 export const FECHA_FIN_GRATIS_TEXTO = '28 de febrero de 2027'
