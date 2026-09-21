@@ -48,6 +48,7 @@ import {
   type FeedEngagementFields,
   type PostEngagementKey,
 } from '@/lib/post-engagements'
+import { formatPostTimestamp } from '@/lib/format-post-timestamp'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800,
   textTransform: 'uppercase' as const } as const
@@ -651,17 +652,6 @@ function HighlightBadge() {
       📩 Desde tu notificación
     </span>
   )
-}
-
-function formatRelativeTime(iso: string) {
-  try {
-    const diff = Date.now() - new Date(iso).getTime()
-    const h = Math.floor(diff / (1000 * 60 * 60))
-    if (h < 1) return 'hace unos minutos'
-    if (h < 24) return `hace ${h}h`
-    const d = Math.floor(h / 24)
-    return d === 1 ? 'hace 1 día' : `hace ${d} días`
-  } catch { return '' }
 }
 
 function formatEventDate(iso: string) {
@@ -1543,7 +1533,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
           <Link href={`/equipos/${item.team.slug}`}>
             <p style={jost} className="text-[12px] font-extrabold uppercase text-[#111111] hover:text-[#CC4B37]">{item.team.nombre}</p>
           </Link>
-          <p style={lato} className="text-[11px] text-[#999999]">{formatRelativeTime(item.created_at)}</p>
+          <p style={lato} className="text-[11px] text-[#999999]">{formatPostTimestamp(item.created_at)}</p>
         </div>
         <div className="ml-auto">
           <ReportablePostMenu
@@ -1684,7 +1674,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             targetLabel={`Publicación de ${name}`}
           />
         </div>
-        <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
+        <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatPostTimestamp(item.created_at)}</p>
       </div>
       {item.replica_id ? (
         <>
@@ -1841,7 +1831,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
             targetLabel={`Publicación de ${name}`}
           />
         </div>
-        <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatRelativeTime(item.created_at)}</p>
+        <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatPostTimestamp(item.created_at)}</p>
       </div>
       {item.replica_id ? (
         <>
@@ -1968,7 +1958,7 @@ function FieldPostCard({
             </p>
           </Link>
           <p style={lato} className="text-[11px] text-[#999999]">
-            {formatRelativeTime(item.created_at)}
+            {formatPostTimestamp(item.created_at)}
           </p>
         </div>
         <ReportablePostMenu
