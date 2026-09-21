@@ -8,11 +8,14 @@ const UUID_RE =
 
 const TIPOS_EVENTO = new Set([
   "Dominguera",
+  "Milsim / Opsim",
   "Torneo",
+  "Final nacional",
   "Speedsoft",
+  "Otro",
+  // Alias de la escalera vieja (formulario cacheado / solicitudes en vuelo).
   "Milsim o evento grande",
   "Circuito",
-  "Otro",
 ]);
 
 const JUGADORES_OPCIONES = new Set([

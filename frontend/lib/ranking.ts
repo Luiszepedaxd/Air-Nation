@@ -104,36 +104,55 @@ export type RankingHistorialJugador = {
   }[]
 }
 
+/**
+ * Escalera pública del Ranking Nacional (4 niveles).
+ *
+ * Modelo de producto: 3 familias de evento + la final nacional como pico
+ * del track TORNEO (no es una familia aparte). Circuito nacional (viejo
+ * nivel 4, 200 pts) se plegó: las fechas de circuito son Torneo; la final
+ * de circuito o campeonato nacional es Final nacional.
+ *
+ * `ranking_eventos.nivel` es un entero. Escalera vieja (hasta 2026-09):
+ *   1 Dominguera 25 · 2 Torneo 100 · 3 Milsim 150→120
+ *   4 Circuito nacional 200 · 5 Final nacional 300
+ *
+ * Si hay filas con esa numeración, remapeo de una sola pasada (no reaplicar
+ * después de cargar eventos con la escalera nueva):
+ *   1 → 1  Dominguera
+ *   2 → 3  Torneo (100 → 120)
+ *   3 → 2  Milsim / Opsim (150/120 → 80)
+ *   4 → 3  Torneo (fechas de circuito)
+ *   5 → 4  Final nacional (300 → 200)
+ *
+ * `normalizarNivelRanking` solo traduce 5 → 4 en lectura: el 5 ya no existe
+ * y sin eso `nivelInfo` caería en Dominguera. El swap 2↔3 y 4→3 no se hace
+ * en runtime porque chocaría con eventos nuevos (2 = milsim, 3 = torneo).
+ */
 export const NIVELES_RANKING = [
   {
     nivel: 1,
     nombre: 'Dominguera',
-    descripcion: 'Partidas abiertas y recreativas de un día.',
+    descripcion: 'Recreativo de un día.',
     puntos: 25,
   },
   {
     nivel: 2,
-    nombre: 'Torneo',
-    descripcion: 'Torneos de un día con lugares definidos.',
-    puntos: 100,
+    nombre: 'Milsim / Opsim',
+    descripcion: 'Milsim, opsim o evento grande por bandos.',
+    puntos: 80,
   },
   {
     nivel: 3,
-    nombre: 'Milsim o evento grande',
-    descripcion: 'Milsim de 2 a 3 días o torneos regionales.',
+    nombre: 'Torneo',
+    descripcion: 'Competitivo con lugares definidos.',
     puntos: 120,
   },
   {
     nivel: 4,
-    nombre: 'Circuito nacional',
-    descripcion: 'Fechas de un circuito o liga nacional.',
-    puntos: 200,
-  },
-  {
-    nivel: 5,
     nombre: 'Final nacional',
-    descripcion: 'La final de un circuito o un campeonato nacional.',
-    puntos: 300,
+    descripcion:
+      'Final de circuito o campeonato nacional. Tope del track de torneos.',
+    puntos: 200,
   },
 ] as const
 
@@ -228,8 +247,14 @@ export function tamanoInfo(n: number): (typeof FACTORES_TAMANO)[number] | null {
   return FACTORES_TAMANO.find((r) => n >= r.min && n <= r.max) ?? null
 }
 
+export function normalizarNivelRanking(nivel: number): number {
+  if (nivel === 5) return 4
+  return nivel
+}
+
 export function nivelInfo(nivel: number) {
-  return NIVELES_RANKING.find((n) => n.nivel === nivel) ?? NIVELES_RANKING[0]
+  const n = normalizarNivelRanking(nivel)
+  return NIVELES_RANKING.find((item) => item.nivel === n) ?? NIVELES_RANKING[0]
 }
 
 export function lugarTexto(
@@ -357,7 +382,7 @@ function mapEventoResumen(row: Record<string, unknown>): RankingEventoResumen {
     ciudad: str(row.ciudad),
     organizador_nombre: str(row.organizador_nombre),
     disciplina: str(row.disciplina),
-    nivel: num(row.nivel),
+    nivel: normalizarNivelRanking(num(row.nivel)),
     modalidad: str(row.modalidad),
     total_jugadores: num(row.total_jugadores),
     bolsa: num(row.bolsa),
@@ -608,7 +633,7 @@ export async function fetchHistorialJugador(
         evento_slug: str(evento.slug),
         evento_nombre: str(evento.nombre),
         fecha: str(evento.fecha),
-        nivel: num(evento.nivel),
+        nivel: normalizarNivelRanking(num(evento.nivel)),
         total_jugadores: num(evento.total_jugadores),
         bolsa: num(evento.bolsa),
         posicion: numOrNull(row.posicion),

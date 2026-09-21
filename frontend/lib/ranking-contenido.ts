@@ -65,10 +65,10 @@ export const TEXTOS_SOLICITUD = {
   tipoEvento: '¿QUÉ TIPO DE EVENTO HACES?',
   tiposEvento: [
     'Dominguera',
+    'Milsim / Opsim',
     'Torneo',
+    'Final nacional',
     'Speedsoft',
-    'Milsim o evento grande',
-    'Circuito',
     'Otro',
   ],
   ciudad: 'CIUDAD',
@@ -92,7 +92,7 @@ export const PASOS_RANKING: TarjetaTexto[] = [
   {
     titulo: 'Juega un evento del ranking',
     texto:
-      'Torneos, speedsoft, milsim o domingueras. Si el evento es parte del Ranking Nacional, tus resultados cuentan.',
+      'Domingueras, milsim/opsim o torneos. La final nacional es el tope de los torneos. Si el evento es parte del Ranking Nacional, tus resultados cuentan.',
   },
   {
     titulo: 'Gana puntos',
@@ -133,14 +133,14 @@ export const TEXTOS_PUNTOS = {
   tamanoNota:
     'Un evento con pocos jugadores pone menos puntos en juego que uno lleno.',
   ejemploCuenta:
-    'Ejemplo: un torneo (100 puntos) con 24 jugadores (evento mediano, 75%) pone 75 puntos en juego.',
+    'Ejemplo: un torneo (120 puntos) con 24 jugadores (evento mediano, 75%) pone 90 puntos en juego.',
   lugarTitulo: 'TU LUGAR',
   lugarNota:
     'El 1er lugar se lleva todos los puntos en juego. Los demás, una parte.',
   lugarBarra: (porcentaje: number) => `${porcentaje}% de los puntos`,
   bandosTitulo: 'SI SE JUEGA POR BANDOS',
   bandosNota:
-    'En milsim y domingueras los puntos se reparten entre muchos jugadores, por eso son menos. Lo que te hace destacar son los puntos extra.',
+    'En milsim/opsim y domingueras los puntos se reparten entre muchos jugadores, por eso son menos. Lo que te hace destacar son los puntos extra.',
   bandos: [
     { resultado: 'Bando ganador', porcentaje: 30 },
     { resultado: '2º bando', porcentaje: 15 },
@@ -238,9 +238,9 @@ export const FAQ_JUGADORES: FaqItem[] = [
   },
   { pregunta: '¿Me cuesta algo?', respuesta: 'No. Para jugadores es gratis.' },
   {
-    pregunta: '¿Por qué un torneo da más puntos que una dominguera?',
+    pregunta: '¿Por qué un torneo da más puntos que una milsim o una dominguera?',
     respuesta:
-      'Porque no es lo mismo competir por un lugar que jugar una partida casual. Por eso cada tipo de evento vale distinto.',
+      'Porque no es lo mismo competir por un lugar que jugar por bandos o una partida casual. La milsim/opsim y la dominguera reparten puntos entre muchos; el torneo define lugares. La final nacional es el tope de los torneos, no un tipo de evento aparte.',
   },
   {
     pregunta: '¿Cómo sé de dónde salieron mis puntos?',
@@ -272,7 +272,7 @@ export const FAQ_ORGANIZADORES: FaqItem[] = [
   {
     pregunta: '¿Qué eventos pueden entrar?',
     respuesta:
-      'Cualquiera: torneos, speedsoft, milsim o domingueras. Solo necesitas mínimo 6 jugadores y publicar tu evento en AirNation con una semana de anticipación.',
+      'Domingueras, milsim/opsim o torneos (la final nacional es el tope del circuito de torneos). Solo necesitas mínimo 6 jugadores y publicar tu evento en AirNation con una semana de anticipación.',
   },
   {
     pregunta: '¿Cuánto cuesta?',
@@ -358,7 +358,7 @@ export const TEXTOS_HOME = {
   orgEyebrow: 'PARA ORGANIZADORES',
   orgTitulo: '¿VAS A HACER UN EVENTO?',
   orgTexto:
-    'Haz que tus resultados cuenten para el Ranking Nacional. Torneos, speedsoft, milsim o domingueras.',
+    'Haz que tus resultados cuenten para el Ranking Nacional. Torneos, milsim/opsim o domingueras.',
   orgBullets: [
     'Puntos oficiales para tus jugadores',
     'Resultados claros y fáciles de compartir',

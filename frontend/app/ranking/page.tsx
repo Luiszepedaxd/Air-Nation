@@ -50,9 +50,10 @@ import { TablaRanking } from './components/TablaRanking'
 export const revalidate = 300
 
 const SECTION_PY = 'relative px-5 py-14 sm:px-8 sm:py-20 lg:py-24'
-const MAX_PUNTOS_ESCALERA = 300
+const MAX_PUNTOS_ESCALERA = Math.max(...NIVELES_RANKING.map((n) => n.puntos))
 const ALTURA_ESCALERA = 220
-const OPACIDAD_ESCALERA = [0.45, 0.6, 0.75, 0.9, 1] as const
+const OPACIDAD_ESCALERA = [0.5, 0.65, 0.8, 1] as const
+const OPACIDAD_TAMANO = [0.45, 0.6, 0.75, 0.9, 1] as const
 
 const CANONICAL = 'https://www.airnation.online/ranking'
 const OG_IMAGE = 'https://www.airnation.online/og-default.jpg'
@@ -373,7 +374,7 @@ export default async function RankingPage() {
             <div className="space-y-14">
               <div>
                 <SubtituloBloque>{TEXTOS_PUNTOS.tipoTitulo}</SubtituloBloque>
-                <div className="hidden items-end gap-3 md:grid md:grid-cols-5">
+                <div className="hidden items-end gap-3 md:grid md:grid-cols-4">
                   {NIVELES_RANKING.map((n, i) => (
                     <div
                       key={n.nivel}
@@ -474,7 +475,7 @@ export default async function RankingPage() {
                             className="h-full bg-[#CC4B37]"
                             style={{
                               width: `${(f.porcentaje / 150) * 100}%`,
-                              opacity: OPACIDAD_ESCALERA[idx] ?? 1,
+                              opacity: OPACIDAD_TAMANO[idx] ?? 1,
                             }}
                           />
                         </div>
