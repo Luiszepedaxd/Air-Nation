@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { PostMedia } from '@/components/posts/PhotoGrid'
 import { parseContentWithMentions } from '@/app/dashboard/FeedHome'
+import { formatPostTimestamp } from '@/lib/format-post-timestamp'
 import { supabase } from '@/lib/supabase'
 import type { EventFeedPostRow } from '../page'
 import { EventoPostBoxMini } from './EventoPostBoxMini'
@@ -15,19 +16,6 @@ const jost = {
 } as const
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
-
-function formatRelative(iso: string) {
-  try {
-    const diff = Date.now() - new Date(iso).getTime()
-    const h = Math.floor(diff / (1000 * 60 * 60))
-    if (h < 1) return 'hace unos minutos'
-    if (h < 24) return `hace ${h}h`
-    const d = Math.floor(h / 24)
-    return d === 1 ? 'hace 1 día' : `hace ${d} días`
-  } catch {
-    return ''
-  }
-}
 
 function initialFrom(nombre: string | null, alias: string | null) {
   const s = alias?.trim()?.[0] || nombre?.trim()?.[0] || '?'
@@ -218,7 +206,7 @@ export function EventoPostsTab({
                       className="text-[11px] text-[#999999]"
                       style={lato}
                     >
-                      {formatRelative(post.created_at)}
+                      {formatPostTimestamp(post.created_at)}
                     </p>
                   </div>
                 </div>

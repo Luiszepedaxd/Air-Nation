@@ -14,6 +14,7 @@ import {
   FIELD_DAY_LABELS,
   weekScheduleFromJson,
 } from '@/lib/field-schedule'
+import { formatPostTimestamp } from '@/lib/format-post-timestamp'
 import { supabase } from '@/lib/supabase'
 import type { CampoDetailRow, FieldReviewPublic } from '../../types'
 import { CampoReviews } from './CampoReviews'
@@ -147,19 +148,6 @@ export type CampoFieldPostPublic = {
   content: string
   fotos_urls: string[]
   created_at: string
-}
-
-function formatRelative(iso: string): string {
-  try {
-    const diff = Date.now() - new Date(iso).getTime()
-    const h = Math.floor(diff / (1000 * 60 * 60))
-    if (h < 1) return 'hace unos minutos'
-    if (h < 24) return `hace ${h}h`
-    const d = Math.floor(h / 24)
-    return d === 1 ? 'hace 1 día' : `hace ${d} días`
-  } catch {
-    return ''
-  }
 }
 
 export function CampoPublicTabs({
@@ -553,7 +541,7 @@ export function CampoPublicTabs({
                     >
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[11px] text-[#999999]" style={lato}>
-                          {formatRelative(p.created_at)}
+                          {formatPostTimestamp(p.created_at)}
                         </p>
                         <ReportablePostMenu
                           canDelete={isFieldOwner || isAdmin}
