@@ -121,7 +121,7 @@ export const NIVELES_RANKING = [
     nivel: 3,
     nombre: 'Milsim o evento grande',
     descripcion: 'Milsim de 2 a 3 días o torneos regionales.',
-    puntos: 150,
+    puntos: 120,
   },
   {
     nivel: 4,
