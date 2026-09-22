@@ -133,9 +133,13 @@ export const TEXTOS_PUNTOS = {
   tipoNota: 'Puntos para el 1er lugar en un evento de tamaño normal.',
   tamanoTitulo: 'ENTRE MÁS JUGADORES, MÁS PUNTOS',
   tamanoNota:
-    'Un evento con pocos jugadores pone menos puntos en juego que uno lleno.',
+    'Los porcentajes son los mismos en todos: chico 50%, mediano 75%, normal 100%, grande 125% y masivo 150%. Lo que cambia es cuántos jugadores hacen falta según el tipo de evento. Con menos de 6 jugadores el evento no cuenta. La final nacional nunca baja del 75%: ahí no hay tamaño chico.',
+  baseNormal: (puntos: number) => `${puntos} puntos en tamaño normal`,
+  colJugadores: 'Jugadores',
+  colTamano: 'Tamaño',
+  colPorcentaje: 'Porcentaje',
   ejemploCuenta:
-    'Ejemplo: una dominguera organizada (20 puntos) con 24 jugadores (evento mediano, 75%) pone 15 puntos en juego. Un torneo (120 puntos) con los mismos 24 jugadores pone 90.',
+    'Con 24 jugadores, una dominguera (20 puntos) es mediana (75%) y pone 15 puntos en juego. Esas mismas 24 en una milsim (80 puntos) siguen siendo chicas (50%) y ponen 40. Un torneo (120 puntos) con 6 jugadores es chico (50%) y pone 60. Una final nacional (200 puntos) con 20 jugadores es mediana (75%) y pone 150.',
   lugarTitulo: 'TU LUGAR',
   lugarNota:
     'El 1er lugar se lleva todos los puntos en juego. Los demás, una parte.',
@@ -260,6 +264,11 @@ export const FAQ_JUGADORES: FaqItem[] = [
     pregunta: '¿Por qué un torneo da más puntos que una milsim o una dominguera?',
     respuesta:
       'Porque no es lo mismo competir por un lugar que jugar por bandos o por facciones. Con solo dos bandos, cada jugador del ganador se lleva 60% de los puntos en juego y cada uno del perdedor 40%. Con tres facciones o más, cada jugador de la ganadora se lleva 30%, de la 2ª el 15% y del resto el 10%. El torneo define lugares. La final nacional es el tope de los torneos, no un tipo de evento aparte.',
+  },
+  {
+    pregunta: '¿El tamaño cuenta igual en todos los eventos?',
+    respuesta:
+      'No. El porcentaje sí es el mismo (50%, 75%, 100%, 125% o 150%), pero cada tipo de evento lo alcanza con distinta cantidad de jugadores. 24 personas en una dominguera ya son tamaño mediano; en una milsim siguen siendo tamaño chico. La final nacional no baja del 75%.',
   },
   {
     pregunta: '¿Cómo sé de dónde salieron mis puntos?',

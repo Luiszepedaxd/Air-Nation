@@ -1,5 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { LUGAR_BANDO, STATS_LABELS } from './ranking-contenido'
+import { PUNTOS_BASE_POR_NIVEL, normalizarNivelRanking } from './ranking-tamano'
+
+export {
+  FACTORES_TAMANO_POR_NIVEL,
+  bolsaPorJugadores,
+  factorPorJugadores,
+  factoresTamano,
+  normalizarNivelRanking,
+  tamanoInfo,
+} from './ranking-tamano'
+export type { FactorTamanoRanking } from './ranking-tamano'
 
 export type RankingTemporada = {
   id: string
@@ -112,11 +123,15 @@ export type RankingHistorialJugador = {
  * nivel 4, 200 pts) se plegó: las fechas de circuito son Torneo; la final
  * de circuito o campeonato nacional es Final nacional.
  *
- * Puntos base actuales (1er lugar, tamaño normal, antes del factor
- * de tamaño 0.5×–1.5× que aplica a todos los niveles):
+ * Puntos base actuales (1er lugar, tamaño normal = 100%):
  *   1 Dominguera 20 · 2 Milsim/Opsim 80 · 3 Torneo 120 · 4 Final nacional 200
  * Dominguera bajó de 25 a 20. Sigue siendo jornada organizada con
  * invitación y resultados; llegar y partirse en dos no cuenta.
+ *
+ * El porcentaje de tamaño es el mismo en todos (50 / 75 / 100 / 125 / 150).
+ * Los cortes de jugadores cambian por tipo: ver FACTORES_TAMANO_POR_NIVEL.
+ * La final nacional no tiene 50%: su piso es 75%. Con menos de 6 jugadores
+ * el evento no cuenta.
  *
  * `ranking_eventos.nivel` es un entero. Escalera vieja (hasta 2026-09):
  *   1 Dominguera 25 · 2 Torneo 100 · 3 Milsim 150→120
@@ -140,69 +155,26 @@ export const NIVELES_RANKING = [
     nombre: 'Dominguera',
     descripcion:
       'Jornada que alguien organiza, invita y puede subir resultados. Si solo llegan y se parten en dos, no cuenta.',
-    puntos: 20,
+    puntos: PUNTOS_BASE_POR_NIVEL[1],
   },
   {
     nivel: 2,
     nombre: 'Milsim / Opsim',
     descripcion: 'Milsim, opsim o evento grande por bandos o facciones.',
-    puntos: 80,
+    puntos: PUNTOS_BASE_POR_NIVEL[2],
   },
   {
     nivel: 3,
     nombre: 'Torneo',
     descripcion: 'Competitivo con lugares definidos.',
-    puntos: 120,
+    puntos: PUNTOS_BASE_POR_NIVEL[3],
   },
   {
     nivel: 4,
     nombre: 'Final nacional',
     descripcion:
       'Final de circuito o campeonato nacional. Tope del track de torneos.',
-    puntos: 200,
-  },
-] as const
-
-export const FACTORES_TAMANO = [
-  {
-    rango: '6 – 15',
-    min: 6,
-    max: 15,
-    factor: 0.5,
-    etiqueta: 'Evento chico',
-    porcentaje: 50,
-  },
-  {
-    rango: '16 – 39',
-    min: 16,
-    max: 39,
-    factor: 0.75,
-    etiqueta: 'Evento mediano',
-    porcentaje: 75,
-  },
-  {
-    rango: '40 – 99',
-    min: 40,
-    max: 99,
-    factor: 1,
-    etiqueta: 'Evento normal',
-    porcentaje: 100,
-  },
-  {
-    rango: '100 – 199',
-    min: 100,
-    max: 199,
-    factor: 1.25,
-    etiqueta: 'Evento grande',
-    porcentaje: 125,
-  },
-  {
-    rango: '200 o más',
-    min: 200,
-    max: Infinity,
-    factor: 1.5,
-    etiqueta: 'Evento masivo',
-    porcentaje: 150,
+    puntos: PUNTOS_BASE_POR_NIVEL[4],
   },
 ] as const
 
@@ -249,22 +221,6 @@ export const PRECIO_TARIFA_ESTANDAR = 29
 export const DIAS_PAGO_TARIFA_AIRNATION = 7
 export const FECHA_FIN_GRATIS_TEXTO = '28 de febrero de 2027'
 export const TOPE_BONO_PORCENTAJE = 30
-
-export function factorPorJugadores(n: number): number {
-  if (n < 6) return 0
-  const match = FACTORES_TAMANO.find((r) => n >= r.min && n <= r.max)
-  return match?.factor ?? 0
-}
-
-export function tamanoInfo(n: number): (typeof FACTORES_TAMANO)[number] | null {
-  if (n < 6) return null
-  return FACTORES_TAMANO.find((r) => n >= r.min && n <= r.max) ?? null
-}
-
-export function normalizarNivelRanking(nivel: number): number {
-  if (nivel === 5) return 4
-  return nivel
-}
 
 export function nivelInfo(nivel: number) {
   const n = normalizarNivelRanking(nivel)

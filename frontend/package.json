@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "icons": "node scripts/generate-icons.mjs",
-    "test": "node --experimental-strip-types --test lib/format-post-timestamp.test.ts"
+    "test": "node --experimental-strip-types --test lib/*.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

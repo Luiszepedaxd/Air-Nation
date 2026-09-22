@@ -92,7 +92,7 @@ export async function generateMetadata({
 
 function FichaPuntos({ evento }: { evento: RankingEventoDetalle }) {
   const ni = nivelInfo(evento.nivel)
-  const tam = tamanoInfo(evento.total_jugadores)
+  const tam = tamanoInfo(evento.nivel, evento.total_jugadores)
 
   return (
     <div>
