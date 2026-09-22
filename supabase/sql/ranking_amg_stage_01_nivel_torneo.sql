@@ -1,12 +1,12 @@
 -- AMG Stage 01 CDMX es una fecha de circuito (Torneo), no la final.
--- La fila está en nivel 4, y la UI de la escalera nueva lee eso como
--- Final nacional. No toca bolsa ni ranking_resultados: los puntos de
--- cada jugador se quedan.
+-- La fila está en nivel 4. La escalera nueva lee 4 como Final nacional
+-- (200 pts). Torneo es nivel 3, base 120.
 --
--- Después de correr esto, se puede quitar el slug de
--- SLUGS_TORNEO_NIVEL_FINAL en frontend/lib/ranking.ts.
+-- 6 jugadores = evento chico, factor 0.5. La bolsa guardada (100) salió
+-- de 200 × 0.5. Con Torneo queda 120 × 0.5 = 60.
+-- No toca ranking_resultados: los puntos de cada jugador se quedan.
 
 UPDATE ranking_eventos
-SET nivel = 3
-WHERE slug = 'amg-stage-01-cdmx-2026'
-  AND nivel IN (4, 5);
+SET nivel = 3,
+    bolsa = 60
+WHERE slug = 'amg-stage-01-cdmx-2026';

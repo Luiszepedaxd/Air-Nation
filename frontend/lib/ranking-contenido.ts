@@ -355,8 +355,6 @@ export const TEXTOS_EVENTO = {
     bolsa: number
   ) =>
     `${tipo} (${puntosTipo}) × ${etiquetaTamano.toLowerCase()} (${porcentaje}%) = ${bolsa} puntos en juego.`,
-  cuentaRegistrada: (tipo: string, bolsa: number) =>
-    `${tipo}. En este evento hay ${bolsa} puntos en juego.`,
   ordenTitulo: '¿CÓMO SE DECIDIÓ EL ORDEN?',
   ordenNota: 'Lo definió el organizador y lo anunció antes del evento.',
   extraTitulo: 'PUNTOS EXTRA DE ESTE EVENTO',

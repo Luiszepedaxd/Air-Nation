@@ -130,13 +130,9 @@ export type RankingHistorialJugador = {
  *   4 → 3  Torneo (fechas de circuito)
  *   5 → 4  Final nacional (300 → 200)
  *
- * `normalizarNivelRanking` traduce 5 → 4 en lectura: el 5 ya no existe
+ * `normalizarNivelRanking` solo traduce 5 → 4 en lectura: el 5 ya no existe
  * y sin eso `nivelInfo` caería en Dominguera. El swap 2↔3 y 4→3 no se hace
  * en runtime porque chocaría con eventos nuevos (2 = milsim, 3 = torneo).
- *
- * Excepción: `amg-stage-01-cdmx-2026` quedó grabado como nivel 4 (Final
- * nacional) y es una fecha de circuito, o sea Torneo. Solo cambia la
- * etiqueta. Bolsa y puntos de cada jugador se quedan como están.
  */
 export const NIVELES_RANKING = [
   {
@@ -258,11 +254,7 @@ export function tamanoInfo(n: number): (typeof FACTORES_TAMANO)[number] | null {
   return FACTORES_TAMANO.find((r) => n >= r.min && n <= r.max) ?? null
 }
 
-/** Fecha de circuito cargada como Final nacional. Quitar al corregir la fila. */
-const SLUGS_TORNEO_NIVEL_FINAL = new Set(['amg-stage-01-cdmx-2026'])
-
-export function normalizarNivelRanking(nivel: number, slug?: string | null): number {
-  if (slug && SLUGS_TORNEO_NIVEL_FINAL.has(slug)) return 3
+export function normalizarNivelRanking(nivel: number): number {
   if (nivel === 5) return 4
   return nivel
 }
@@ -397,7 +389,7 @@ function mapEventoResumen(row: Record<string, unknown>): RankingEventoResumen {
     ciudad: str(row.ciudad),
     organizador_nombre: str(row.organizador_nombre),
     disciplina: str(row.disciplina),
-    nivel: normalizarNivelRanking(num(row.nivel), str(row.slug)),
+    nivel: normalizarNivelRanking(num(row.nivel)),
     modalidad: str(row.modalidad),
     total_jugadores: num(row.total_jugadores),
     bolsa: num(row.bolsa),
@@ -648,7 +640,7 @@ export async function fetchHistorialJugador(
         evento_slug: str(evento.slug),
         evento_nombre: str(evento.nombre),
         fecha: str(evento.fecha),
-        nivel: normalizarNivelRanking(num(evento.nivel), str(evento.slug)),
+        nivel: normalizarNivelRanking(num(evento.nivel)),
         total_jugadores: num(evento.total_jugadores),
         bolsa: num(evento.bolsa),
         posicion: numOrNull(row.posicion),
