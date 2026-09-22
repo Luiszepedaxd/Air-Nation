@@ -77,7 +77,9 @@ function TablaTamano({
 
 export function EscaleraTamano() {
   const inicial = NIVELES_RANKING[0]
-  const [nivelActivo, setNivelActivo] = useState(inicial.nivel)
+  const [nivelActivo, setNivelActivo] = useState<(typeof NIVELES_RANKING)[number]['nivel']>(
+    inicial.nivel,
+  )
   const activo = NIVELES_RANKING.find((n) => n.nivel === nivelActivo) ?? inicial
 
   return (
