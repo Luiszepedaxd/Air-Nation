@@ -92,7 +92,7 @@ export const PASOS_RANKING: TarjetaTexto[] = [
   {
     titulo: 'Juega un evento del ranking',
     texto:
-      'Domingueras, milsim/opsim o torneos. La final nacional es el tope de los torneos. Si el evento es parte del Ranking Nacional, tus resultados cuentan.',
+      'Domingueras que alguien organiza, milsim/opsim o torneos. La final nacional es el tope de los torneos. Cuenta cuando alguien arma la jornada, invita y se pueden subir resultados. Si solo llegan y se parten en dos, no suma.',
   },
   {
     titulo: 'Gana puntos',
@@ -111,7 +111,7 @@ export const TEXTOS_TABLA = {
   titulo: 'ASÍ VA LA TEMPORADA',
   subtitulo: 'Los mejores jugadores del Ranking Nacional hasta hoy.',
   nota: (maxResultados: number, maxRecreativos: number) =>
-    `Cuentan tus ${maxResultados} mejores eventos de la temporada (máximo ${maxRecreativos} domingueras).`,
+    `Cuentan tus ${maxResultados} mejores eventos de la temporada (máximo ${maxRecreativos} domingueras organizadas).`,
 }
 
 export const TEXTOS_EVENTOS = {
@@ -133,14 +133,14 @@ export const TEXTOS_PUNTOS = {
   tamanoNota:
     'Un evento con pocos jugadores pone menos puntos en juego que uno lleno.',
   ejemploCuenta:
-    'Ejemplo: un torneo (120 puntos) con 24 jugadores (evento mediano, 75%) pone 90 puntos en juego.',
+    'Ejemplo: una dominguera organizada (20 puntos) con 24 jugadores (evento mediano, 75%) pone 15 puntos en juego. Un torneo (120 puntos) con los mismos 24 jugadores pone 90.',
   lugarTitulo: 'TU LUGAR',
   lugarNota:
     'El 1er lugar se lleva todos los puntos en juego. Los demás, una parte.',
   lugarBarra: (porcentaje: number) => `${porcentaje}% de los puntos`,
   bandosTitulo: 'SI SE JUEGA POR BANDOS',
   bandosNota:
-    'En milsim/opsim y domingueras los puntos se reparten entre muchos jugadores, por eso son menos. Lo que te hace destacar son los puntos extra.',
+    'En milsim/opsim y en una dominguera organizada los puntos se reparten entre muchos jugadores, por eso son menos. Lo que te hace destacar son los puntos extra.',
   bandos: [
     { resultado: 'Bando ganador', porcentaje: 30 },
     { resultado: '2º bando', porcentaje: 15 },
@@ -163,7 +163,7 @@ export const REGLAS_EN_CORTO: TarjetaTexto[] = [
   {
     titulo: 'Cuentan tus mejores eventos',
     texto:
-      'En cada temporada suman tus 10 mejores resultados (máximo 4 domingueras). La tabla empieza de cero cada temporada y tu historial se queda en tu perfil.',
+      'En cada temporada suman tus 10 mejores resultados (máximo 4 domingueras organizadas). La tabla empieza de cero cada temporada y tu historial se queda en tu perfil.',
   },
   {
     titulo: 'Todo se avisa antes de jugar',
@@ -232,6 +232,21 @@ export const FAQ_JUGADORES: FaqItem[] = [
       'Juega un evento que sea parte del Ranking Nacional. El organizador sube los resultados y apareces en la tabla.',
   },
   {
+    pregunta: '¿Qué cuenta como Dominguera?',
+    respuesta:
+      'Una jornada que alguien organiza: arma el evento, invita gente y se pueden subir los resultados en AirNation. No es cualquier domingo en el campo.',
+  },
+  {
+    pregunta: '¿Si llegamos al campo y nos partimos en dos, cuenta?',
+    respuesta:
+      'No. Si nadie organiza la jornada, nadie invita y no se publican resultados, no es Dominguera y no suma puntos.',
+  },
+  {
+    pregunta: '¿Cuántas domingueras cuentan en la temporada?',
+    respuesta:
+      'De tus 10 mejores eventos de la temporada, máximo 4 pueden ser domingueras. Las demás que juegues no entran a la suma.',
+  },
+  {
     pregunta: '¿Necesito cuenta en AirNation?',
     respuesta:
       'No para sumar puntos. Pero con cuenta puedes ver tu historial y tu posición en tu perfil, y compartirlo.',
@@ -240,7 +255,7 @@ export const FAQ_JUGADORES: FaqItem[] = [
   {
     pregunta: '¿Por qué un torneo da más puntos que una milsim o una dominguera?',
     respuesta:
-      'Porque no es lo mismo competir por un lugar que jugar por bandos o una partida casual. La milsim/opsim y la dominguera reparten puntos entre muchos; el torneo define lugares. La final nacional es el tope de los torneos, no un tipo de evento aparte.',
+      'Porque no es lo mismo competir por un lugar que jugar por bandos. La milsim/opsim y la dominguera organizada reparten puntos entre muchos; el torneo define lugares. La final nacional es el tope de los torneos, no un tipo de evento aparte.',
   },
   {
     pregunta: '¿Cómo sé de dónde salieron mis puntos?',
@@ -272,7 +287,12 @@ export const FAQ_ORGANIZADORES: FaqItem[] = [
   {
     pregunta: '¿Qué eventos pueden entrar?',
     respuesta:
-      'Domingueras, milsim/opsim o torneos (la final nacional es el tope del circuito de torneos). Solo necesitas mínimo 6 jugadores y publicar tu evento en AirNation con una semana de anticipación.',
+      'Domingueras organizadas, milsim/opsim o torneos (la final nacional es el tope del circuito de torneos). Cuenta si alguien arma la jornada, invita y se pueden subir resultados. Si la gente llega, se parte en dos y juega sin que nadie organice ni publique, no entra. Mínimo 6 jugadores y publicar tu evento en AirNation con una semana de anticipación.',
+  },
+  {
+    pregunta: '¿La jornada del domingo de mi campo cuenta?',
+    respuesta:
+      'Sí, si tú la organizas: invitas, la publicas en AirNation y puedes subir resultados. Si es el juego de siempre, donde llegan y se parten solos, no entra al ranking.',
   },
   {
     pregunta: '¿Cuánto cuesta?',
@@ -358,7 +378,7 @@ export const TEXTOS_HOME = {
   orgEyebrow: 'PARA ORGANIZADORES',
   orgTitulo: '¿VAS A HACER UN EVENTO?',
   orgTexto:
-    'Haz que tus resultados cuenten para el Ranking Nacional. Torneos, milsim/opsim o domingueras.',
+    'Haz que tus resultados cuenten para el Ranking Nacional. Torneos, milsim/opsim o domingueras que tú organices.',
   orgBullets: [
     'Puntos oficiales para tus jugadores',
     'Resultados claros y fáciles de compartir',

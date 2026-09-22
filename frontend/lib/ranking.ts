@@ -112,6 +112,12 @@ export type RankingHistorialJugador = {
  * nivel 4, 200 pts) se plegó: las fechas de circuito son Torneo; la final
  * de circuito o campeonato nacional es Final nacional.
  *
+ * Puntos base actuales (1er lugar, tamaño normal, antes del factor
+ * de tamaño 0.5×–1.5× que aplica a todos los niveles):
+ *   1 Dominguera 20 · 2 Milsim/Opsim 80 · 3 Torneo 120 · 4 Final nacional 200
+ * Dominguera bajó de 25 a 20. Sigue siendo jornada organizada con
+ * invitación y resultados; llegar y partirse en dos no cuenta.
+ *
  * `ranking_eventos.nivel` es un entero. Escalera vieja (hasta 2026-09):
  *   1 Dominguera 25 · 2 Torneo 100 · 3 Milsim 150→120
  *   4 Circuito nacional 200 · 5 Final nacional 300
@@ -132,8 +138,9 @@ export const NIVELES_RANKING = [
   {
     nivel: 1,
     nombre: 'Dominguera',
-    descripcion: 'Recreativo de un día.',
-    puntos: 25,
+    descripcion:
+      'Jornada que alguien organiza, invita y puede subir resultados. Si solo llegan y se parten en dos, no cuenta.',
+    puntos: 20,
   },
   {
     nivel: 2,
