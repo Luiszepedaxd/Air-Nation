@@ -145,7 +145,7 @@ export const NIVELES_RANKING = [
   {
     nivel: 2,
     nombre: 'Milsim / Opsim',
-    descripcion: 'Milsim, opsim o evento grande por bandos.',
+    descripcion: 'Milsim, opsim o evento grande por bandos o facciones.',
     puntos: 80,
   },
   {
@@ -214,10 +214,17 @@ export const PORCENTAJES_POSICION = [
   { posicion: '17º – 32º', porcentaje: 20 }, { posicion: '33º en adelante', porcentaje: 10 },
 ] as const
 
+/** Tres facciones o más. Cada jugador de ese lado se lleva este % de los puntos en juego. */
 export const PORCENTAJES_FACCION = [
   { resultado: 'Facción ganadora', porcentaje: 30 },
-  { resultado: 'Segunda facción', porcentaje: 15 },
-  { resultado: 'Tercera facción en adelante', porcentaje: 10 },
+  { resultado: '2ª facción', porcentaje: 15 },
+  { resultado: '3ª en adelante', porcentaje: 10 },
+] as const
+
+/** Solo dos bandos. Cada jugador de ese lado se lleva este % de los puntos en juego. */
+export const PORCENTAJES_BANDOS = [
+  { resultado: 'Bando ganador', porcentaje: 60 },
+  { resultado: 'Bando perdedor', porcentaje: 40 },
 ] as const
 
 export const DISCIPLINA_LABELS: Record<string, string> = {
@@ -234,7 +241,7 @@ export const DISCIPLINA_LABELS: Record<string, string> = {
 export const MODALIDAD_LABELS: Record<string, string> = {
   individual: 'Individual',
   equipos: 'Por equipos',
-  facciones: 'Por bandos',
+  facciones: 'Por bandos o facciones',
 }
 
 export const PRECIO_TARIFA_AIRNATION = 9
@@ -270,20 +277,37 @@ export function lugarTexto(
 ): string {
   if (resultadoFaccion) {
     const key = resultadoFaccion.toLowerCase().replace(/\s+/g, '_')
+    const plain = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     if (LUGAR_BANDO[key]) return LUGAR_BANDO[key]
-    if (key === 'ganador' || key === 'primera' || key === 'ganadora') {
-      return LUGAR_BANDO.ganadora
+    if (LUGAR_BANDO[plain]) return LUGAR_BANDO[plain]
+    if (plain === 'ganadores' || plain === 'bando_ganador') {
+      return LUGAR_BANDO.ganador
     }
     if (
-      key === 'tercera' ||
-      key === 'tercera_mas' ||
-      key === 'tercera_en_adelante' ||
-      key === 'tercera_o_mas' ||
-      key === 'resto'
+      plain === 'perdedora' ||
+      plain === 'perdedores' ||
+      plain === 'bando_perdedor'
+    ) {
+      return LUGAR_BANDO.perdedor
+    }
+    if (
+      plain === 'primera' ||
+      plain === 'faccion_ganadora' ||
+      plain === 'primera_faccion'
+    ) {
+      return LUGAR_BANDO.ganadora
+    }
+    if (plain === 'segunda_faccion') return LUGAR_BANDO.segunda
+    if (
+      plain === 'tercera' ||
+      plain === 'tercera_mas' ||
+      plain === 'tercera_en_adelante' ||
+      plain === 'tercera_faccion' ||
+      plain === 'resto' ||
+      plain === 'otros'
     ) {
       return LUGAR_BANDO.tercera_o_mas
     }
-    if (key === 'segunda') return LUGAR_BANDO.segunda
     const s = key.replace(/_/g, ' ')
     if (!s) return '—'
     return s.charAt(0).toUpperCase() + s.slice(1)

@@ -17,6 +17,8 @@ import {
   DISCIPLINA_LABELS,
   FACTORES_TAMANO,
   NIVELES_RANKING,
+  PORCENTAJES_BANDOS,
+  PORCENTAJES_FACCION,
   PORCENTAJES_POSICION,
   PRECIO_TARIFA_AIRNATION,
   PRECIO_TARIFA_ESTANDAR,
@@ -105,7 +107,7 @@ function BarraLugar({
   return (
     <>
       <div className="hidden items-center gap-3 md:flex">
-        <span className="w-32 shrink-0 text-sm font-bold text-[#111111]">{etiqueta}</span>
+        <span className="w-40 shrink-0 text-sm font-bold text-[#111111]">{etiqueta}</span>
         <div className="relative h-7 flex-1 bg-[#E9E9E9]">
           <div
             className={`absolute inset-y-0 left-0 bg-[#CC4B37] ${solida ? '' : 'opacity-60'}`}
@@ -506,9 +508,27 @@ export default async function RankingPage() {
               </div>
 
               <div>
+                <SubtituloBloque>{TEXTOS_PUNTOS.faccionesTitulo}</SubtituloBloque>
+                <div className="space-y-4">
+                  {PORCENTAJES_FACCION.map((b) => (
+                    <BarraLugar
+                      key={b.resultado}
+                      etiqueta={b.resultado}
+                      porcentaje={b.porcentaje}
+                      solida={false}
+                    />
+                  ))}
+                </div>
+                <p className="mt-4 text-sm text-[#555555]">{TEXTOS_PUNTOS.faccionesNota}</p>
+                <p className="mt-3 border border-[#E5E5E5] border-l-[3px] border-l-[#CC4B37] bg-white px-4 py-3 text-sm text-[#111111]">
+                  {TEXTOS_PUNTOS.faccionesEjemplo}
+                </p>
+              </div>
+
+              <div>
                 <SubtituloBloque>{TEXTOS_PUNTOS.bandosTitulo}</SubtituloBloque>
                 <div className="space-y-4">
-                  {TEXTOS_PUNTOS.bandos.map((b) => (
+                  {PORCENTAJES_BANDOS.map((b) => (
                     <BarraLugar
                       key={b.resultado}
                       etiqueta={b.resultado}
@@ -518,6 +538,9 @@ export default async function RankingPage() {
                   ))}
                 </div>
                 <p className="mt-4 text-sm text-[#555555]">{TEXTOS_PUNTOS.bandosNota}</p>
+                <p className="mt-3 border border-[#E5E5E5] border-l-[3px] border-l-[#CC4B37] bg-white px-4 py-3 text-sm text-[#111111]">
+                  {TEXTOS_PUNTOS.bandosEjemplo}
+                </p>
               </div>
 
               <div>

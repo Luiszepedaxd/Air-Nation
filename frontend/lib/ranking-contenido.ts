@@ -30,9 +30,11 @@ export const ETIQUETAS = {
 } as const
 
 export const LUGAR_BANDO: Record<string, string> = {
-  ganadora: 'Bando ganador',
-  segunda: '2º bando',
-  tercera_o_mas: 'Otros bandos',
+  ganador: 'Bando ganador',
+  perdedor: 'Bando perdedor',
+  ganadora: 'Facción ganadora',
+  segunda: '2ª facción',
+  tercera_o_mas: '3ª en adelante',
 }
 
 export const STATS_LABELS: Record<string, string> = {
@@ -138,14 +140,16 @@ export const TEXTOS_PUNTOS = {
   lugarNota:
     'El 1er lugar se lleva todos los puntos en juego. Los demás, una parte.',
   lugarBarra: (porcentaje: number) => `${porcentaje}% de los puntos`,
-  bandosTitulo: 'SI SE JUEGA POR BANDOS',
+  faccionesTitulo: 'SI SE JUEGA POR FACCIONES (3 O MÁS)',
+  faccionesNota:
+    'Cada jugador de esa facción se lleva este porcentaje de los puntos en juego. La diferencia es chica; lo que separa son los puntos extra.',
+  faccionesEjemplo:
+    'Ejemplo con 100 puntos en juego: los de la facción ganadora se llevan 30 cada uno, los de la 2ª facción 15 cada uno y el resto 10 cada uno.',
+  bandosTitulo: 'SI SE JUEGA POR BANDOS (SOLO 2)',
   bandosNota:
-    'En milsim/opsim y en una dominguera organizada los puntos se reparten entre muchos jugadores, por eso son menos. Lo que te hace destacar son los puntos extra.',
-  bandos: [
-    { resultado: 'Bando ganador', porcentaje: 30 },
-    { resultado: '2º bando', porcentaje: 15 },
-    { resultado: 'Otros bandos', porcentaje: 10 },
-  ],
+    'Cada jugador de ese bando se lleva este porcentaje de los puntos en juego.',
+  bandosEjemplo:
+    'Ejemplo con 100 puntos en juego: los del bando ganador se llevan 60 cada uno y los del bando perdedor 40 cada uno.',
   extraTitulo: 'PUNTOS EXTRA',
   extraTexto:
     'MVP, objetivos, rondas ganadas… Cada organizador decide y lo anuncia antes del evento. Nadie puede recibir en extras más del 30% de los puntos en juego.',
@@ -255,7 +259,7 @@ export const FAQ_JUGADORES: FaqItem[] = [
   {
     pregunta: '¿Por qué un torneo da más puntos que una milsim o una dominguera?',
     respuesta:
-      'Porque no es lo mismo competir por un lugar que jugar por bandos. La milsim/opsim y la dominguera organizada reparten puntos entre muchos; el torneo define lugares. La final nacional es el tope de los torneos, no un tipo de evento aparte.',
+      'Porque no es lo mismo competir por un lugar que jugar por bandos o por facciones. Con solo dos bandos, cada jugador del ganador se lleva 60% de los puntos en juego y cada uno del perdedor 40%. Con tres facciones o más, cada jugador de la ganadora se lleva 30%, de la 2ª el 15% y del resto el 10%. El torneo define lugares. La final nacional es el tope de los torneos, no un tipo de evento aparte.',
   },
   {
     pregunta: '¿Cómo sé de dónde salieron mis puntos?',
