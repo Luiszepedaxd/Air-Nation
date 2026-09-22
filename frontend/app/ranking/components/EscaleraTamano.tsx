@@ -30,7 +30,56 @@ function SubtituloBloque({ children }: { children: string }) {
   )
 }
 
-function TablaTamano({
+/** 150% llena la pista; el resto escala contra ese tope. */
+const TOPE_BARRA_PORCENTAJE = 150
+
+function anchoBarraTamano(porcentaje: number): string {
+  const ancho = Math.min(100, (porcentaje / TOPE_BARRA_PORCENTAJE) * 100)
+  return `${ancho}%`
+}
+
+function puntosEnJuego(puntosBase: number, porcentaje: number): number {
+  return Math.round((puntosBase * porcentaje) / 100)
+}
+
+function BarraTamano({
+  etiqueta,
+  rango,
+  porcentaje,
+  puntos,
+}: {
+  etiqueta: string
+  rango: string
+  porcentaje: number
+  puntos: number
+}) {
+  const ancho = anchoBarraTamano(porcentaje)
+
+  return (
+    <li className="border border-[#E5E5E5] bg-white px-4 py-4 sm:px-5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 md:grid-cols-[12rem_minmax(0,1fr)_7.5rem] md:gap-x-4">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-[#111111]">{etiqueta}</p>
+          <p className="mt-0.5 text-xs text-[#666666]">{rango} jugadores</p>
+        </div>
+        <div className="text-right md:col-start-3 md:row-start-1">
+          <p className="font-display text-2xl font-black tabular-nums leading-none text-[#CC4B37]">
+            {porcentaje}%
+          </p>
+          <p className="mt-1 text-xs font-bold tabular-nums text-[#111111]">{puntos} puntos</p>
+        </div>
+        <div
+          className="col-span-2 h-2.5 bg-[#E9E9E9] md:col-span-1 md:col-start-2 md:row-start-1 md:h-7"
+          aria-hidden
+        >
+          <div className="h-full bg-[#CC4B37]" style={{ width: ancho }} />
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function DetalleTamano({
   nombre,
   puntos,
   bandas,
@@ -40,37 +89,24 @@ function TablaTamano({
   bandas: readonly FactorTamanoRanking[]
 }) {
   return (
-    <div className="w-full max-w-2xl overflow-x-auto border border-[#E5E5E5] bg-white">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-[#E5E5E5] px-4 py-3">
-        <p className="text-sm font-bold text-[#111111]">{nombre}</p>
-        <p className="text-xs text-[#666666]">{TEXTOS_PUNTOS.baseNormal(puntos)}</p>
+    <div className="w-full space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border border-[#E5E5E5] bg-white px-4 py-4 sm:px-5 sm:py-5">
+        <p className="font-display text-2xl font-black uppercase leading-none text-[#111111]">
+          {nombre}
+        </p>
+        <p className="text-sm text-[#555555]">{TEXTOS_PUNTOS.baseNormal(puntos)}</p>
       </div>
-      <table className="w-full table-fixed text-left">
-        <thead>
-          <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#999999]">
-            <th scope="col" className="px-4 py-2 font-bold">
-              {TEXTOS_PUNTOS.colJugadores}
-            </th>
-            <th scope="col" className="px-2 py-2 font-bold">
-              {TEXTOS_PUNTOS.colTamano}
-            </th>
-            <th scope="col" className="px-4 py-2 text-right font-bold">
-              {TEXTOS_PUNTOS.colPorcentaje}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {bandas.map((f) => (
-            <tr key={f.min} className="border-t border-[#F0F0F0]">
-              <td className="px-4 py-2.5 text-sm text-[#111111]">{f.rango}</td>
-              <td className="px-2 py-2.5 text-sm text-[#555555]">{f.etiqueta}</td>
-              <td className="px-4 py-2.5 text-right font-display text-lg font-black tabular-nums text-[#111111]">
-                {f.porcentaje}%
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <ul className="space-y-4">
+        {bandas.map((f) => (
+          <BarraTamano
+            key={f.min}
+            etiqueta={f.etiqueta}
+            rango={f.rango}
+            porcentaje={f.porcentaje}
+            puntos={puntosEnJuego(puntos, f.porcentaje)}
+          />
+        ))}
+      </ul>
     </div>
   )
 }
@@ -159,7 +195,7 @@ export function EscaleraTamano() {
         <p className="mb-6 max-w-3xl text-sm leading-relaxed text-[#555555]">
           {TEXTOS_PUNTOS.tamanoNota}
         </p>
-        <TablaTamano
+        <DetalleTamano
           nombre={activo.nombre}
           puntos={activo.puntos}
           bandas={factoresTamano(activo.nivel)}
