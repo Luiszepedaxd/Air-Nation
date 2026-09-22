@@ -132,13 +132,15 @@ function FichaPuntos({ evento }: { evento: RankingEventoDetalle }) {
       </div>
       {tam ? (
         <p className="mt-3 text-[12px] text-[#666666]" style={lato}>
-          {TEXTOS_EVENTO.cuenta(
-            ni.nombre,
-            ni.puntos,
-            tam.etiqueta,
-            tam.porcentaje,
-            evento.bolsa
-          )}
+          {Math.round((ni.puntos * tam.porcentaje) / 100) === evento.bolsa
+            ? TEXTOS_EVENTO.cuenta(
+                ni.nombre,
+                ni.puntos,
+                tam.etiqueta,
+                tam.porcentaje,
+                evento.bolsa
+              )
+            : TEXTOS_EVENTO.cuentaRegistrada(ni.nombre, evento.bolsa)}
         </p>
       ) : null}
     </div>
