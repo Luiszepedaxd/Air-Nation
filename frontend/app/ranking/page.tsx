@@ -15,19 +15,16 @@ import Footer from '@/components/landing/Footer'
 import { RevealOnScroll } from '@/components/animations/RevealOnScroll'
 import {
   DISCIPLINA_LABELS,
-  NIVELES_RANKING,
   PORCENTAJES_BANDOS,
   PORCENTAJES_FACCION,
   PORCENTAJES_POSICION,
   PRECIO_TARIFA_AIRNATION,
   PRECIO_TARIFA_ESTANDAR,
-  factoresTamano,
   fetchEventosTemporada,
   fetchTablaRanking,
   fetchTemporadaActiva,
   formatFechaRanking,
   nivelInfo,
-  type FactorTamanoRanking,
 } from '@/lib/ranking'
 import {
   FAQ_JUGADORES,
@@ -45,6 +42,7 @@ import {
 import { BadgeCapturaAirNation } from './components/BadgeCapturaAirNation'
 import { BotonSolicitudEvento } from './components/SolicitudEventoModal'
 import { EncabezadoSeccion } from './components/EncabezadoSeccion'
+import { EscaleraTamano } from './components/EscaleraTamano'
 import { FaqRanking } from './components/FaqRanking'
 import { IconoEstrella } from './components/RankingIconos'
 import { PodioRanking } from './components/PodioRanking'
@@ -53,9 +51,6 @@ import { TablaRanking } from './components/TablaRanking'
 export const revalidate = 300
 
 const SECTION_PY = 'relative px-5 py-14 sm:px-8 sm:py-20 lg:py-24'
-const MAX_PUNTOS_ESCALERA = Math.max(...NIVELES_RANKING.map((n) => n.puntos))
-const ALTURA_ESCALERA = 220
-const OPACIDAD_ESCALERA = [0.5, 0.65, 0.8, 1] as const
 
 const CANONICAL = 'https://www.airnation.online/ranking'
 const OG_IMAGE = 'https://www.airnation.online/og-default.jpg'
@@ -72,8 +67,6 @@ const jostSub = {
   textTransform: 'uppercase' as const,
 }
 
-const CARD = 'border border-[#E5E5E5] bg-white'
-
 function esTopTresLugar(posicion: string): boolean {
   return posicion.startsWith('1º') || posicion.startsWith('2º') || posicion.startsWith('3º')
 }
@@ -84,51 +77,6 @@ function ChipOrden({ texto }: { texto: string }) {
       <ArrowDown className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
       {texto}
     </p>
-  )
-}
-
-function TablaTamano({
-  nombre,
-  puntos,
-  bandas,
-}: {
-  nombre: string
-  puntos: number
-  bandas: readonly FactorTamanoRanking[]
-}) {
-  return (
-    <div className={`overflow-x-auto ${CARD}`}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-[#E5E5E5] px-4 py-3">
-        <p className="text-sm font-bold text-[#111111]">{nombre}</p>
-        <p className="text-xs text-[#666666]">{TEXTOS_PUNTOS.baseNormal(puntos)}</p>
-      </div>
-      <table className="w-full table-fixed text-left">
-        <thead>
-          <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#999999]">
-            <th scope="col" className="px-4 py-2 font-bold">
-              {TEXTOS_PUNTOS.colJugadores}
-            </th>
-            <th scope="col" className="px-2 py-2 font-bold">
-              {TEXTOS_PUNTOS.colTamano}
-            </th>
-            <th scope="col" className="px-4 py-2 text-right font-bold">
-              {TEXTOS_PUNTOS.colPorcentaje}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {bandas.map((f) => (
-            <tr key={f.min} className="border-t border-[#F0F0F0]">
-              <td className="px-4 py-2.5 text-sm text-[#111111]">{f.rango}</td>
-              <td className="px-2 py-2.5 text-sm text-[#555555]">{f.etiqueta}</td>
-              <td className="px-4 py-2.5 text-right font-display text-lg font-black tabular-nums text-[#111111]">
-                {f.porcentaje}%
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   )
 }
 
@@ -419,80 +367,7 @@ export default async function RankingPage() {
             />
 
             <div className="space-y-14">
-              <div>
-                <SubtituloBloque>{TEXTOS_PUNTOS.tipoTitulo}</SubtituloBloque>
-                <div className="hidden items-end gap-3 md:grid md:grid-cols-4">
-                  {NIVELES_RANKING.map((n, i) => (
-                    <div
-                      key={n.nivel}
-                      className={`flex flex-col items-center px-3 pb-4 pt-6 ${CARD}`}
-                    >
-                      <p className="font-display text-2xl font-black tabular-nums text-[#111111]">
-                        {n.puntos}
-                      </p>
-                      <div
-                        className="mt-3 w-full bg-[#CC4B37]"
-                        style={{
-                          height: `${(n.puntos / MAX_PUNTOS_ESCALERA) * ALTURA_ESCALERA}px`,
-                          opacity: OPACIDAD_ESCALERA[i] ?? 1,
-                        }}
-                      />
-                      <p className="mt-4 text-center text-sm font-bold text-[#111111]">
-                        {n.nombre}
-                      </p>
-                      <p className="mt-2 text-center text-xs leading-relaxed text-[#666666]">
-                        {n.descripcion}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="md:hidden">
-                  <ChipOrden texto={TEXTOS_PUNTOS.ordenMenosAMas} />
-                  <div className="flex flex-col gap-4">
-                    {NIVELES_RANKING.map((n, i) => (
-                      <div key={n.nivel} className={`p-4 ${CARD}`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-bold text-[#111111]">{n.nombre}</p>
-                          <p className="font-display text-xl font-black text-[#111111]">
-                            {n.puntos}
-                          </p>
-                        </div>
-                        <div className="mt-3 h-2 w-full bg-[#EEEEEE]">
-                          <div
-                            className="h-full bg-[#CC4B37]"
-                            style={{
-                              width: `${(n.puntos / MAX_PUNTOS_ESCALERA) * 100}%`,
-                              opacity: OPACIDAD_ESCALERA[i] ?? 1,
-                            }}
-                          />
-                        </div>
-                        <p className="mt-2 text-xs text-[#666666]">{n.descripcion}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <p className="mt-4 text-sm text-[#555555]">{TEXTOS_PUNTOS.tipoNota}</p>
-              </div>
-
-              <div>
-                <SubtituloBloque>{TEXTOS_PUNTOS.tamanoTitulo}</SubtituloBloque>
-                <p className="mb-6 max-w-3xl text-sm leading-relaxed text-[#555555]">
-                  {TEXTOS_PUNTOS.tamanoNota}
-                </p>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {NIVELES_RANKING.map((n) => (
-                    <TablaTamano
-                      key={n.nivel}
-                      nombre={n.nombre}
-                      puntos={n.puntos}
-                      bandas={factoresTamano(n.nivel)}
-                    />
-                  ))}
-                </div>
-                <p className="mt-4 border border-[#E5E5E5] border-l-[3px] border-l-[#CC4B37] bg-white px-4 py-3 text-sm leading-relaxed text-[#111111]">
-                  {TEXTOS_PUNTOS.ejemploCuenta}
-                </p>
-              </div>
+              <EscaleraTamano />
 
               <div>
                 <SubtituloBloque>{TEXTOS_PUNTOS.lugarTitulo}</SubtituloBloque>
