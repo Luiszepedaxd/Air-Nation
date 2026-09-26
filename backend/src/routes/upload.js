@@ -10,10 +10,11 @@ const {
   ensureFfmpegPaths,
   trimVideoBuffer,
 } = require("../lib/videoTrim");
+const { inspectImageUpload } = require("../lib/imageUpload");
 
 ensureFfmpegPaths();
 
-const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 
 const videoMimes = new Set([
   "video/mp4",
@@ -61,14 +62,7 @@ const uploadVideo = multer({
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (allowedMimes.has(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Solo se permiten image/jpeg, image/png o image/webp"));
-    }
-  },
+  limits: { fileSize: IMAGE_MAX_BYTES },
 });
 
 /**
@@ -146,17 +140,33 @@ router.get("/video/health", (req, res) => {
 router.post("/", requireAuth, (req, res) => {
   upload.single("file")(req, res, async (err) => {
     if (err) {
+      if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+        return res
+          .status(400)
+          .json({ error: "La foto pesa más de 10 MB. Elige una más liviana." });
+      }
       return res.status(400).json({ error: err.message });
     }
     if (!req.file) {
       return res.status(400).json({ error: "No se recibió ningún archivo" });
     }
+    const inspected = inspectImageUpload(
+      req.file.buffer,
+      req.file.mimetype,
+      req.file.originalname
+    );
+    if (inspected.error) {
+      return res.status(400).json({ error: inspected.error });
+    }
     try {
       const url = await uploadToCloudflare(
-        req.file.buffer,
-        req.file.originalname,
-        req.file.mimetype
+        inspected.buffer,
+        inspected.filename,
+        inspected.mimetype
       );
+      if (!url || typeof url !== "string") {
+        return res.status(502).json({ error: "No se pudo guardar la foto." });
+      }
       return res.status(200).json({ url });
     } catch (e) {
       return res.status(500).json({ error: e.message });

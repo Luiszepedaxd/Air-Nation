@@ -1,11 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
+import {
+  PHOTO_ACCEPT,
+  PHOTO_UPLOAD_FAIL,
+  prepareReplicaPhoto,
+  replicaRegistrationPhotos,
+} from '@/lib/replica-photo'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
 const lato = { fontFamily: "'Lato', sans-serif" } as const
@@ -136,21 +142,42 @@ export function RegistrarForm({
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [photoError, setPhotoError] = useState('')
+  const photoSeq = useRef(0)
+
+  const clearPhoto = () => {
+    photoSeq.current += 1
+    setFotoUrl('')
+    setPhotoError('')
+    setError('')
+    setUploading(false)
+  }
 
   const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('Solo JPG, PNG o WebP.')
-      return
-    }
+    const seq = ++photoSeq.current
+    setFotoUrl('')
+    setPhotoError('')
+    setError('')
     setUploading(true)
     try {
-      const url = await uploadFile(file)
-      setFotoUrl(url)
-    } catch { setError('Error al subir la foto.') }
-    finally { setUploading(false) }
+      const prepared = await prepareReplicaPhoto(file)
+      const url = await uploadFile(prepared)
+      if (seq !== photoSeq.current) return
+      const photos = replicaRegistrationPhotos(url)
+      if (!photos) throw new Error(PHOTO_UPLOAD_FAIL)
+      setFotoUrl(photos[0])
+    } catch (err) {
+      if (seq !== photoSeq.current) return
+      const msg = err instanceof Error && err.message ? err.message : PHOTO_UPLOAD_FAIL
+      setFotoUrl('')
+      setPhotoError(msg)
+      setError(msg)
+    } finally {
+      if (seq === photoSeq.current) setUploading(false)
+    }
   }
 
   const handleSave = async () => {
@@ -161,6 +188,11 @@ export function RegistrarForm({
       setError('Espera a que termine de subir la foto.')
       return
     }
+    if (photoError) {
+      setError('La foto no se subió. Elige otra imagen o quítala para registrar la réplica sin publicarla en el feed.')
+      return
+    }
+    const photos = replicaRegistrationPhotos(fotoUrl)
     setSaving(true)
     setError('')
     try {
@@ -175,7 +207,7 @@ export function RegistrarForm({
           upgrades: condicion === 'upgrades' ? upgrades.trim() || null : null,
           serial: serial.trim() || null,
           descripcion: descripcion.trim() || null,
-          foto_url: fotoUrl || null,
+          foto_url: photos ? photos[0] : null,
           ciudad: userCiudad,
           estado: userEstado,
           verificada: !!serial.trim(),
@@ -183,35 +215,37 @@ export function RegistrarForm({
         .select()
         .single()
       if (dbErr) throw dbErr
-      try {
-        let displayName = 'Jugador'
+      if (photos) {
         try {
-          const { data: userData } = await supabase
-            .from('users')
-            .select('alias, nombre')
-            .eq('id', userId)
-            .single()
-          displayName =
-            userData?.alias?.trim() ||
-            userData?.nombre?.trim() ||
-            'Jugador'
+          let displayName = 'Jugador'
+          try {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('alias, nombre')
+              .eq('id', userId)
+              .single()
+            displayName =
+              userData?.alias?.trim() ||
+              userData?.nombre?.trim() ||
+              'Jugador'
+          } catch (e) {
+            console.error(e)
+          }
+          const postContent =
+            condicion === 'upgrades'
+              ? `${displayName} agregó ${nombre.trim()} a su arsenal. Checa su build.`
+              : `${displayName} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas?`
+          const { error: postErr } = await supabase.from('player_posts').insert({
+            user_id: userId,
+            content: postContent,
+            fotos_urls: photos,
+            published: true,
+            replica_id: data.id,
+          })
+          if (postErr) console.error(postErr)
         } catch (e) {
           console.error(e)
         }
-        const postContent =
-          condicion === 'upgrades'
-            ? `${displayName} agregó ${nombre.trim()} a su arsenal. Checa su build.`
-            : `${displayName} agregó ${nombre.trim()} a su arsenal. ¿Qué opinas?`
-        const { error: postErr } = await supabase.from('player_posts').insert({
-          user_id: userId,
-          content: postContent,
-          fotos_urls: fotoUrl ? [fotoUrl] : [],
-          published: true,
-          replica_id: data.id,
-        })
-        if (postErr) console.error(postErr)
-      } catch (e) {
-        console.error(e)
       }
       onSuccess(data as ReplicaRow)
     } catch { setError('Error al guardar. Intenta de nuevo.') }
@@ -243,10 +277,25 @@ export function RegistrarForm({
               </div>
             )}
           </div>
-          <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 border border-[#EEEEEE] bg-[#F4F4F4] py-2.5 text-[11px] font-extrabold uppercase text-[#111111]" style={jost}>
-            <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFoto} disabled={uploading} />
+          <label className={`mt-2 flex items-center justify-center gap-2 border border-[#EEEEEE] bg-[#F4F4F4] py-2.5 text-[11px] font-extrabold uppercase text-[#111111] ${uploading ? 'cursor-default opacity-60' : 'cursor-pointer'}`} style={jost}>
+            <input type="file" accept={PHOTO_ACCEPT} className="hidden" onChange={handleFoto} disabled={uploading} />
             {uploading ? 'Subiendo…' : 'Elegir foto'}
           </label>
+          {uploading && (
+            <button type="button" onClick={clearPhoto} className="mt-2 text-[11px] text-[#999999] underline" style={lato}>
+              Cancelar subida
+            </button>
+          )}
+          {(fotoUrl || photoError) && !uploading && (
+            <button type="button" onClick={clearPhoto} className="mt-2 text-[11px] text-[#999999] underline" style={lato}>
+              Quitar foto
+            </button>
+          )}
+          {!fotoUrl && !uploading && (
+            <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
+              Sin foto la réplica se guarda, pero no se publica en el feed.
+            </p>
+          )}
         </div>
 
         <div>

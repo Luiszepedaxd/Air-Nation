@@ -28,7 +28,8 @@
     "indexnow:todo": "node scripts/indexnow.js --todo",
     "indexnow:ranking": "node scripts/indexnow.js --ranking",
     "migrate:stream": "node scripts/migrate-player-posts-to-stream.js",
-    "migrate:stream:dry": "node scripts/migrate-player-posts-to-stream.js --dry-run"
+    "migrate:stream:dry": "node scripts/migrate-player-posts-to-stream.js --dry-run",
+    "test": "node --test src/lib/imageUpload.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1035.0",

@@ -33,6 +33,7 @@ export type PlayerPostRow = {
   id: string
   content: string | null
   fotos_urls: string[] | null
+  replica_id?: string | null
   created_at: string
   video_url?: string | null
   video_duration_s?: number | null

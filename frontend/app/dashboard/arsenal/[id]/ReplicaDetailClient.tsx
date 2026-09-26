@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { uploadFile } from '@/lib/apiFetch'
+import { PHOTO_ACCEPT, PHOTO_UPLOAD_FAIL, prepareReplicaPhoto } from '@/lib/replica-photo'
 import { ArsenalIcon, SISTEMAS, MECANISMOS, type ReplicaRow } from '../ArsenalClient'
 
 const jost = { fontFamily: "'Jost', sans-serif", fontWeight: 800, textTransform: 'uppercase' as const } as const
@@ -107,25 +108,19 @@ export function ReplicaDetailClient({
     router.push('/dashboard/arsenal')
   }
 
+  const photoSeq = useRef(0)
+
   const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = ''
     if (!file) return
-
-    const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    if (!allowed.includes(file.type)) {
-      setError('Solo se permiten imágenes JPG, PNG o WebP.')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError('La imagen no debe pesar más de 10 MB.')
-      return
-    }
-
+    const seq = ++photoSeq.current
     setUploadingFoto(true)
     setError(null)
     try {
-      const url = await uploadFile(file)
+      const prepared = await prepareReplicaPhoto(file)
+      const url = await uploadFile(prepared)
+      if (seq !== photoSeq.current) return
       const { error: dbError } = await supabase
         .from('arsenal')
         .update({ foto_url: url })
@@ -133,10 +128,11 @@ export function ReplicaDetailClient({
       if (dbError) throw new Error(dbError.message)
       setReplica(r => ({ ...r, foto_url: url }))
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error desconocido'
-      setError(`No se pudo subir la foto: ${msg}. Intenta de nuevo.`)
+      if (seq !== photoSeq.current) return
+      const msg = err instanceof Error && err.message ? err.message : PHOTO_UPLOAD_FAIL
+      setError(msg)
     } finally {
-      setUploadingFoto(false)
+      if (seq === photoSeq.current) setUploadingFoto(false)
     }
   }
 
@@ -215,7 +211,7 @@ export function ReplicaDetailClient({
           }
           {isOwner && (
             <label className="absolute bottom-2 right-2 cursor-pointer bg-black/60 px-3 py-1.5 text-[10px] font-extrabold uppercase text-white" style={jost}>
-              <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={handleFoto} disabled={uploadingFoto} />
+              <input type="file" accept={PHOTO_ACCEPT} className="hidden" onChange={handleFoto} disabled={uploadingFoto} />
               {uploadingFoto ? 'Subiendo…' : 'Cambiar foto'}
             </label>
           )}
