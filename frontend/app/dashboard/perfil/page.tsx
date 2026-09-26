@@ -5,7 +5,6 @@ import { fetchPendingJoinRequestsForModerator } from '@/lib/pending-join-request
 import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
 import type { PlayerPostRow, PublicReplicaRow } from '@/app/u/[id]/types'
-import { visiblePlayerPosts } from '@/lib/replica-photo'
 import { type MisEquipoItem } from './MisEquiposSection'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
 import { PerfilTabsClient } from './PerfilTabsClient'
@@ -104,7 +103,7 @@ export default async function PerfilPage({
     supabase
       .from('player_posts')
       .select(
-        'id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, replica_id, created_at'
+        'id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, created_at'
       )
       .eq('user_id', authUser.id)
       .eq('published', true)
@@ -452,7 +451,7 @@ export default async function PerfilPage({
       }
       campoRegistradoNotice={searchParams.campo_creado === '1'}
       credencialData={credencialData}
-      posts={visiblePlayerPosts((postsData ?? []) as PlayerPostRow[])}
+      posts={(postsData ?? []) as PlayerPostRow[]}
       replicas={(replicasData ?? []) as PublicReplicaRow[]}
     />
   )

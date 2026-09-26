@@ -150,53 +150,6 @@ export function isPublishablePhotoUrl(url: string | null | undefined): boolean {
   }
 }
 
-export function usablePhotoUrls(urls: unknown): string[] {
-  if (!Array.isArray(urls)) return []
-  const out: string[] = []
-  for (const url of urls) {
-    if (typeof url === 'string' && isPublishablePhotoUrl(url)) out.push(url.trim())
-  }
-  return out
-}
-
-/**
- * Post de alta de réplica sin imagen usable (ni video).
- * Un post de texto normal, sin replica_id, no entra aquí.
- */
-export function isEmptyReplicaFeedPost(post: {
-  replica_id?: string | null
-  fotos_urls?: unknown
-  video_url?: string | null
-}): boolean {
-  if (!post.replica_id) return false
-  if (typeof post.video_url === 'string' && post.video_url.trim()) return false
-  return usablePhotoUrls(post.fotos_urls).length === 0
-}
-
-export function omitEmptyReplicaPosts<
-  T extends {
-    kind?: string
-    replica_id?: string | null
-    fotos_urls?: unknown
-    video_url?: string | null
-  },
->(items: T[]): T[] {
-  return items.filter((item) => {
-    if (item.kind !== 'player_post' && item.kind !== 'pinned_post') return true
-    return !isEmptyReplicaFeedPost(item)
-  })
-}
-
-export function visiblePlayerPosts<
-  T extends {
-    replica_id?: string | null
-    fotos_urls?: unknown
-    video_url?: string | null
-  },
->(posts: T[]): T[] {
-  return posts.filter((post) => !isEmptyReplicaFeedPost(post))
-}
-
 /** null = no publicar. El feed no debe recibir fotos_urls vacío. */
 export function replicaRegistrationPhotos(
   fotoUrl: string | null | undefined

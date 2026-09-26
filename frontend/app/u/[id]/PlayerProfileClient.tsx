@@ -14,7 +14,6 @@ import { PostActions } from '@/components/posts/PostInteractions'
 import { adminDeletePlayerPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { supabase } from '@/lib/supabase'
-import { visiblePlayerPosts } from '@/lib/replica-photo'
 import type {
   PlayerEventRow,
   PlayerPostRow,
@@ -91,13 +90,13 @@ export function PlayerProfileClient({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [postsState, setPostsState] = useState<PlayerPostRow[]>(() => visiblePlayerPosts(posts))
+  const [postsState, setPostsState] = useState<PlayerPostRow[]>(posts)
   const [tab, setTabState] = useState<TabId>(() =>
     profileTabFromSearchParams(new URLSearchParams(searchParams.toString()))
   )
 
   useEffect(() => {
-    setPostsState(visiblePlayerPosts(posts))
+    setPostsState(posts)
   }, [posts])
 
   useEffect(() => {
@@ -171,13 +170,13 @@ export function PlayerProfileClient({
                     const { data } = await supabase
                       .from('player_posts')
                       .select(
-                        'id, content, fotos_urls, video_url, video_duration_s, mentions, replica_id, created_at'
+                        'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
                       )
                       .eq('user_id', user.id)
                       .eq('published', true)
                       .order('created_at', { ascending: false })
                       .limit(20)
-                    if (data) setPostsState(visiblePlayerPosts(data as PlayerPostRow[]))
+                    if (data) setPostsState(data as PlayerPostRow[])
                     void router.refresh()
                   }}
                 />
@@ -228,8 +227,7 @@ function PostsPanel({
 }) {
   const router = useRouter()
 
-  const visiblePosts = visiblePlayerPosts(posts)
-  if (!visiblePosts.length) {
+  if (!posts.length) {
     return (
       <p className="py-12 text-center text-[14px] text-[#666666]" style={lato}>
         Aún no hay publicaciones
@@ -239,7 +237,7 @@ function PostsPanel({
 
   return (
     <div className="flex flex-col">
-      {visiblePosts.map((post) => {
+      {posts.map((post) => {
         const urls = postPhotoUrls(post)
         const isOwner = currentUserId === profileUserId
 

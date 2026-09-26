@@ -9,7 +9,6 @@ import { PlayerProfileClient } from './PlayerProfileClient'
 import { PlayerHero } from './PlayerHero'
 import { RankingJugadorSection } from './RankingJugadorSection'
 import type { PlayerEventRow, PlayerPostRow, PublicReplicaRow, PublicUserProfile } from './types'
-import { visiblePlayerPosts } from '@/lib/replica-photo'
 
 export const revalidate = 0
 export const dynamic = 'force-dynamic'
@@ -86,7 +85,7 @@ const fetchPublicProfile = cache(async (id: string) => {
     const { data: postsData } = await supabase
       .from('player_posts')
       .select(
-        'id, content, fotos_urls, video_url, video_duration_s, mentions, replica_id, created_at'
+        'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
       )
       .eq('user_id', id)
       .eq('published', true)
@@ -116,7 +115,7 @@ const fetchPublicProfile = cache(async (id: string) => {
       }
     }
 
-    return visiblePlayerPosts(postsData as PlayerPostRow[]).map((postRow) => {
+    return (postsData as PlayerPostRow[]).map((postRow) => {
       const mids = postRow.mentions
       const mentionAliasById: Record<string, string> = {}
       if (Array.isArray(mids)) {

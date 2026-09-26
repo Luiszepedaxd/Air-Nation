@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  isEmptyReplicaFeedPost,
   replicaRegistrationPhotos,
   resolveImageKind,
   shouldTranscode,
-  usablePhotoUrls,
 } from './replica-photo.ts'
 
 function bytes(...xs: number[]): Uint8Array {
@@ -36,46 +34,6 @@ describe('replica registration feed post', () => {
       replicaRegistrationPhotos('  https://imagedelivery.net/a/b/public  '),
       ['https://imagedelivery.net/a/b/public']
     )
-  })
-
-  it('hides existing replica posts that have no usable photo', () => {
-    assert.equal(
-      isEmptyReplicaFeedPost({ replica_id: 'r1', fotos_urls: [] }),
-      true
-    )
-    assert.equal(
-      isEmptyReplicaFeedPost({ replica_id: 'r1', fotos_urls: null }),
-      true
-    )
-    assert.equal(
-      isEmptyReplicaFeedPost({ replica_id: 'r1', fotos_urls: ['', '   '] }),
-      true
-    )
-    assert.equal(
-      isEmptyReplicaFeedPost({
-        replica_id: 'r1',
-        fotos_urls: ['https://imagedelivery.net/a/b/public'],
-      }),
-      false
-    )
-    assert.equal(
-      isEmptyReplicaFeedPost({
-        replica_id: 'r1',
-        fotos_urls: [],
-        video_url: 'https://videodelivery.net/x/manifest/video.m3u8',
-      }),
-      false
-    )
-    assert.equal(
-      isEmptyReplicaFeedPost({ replica_id: null, fotos_urls: [] }),
-      false
-    )
-  })
-
-  it('drops blank urls before the feed renders them', () => {
-    assert.deepEqual(usablePhotoUrls(['', ' https://cdn.example/a.jpg ', 'nope']), [
-      'https://cdn.example/a.jpg',
-    ])
   })
 })
 

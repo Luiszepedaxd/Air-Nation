@@ -31,7 +31,6 @@ import { VideoTrimmer } from '@/components/posts/VideoTrimmer'
 import { PostContent } from '@/components/feed/PostContent'
 import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
 import { feedAvatarUrl } from '@/lib/media-url'
-import { isEmptyReplicaFeedPost, omitEmptyReplicaPosts } from '@/lib/replica-photo'
 import { TablaRanking } from '@/app/ranking/components/TablaRanking'
 import {
   fetchTablaRanking,
@@ -280,12 +279,10 @@ function readFeedTabSessionCache(): FeedTabSessionPayload | null {
     if (!parsed || typeof parsed !== 'object') return null
     const o = parsed as Record<string, unknown>
     if (!Array.isArray(o.items) || o.items.length === 0) return null
-    const items = omitEmptyReplicaPosts(o.items as FeedItem[])
-    if (items.length === 0) return null
     const cp = o.cursorPlayerPosts != null ? String(o.cursorPlayerPosts) : null
     const ct = o.cursorTeamPosts != null ? String(o.cursorTeamPosts) : null
     return {
-      items,
+      items: o.items as FeedItem[],
       cursorPlayerPosts: cp && cp.length > 0 ? cp : null,
       cursorTeamPosts: ct && ct.length > 0 ? ct : null,
       hasMore: typeof o.hasMore === 'boolean' ? o.hasMore : true,
@@ -582,11 +579,11 @@ async function fetchHighlightFeedItem(
       created_at: String(r.created_at),
       user: mapJoinedUserForPlayerPost(u ? (u as Record<string, unknown>) : null),
     }
-    const item = r.pinned
-      ? { kind: 'pinned_post' as const, ...base }
-      : { kind: 'player_post' as const, ...base }
-    if (isEmptyReplicaFeedPost(item)) return null
-    return attach(item)
+    return attach(
+      r.pinned
+        ? { kind: 'pinned_post' as const, ...base }
+        : { kind: 'player_post' as const, ...base }
+    )
   }
 
   if (postType === 'team') {
@@ -1600,7 +1597,6 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   onPostDeleted: (id: string) => void
   highlighted?: boolean
 }) {
-  if (isEmptyReplicaFeedPost(item)) return null
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
 
@@ -1759,7 +1755,6 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   isAdmin: boolean
   highlighted?: boolean
 }) {
-  if (isEmptyReplicaFeedPost(item)) return null
   const fotos = (item.fotos_urls ?? []).slice(0, 4)
   const name = item.user.alias?.trim() || item.user.nombre?.trim() || 'Jugador'
 
@@ -2884,7 +2879,7 @@ function FeedTab({
           combined = [highlightedItemRef.current, ...combined]
         }
       }
-      setItems(attachEngagements(omitEmptyReplicaPosts(combined), engagementMap))
+      setItems(attachEngagements(combined, engagementMap))
 
       const teamData = teamPostsRes.data ?? []
       const playerData = playerPostsRes.data ?? []
@@ -3089,7 +3084,7 @@ function FeedTab({
 
       setItems((prev) => [
         ...prev,
-        ...attachEngagements(omitEmptyReplicaPosts(filteredNewItems), loadMoreEngagementMap),
+        ...attachEngagements(filteredNewItems, loadMoreEngagementMap),
       ])
     } finally {
       loadingMoreRef.current = false
