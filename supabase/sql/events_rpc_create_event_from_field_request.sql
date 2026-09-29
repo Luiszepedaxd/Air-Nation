@@ -71,7 +71,7 @@ BEGIN
     'Partida en ' || v_field.nombre,
     v_request.mensaje,
     v_request.field_id,
-    v_request.fecha_deseada::timestamptz,
+    v_request.fecha_deseada::timestamp AT TIME ZONE 'America/Mexico_City',
     v_request.num_jugadores,
     'airsoft',
     'privado',
