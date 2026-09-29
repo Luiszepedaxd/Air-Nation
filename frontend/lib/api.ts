@@ -90,11 +90,14 @@ export const api = {
       user_id?: string | null;
       origen?: string | null;
       sitio_web?: string;
-    }): Promise<{ success: boolean; error?: string; id?: string }> => {
+      event_id?: string | null;
+      formato?: string | null;
+    }, signal?: AbortSignal): Promise<{ success: boolean; error?: string; id?: string }> => {
       const res = await fetch(`${BASE_URL}/ranking/solicitudes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal,
       });
       const data = (await res.json().catch(() => ({}))) as {
         success?: boolean;

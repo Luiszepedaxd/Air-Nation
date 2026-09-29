@@ -422,3 +422,13 @@ export const TEXTOS_PERFIL = {
   pie: 'Cada punto se puede revisar.',
   pieLink: '¿Cómo se ganan? →',
 }
+
+// Opciones del formulario "crear evento → solicitar ranking".
+// Usados tanto en el cliente (EventoNuevoForm) como en el servidor (actions.ts).
+export const TIPOS_EVENTO_RANKING_EVENTO = TEXTOS_SOLICITUD.tiposEvento.slice(0, 4)
+
+export const FORMATOS_EVENTO = [
+  'Dos bandos',
+  'Facciones (3 o más)',
+  'Lugares por equipo o jugador',
+] as const

@@ -25,7 +25,13 @@ const JUGADORES_OPCIONES = new Set([
   "Más de 100",
 ]);
 
-const ORIGENES = new Set(["home", "ranking", "feed"]);
+const FORMATOS = new Set([
+  "Dos bandos",
+  "Facciones (3 o más)",
+  "Lugares por equipo o jugador",
+]);
+
+const ORIGENES = new Set(["home", "ranking", "feed", "evento"]);
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -164,6 +170,24 @@ router.post("/solicitudes", async (req, res) => {
       origen = origenRaw;
     }
 
+    const eventIdRaw = strField(body, "event_id");
+    let event_id = null;
+    if (eventIdRaw.length > 0) {
+      if (!UUID_RE.test(eventIdRaw)) {
+        return res.status(400).json({ success: false, error: "Evento inválido" });
+      }
+      event_id = eventIdRaw;
+    }
+
+    const formatoRaw = strField(body, "formato");
+    let formato = null;
+    if (formatoRaw.length > 0) {
+      if (!FORMATOS.has(formatoRaw)) {
+        return res.status(400).json({ success: false, error: "Formato inválido" });
+      }
+      formato = formatoRaw;
+    }
+
     const row = {
       nombre,
       whatsapp,
@@ -176,13 +200,34 @@ router.post("/solicitudes", async (req, res) => {
       mensaje,
       user_id,
       origen,
+      ...(event_id ? { event_id } : {}),
+      ...(formato ? { formato } : {}),
     };
 
-    const { data: inserted, error: insertErr } = await supabase
+    let inserted, insertErr;
+    ({ data: inserted, error: insertErr } = await supabase
       .from("ranking_solicitudes")
       .insert(row)
       .select("id, created_at")
-      .single();
+      .single());
+
+    // ponytail: fallback omits new columns; delete once supabase/sql/ranking_solicitudes_event_link.sql is applied
+    if (insertErr && (row.event_id || row.formato)) {
+      const extras = [
+        formato ? `Formato: ${formato}` : null,
+        event_id ? `Evento: https://www.airnation.online/eventos/${event_id}` : null,
+      ].filter(Boolean).join(" / ");
+      const fallbackRow = { ...row };
+      delete fallbackRow.event_id;
+      delete fallbackRow.formato;
+      fallbackRow.origen = null;
+      fallbackRow.mensaje = [row.mensaje, extras].filter(Boolean).join(" / ") || null;
+      ({ data: inserted, error: insertErr } = await supabase
+        .from("ranking_solicitudes")
+        .insert(fallbackRow)
+        .select("id, created_at")
+        .single());
+    }
 
     if (insertErr || !inserted) {
       console.error("[ranking] insert error:", insertErr);
@@ -200,6 +245,9 @@ router.post("/solicitudes", async (req, res) => {
         const fromAddr =
           process.env.RESEND_FROM_EMAIL || "AirNation <info@airnation.online>";
         const waLink = `https://wa.me/${whatsapp}`;
+        const eventoLine = event_id
+          ? `<p><strong>Evento:</strong> <a href="https://www.airnation.online/eventos/${escapeHtml(event_id)}">https://www.airnation.online/eventos/${escapeHtml(event_id)}</a></p>`
+          : "";
         const html = `
 <h2>Nueva solicitud — Ranking Nacional</h2>
 <p><strong>Nombre:</strong> ${escapeHtml(nombre)}</p>
@@ -207,6 +255,7 @@ router.post("/solicitudes", async (req, res) => {
 <p><strong>Correo:</strong> ${escapeHtml(email || "—")}</p>
 <p><strong>Organización / evento:</strong> ${escapeHtml(organizacion)}</p>
 <p><strong>Tipo de evento:</strong> ${escapeHtml(tipo_evento)}</p>
+<p><strong>Formato:</strong> ${escapeHtml(formato || "—")}</p>
 <p><strong>Ciudad:</strong> ${escapeHtml(ciudad)}</p>
 <p><strong>Jugadores esperados:</strong> ${escapeHtml(jugadores_esperados || "—")}</p>
 <p><strong>Fecha aproximada:</strong> ${escapeHtml(fecha_aproximada || "—")}</p>
@@ -214,6 +263,7 @@ router.post("/solicitudes", async (req, res) => {
 <p>${mensaje ? escapeHtml(mensaje).replace(/\n/g, "<br/>") : "—"}</p>
 <p><strong>Origen:</strong> ${escapeHtml(origen || "—")}</p>
 <p><strong>User ID:</strong> ${escapeHtml(user_id || "—")}</p>
+${eventoLine}
 <p><strong>Fecha:</strong> ${escapeHtml(inserted.created_at)}</p>
 <p><a href="${escapeHtml(waLink)}" style="display:inline-block;padding:10px 16px;background:#25D366;color:#fff;text-decoration:none;font-weight:bold;">Escribir por WhatsApp</a></p>
 `.trim();

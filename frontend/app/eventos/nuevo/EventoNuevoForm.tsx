@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
+import { TIPOS_EVENTO_RANKING_EVENTO, FORMATOS_EVENTO, TEXTOS_SOLICITUD } from '@/lib/ranking-contenido'
 import { createUserEvento } from './actions'
 
 const jostHeading = {
@@ -42,6 +43,14 @@ export function EventoNuevoForm({
   const [clientError, setClientError] = useState('')
   const [saving, setSaving] = useState(false)
   const [activeUploads, setActiveUploads] = useState(0)
+
+  // Ranking Nacional opt-in
+  const [rankingCheck, setRankingCheck] = useState(false)
+  const [rankingTipo, setRankingTipo] = useState<string>('')
+  const [rankingFormato, setRankingFormato] = useState<string>('')
+  const [rankingJugadores, setRankingJugadores] = useState<string>('')
+  const [rankingWhatsapp, setRankingWhatsapp] = useState<string>('')
+  const [rankingConfirm, setRankingConfirm] = useState(false)
 
   const fieldOptions = useMemo(() => {
     return tipo === 'privado' ? privateFields : publicFields
@@ -106,6 +115,31 @@ export function EventoNuevoForm({
           return
         }
       }
+
+      if (rankingCheck) {
+        if (!rankingTipo) {
+          setClientError('Selecciona el tipo de evento para el Ranking Nacional.')
+          return
+        }
+        if (!rankingFormato) {
+          setClientError('Indica cómo se gana el evento.')
+          return
+        }
+        if (!rankingJugadores) {
+          setClientError('Indica cuántos jugadores esperas.')
+          return
+        }
+        const digits = rankingWhatsapp.replace(/\D/g, '')
+        if (digits.length < 10 || digits.length > 13) {
+          setClientError('El WhatsApp debe tener 10 dígitos.')
+          return
+        }
+        if (!rankingConfirm) {
+          setClientError('Confirma que alguien organiza y se podrán subir resultados.')
+          return
+        }
+      }
+
       const fechaIso = new Date(fechaLocal).toISOString()
 
       setSaving(true)
@@ -118,6 +152,14 @@ export function EventoNuevoForm({
         cupo_vendido_creador: cupoVendidoNum,
         tipo,
         imagen_url: imagenUrl.trim() || null,
+        ranking: rankingCheck
+          ? {
+              tipo_evento: rankingTipo,
+              formato: rankingFormato,
+              jugadores_esperados: rankingJugadores,
+              whatsapp: rankingWhatsapp,
+            }
+          : null,
       })
       setSaving(false)
       if ('error' in res) {
@@ -139,6 +181,12 @@ export function EventoNuevoForm({
       canCreatePrivate,
       router,
       lockedField,
+      rankingCheck,
+      rankingTipo,
+      rankingFormato,
+      rankingJugadores,
+      rankingWhatsapp,
+      rankingConfirm,
     ]
   )
 
@@ -343,6 +391,106 @@ export function EventoNuevoForm({
           onUploadStart={() => setActiveUploads((n) => n + 1)}
           onUploadEnd={() => setActiveUploads((n) => Math.max(0, n - 1))}
         />
+      </div>
+
+      {/* Ranking Nacional opt-in */}
+      <div>
+        <div className="flex items-start gap-3">
+          <input
+            id="ranking-check"
+            type="checkbox"
+            checked={rankingCheck}
+            onChange={(e) => {
+              setRankingCheck(e.target.checked)
+              setClientError('')
+            }}
+            className="mt-0.5 accent-[#CC4B37]"
+          />
+          <label
+            htmlFor="ranking-check"
+            className="cursor-pointer text-sm text-[#111111]"
+            style={latoBody}
+          >
+            Quiero que este evento cuente para el Ranking Nacional
+          </label>
+        </div>
+        <p className="mt-1 pl-7 text-[11px] text-[#999999]" style={latoBody}>
+          Tu evento se publica igual. Nosotros revisamos si califica y te avisamos.
+        </p>
+
+        {rankingCheck && (
+          <div className="mt-4 space-y-4">
+            {[
+              { label: 'Tipo de evento', opts: TIPOS_EVENTO_RANKING_EVENTO, value: rankingTipo, set: setRankingTipo },
+              { label: '¿Cómo se gana?', opts: FORMATOS_EVENTO, value: rankingFormato, set: setRankingFormato },
+              { label: '¿Cuántos jugadores esperas?', opts: TEXTOS_SOLICITUD.jugadoresOpciones, value: rankingJugadores, set: setRankingJugadores },
+            ].map(({ label, opts, value, set }) => (
+              <div key={label}>
+                <p
+                  className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+                  style={jostHeading}
+                >
+                  {label} <span className="text-[#CC4B37]">*</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(opts as readonly string[]).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      aria-pressed={value === opt}
+                      onClick={() => set(opt)}
+                      className={`border border-solid px-3 py-2 text-[10px] tracking-[0.12em] ${
+                        value === opt
+                          ? 'border-[#111111] bg-[#111111] text-[#FFFFFF]'
+                          : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#666666]'
+                      }`}
+                      style={jostHeading}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div>
+              <label
+                htmlFor="ranking-whatsapp"
+                className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+                style={jostHeading}
+              >
+                WhatsApp de contacto <span className="text-[#CC4B37]">*</span>
+              </label>
+              <input
+                id="ranking-whatsapp"
+                type="text"
+                inputMode="tel"
+                value={rankingWhatsapp}
+                onChange={(e) => setRankingWhatsapp(e.target.value)}
+                placeholder="10 dígitos"
+                className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+                style={{ borderRadius: 2 }}
+              />
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input
+                id="ranking-confirm"
+                type="checkbox"
+                checked={rankingConfirm}
+                onChange={(e) => setRankingConfirm(e.target.checked)}
+                className="mt-0.5 accent-[#CC4B37]"
+              />
+              <label
+                htmlFor="ranking-confirm"
+                className="cursor-pointer text-sm text-[#111111]"
+                style={latoBody}
+              >
+                Alguien organiza, invita a los jugadores y podremos subir resultados.
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       {clientError ? (

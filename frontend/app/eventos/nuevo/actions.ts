@@ -2,6 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
+import { TIPOS_EVENTO_RANKING_EVENTO, FORMATOS_EVENTO, TEXTOS_SOLICITUD } from '@/lib/ranking-contenido'
+import { api } from '@/lib/api'
+
+export type RankingPayload = {
+  tipo_evento: string
+  formato: string
+  jugadores_esperados: string
+  whatsapp: string
+}
 
 export type CreateUserEventoPayload = {
   title: string
@@ -12,6 +21,7 @@ export type CreateUserEventoPayload = {
   cupo_vendido_creador: number | null
   tipo: 'publico' | 'privado'
   imagen_url: string | null
+  ranking?: RankingPayload | null
 }
 
 export async function createUserEvento(
@@ -62,13 +72,27 @@ export async function createUserEvento(
 
   if (!payload.fecha) return { error: 'Indica fecha y hora.' }
 
+  // Server-side ranking validation (trust boundary)
+  if (payload.ranking) {
+    const { tipo_evento, formato, jugadores_esperados, whatsapp } = payload.ranking
+    const tiposValidos = new Set<string>(TIPOS_EVENTO_RANKING_EVENTO)
+    const formatosValidos = new Set<string>(FORMATOS_EVENTO)
+    const jugadoresValidos = new Set<string>(TEXTOS_SOLICITUD.jugadoresOpciones)
+    if (!tiposValidos.has(tipo_evento)) return { error: 'Tipo de evento inválido.' }
+    if (!formatosValidos.has(formato)) return { error: 'Formato inválido.' }
+    if (!jugadoresValidos.has(jugadores_esperados)) return { error: 'Jugadores esperados inválido.' }
+    const digits = String(whatsapp ?? '').replace(/\D/g, '')
+    if (digits.length < 10 || digits.length > 13) return { error: 'WhatsApp inválido.' }
+  }
+
   let fieldId: string | null = payload.field_id?.trim() || null
+  let fieldCiudad: string | null = null
 
   if (payload.tipo === 'privado') {
     if (!fieldId) return { error: 'Elige el campo privado del equipo.' }
     const { data: frow } = await supabase
       .from('fields')
-      .select('id, tipo, team_id, status')
+      .select('id, tipo, team_id, status, ciudad')
       .eq('id', fieldId)
       .maybeSingle()
     if (!frow || frow.status !== 'aprobado') return { error: 'Campo no válido.' }
@@ -78,16 +102,18 @@ export async function createUserEvento(
     if (!frow.team_id || !modTeamIds.has(frow.team_id)) {
       return { error: 'No puedes usar ese campo privado.' }
     }
+    fieldCiudad = typeof frow.ciudad === 'string' ? frow.ciudad : null
   } else if (fieldId) {
     const { data: frow } = await supabase
       .from('fields')
-      .select('id, tipo, status')
+      .select('id, tipo, status, ciudad')
       .eq('id', fieldId)
       .maybeSingle()
     if (!frow || frow.status !== 'aprobado') return { error: 'Campo no válido.' }
     if ((frow.tipo || '').toLowerCase() === 'privado') {
       return { error: 'Para un campo privado, el evento debe ser privado.' }
     }
+    fieldCiudad = typeof frow.ciudad === 'string' ? frow.ciudad : null
   }
 
   const cupoVendidoInsert =
@@ -120,5 +146,54 @@ export async function createUserEvento(
   const id = data?.id as string
   revalidatePath('/eventos')
   revalidatePath(`/eventos/${id}`)
+
+  // Solicitud de ranking: nunca bloquea ni hace fallar la creación del evento.
+  if (payload.ranking) {
+    try {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('nombre, alias')
+        .eq('id', user.id)
+        .maybeSingle()
+      const nombreRaw = ((userRow?.nombre || userRow?.alias) as string | null | undefined)?.trim() ?? ''
+      const nombre = nombreRaw.length >= 2 ? nombreRaw.slice(0, 120) : 'Organizador'
+
+      const organizacion = t.length >= 2 ? t.slice(0, 150) : `Evento ${t}`.slice(0, 150)
+
+      const fechaFormateada = new Intl.DateTimeFormat('es-MX', {
+        dateStyle: 'long',
+        timeZone: 'America/Mexico_City',
+      })
+        .format(new Date(payload.fecha))
+        .slice(0, 60)
+
+      const ciudadRaw = fieldCiudad?.trim() ?? ''
+      const ciudad = ciudadRaw.length >= 2 ? ciudadRaw : 'Sin especificar'
+
+      const result = await api.ranking.solicitarEvento(
+        {
+          nombre,
+          whatsapp: payload.ranking.whatsapp,
+          email: user.email ?? null,
+          organizacion,
+          tipo_evento: payload.ranking.tipo_evento,
+          ciudad,
+          jugadores_esperados: payload.ranking.jugadores_esperados,
+          fecha_aproximada: fechaFormateada,
+          user_id: user.id,
+          origen: 'evento',
+          event_id: id,
+          formato: payload.ranking.formato,
+        },
+        AbortSignal.timeout(6000)
+      )
+      if (!result.success) {
+        console.error('[createUserEvento] ranking solicitud failed:', result.error)
+      }
+    } catch (e) {
+      console.error('[createUserEvento] ranking solicitud error:', e)
+    }
+  }
+
   return { ok: true, id }
 }
