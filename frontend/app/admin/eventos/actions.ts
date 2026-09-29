@@ -84,6 +84,7 @@ export type EventoUpsertPayload = {
   sede_nombre?: string | null
   sede_ciudad?: string | null
   cupo_vendido_creador: number | null
+  fecha_fin: string
 }
 
 export async function upsertEvento(
@@ -113,11 +114,20 @@ export async function upsertEvento(
     }
   }
 
+  if (!payload.fecha_fin) return { error: 'Indica la hora de término.' }
+  if (
+    !Number.isFinite(new Date(payload.fecha_fin).getTime()) ||
+    new Date(payload.fecha_fin) <= new Date(payload.fecha)
+  ) {
+    return { error: 'La hora de término debe ser después del inicio' }
+  }
+
   const base: Record<string, unknown> = {
     title: payload.title.slice(0, 100),
     descripcion: payload.descripcion ? payload.descripcion.slice(0, 1000) : null,
     field_id: payload.field_id || null,
     fecha: payload.fecha,
+    fecha_fin: payload.fecha_fin,
     cupo: cupoNorm,
     cupo_vendido_creador: cupoVendido,
     disciplina: payload.disciplina || 'airsoft',

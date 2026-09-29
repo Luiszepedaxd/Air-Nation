@@ -37,6 +37,7 @@ export function EventoNuevoForm({
   const [descripcion, setDescripcion] = useState('')
   const [fieldId, setFieldId] = useState(() => lockedField?.id ?? '')
   const [fechaLocal, setFechaLocal] = useState('')
+  const [fechaFinLocal, setFechaFinLocal] = useState('')
   const [cupo, setCupo] = useState('0')
   const [cupoVendidoCreador, setCupoVendidoCreador] = useState('')
   const [tipo, setTipo] = useState<'publico' | 'privado'>('publico')
@@ -85,6 +86,14 @@ export function EventoNuevoForm({
       }
       if (!fechaLocal) {
         setClientError('Indica fecha y hora.')
+        return
+      }
+      if (!fechaFinLocal) {
+        setClientError('Indica la hora de término.')
+        return
+      }
+      if (mxLocalToIso(fechaFinLocal) <= mxLocalToIso(fechaLocal)) {
+        setClientError('La hora de término debe ser después del inicio')
         return
       }
       if (tipo === 'privado' && !canCreatePrivate) {
@@ -137,6 +146,7 @@ export function EventoNuevoForm({
       }
 
       const fechaIso = mxLocalToIso(fechaLocal)
+      const fechaFinIso = mxLocalToIso(fechaFinLocal)
 
       setSaving(true)
       const res = await createUserEvento({
@@ -144,6 +154,7 @@ export function EventoNuevoForm({
         descripcion: descripcion.trim(),
         field_id: fid || null,
         fecha: fechaIso,
+        fecha_fin: fechaFinIso,
         cupo: cupoNum,
         cupo_vendido_creador: cupoVendidoNum,
         tipo,
@@ -170,6 +181,7 @@ export function EventoNuevoForm({
       descripcion,
       fieldId,
       fechaLocal,
+      fechaFinLocal,
       cupo,
       cupoVendidoCreador,
       tipo,
@@ -314,21 +326,40 @@ export function EventoNuevoForm({
         )}
       </div>
 
-      <div>
-        <label
-          className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
-          style={jostHeading}
-        >
-          Fecha y hora <span className="text-[#CC4B37]">*</span>
-        </label>
-        <input
-          type="datetime-local"
-          value={fechaLocal}
-          onChange={(e) => setFechaLocal(e.target.value)}
-          required
-          className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
-          style={{ borderRadius: 2 }}
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label
+            className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+            style={jostHeading}
+          >
+            Inicio (fecha y hora) <span className="text-[#CC4B37]">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            value={fechaLocal}
+            onChange={(e) => setFechaLocal(e.target.value)}
+            required
+            className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+            style={{ borderRadius: 2 }}
+          />
+        </div>
+        <div>
+          <label
+            className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
+            style={jostHeading}
+          >
+            Término (fecha y hora) <span className="text-[#CC4B37]">*</span>
+          </label>
+          <input
+            type="datetime-local"
+            value={fechaFinLocal}
+            min={fechaLocal}
+            onChange={(e) => setFechaFinLocal(e.target.value)}
+            required
+            className="box-border block w-full min-w-0 max-w-full border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] focus:border-[#CC4B37] focus:outline-none"
+            style={{ borderRadius: 2 }}
+          />
+        </div>
       </div>
 
       <div>

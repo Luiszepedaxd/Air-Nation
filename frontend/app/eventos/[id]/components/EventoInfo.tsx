@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import {
-  formatEventoFechaLarga,
+  formatEventoRango,
   disciplinaLabel,
 } from '../../lib/format-evento-fecha'
 import { EventoCupoYRSVP } from './EventoCupoYRSVP'
@@ -18,6 +18,7 @@ export function EventoInfo({
   descripcion,
   disciplina,
   fecha,
+  fecha_fin,
   field_nombre,
   field_slug,
   ciudad,
@@ -37,6 +38,7 @@ export function EventoInfo({
   descripcion: string | null
   disciplina: string | null
   fecha: string
+  fecha_fin?: string | null
   field_nombre: string | null
   field_slug: string | null
   ciudad: string | null
@@ -52,7 +54,7 @@ export function EventoInfo({
   sessionUserId: string | null
   userHasRsvp: boolean
 }) {
-  const fechaLarga = formatEventoFechaLarga(fecha)
+  const fechaLarga = formatEventoRango(fecha, fecha_fin, true)
   const disc = disciplinaLabel(disciplina)
 
   return (

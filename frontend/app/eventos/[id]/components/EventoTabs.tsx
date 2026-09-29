@@ -19,6 +19,7 @@ export function EventoTabs({
   descripcion,
   disciplina,
   fecha,
+  fecha_fin,
   field_nombre,
   field_slug,
   ciudad,
@@ -42,6 +43,7 @@ export function EventoTabs({
   descripcion: string | null
   disciplina: string | null
   fecha: string
+  fecha_fin?: string | null
   field_nombre: string | null
   field_slug: string | null
   ciudad: string | null
@@ -114,6 +116,7 @@ export function EventoTabs({
             descripcion={descripcion}
             disciplina={disciplina}
             fecha={fecha}
+            fecha_fin={fecha_fin}
             field_nombre={field_nombre}
             field_slug={field_slug}
             ciudad={ciudad}

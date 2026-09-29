@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
-import { formatEventoFechaCorta, mxLocalToIso, isoToMxLocal } from '@/app/eventos/lib/format-evento-fecha'
+import { formatEventoRango, mxLocalToIso, isoToMxLocal } from '@/app/eventos/lib/format-evento-fecha'
 import { updateEventoEdicion } from './actions'
 
 const jost = {
@@ -36,6 +36,7 @@ type Props = {
     status: string
     field_nombre: string | null
     field_ciudad: string | null
+    fecha_fin: string | null
   }
 }
 
@@ -60,6 +61,9 @@ export function EditEventoClient({
   const [fieldId, setFieldId] = useState(initial.field_id ?? '')
   const [fechaLocal, setFechaLocal] = useState(() =>
     isoToMxLocal(initial.fecha)
+  )
+  const [fechaFinLocal, setFechaFinLocal] = useState(() =>
+    initial.fecha_fin ? isoToMxLocal(initial.fecha_fin) : ''
   )
   const [status, setStatus] = useState(() =>
     (initial.status || 'publicado').toLowerCase()
@@ -90,12 +94,22 @@ export function EditEventoClient({
         return
       }
       let fechaIso: string | undefined
+      let fechaFinIso: string | undefined
       if (isAdmin) {
         if (!fechaLocal) {
           setError('Indica fecha y hora.')
           return
         }
+        if (!fechaFinLocal) {
+          setError('Indica la hora de término.')
+          return
+        }
+        if (mxLocalToIso(fechaFinLocal) <= mxLocalToIso(fechaLocal)) {
+          setError('La hora de término debe ser después del inicio')
+          return
+        }
         fechaIso = mxLocalToIso(fechaLocal)
+        fechaFinIso = mxLocalToIso(fechaFinLocal)
       }
 
       const urlExt = urlExterna.trim()
@@ -117,6 +131,7 @@ export function EditEventoClient({
           ? {
               field_id: fieldId.trim() || null,
               fecha: fechaIso,
+              fecha_fin: fechaFinIso,
               status,
             }
           : {}),
@@ -140,6 +155,7 @@ export function EditEventoClient({
       router,
       isAdmin,
       fechaLocal,
+      fechaFinLocal,
       fieldId,
       status,
     ]
@@ -313,21 +329,39 @@ export function EditEventoClient({
               </select>
             </label>
 
-            <label className="block">
-              <span
-                className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
-                style={jost}
-              >
-                Fecha
-              </span>
-              <input
-                type="datetime-local"
-                value={fechaLocal}
-                onChange={(ev) => setFechaLocal(ev.target.value)}
-                className="mt-1.5 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2.5 text-[14px] text-[#111111] outline-none focus:border-[#CC4B37]"
-                style={{ borderRadius: 0, ...lato }}
-              />
-            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span
+                  className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+                  style={jost}
+                >
+                  Inicio (fecha y hora) <span className="text-[#CC4B37]">*</span>
+                </span>
+                <input
+                  type="datetime-local"
+                  value={fechaLocal}
+                  onChange={(ev) => setFechaLocal(ev.target.value)}
+                  className="mt-1.5 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2.5 text-[14px] text-[#111111] outline-none focus:border-[#CC4B37]"
+                  style={{ borderRadius: 0, ...lato }}
+                />
+              </label>
+              <label className="block">
+                <span
+                  className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#999999]"
+                  style={jost}
+                >
+                  Término (fecha y hora) <span className="text-[#CC4B37]">*</span>
+                </span>
+                <input
+                  type="datetime-local"
+                  value={fechaFinLocal}
+                  min={fechaLocal}
+                  onChange={(ev) => setFechaFinLocal(ev.target.value)}
+                  className="mt-1.5 w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2.5 text-[14px] text-[#111111] outline-none focus:border-[#CC4B37]"
+                  style={{ borderRadius: 0, ...lato }}
+                />
+              </label>
+            </div>
 
             <label className="block">
               <span
@@ -376,7 +410,7 @@ export function EditEventoClient({
                 className="mt-1.5 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2.5 text-[14px] text-[#666666]"
                 style={{ borderRadius: 0, ...lato }}
               >
-                {formatEventoFechaCorta(initial.fecha) || '—'}
+                {formatEventoRango(initial.fecha, initial.fecha_fin) || '—'}
               </p>
             </div>
 

@@ -1,4 +1,4 @@
-import { formatEventoFechaCorta, disciplinaLabel } from '../../lib/format-evento-fecha'
+import { formatEventoRango, disciplinaLabel } from '../../lib/format-evento-fecha'
 import { CalendarioPlaceholderIcon } from '../../lib/calendar-placeholder'
 import { EventoCtaPrincipal } from './EventoCtaPrincipal'
 
@@ -13,6 +13,7 @@ function tipoBadge(tipo: string | null) {
 export function EventoHero({
   title,
   fecha,
+  fecha_fin,
   imagen_url,
   tipo,
   disciplina,
@@ -20,12 +21,13 @@ export function EventoHero({
 }: {
   title: string
   fecha: string
+  fecha_fin?: string | null
   imagen_url: string | null
   tipo: string | null
   disciplina: string | null
   urlExterna: string | null
 }) {
-  const fechaTxt = formatEventoFechaCorta(fecha)
+  const fechaTxt = formatEventoRango(fecha, fecha_fin)
   const disc = disciplinaLabel(disciplina)
   return (
     <div className="w-full">

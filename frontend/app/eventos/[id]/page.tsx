@@ -55,6 +55,7 @@ type EventDetailRow = {
   descripcion: string | null
   field_id: string | null
   fecha: string
+  fecha_fin: string | null
   cupo: number
   disciplina: string | null
   imagen_url: string | null
@@ -79,6 +80,7 @@ const getEventoById = cache(async (id: string): Promise<EventDetailRow | null> =
       descripcion,
       field_id,
       fecha,
+      fecha_fin,
       cupo,
       disciplina,
       imagen_url,
@@ -375,6 +377,7 @@ export default async function EventoDetailPage({
             '@type': 'Event',
             name: row.title,
             startDate: row.fecha,
+            ...(row.fecha_fin ? { endDate: row.fecha_fin } : {}),
             description: row.descripcion ?? undefined,
             url: `https://www.airnation.online/eventos/${id}`,
             eventStatus: 'https://schema.org/EventScheduled',
@@ -421,6 +424,7 @@ export default async function EventoDetailPage({
       <EventoHero
         title={row.title}
         fecha={row.fecha}
+        fecha_fin={row.fecha_fin}
         imagen_url={heroImagen}
         tipo={row.tipo}
         disciplina={row.disciplina}
@@ -431,6 +435,7 @@ export default async function EventoDetailPage({
         descripcion={row.descripcion}
         disciplina={row.disciplina}
         fecha={row.fecha}
+        fecha_fin={row.fecha_fin}
         field_nombre={f.nombre}
         field_slug={f.slug}
         ciudad={f.ciudad}

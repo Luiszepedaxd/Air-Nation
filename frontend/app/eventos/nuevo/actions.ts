@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminSupabaseServerClient } from '@/app/admin/supabase-server'
 import { TIPOS_EVENTO_RANKING_EVENTO, FORMATOS_EVENTO, TEXTOS_SOLICITUD } from '@/lib/ranking-contenido'
 import { api } from '@/lib/api'
+import { formatEventoRango } from '@/app/eventos/lib/format-evento-fecha'
 
 export type RankingPayload = {
   tipo_evento: string
@@ -17,6 +18,7 @@ export type CreateUserEventoPayload = {
   descripcion: string
   field_id: string | null
   fecha: string
+  fecha_fin: string
   cupo: number
   cupo_vendido_creador: number | null
   tipo: 'publico' | 'privado'
@@ -71,6 +73,13 @@ export async function createUserEvento(
   }
 
   if (!payload.fecha) return { error: 'Indica fecha y hora.' }
+  if (!payload.fecha_fin) return { error: 'Indica la hora de término.' }
+  if (
+    !Number.isFinite(new Date(payload.fecha_fin).getTime()) ||
+    new Date(payload.fecha_fin) <= new Date(payload.fecha)
+  ) {
+    return { error: 'La hora de término debe ser después del inicio' }
+  }
 
   // Server-side ranking validation (trust boundary)
   if (payload.ranking) {
@@ -128,6 +137,7 @@ export async function createUserEvento(
       descripcion: desc ? desc.slice(0, 1000) : null,
       field_id: fieldId,
       fecha: payload.fecha,
+      fecha_fin: payload.fecha_fin,
       cupo,
       cupo_vendido_creador: cupoVendidoInsert,
       disciplina: 'airsoft',
@@ -160,12 +170,7 @@ export async function createUserEvento(
 
       const organizacion = t.length >= 2 ? t.slice(0, 150) : `Evento ${t}`.slice(0, 150)
 
-      const fechaFormateada = new Intl.DateTimeFormat('es-MX', {
-        dateStyle: 'long',
-        timeZone: 'America/Mexico_City',
-      })
-        .format(new Date(payload.fecha))
-        .slice(0, 60)
+      const fechaFormateada = formatEventoRango(payload.fecha, payload.fecha_fin).slice(0, 60)
 
       const ciudadRaw = fieldCiudad?.trim() ?? ''
       const ciudad = ciudadRaw.length >= 2 ? ciudadRaw : 'Sin especificar'

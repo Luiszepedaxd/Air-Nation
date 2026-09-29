@@ -21,6 +21,7 @@ export async function updateEventoEdicion(
     tipo: 'publico' | 'privado'
     field_id?: string | null
     fecha?: string
+    fecha_fin?: string
     status?: string
   }
 ): Promise<{ ok: true } | { error: string }> {
@@ -104,6 +105,13 @@ export async function updateEventoEdicion(
     const fechaNext =
       payload.fecha !== undefined ? payload.fecha : String(ev.fecha ?? '')
     if (!fechaNext) return { error: 'Indica fecha y hora.' }
+    if (!payload.fecha_fin) return { error: 'Indica la hora de término.' }
+    if (
+      !Number.isFinite(new Date(payload.fecha_fin).getTime()) ||
+      new Date(payload.fecha_fin) <= new Date(fechaNext)
+    ) {
+      return { error: 'La hora de término debe ser después del inicio' }
+    }
 
     const { error: upErr } = await supabase
       .from('events')
@@ -111,6 +119,7 @@ export async function updateEventoEdicion(
         ...base,
         field_id: targetFieldId,
         fecha: fechaNext,
+        fecha_fin: payload.fecha_fin,
         status: st,
         published: st === 'publicado',
       })

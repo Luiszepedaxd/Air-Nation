@@ -97,6 +97,36 @@ export function formatEventoFechaDiaMesHora(iso: string): string {
   }
 }
 
+/**
+ * "Dom, 4 de oct de 2026 · 11:00 a 17:00" (same CDMX day, or fin at exactly 00:00 next day)
+ * "Dom, 4 de oct de 2026 · 11:00 a <fin formatted>" (different day)
+ * Falls back to formatEventoFechaCorta/Larga(inicio) when fin is null/invalid.
+ */
+export function formatEventoRango(inicio: string, fin?: string | null, larga = false): string {
+  const base = larga ? formatEventoFechaLarga(inicio) : formatEventoFechaCorta(inicio)
+  if (!fin) return base
+  const dFin = new Date(fin)
+  if (Number.isNaN(dFin.getTime())) return base
+  const dInicio = new Date(inicio)
+  if (Number.isNaN(dInicio.getTime())) return base
+
+  const mxDay = (d: Date) => isoToMxLocal(d.toISOString()).slice(0, 10)
+  // fin exactly at 00:00 CDMX belongs to the previous day ("11:00 a 00:00"), hence the -1ms
+  const sameDay = mxDay(dInicio) === mxDay(new Date(dFin.getTime() - 1))
+
+  const timeFin = new Intl.DateTimeFormat('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: MX_TZ,
+  }).format(dFin)
+
+  if (sameDay) return `${base} a ${timeFin}`
+
+  const baseFin = larga ? formatEventoFechaLarga(fin) : formatEventoFechaCorta(fin)
+  return `${base} a ${baseFin}`
+}
+
 /** Fecha corta para eventos pasados (título secundario). */
 export function formatEventoFechaPasadaCompacta(iso: string): string {
   try {
