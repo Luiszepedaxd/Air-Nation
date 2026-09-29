@@ -5,6 +5,7 @@ import { createAdminClient } from '@/app/admin/supabase-server'
 import { requireAppAdminUserId } from '@/app/admin/require-app-admin'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { generateTeamSlug } from '@/lib/team-slug'
+import { teamFieldError } from '@/lib/team-fields'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type CreateTeamState = { error: string } | null
@@ -48,11 +49,8 @@ export async function createTeamAction(
   const logoUrl = String(formData.get('logo_url') ?? '').trim()
   const fotoPortadaUrl = String(formData.get('foto_portada_url') ?? '').trim()
 
-  if (nombre.length < 2 || ciudad.length < 2) {
-    return {
-      error: 'Nombre y ciudad (mínimo 2 caracteres) son obligatorios.',
-    }
-  }
+  const invalid = teamFieldError({ nombre, ciudad, estado })
+  if (invalid) return { error: invalid }
 
   if (adminContext) {
     const adminId = await requireAppAdminUserId()
@@ -80,7 +78,7 @@ export async function createTeamAction(
       .insert({
         nombre,
         ciudad,
-        estado: estado || null,
+        estado,
         created_by: adminId,
         slug: uniqueSlug,
         status: 'activo',
@@ -131,6 +129,20 @@ export async function createTeamAction(
     redirect('/login?redirect=/equipos/nuevo')
   }
 
+  const { data: profile, error: profileErr } = await supabase
+    .from('users')
+    .select('alias')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (profileErr) {
+    return { error: 'No se pudo verificar tu perfil.' }
+  }
+  const alias = typeof profile?.alias === 'string' ? profile.alias.trim() : ''
+  if (!alias) {
+    return { error: 'Completa tu perfil antes de crear un equipo.' }
+  }
+
   let uniqueSlug: string
   try {
     const baseSlug = generateTeamSlug(rawSlug || undefined, nombre)
@@ -148,7 +160,7 @@ export async function createTeamAction(
     .insert({
       nombre,
       ciudad,
-      estado: estado || null,
+      estado,
       created_by: user.id,
       slug: uniqueSlug,
       status: 'activo',

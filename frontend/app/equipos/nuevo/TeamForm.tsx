@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { generateTeamSlug } from "@/lib/team-slug";
+import { teamFieldError } from "@/lib/team-fields";
 import { ImageUploadField } from "@/components/ui/ImageUploadField";
 import {
   createTeamAction,
@@ -60,9 +61,13 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
     const n = nombre.trim();
     const c = ciudad.trim();
     const eSt = estado.trim();
-    if (n.length < 2 || c.length < 2 || eSt.length < 2 || activeUploads > 0) {
+    const invalid = teamFieldError({ nombre: n, ciudad: c, estado: eSt });
+    if (invalid || activeUploads > 0) {
       e.preventDefault();
+      if (invalid) setClientError(invalid);
+      return;
     }
+    if (clientError) setClientError("");
   };
 
   return (
@@ -110,7 +115,7 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             placeholder="Ej. Ghost Squad"
-            maxLength={120}
+            maxLength={60}
             autoComplete="organization"
             className="w-full rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
           />
@@ -146,7 +151,6 @@ export function TeamForm({ adminContext = false }: { adminContext?: boolean }) {
                   getComponent("locality") ||
                   getComponent("sublocality_level_1") ||
                   getComponent("administrative_area_level_2") ||
-                  getComponent("administrative_area_level_1") ||
                   "";
 
                 setEstado(estadoLugar);

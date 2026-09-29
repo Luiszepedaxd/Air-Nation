@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useLoadScript, Autocomplete } from '@react-google-maps/api'
 import { updateTeamAdmin } from '@/app/admin/equipos/actions'
+import { teamFieldError } from '@/lib/team-fields'
 import { supabase } from '@/lib/supabase'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 
@@ -82,8 +83,9 @@ export function EditTeamClient({
 
   const handleSave = useCallback(async () => {
     const n = nombre.trim()
-    if (n.length < 2) {
-      setError('El nombre debe tener al menos 2 caracteres.')
+    const invalid = teamFieldError({ nombre: n, ciudad, estado })
+    if (invalid) {
+      setError(invalid)
       return
     }
     if (!teamId) {
@@ -202,7 +204,7 @@ export function EditTeamClient({
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             className={inputClass}
-            maxLength={200}
+            maxLength={60}
           />
         </Field>
         <Field label="Ciudad" style={jost}>
@@ -229,7 +231,6 @@ export function EditTeamClient({
                   getComponent('locality') ||
                   getComponent('sublocality_level_1') ||
                   getComponent('administrative_area_level_2') ||
-                  getComponent('administrative_area_level_1') ||
                   ''
 
                 setEstado(estadoLugar)

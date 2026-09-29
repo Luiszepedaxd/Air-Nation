@@ -1,5 +1,7 @@
 const express = require("express");
 const supabase = require("../lib/supabase");
+const { requireAuth } = require("../middleware/requireAuth");
+const { teamFieldError } = require("../lib/teamFields");
 const {
   generateTeamSlug,
   resolveUniqueTeamSlug,
@@ -254,16 +256,35 @@ router.get("/:id", async (req, res) => {
 
 /**
  * POST /api/v1/teams
- * @param {string} req.body.nombre - nombre del equipo
- * @param {string} req.body.ciudad - ciudad
- * @param {string} req.body.created_by - id del usuario creador
+ * created_by sale de la sesión, no del body.
+ * @param {string} req.body.nombre
+ * @param {string} req.body.ciudad
+ * @param {string} req.body.estado
  * @param {string} [req.body.slug] - slug opcional (se normaliza; si falta se deriva del nombre)
  */
-router.post("/", async (req, res) => {
+router.post("/", requireAuth, async (req, res) => {
   try {
-    const { nombre, ciudad, estado, created_by, slug: rawSlug } = req.body || {};
-    if (!nombre || !ciudad || !created_by) {
-      return res.status(400).json({ error: "nombre, ciudad y created_by son requeridos" });
+    const created_by = req.authUser.id;
+    const { nombre, ciudad, estado, slug: rawSlug } = req.body || {};
+    const invalid = teamFieldError({ nombre, ciudad, estado });
+    if (invalid) {
+      return res.status(400).json({ error: invalid });
+    }
+
+    const { data: profile, error: profileErr } = await supabase
+      .from("users")
+      .select("alias")
+      .eq("id", created_by)
+      .maybeSingle();
+
+    if (profileErr) {
+      return res.status(500).json({ error: profileErr.message });
+    }
+    const alias = typeof profile?.alias === "string" ? profile.alias.trim() : "";
+    if (!alias) {
+      return res.status(403).json({
+        error: "Completa tu perfil antes de crear un equipo.",
+      });
     }
 
     const nombreTrim = String(nombre).trim();
@@ -275,7 +296,7 @@ router.post("/", async (req, res) => {
       .insert({
         nombre: nombreTrim,
         ciudad: String(ciudad).trim(),
-        estado: estado ? String(estado).trim() : null,
+        estado: String(estado).trim(),
         created_by,
         slug: uniqueSlug,
         status: "activo",
@@ -330,16 +351,17 @@ router.post("/", async (req, res) => {
  * PATCH /api/v1/teams/:teamId/logo
  * Actualiza el logo del equipo. Solo el founder activo puede hacerlo.
  */
-router.patch("/:teamId/logo", async (req, res) => {
+router.patch("/:teamId/logo", requireAuth, async (req, res) => {
   try {
     const { teamId } = req.params;
-    const { logo_url, user_id } = req.body || {};
+    const user_id = req.authUser.id;
+    const { logo_url } = req.body || {};
 
     if (!UUID_RE.test(String(teamId))) {
       return res.status(400).json({ error: "teamId inválido" });
     }
-    if (!user_id || !logo_url) {
-      return res.status(400).json({ error: "user_id y logo_url son requeridos" });
+    if (!logo_url) {
+      return res.status(400).json({ error: "logo_url es requerido" });
     }
 
     const { data: member, error: memberErr } = await supabase

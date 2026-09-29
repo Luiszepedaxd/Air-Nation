@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { apiFetch, uploadFile } from "@/lib/apiFetch";
 import { useLoadScript, Autocomplete } from "@react-google-maps/api";
 import { notifyTeamJoinRequest } from "@/lib/notify-team-join-request";
-import { generateTeamSlug } from "@/lib/team-slug";
+import { teamFieldError } from "@/lib/team-fields";
 
 const GOOGLE_LIBRARIES: "places"[] = ["places"];
 
@@ -33,7 +33,6 @@ type OnboardingState = {
     | "";
   team_id: string | null;
   team_nombre: string;
-  team_logo_url: string;
   team_created_by_me: boolean;
   avatar_url: string;
   bio: string;
@@ -50,7 +49,6 @@ const DEFAULT_STATE: OnboardingState = {
   rol: "",
   team_id: null,
   team_nombre: "",
-  team_logo_url: "",
   team_created_by_me: false,
   avatar_url: "",
   bio: "",
@@ -108,7 +106,6 @@ function parseStoredState(raw: string): OnboardingState | null {
             ? p.team_id
             : null,
       team_nombre: typeof p.team_nombre === "string" ? p.team_nombre : "",
-      team_logo_url: typeof p.team_logo_url === "string" ? p.team_logo_url : "",
       team_created_by_me: p.team_created_by_me === true,
       avatar_url: typeof p.avatar_url === "string" ? p.avatar_url : "",
       bio: typeof p.bio === "string" ? p.bio : "",
@@ -254,15 +251,9 @@ export default function OnboardingPage() {
   const [searchFailed, setSearchFailed] = useState(false);
   const [confirmArmed, setConfirmArmed] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
-  const [creatingTeam, setCreatingTeam] = useState(false);
-
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  const [teamLogoUploading, setTeamLogoUploading] = useState(false);
-  const [teamLogoError, setTeamLogoError] = useState("");
-  const teamLogoInputRef = useRef<HTMLInputElement>(null);
 
   const { isLoaded: mapsLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "",
@@ -348,7 +339,7 @@ export default function OnboardingPage() {
   }, [teamSearchInput]);
 
   useEffect(() => {
-    if (state.paso !== 4 || state.team_id !== null) {
+    if (state.paso !== 4 || state.team_id !== null || state.team_created_by_me) {
       setSearchTeams([]);
       setSearchLoading(false);
       return;
@@ -405,7 +396,7 @@ export default function OnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedTeamQuery, state.paso, state.ciudad, state.team_id, retryTick]);
+  }, [debouncedTeamQuery, state.paso, state.ciudad, state.team_id, state.team_created_by_me, retryTick]);
 
   const aliasValid = useMemo(() => {
     const t = state.alias.trim();
@@ -471,6 +462,19 @@ export default function OnboardingPage() {
         });
       }
 
+      const creatingNew = state.team_created_by_me && !state.team_id;
+      if (creatingNew) {
+        const invalid = teamFieldError({
+          nombre: state.team_nombre,
+          ciudad: state.ciudad,
+          estado: state.estado,
+        });
+        if (invalid) {
+          setSubmitError(invalid);
+          return;
+        }
+      }
+
       const patchTeamId =
         state.team_join_via_request ? null : state.team_id;
 
@@ -490,6 +494,37 @@ export default function OnboardingPage() {
         setSubmitError("Algo salió mal. Intenta de nuevo.");
         return;
       }
+
+      if (creatingNew) {
+        const createRes = await apiFetch("/teams", {
+          method: "POST",
+          body: JSON.stringify({
+            nombre: state.team_nombre.trim(),
+            ciudad: state.ciudad,
+            estado: state.estado,
+          }),
+        });
+        const data = (await createRes.json().catch(() => ({}))) as {
+          team?: { id?: string };
+          error?: string;
+        };
+        if (!createRes.ok || !data.team?.id) {
+          setSubmitError(data.error || "Algo salió mal. Intenta de nuevo.");
+          return;
+        }
+        const assignRes = await apiFetch(`/users/${userId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ team_id: data.team.id }),
+        });
+        if (!assignRes.ok) {
+          update({ team_id: data.team.id });
+          setSubmitError(
+            "El equipo se creó, pero no se pudo ligar a tu perfil. Intenta de nuevo."
+          );
+          return;
+        }
+      }
+
       redirectingRef.current = true;
       try {
         localStorage.removeItem(STORAGE_KEY);
@@ -504,7 +539,7 @@ export default function OnboardingPage() {
     } finally {
       setSubmitting(false);
     }
-  }, [userId, canContinue, state, router]);
+  }, [userId, canContinue, state, router, update]);
 
   const selectTeam = useCallback(
     (t: TeamRow, joinViaRequest: boolean) => {
@@ -512,6 +547,7 @@ export default function OnboardingPage() {
         team_id: t.id,
         team_nombre: t.nombre,
         team_join_via_request: joinViaRequest,
+        team_created_by_me: false,
       });
       setTeamSearchInput("");
       setDebouncedTeamQuery("");
@@ -525,7 +561,6 @@ export default function OnboardingPage() {
       team_id: null,
       team_nombre: "",
       team_join_via_request: false,
-      team_logo_url: "",
       team_created_by_me: false,
     });
     setTeamSearchInput("");
@@ -533,79 +568,29 @@ export default function OnboardingPage() {
     setConfirmArmed(false);
   }, [update]);
 
-  const createTeamFromQuery = useCallback(async () => {
+  const rememberNewTeam = useCallback(() => {
     const query = debouncedTeamQuery.trim();
-    if (!userId || query.length < 2 || !state.ciudad) return;
-    setCreatingTeam(true);
-    setSubmitError("");
-    try {
-      const res = await fetch(`${API_URL}/teams`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: query,
-          ciudad: state.ciudad,
-          estado: state.estado || null,
-          created_by: userId,
-          slug: generateTeamSlug(undefined, query),
-        }),
-      });
-      const data = (await res.json()) as { team?: TeamRow; error?: string };
-      if (!res.ok || !data.team?.id) {
-        setSubmitError("Algo salió mal. Intenta de nuevo.");
-        return;
-      }
-      selectTeam(
-        {
-          id: data.team.id,
-          nombre: data.team.nombre ?? query,
-          ciudad: state.ciudad,
-        },
-        false
-      );
-      update({ team_created_by_me: true });
-    } catch {
-      setSubmitError("Algo salió mal. Intenta de nuevo.");
-    } finally {
-      setCreatingTeam(false);
+    const invalid = teamFieldError({
+      nombre: query,
+      ciudad: state.ciudad,
+      estado: state.estado,
+    });
+    if (invalid) {
+      setSubmitError(invalid);
+      return;
     }
-  }, [userId, debouncedTeamQuery, state.ciudad, state.estado, selectTeam, update]);
-
-  const onTeamLogoChange = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file || !userId || !state.team_id) return;
-      setTeamLogoError("");
-      const MIME_OK = new Set(["image/jpeg", "image/png", "image/webp"]);
-      if (!MIME_OK.has(file.type)) {
-        setTeamLogoError("Solo JPG, PNG o WebP.");
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        setTeamLogoError("Máximo 10 MB.");
-        return;
-      }
-      setTeamLogoUploading(true);
-      try {
-        const url = await uploadFile(file);
-        const res = await apiFetch(`/teams/${state.team_id}/logo`, {
-          method: "PATCH",
-          body: JSON.stringify({ logo_url: url, user_id: userId }),
-        });
-        if (!res.ok) {
-          setTeamLogoError("No se pudo guardar el logo. Intenta después.");
-          return;
-        }
-        update({ team_logo_url: url });
-      } catch {
-        setTeamLogoError("No se pudo guardar el logo. Intenta después.");
-      } finally {
-        setTeamLogoUploading(false);
-      }
-    },
-    [userId, state.team_id, update]
-  );
+    setSubmitError("");
+    update({
+      team_id: null,
+      team_nombre: query,
+      team_join_via_request: false,
+      team_created_by_me: true,
+    });
+    setTeamSearchInput("");
+    setDebouncedTeamQuery("");
+    setSearchTeams([]);
+    setConfirmArmed(false);
+  }, [debouncedTeamQuery, state.ciudad, state.estado, update]);
 
   const onAliasChange = (v: string) => {
     if (v.length > 30) return;
@@ -674,7 +659,7 @@ export default function OnboardingPage() {
     "block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999] mb-2";
   const labelStyle = { fontFamily: "'Jost', sans-serif" } as const;
 
-  const showTeamSearch = state.team_id === null;
+  const showTeamSearch = state.team_id === null && !state.team_created_by_me;
 
   return (
     <main
@@ -805,7 +790,6 @@ export default function OnboardingPage() {
                       getComponent("locality") ||
                       getComponent("sublocality_level_1") ||
                       getComponent("administrative_area_level_2") ||
-                      getComponent("administrative_area_level_1") ||
                       "";
 
                     update({
@@ -1059,9 +1043,8 @@ export default function OnboardingPage() {
                         !needsConfirm && (
                           <button
                             type="button"
-                            disabled={creatingTeam}
-                            onClick={() => void createTeamFromQuery()}
-                            className="mt-3 w-full py-3 px-3 bg-[#CC4B37] text-white font-bold text-sm rounded-[2px] disabled:opacity-50"
+                            onClick={rememberNewTeam}
+                            className="mt-3 w-full py-3 px-3 bg-[#CC4B37] text-white font-bold text-sm rounded-[2px]"
                           >
                             + Crear equipo &apos;{debouncedTeamQuery.trim()}&apos;
                           </button>
@@ -1073,9 +1056,8 @@ export default function OnboardingPage() {
                             {confirmArmed ? (
                               <button
                                 type="button"
-                                disabled={creatingTeam}
-                                onClick={() => void createTeamFromQuery()}
-                                className="mt-3 w-full py-3 px-3 bg-[#CC4B37] text-white font-bold text-sm rounded-[2px] disabled:opacity-50"
+                                onClick={rememberNewTeam}
+                                className="mt-3 w-full py-3 px-3 bg-[#CC4B37] text-white font-bold text-sm rounded-[2px]"
                               >
                                 + Crear equipo &apos;{debouncedTeamQuery.trim()}&apos;
                               </button>
@@ -1146,56 +1128,9 @@ export default function OnboardingPage() {
                   </button>
                 </div>
                 {state.team_created_by_me && (
-                  <div className="mt-6">
-                    <span
-                      className="mb-2 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#999999]"
-                      style={labelStyle}
-                    >
-                      LOGO DEL EQUIPO (OPCIONAL)
-                    </span>
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full border border-[#EEEEEE] bg-[#F4F4F4] flex items-center justify-center overflow-hidden shrink-0">
-                        {state.team_logo_url ? (
-                          <img
-                            src={state.team_logo_url}
-                            alt="Logo del equipo"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span
-                            className="text-xl font-bold text-[#AAAAAA]"
-                            style={{ fontFamily: "'Jost', sans-serif" }}
-                          >
-                            {(state.team_nombre.trim()[0] || "?").toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <input
-                          ref={teamLogoInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={onTeamLogoChange}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => teamLogoInputRef.current?.click()}
-                          disabled={teamLogoUploading}
-                          className="px-4 py-2 border border-[#EEEEEE] bg-[#F4F4F4] text-sm text-[#111111] disabled:opacity-50"
-                          style={{ borderRadius: 2 }}
-                        >
-                          {teamLogoUploading ? "Subiendo…" : "Elegir logo"}
-                        </button>
-                        {teamLogoError && (
-                          <p className="text-xs text-[#CC4B37]">{teamLogoError}</p>
-                        )}
-                      </div>
-                    </div>
-                    <p className="mt-2 text-[11px] text-[#999999]">
-                      Puedes subirlo después desde el panel de tu equipo.
-                    </p>
-                  </div>
+                  <p className="mt-2 text-[11px] text-[#999999]">
+                    El equipo se crea al terminar. El logo lo puedes subir después desde el panel.
+                  </p>
                 )}
                 </>
               )}

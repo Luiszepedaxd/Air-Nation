@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '../supabase-server'
 import { requireAppAdminUserId } from '../require-app-admin'
+import { teamFieldError } from '@/lib/team-fields'
 
 export async function deleteTeam(
   id: string
@@ -76,10 +77,14 @@ export async function updateTeamAdmin(
     return { error: 'Equipo no válido.' }
   }
 
+  const invalid = teamFieldError({
+    nombre: payload.nombre,
+    ciudad: payload.ciudad,
+    estado: payload.estado,
+  })
+  if (invalid) return { error: invalid }
+
   const n = payload.nombre.trim()
-  if (n.length < 2) {
-    return { error: 'El nombre debe tener al menos 2 caracteres.' }
-  }
 
   const supabase = createAdminClient()
   const { error } = await supabase

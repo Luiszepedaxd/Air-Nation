@@ -21,8 +21,6 @@ export const api = {
   teams: {
     list: () => request<{ teams: any[] }>("/teams"),
     get: (id: string) => request<{ team: any }>(`/teams/${id}`),
-    create: (data: { name: string; city: string; description?: string }) =>
-      request<{ team: any }>("/teams", { method: "POST", body: JSON.stringify(data) }),
   },
 
   users: {
