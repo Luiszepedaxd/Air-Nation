@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
-import { formatEventoFechaCorta } from '@/app/eventos/lib/format-evento-fecha'
+import { formatEventoFechaCorta, mxLocalToIso, isoToMxLocal } from '@/app/eventos/lib/format-evento-fecha'
 import { updateEventoEdicion } from './actions'
 
 const jost = {
@@ -39,17 +39,6 @@ type Props = {
   }
 }
 
-function toDatetimeLocalValue(iso: string): string {
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return ''
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } catch {
-    return ''
-  }
-}
-
 export function EditEventoClient({
   eventId,
   isAdmin,
@@ -70,7 +59,7 @@ export function EditEventoClient({
   )
   const [fieldId, setFieldId] = useState(initial.field_id ?? '')
   const [fechaLocal, setFechaLocal] = useState(() =>
-    toDatetimeLocalValue(initial.fecha)
+    isoToMxLocal(initial.fecha)
   )
   const [status, setStatus] = useState(() =>
     (initial.status || 'publicado').toLowerCase()
@@ -106,7 +95,7 @@ export function EditEventoClient({
           setError('Indica fecha y hora.')
           return
         }
-        fechaIso = new Date(fechaLocal).toISOString()
+        fechaIso = mxLocalToIso(fechaLocal)
       }
 
       const urlExt = urlExterna.trim()

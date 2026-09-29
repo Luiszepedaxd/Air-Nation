@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import { supabase } from '@/lib/supabase'
+import { mxLocalToIso, isoToMxLocal } from '@/app/eventos/lib/format-evento-fecha'
 import { upsertEvento } from './actions'
 import type { EventosActor } from './eventos-supabase'
 
@@ -23,13 +24,6 @@ export type FieldOption = {
   id: string
   nombre: string
   ciudad: string | null
-}
-
-function isoToDatetimeLocal(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 export function EventoForm({
@@ -70,7 +64,7 @@ export function EventoForm({
     initial?.field_id ?? defaultFieldId ?? ''
   )
   const [fechaLocal, setFechaLocal] = useState(
-    initial?.fecha ? isoToDatetimeLocal(initial.fecha) : ''
+    initial?.fecha ? isoToMxLocal(initial.fecha) : ''
   )
   const [cupo, setCupo] = useState(
     initial?.cupo != null ? String(initial.cupo) : '0'
@@ -193,7 +187,7 @@ export function EventoForm({
           return
         }
       }
-      const fechaIso = new Date(fechaLocal).toISOString()
+      const fechaIso = mxLocalToIso(fechaLocal)
 
       const urlExt = urlExterna.trim()
       if (urlExt && !/^https?:\/\//i.test(urlExt)) {

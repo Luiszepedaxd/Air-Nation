@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import { TIPOS_EVENTO_RANKING_EVENTO, FORMATOS_EVENTO, TEXTOS_SOLICITUD } from '@/lib/ranking-contenido'
+import { mxLocalToIso } from '@/app/eventos/lib/format-evento-fecha'
 import { createUserEvento } from './actions'
 
 const jostHeading = {
@@ -50,7 +51,6 @@ export function EventoNuevoForm({
   const [rankingFormato, setRankingFormato] = useState<string>('')
   const [rankingJugadores, setRankingJugadores] = useState<string>('')
   const [rankingWhatsapp, setRankingWhatsapp] = useState<string>('')
-  const [rankingConfirm, setRankingConfirm] = useState(false)
 
   const fieldOptions = useMemo(() => {
     return tipo === 'privado' ? privateFields : publicFields
@@ -134,13 +134,9 @@ export function EventoNuevoForm({
           setClientError('El WhatsApp debe tener 10 dígitos.')
           return
         }
-        if (!rankingConfirm) {
-          setClientError('Confirma que alguien organiza y se podrán subir resultados.')
-          return
-        }
       }
 
-      const fechaIso = new Date(fechaLocal).toISOString()
+      const fechaIso = mxLocalToIso(fechaLocal)
 
       setSaving(true)
       const res = await createUserEvento({
@@ -186,7 +182,6 @@ export function EventoNuevoForm({
       rankingFormato,
       rankingJugadores,
       rankingWhatsapp,
-      rankingConfirm,
     ]
   )
 
@@ -473,22 +468,6 @@ export function EventoNuevoForm({
               />
             </div>
 
-            <div className="flex items-start gap-3">
-              <input
-                id="ranking-confirm"
-                type="checkbox"
-                checked={rankingConfirm}
-                onChange={(e) => setRankingConfirm(e.target.checked)}
-                className="mt-0.5 accent-[#CC4B37]"
-              />
-              <label
-                htmlFor="ranking-confirm"
-                className="cursor-pointer text-sm text-[#111111]"
-                style={latoBody}
-              >
-                Alguien organiza, invita a los jugadores y podremos subir resultados.
-              </label>
-            </div>
           </div>
         )}
       </div>

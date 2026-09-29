@@ -27,6 +27,7 @@ function formatFecha(iso: string) {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
+      timeZone: 'America/Mexico_City',
     })
       .format(d)
       .toUpperCase()

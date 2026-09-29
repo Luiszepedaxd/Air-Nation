@@ -49,6 +49,7 @@ function formatDate(iso: string) {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      timeZone: 'America/Mexico_City',
     }).format(new Date(iso))
   } catch {
     return ''

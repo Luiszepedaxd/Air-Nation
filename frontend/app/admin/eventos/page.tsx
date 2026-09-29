@@ -128,6 +128,7 @@ function formatFecha(iso: string) {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
+      timeZone: 'America/Mexico_City',
     }).format(d)
   } catch {
     return iso

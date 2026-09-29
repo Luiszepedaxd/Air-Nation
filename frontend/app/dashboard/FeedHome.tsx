@@ -656,10 +656,11 @@ function HighlightBadge() {
 
 function formatEventDate(iso: string) {
   try {
-    const d = new Date(iso)
+    // ponytail: fixed CDMX offset (-6h, no DST since 2022), same as isoToMxLocal in format-evento-fecha.ts
+    const d = new Date(new Date(iso).getTime() - 6 * 60 * 60 * 1000)
     const dias = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']
     const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
-    return `${dias[d.getDay()]} ${d.getDate()} ${meses[d.getMonth()]}`
+    return `${dias[d.getUTCDay()]} ${d.getUTCDate()} ${meses[d.getUTCMonth()]}`
   } catch { return '' }
 }
 
