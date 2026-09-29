@@ -42,8 +42,8 @@ export async function updateFieldAdmin(
   }
 
   const descripcion = payload.descripcion?.trim() ?? ''
-  if (descripcion.length > 500) {
-    return { error: 'Revisa el límite de descripción.' }
+  if (descripcion.length > 1000) {
+    return { error: 'La descripción puede tener hasta 1000 caracteres.' }
   }
 
   const direccion = payload.direccion?.trim() ?? ''

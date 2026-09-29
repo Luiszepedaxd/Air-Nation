@@ -160,8 +160,8 @@ export async function createCampoAction(
   if (!ciudad) {
     return { error: 'Selecciona una ciudad.' }
   }
-  if (descripcion.length > 500) {
-    return { error: 'La descripción no puede superar 500 caracteres.' }
+  if (descripcion.length > 1000) {
+    return { error: 'La descripción puede tener hasta 1000 caracteres.' }
   }
   if (direccion.length > 300) {
     return { error: 'La dirección no puede superar 300 caracteres.' }

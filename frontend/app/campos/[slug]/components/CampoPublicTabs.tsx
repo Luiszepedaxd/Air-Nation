@@ -150,6 +150,40 @@ export type CampoFieldPostPublic = {
   created_at: string
 }
 
+function CampoDescripcion({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  // ponytail: umbral de 200 caracteres (mismo corte que la ficha de producto) en vez de medir el line-clamp. Textos con muchos saltos de línea pueden ocupar más de 4 renglones y no mostrar el botón; textos largos en una sola línea lo muestran antes en escritorio. Para medirlo de verdad, comparar scrollHeight de un clon sin line-clamp.
+  const long = text.length > 200
+
+  return (
+    <section>
+      <h2
+        className="mb-3 text-[11px] tracking-[0.14em] text-[#111111]"
+        style={jostHeading}
+      >
+        DESCRIPCIÓN
+      </h2>
+      <p
+        className={`whitespace-pre-line text-sm leading-relaxed text-[#111111] ${open ? '' : 'line-clamp-4'}`}
+        style={lato}
+      >
+        {text}
+      </p>
+      {long ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="mt-2 text-sm text-[#111111] underline underline-offset-2 hover:text-[#CC4B37]"
+          style={lato}
+        >
+          {open ? 'Ver menos' : 'Ver más'}
+        </button>
+      ) : null}
+    </section>
+  )
+}
+
 export function CampoPublicTabs({
   field,
   fieldSlug,
@@ -426,20 +460,7 @@ export function CampoPublicTabs({
             </section>
 
             {field.descripcion?.trim() ? (
-              <section>
-                <h2
-                  className="mb-3 text-[11px] tracking-[0.14em] text-[#111111]"
-                  style={jostHeading}
-                >
-                  DESCRIPCIÓN
-                </h2>
-                <p
-                  className="whitespace-pre-wrap text-sm leading-relaxed text-[#111111]"
-                  style={lato}
-                >
-                  {field.descripcion.trim()}
-                </p>
-              </section>
+              <CampoDescripcion text={field.descripcion.trim()} />
             ) : null}
 
             {field.instagram?.trim() ? (

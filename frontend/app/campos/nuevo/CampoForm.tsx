@@ -241,8 +241,8 @@ export function CampoForm({
       setClientError('Selecciona una ciudad.')
       return
     }
-    if (descripcion.length > 500) {
-      setClientError('La descripción no puede superar 500 caracteres.')
+    if (descripcion.length > 1000) {
+      setClientError('La descripción puede tener hasta 1000 caracteres.')
       return
     }
     if (activeUploads > 0) {
@@ -471,12 +471,12 @@ export function CampoForm({
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={4}
-            maxLength={500}
+            maxLength={1000}
             className="w-full resize-y rounded-[2px] border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none"
             placeholder="Describe instalaciones, partidas, reglas básicas…"
           />
           <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
-            {descripcion.length}/500
+            {descripcion.length}/1000
           </p>
         </div>
 

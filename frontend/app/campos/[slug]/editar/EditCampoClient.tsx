@@ -10,7 +10,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { updateFieldAdmin } from '@/app/admin/campos/field-edit-actions'
-import { supabase } from '@/lib/supabase'
+import { updateCampoOwner } from './actions'
 import { ImageUploadField } from '@/components/ui/ImageUploadField'
 import {
   FIELD_DAY_KEYS,
@@ -274,8 +274,8 @@ export function EditCampoClient({
       setError('El nombre es obligatorio (máx. 80 caracteres).')
       return
     }
-    if (descripcion.length > 500) {
-      setError('Revisa el límite de descripción.')
+    if (descripcion.length > 1000) {
+      setError('La descripción puede tener hasta 1000 caracteres.')
       return
     }
     if (activeUploads > 0) return
@@ -343,16 +343,16 @@ export function EditCampoClient({
       return
     }
 
-    const { error: upErr } = await supabase
-      .from('fields')
-      .update(payload)
-      .eq('id', fieldId)
+    const result = await updateCampoOwner({
+      fieldId,
+      ...payload,
+    })
 
     setSaving(false)
 
-    if (upErr) {
-      console.error('[EditCampoClient] fields UPDATE:', upErr)
-      setError(upErr.message)
+    if ('error' in result) {
+      console.error('[EditCampoClient] fields UPDATE:', result.error)
+      setError(result.error)
       return
     }
 
@@ -492,11 +492,11 @@ export function EditCampoClient({
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={4}
-            maxLength={500}
+            maxLength={1000}
             className={`${inputClass} resize-y`}
           />
           <p className="mt-1 text-[11px] text-[#999999]" style={lato}>
-            {descripcion.length}/500
+            {descripcion.length}/1000
           </p>
         </Field>
         <Field label="Horarios">
