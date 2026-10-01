@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { isoToMxLocal, mxLocalToIso } from '@/app/eventos/lib/format-evento-fecha'
 import { createAdminClient } from './supabase-server'
 
 const jostHeading = {
@@ -15,7 +16,7 @@ const latoBody = { fontFamily: "'Lato', sans-serif" }
 function MetricsSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-      {[1, 2, 3, 4].map((i) => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
           className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-4 md:p-5"
@@ -31,20 +32,32 @@ function MetricsSkeleton() {
 async function AdminMetrics() {
   const supabase = createAdminClient()
 
-  const [usersQ, postsQ, fieldsQ, pendingQ] = await Promise.all([
-    supabase.from('users').select('*', { count: 'exact', head: true }),
-    supabase.from('posts').select('*', { count: 'exact', head: true }),
-    supabase.from('fields').select('*', { count: 'exact', head: true }),
-    supabase
-      .from('fields')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending'),
-  ])
+  const todayStart = mxLocalToIso(
+    `${isoToMxLocal(new Date().toISOString()).slice(0, 10)}T00:00`,
+  )
+
+  const [usersQ, postsQ, fieldsQ, pendingQ, replicasQ, replicasTodayQ] =
+    await Promise.all([
+      supabase.from('users').select('*', { count: 'exact', head: true }),
+      supabase.from('posts').select('*', { count: 'exact', head: true }),
+      supabase.from('fields').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('fields')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending'),
+      supabase.from('arsenal').select('*', { count: 'exact', head: true }),
+      supabase
+        .from('arsenal')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', todayStart),
+    ])
 
   const totalUsers = usersQ.error ? 0 : usersQ.count ?? 0
   const totalPosts = postsQ.error ? 0 : postsQ.count ?? 0
   const totalFields = fieldsQ.error ? 0 : fieldsQ.count ?? 0
   const pendingFields = pendingQ.error ? 0 : pendingQ.count ?? 0
+  const totalReplicas = replicasQ.error ? 0 : replicasQ.count ?? 0
+  const replicasToday = replicasTodayQ.error ? 0 : replicasTodayQ.count ?? 0
 
   const metrics = [
     { value: totalUsers, label: 'Total usuarios' },
@@ -87,6 +100,20 @@ async function AdminMetrics() {
           </div>
         )
       })}
+      <div className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-4 md:p-5">
+        <p
+          className="text-3xl tabular-nums text-[#111111] md:text-4xl"
+          style={jostHeading}
+        >
+          {totalReplicas}
+        </p>
+        <p className="mt-1 text-xs text-[#666666]" style={latoBody}>
+          Total réplicas
+        </p>
+        <p className="mt-1 text-xs text-[#666666]" style={latoBody}>
+          {replicasToday} registradas hoy
+        </p>
+      </div>
     </div>
   )
 }
