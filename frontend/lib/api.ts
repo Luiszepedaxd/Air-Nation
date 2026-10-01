@@ -4,6 +4,34 @@
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
+export type ReplicaAdminStats = {
+  timezone: string;
+  dayStart: string;
+  total: number;
+  registeredToday: number;
+  verificadas: number;
+  enVenta: number;
+  byEstado: { estado: string; count: number }[];
+  byCiudad: { ciudad: string; estado: string; count: number }[];
+  otrasCiudades: number;
+  transfers: {
+    pendiente: number;
+    byStatus: { status: string; count: number }[];
+  } | null;
+  transfersUnavailable: boolean;
+  placesUnavailable: boolean;
+  recent: {
+    id: string;
+    nombre: string;
+    sistema: string | null;
+    ciudad: string | null;
+    estado: string | null;
+    verificada: boolean;
+    en_venta: boolean;
+    created_at: string | null;
+  }[];
+};
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -40,6 +68,14 @@ export const api = {
       }),
     report: (id: string) =>
       request<{ message: string }>(`/replicas/${id}/report`, { method: "PATCH" }),
+  },
+
+  admin: {
+    replicaStats: (accessToken: string) =>
+      request<ReplicaAdminStats>("/admin/replicas/stats", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }),
   },
 
   docs: {

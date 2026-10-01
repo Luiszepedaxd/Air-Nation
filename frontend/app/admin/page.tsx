@@ -2,6 +2,10 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { Suspense } from 'react'
+import {
+  ReplicasRegistradasSection,
+  ReplicasRegistradasSkeleton,
+} from './ReplicasRegistradas'
 import { createAdminClient } from './supabase-server'
 
 const jostHeading = {
@@ -105,6 +109,10 @@ export default function AdminHomePage() {
         <AdminMetrics />
       </Suspense>
 
+      <Suspense fallback={<ReplicasRegistradasSkeleton />}>
+        <ReplicasRegistradasSection />
+      </Suspense>
+
       <section className="mt-10 border-t border-solid border-[#EEEEEE] pt-8">
         <h2
           className="mb-4 text-[0.7rem] tracking-[0.18em] text-[#666666]"
@@ -134,6 +142,13 @@ export default function AdminHomePage() {
           >
             Aprobar campos
           </Link>
+          <a
+            href="#replicas-registradas"
+            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
+          >
+            Réplicas registradas
+          </a>
           <Link
             href="/admin/bloodmoney2"
             className="inline-flex bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90"
