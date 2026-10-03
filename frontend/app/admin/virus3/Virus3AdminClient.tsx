@@ -615,7 +615,11 @@ function EditorCapsulas({
           </Field>
 
           <Field label="Video">
-            <VideoUploadInput value={c.video_url} onChange={(url) => patchItem(i, { video_url: url })} />
+            <VideoUploadInput
+              value={c.video_url}
+              context="virus3_capsulas"
+              onChange={(url) => patchItem(i, { video_url: url })}
+            />
             <SondaDuracion url={c.video_url} duracion={c.duracion_seg} onDuracion={(segundos) => patchItem(i, { duracion_seg: segundos })} />
           </Field>
 

@@ -6,6 +6,13 @@ const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
 const { uploadToCloudflare, uploadVideoToStream } = require("../services/cloudflare");
 const { requireAuth } = require("../middleware/requireAuth");
+const supabase = require("../lib/supabase");
+const {
+  VIDEO_MAX_DURATION_SEC,
+  CAPSULAS_VIDEO_CONTEXT,
+  resolveVideoDurationLimit,
+  durationLimitMessage,
+} = require("../lib/videoDurationLimit");
 const {
   ensureFfmpegPaths,
   trimVideoBuffer,
@@ -42,7 +49,21 @@ function isAllowedVideoMime(mimetype) {
 
 /** Source videos for server trim can be long phone recordings. */
 const VIDEO_MAX_BYTES = 250 * 1024 * 1024;
-const VIDEO_MAX_DURATION_SEC = 60;
+
+async function esAdminDeApp(userId) {
+  if (!userId) return false;
+  const { data, error } = await supabase
+    .from("users")
+    .select("app_role")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) {
+    const err = new Error(error.message);
+    err.status = 500;
+    throw err;
+  }
+  return data?.app_role === "admin";
+}
 
 const uploadVideo = multer({
   storage: multer.memoryStorage(),
@@ -190,6 +211,26 @@ router.post("/video", requireAuth, (req, res) => {
     try {
       const DURATION_SLACK_SEC = 2;
       const body = req.body || {};
+      const context = String(body.context || "").trim();
+      let isAdmin = false;
+      if (context === CAPSULAS_VIDEO_CONTEXT) {
+        try {
+          isAdmin = await esAdminDeApp(req.authUser && req.authUser.id);
+        } catch (adminErr) {
+          console.error(
+            "[upload/video] admin check:",
+            adminErr && adminErr.message ? adminErr.message : adminErr
+          );
+          return res.status(500).json({ error: "No se pudo verificar el permiso de admin." });
+        }
+      }
+      const limite = resolveVideoDurationLimit(context, isAdmin);
+      if (limite.forbidden) {
+        return res.status(403).json({
+          error: "Solo un administrador puede subir videos de cápsulas de hasta 3 minutos.",
+        });
+      }
+      const maxSec = limite.maxSec;
 
       // Optional server-side trim window (preferred over client MediaRecorder).
       const trimStart = parsePositiveNumber(body.trim_start_s ?? body.start_s);
@@ -204,14 +245,14 @@ router.post("/video", requireAuth, (req, res) => {
       let uploadName = req.file.originalname || "video.mp4";
       let uploadMime = baseMime(req.file.mimetype) || "video/mp4";
 
-      if (wantsTrim && trimDuration > VIDEO_MAX_DURATION_SEC + 0.05) {
+      if (wantsTrim && trimDuration > maxSec + 0.05) {
         return res.status(400).json({
-          error: `El video no puede durar más de ${VIDEO_MAX_DURATION_SEC} segundos (1 minuto).`,
+          error: durationLimitMessage(maxSec),
         });
       }
 
       if (wantsTrim) {
-        const safeDur = Math.min(trimDuration, VIDEO_MAX_DURATION_SEC);
+        const safeDur = Math.min(trimDuration, maxSec);
         console.log(
           `[upload/video] server trim start=${trimStart}s duration=${safeDur}s srcBytes=${uploadBuffer.length}`
         );
@@ -262,11 +303,11 @@ router.post("/video", requireAuth, (req, res) => {
         Number.isFinite(rawClient) && rawClient > 0
           ? Math.round(rawClient * 1000) / 1000
           : wantsTrim && trimDuration
-            ? Math.min(trimDuration, VIDEO_MAX_DURATION_SEC)
+            ? Math.min(trimDuration, maxSec)
             : 0;
 
       const clientWithinMax =
-        client_s > 0 && client_s <= VIDEO_MAX_DURATION_SEC + 0.05;
+        client_s > 0 && client_s <= maxSec + 0.05;
 
       let duration_s = 0;
       if (clientWithinMax) {
@@ -278,28 +319,28 @@ router.post("/video", requireAuth, (req, res) => {
       }
 
       const limitForReject = clientWithinMax
-        ? VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
-        : VIDEO_MAX_DURATION_SEC + 0.05;
+        ? maxSec + DURATION_SLACK_SEC
+        : maxSec + 0.05;
       const measured = probed_s > 0 ? probed_s : duration_s;
       if (!clientWithinMax && measured > limitForReject) {
         return res.status(400).json({
-          error: `El video no puede durar más de ${VIDEO_MAX_DURATION_SEC} segundos (1 minuto).`,
+          error: durationLimitMessage(maxSec),
         });
       }
       if (
         clientWithinMax &&
-        probed_s > VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+        probed_s > maxSec + DURATION_SLACK_SEC
       ) {
-        // Clip claimed <=60s from trimmer but file is clearly longer — reject.
+        // El cliente dijo estar dentro del tope, pero el archivo es claramente más largo.
         return res.status(400).json({
-          error: `El video no puede durar más de ${VIDEO_MAX_DURATION_SEC} segundos (1 minuto).`,
+          error: durationLimitMessage(maxSec),
         });
       }
       if (
-        duration_s > VIDEO_MAX_DURATION_SEC &&
-        duration_s <= VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+        duration_s > maxSec &&
+        duration_s <= maxSec + DURATION_SLACK_SEC
       ) {
-        duration_s = VIDEO_MAX_DURATION_SEC;
+        duration_s = maxSec;
       }
 
       const stream = await uploadVideoToStream(
@@ -307,8 +348,8 @@ router.post("/video", requireAuth, (req, res) => {
         uploadName,
         uploadMime,
         // Mismo margen que aceptamos arriba: un trim por keyframes puede
-        // quedar unas décimas sobre 60s y Stream rechaza lo que exceda el tope.
-        { maxDurationSeconds: VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC }
+        // quedar unas décimas sobre el tope y Stream rechaza lo que lo exceda.
+        { maxDurationSeconds: maxSec + DURATION_SLACK_SEC }
       );
       if (!stream.video_url) {
         return res
@@ -319,11 +360,11 @@ router.post("/video", requireAuth, (req, res) => {
       if (
         stream.duration_s != null &&
         stream.duration_s > 0 &&
-        stream.duration_s <= VIDEO_MAX_DURATION_SEC + DURATION_SLACK_SEC
+        stream.duration_s <= maxSec + DURATION_SLACK_SEC
       ) {
         duration_s = Math.min(
           Math.round(stream.duration_s * 1000) / 1000,
-          VIDEO_MAX_DURATION_SEC
+          maxSec
         );
       }
       return res.status(200).json({

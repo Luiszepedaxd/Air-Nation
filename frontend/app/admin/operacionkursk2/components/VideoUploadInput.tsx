@@ -11,13 +11,15 @@ type Props = {
   value: string
   onChange: (url: string) => void
   accept?: string
+  /** Pide el tope de 3 min. El servidor lo concede solo a un admin. */
+  context?: 'virus3_capsulas'
 }
 
 function isAudioMode(accept?: string) {
   return accept?.includes('audio') ?? false
 }
 
-export function VideoUploadInput({ value, onChange, accept }: Props) {
+export function VideoUploadInput({ value, onChange, accept, context }: Props) {
   const audioMode = isAudioMode(accept)
   const accepted = audioMode ? AUDIO_ACCEPTED : VIDEO_ACCEPTED
   const acceptAttr = accept ?? 'video/mp4,video/quicktime,video/webm'
@@ -52,7 +54,7 @@ export function VideoUploadInput({ value, onChange, accept }: Props) {
     setBusy(true)
     setProgress(audioMode ? 'Subiendo audio a R2…' : 'Subiendo video a R2…')
     try {
-      const result = await uploadVideo(file)
+      const result = await uploadVideo(file, context ? { context } : undefined)
       if (!result?.video_url) throw new Error('Upload sin URL')
       onChange(result.video_url)
     } catch (err: unknown) {
@@ -107,6 +109,7 @@ export function VideoUploadInput({ value, onChange, accept }: Props) {
 
       <p className="mt-1 text-[11px] text-[#999]">
         {audioMode ? 'MP3 / WAV' : 'MP4 / MOV / WebM'} · máx {MAX_MB}MB
+        {context === 'virus3_capsulas' ? ' · hasta 3 min' : ''}
       </p>
 
       {progress ? (

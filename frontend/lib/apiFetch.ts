@@ -66,10 +66,18 @@ export async function uploadVideo(
     /** Server-side ffmpeg window (preferred over client MediaRecorder). */
     trim?: { startSec: number; durationSec: number } | null
     timeoutMs?: number
+    /**
+     * Solo lo envía el editor de cápsulas de /admin/virus3.
+     * El servidor lo acepta únicamente si users.app_role es admin.
+     */
+    context?: 'virus3_capsulas'
   }
 ): Promise<VideoUploadResult> {
   const formData = new FormData()
   formData.append('file', file, file.name)
+  if (opts?.context === 'virus3_capsulas') {
+    formData.append('context', 'virus3_capsulas')
+  }
   if (
     opts?.durationSeconds != null &&
     Number.isFinite(opts.durationSeconds) &&
@@ -88,9 +96,10 @@ export async function uploadVideo(
     formData.append('trim_duration_s', String(trim.durationSec))
   }
 
-  // Large source + server trim + Stream ready can exceed 2 minutes.
+  // Una cápsula de 3 min más la espera de Stream pasa de los 3 minutos del feed.
+  const capsulaLarga = opts?.context === 'virus3_capsulas'
   const timeoutMs =
-    opts?.timeoutMs ?? (trim ? 300_000 : 180_000)
+    opts?.timeoutMs ?? (trim || capsulaLarga ? 300_000 : 180_000)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response
