@@ -2,6 +2,7 @@
 
 import { memo } from 'react'
 import { motion } from 'framer-motion'
+import { Check } from 'lucide-react'
 import type { CapsulaItem } from '../../lib/types'
 import { isCompleted, type CapsulasProgress } from '../../lib/progreso-capsulas'
 import { acento, prefiereQuieto } from './helpers'
@@ -29,8 +30,14 @@ function ProgresoSegmentadoInner({
         style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
       >
         <span>{hechas}/{lista.length} TRANSMISIONES</span>
-        <span className="shrink-0" style={todasHechas ? { color: '#CC4B37' } : undefined}>
-          {todasHechas ? 'MANUAL COMPLETO ✓' : `${porcentaje}%`}
+        <span className="inline-flex shrink-0 items-center gap-1" style={todasHechas ? { color: '#CC4B37' } : undefined}>
+          {todasHechas ? (
+            <>
+              MANUAL COMPLETO <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+            </>
+          ) : (
+            `${porcentaje}%`
+          )}
         </span>
       </div>
       <div className="flex gap-0.5" aria-hidden>

@@ -2,6 +2,7 @@
 
 import { memo } from 'react'
 import { motion } from 'framer-motion'
+import { Play } from 'lucide-react'
 import type { CapsulaItem } from '../../lib/types'
 import { isCompleted, type CapsulasProgress } from '../../lib/progreso-capsulas'
 import { FOCUS, acento, formatearDuracion, prefiereQuieto } from './helpers'
@@ -81,11 +82,11 @@ function TarjetaSiguienteInner({
           </p>
         </div>
         <span
-          className="absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center text-xl text-white lg:bottom-4 lg:right-4 lg:h-16 lg:w-16 lg:text-2xl"
-          style={{ background: color, fontFamily: 'Jost, sans-serif', fontWeight: 900 }}
+          className="absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center text-white lg:bottom-4 lg:right-4 lg:h-16 lg:w-16"
+          style={{ background: color }}
           aria-hidden
         >
-          ▶
+          <Play className="h-6 w-6 lg:h-8 lg:w-8" fill="currentColor" aria-hidden />
         </span>
         {enProgreso && pct != null ? (
           <span className="absolute inset-x-0 bottom-0 h-1 bg-white/15" aria-hidden>

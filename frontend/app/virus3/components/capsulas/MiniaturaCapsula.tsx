@@ -2,6 +2,7 @@
 
 import { memo } from 'react'
 import { motion } from 'framer-motion'
+import { Check } from 'lucide-react'
 import type { CapsulaItem } from '../../lib/types'
 import { isCompleted, type CapsulasProgress } from '../../lib/progreso-capsulas'
 import { FOCUS, acento } from './helpers'
@@ -58,8 +59,8 @@ function MiniaturaCapsulaInner({
             {capsula.numero}
           </span>
           {completa ? (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg text-white" aria-hidden>
-              ✓
+            <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-white" aria-hidden>
+              <Check className="h-6 w-6" strokeWidth={2.5} aria-hidden />
             </span>
           ) : null}
           {enProgreso && pct != null ? (

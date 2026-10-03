@@ -10,6 +10,7 @@ import {
   resetProgress,
   type CapsulasProgress,
 } from '../lib/progreso-capsulas'
+import { CapsulaVideoProvider, useCapsulaVideoEngine } from './capsulas/CapsulaVideoEngine'
 import { GridCapsulas } from './capsulas/GridCapsulas'
 import { ProgresoSegmentado } from './capsulas/ProgresoSegmentado'
 import { preloadReproductorInmersivo } from './capsulas/preloadReproductor'
@@ -25,6 +26,7 @@ import {
   scrollA,
   sincronizarUrl,
 } from './capsulas/helpers'
+
 const LAYOUT_PREFIX = 'capsula-reel'
 
 const ReproductorInmersivo = dynamic(
@@ -32,7 +34,20 @@ const ReproductorInmersivo = dynamic(
   { ssr: false },
 )
 
-export function CapsulasSection({
+export function CapsulasSection(props: {
+  config: CapsulasConfig
+  initialProgreso?: CapsulasProgress
+  initialDestacadaId?: string
+  capsulaParam?: string
+}) {
+  return (
+    <CapsulaVideoProvider>
+      <CapsulasSectionInner {...props} />
+    </CapsulaVideoProvider>
+  )
+}
+
+function CapsulasSectionInner({
   config,
   initialProgreso = PROGRESO_VACIO,
   initialDestacadaId,
@@ -43,6 +58,7 @@ export function CapsulasSection({
   initialDestacadaId?: string
   capsulaParam?: string
 }) {
+  const engine = useCapsulaVideoEngine()
   const lista = useMemo(() => capsulasVisibles(config), [config])
 
   const destacadaInicial =
@@ -61,7 +77,6 @@ export function CapsulasSection({
   const [avisoCopia, setAvisoCopia] = useState<string | null>(null)
   const [esDesktop, setEsDesktop] = useState(false)
 
-  const quierePlay = useRef(false)
   const copiaTimer = useRef<number | null>(null)
   const progresoRef = useRef(progreso)
   progresoRef.current = progreso
@@ -142,20 +157,23 @@ export function CapsulasSection({
     void preloadReproductorInmersivo()
   }, [])
 
-  const abrirReproductor = useCallback((id: string, rect: DOMRect) => {
-    void preloadReproductorInmersivo()
-    quierePlay.current = true
-    setReproductorId(id)
-    setDestacadaId(id)
-    setOriginRect(rect)
-    setPlayerMontado(true)
-    setModalAbierto(true)
-    sincronizarUrl(id)
-  }, [])
+  const abrirReproductor = useCallback(
+    (id: string, rect: DOMRect) => {
+      void preloadReproductorInmersivo()
+      const c = lista.find((x) => x.id === id)
+      if (c) engine.playFromGesture(c, progresoRef.current)
+      setReproductorId(id)
+      setDestacadaId(id)
+      setOriginRect(rect)
+      setPlayerMontado(true)
+      setModalAbierto(true)
+      sincronizarUrl(id)
+    },
+    [engine, lista],
+  )
 
   const cerrarReproductor = useCallback(() => {
     setModalAbierto(false)
-    quierePlay.current = false
   }, [])
 
   const alSalirReproductor = useCallback(() => {
@@ -327,7 +345,6 @@ export function CapsulasSection({
           ctaTexto={ctaTexto}
           ctaLink={ctaLink}
           layoutIdPrefix={LAYOUT_PREFIX}
-          quierePlayRef={quierePlay}
         />
       ) : null}
     </LayoutGroup>

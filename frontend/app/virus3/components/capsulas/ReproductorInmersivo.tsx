@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, animate, motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
+import { Check, Pause, Play, Share2, Volume2, VolumeX, X } from 'lucide-react'
 import type { CapsulaItem } from '../../lib/types'
 import {
   isCompleted,
@@ -10,9 +11,11 @@ import {
   savePosition,
   type CapsulasProgress,
 } from '../../lib/progreso-capsulas'
+import { useCapsulaVideoEngine } from './CapsulaVideoEngine'
 import { FOCUS, acento, emitir, prefiereQuieto, sincronizarUrl } from './helpers'
 import { posterDe } from './poster'
 import { PosterVisual } from './PosterVisual'
+import { ReproductorDebugPanel } from './ReproductorDebugPanel'
 
 type Overlay =
   | { tipo: 'siguiente'; siguienteId: string; segundos: number }
@@ -56,7 +59,6 @@ export function ReproductorInmersivo({
   ctaTexto,
   ctaLink,
   layoutIdPrefix,
-  quierePlayRef,
   onSalirAnimacion,
 }: {
   abierto: boolean
@@ -74,41 +76,44 @@ export function ReproductorInmersivo({
   ctaTexto: string
   ctaLink: string
   layoutIdPrefix: string
-  quierePlayRef: MutableRefObject<boolean>
   onSalirAnimacion: () => void
 }) {
   const EASE_REELS = [0.2, 0.8, 0.2, 1] as const
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const engine = useCapsulaVideoEngine()
+  const [debugCapsulas, setDebugCapsulas] = useState(false)
+  useEffect(() => {
+    setDebugCapsulas(new URLSearchParams(window.location.search).get('debug') === 'capsulas')
+  }, [])
+
   const progresoRef = useRef(progreso)
   progresoRef.current = progreso
+  engine.progresoRef.current = progreso
+
   const barRefs = useRef<(HTMLDivElement | null)[]>([])
   const scrubRef = useRef<HTMLDivElement>(null)
+  const videoSlotRef = useRef<HTMLDivElement>(null)
   const ultimoGuardado = useRef(0)
   const rafRef = useRef(0)
   const pushedRef = useRef(false)
   const pointerStart = useRef<{ y: number; t: number } | null>(null)
   const irARef = useRef<(id: string, reproducir?: boolean) => void>(() => {})
   const prepararSalidaRef = useRef(() => {})
+  const videoAreaRef = useRef<HTMLDivElement>(null)
+  const [videoAreaH, setVideoAreaH] = useState(0)
 
   const [overlay, setOverlay] = useState<Overlay | null>(null)
-  const [muted, setMuted] = useState(false)
-  const [glitch, setGlitch] = useState(false)
   const [iconoPlay, setIconoPlay] = useState<'play' | 'pause' | null>(null)
   const [montado, setMontado] = useState(false)
   const [checkAnim, setCheckAnim] = useState(false)
-  const [panelH, setPanelH] = useState(0)
   const [salidaRect, setSalidaRect] = useState<DOMRect | null>(null)
-  const [tapaderaCapsula, setTapaderaCapsula] = useState<CapsulaItem | null>(null)
-  const [tapaderaVisible, setTapaderaVisible] = useState(false)
-  const tapaderaListeners = useRef<(() => void) | null>(null)
 
   const dragY = useMotionValue(0)
   const nextY = useTransform(dragY, (v) => {
-    const h = panelH || 1
+    const h = videoAreaH || 1
     return v > 0 ? h : h + v
   })
   const prevY = useTransform(dragY, (v) => {
-    const h = panelH || 1
+    const h = videoAreaH || 1
     return v < 0 ? -h : -h + v
   })
 
@@ -121,11 +126,26 @@ export function ReproductorInmersivo({
   useEffect(() => setMontado(true), [])
 
   useEffect(() => {
-    if (!abierto) return
-    const medir = () => setPanelH(window.innerHeight)
+    if (!abierto) {
+      engine.attachToSlot(null)
+      return
+    }
+    const t = window.requestAnimationFrame(() => {
+      engine.attachToSlot(videoSlotRef.current)
+    })
+    return () => {
+      window.cancelAnimationFrame(t)
+      if (!abierto) engine.attachToSlot(null)
+    }
+  }, [abierto, engine, capsulaId])
+
+  useEffect(() => {
+    if (!abierto || !videoAreaRef.current) return
+    const medir = () => setVideoAreaH(videoAreaRef.current?.clientHeight ?? 0)
     medir()
-    window.addEventListener('resize', medir)
-    return () => window.removeEventListener('resize', medir)
+    const ro = new ResizeObserver(medir)
+    ro.observe(videoAreaRef.current)
+    return () => ro.disconnect()
   }, [abierto])
 
   useEffect(() => {
@@ -139,7 +159,7 @@ export function ReproductorInmersivo({
   }, [abierto, capsulaId, dragY])
 
   const actualizarBarras = useCallback(() => {
-    const video = videoRef.current
+    const video = engine.videoRef.current
     if (!video || !capsula) return
     const dur = video.duration
     const t = video.currentTime
@@ -154,89 +174,18 @@ export function ReproductorInmersivo({
     if (scrub && Number.isFinite(dur) && dur > 0) {
       scrub.style.transform = `scaleX(${Math.min(1, t / dur)})`
     }
-  }, [capsula, indice, lista])
-
-  const retirarTapadera = useCallback(() => {
-    setTapaderaVisible(false)
-  }, [])
-
-  const mostrarTapadera = useCallback((c: CapsulaItem) => {
-    setTapaderaCapsula(c)
-    setTapaderaVisible(true)
-  }, [])
-
-  const enlazarTapaderaVideo = useCallback(
-    (video: HTMLVideoElement) => {
-      tapaderaListeners.current?.()
-      const listo = () => retirarTapadera()
-      const onPlaying = () => listo()
-      const onLoaded = () => {
-        if (video.paused) listo()
-      }
-      video.addEventListener('playing', onPlaying, { once: true })
-      video.addEventListener('loadeddata', onLoaded, { once: true })
-      tapaderaListeners.current = () => {
-        video.removeEventListener('playing', onPlaying)
-        video.removeEventListener('loadeddata', onLoaded)
-      }
-    },
-    [retirarTapadera],
-  )
-
-  const cargarYReproducir = useCallback(
-    (c: CapsulaItem, reproducir: boolean) => {
-      const video = videoRef.current
-      if (!video) return
-      const src = c.video_url.trim()
-      const cambia = !video.src.endsWith(src) && video.src !== src
-      if (cambia) {
-        mostrarTapadera(c)
-        enlazarTapaderaVideo(video)
-        video.src = src
-        video.load()
-      }
-      const poster = posterDe(c)
-      if (poster) video.poster = poster
-      const pos = progresoRef.current.p[c.id] ?? 0
-      const onMeta = () => {
-        if (
-          pos > 0 &&
-          !isCompleted(progresoRef.current, c.id) &&
-          Number.isFinite(video.duration) &&
-          pos < video.duration - 0.5
-        ) {
-          try {
-            video.currentTime = pos
-          } catch {
-            /* seek */
-          }
-        }
-        if (reproducir) video.play().catch(() => {})
-      }
-      if (video.readyState >= 1) onMeta()
-      else video.addEventListener('loadedmetadata', onMeta, { once: true })
-    },
-    [enlazarTapaderaVideo, mostrarTapadera],
-  )
-
-  useEffect(() => {
-    return () => tapaderaListeners.current?.()
-  }, [])
+  }, [capsula, engine.videoRef, indice, lista])
 
   const irA = useCallback(
     (id: string, reproducir = false) => {
       const c = lista.find((x) => x.id === id)
       if (!c) return
       setOverlay(null)
-      if (!quieto) {
-        setGlitch(true)
-        window.setTimeout(() => setGlitch(false), 200)
-      }
       onCambiarCapsula(id)
       sincronizarUrl(id)
-      cargarYReproducir(c, reproducir)
+      engine.switchCapsula(c, progresoRef.current, reproducir)
     },
-    [cargarYReproducir, lista, onCambiarCapsula, quieto],
+    [engine, lista, onCambiarCapsula],
   )
 
   irARef.current = irA
@@ -271,10 +220,14 @@ export function ReproductorInmersivo({
 
   useEffect(() => {
     if (!abierto || !capsula) return
-    const rep = quierePlayRef.current
-    quierePlayRef.current = false
-    cargarYReproducir(capsula, rep)
-  }, [abierto, capsula?.id, capsula, cargarYReproducir, quierePlayRef])
+    return engine.bindVideoEvents({
+      onPlay: () => emitir('capsula_play', capsula),
+      onPause: onPausePersist,
+      onTimeUpdate: onTimePersist,
+      onEnded: alTerminar,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto, capsula?.id])
 
   useEffect(() => {
     if (!abierto || !proxima) return
@@ -316,6 +269,7 @@ export function ReproductorInmersivo({
 
   function cerrar() {
     prepararSalida()
+    engine.onClose()
     if (pushedRef.current) {
       pushedRef.current = false
       window.history.back()
@@ -343,10 +297,10 @@ export function ReproductorInmersivo({
   }
 
   function togglePlay() {
-    const video = videoRef.current
+    const video = engine.videoRef.current
     if (!video) return
     if (video.paused) {
-      video.play().catch(() => {})
+      engine.tapToPlay()
       setIconoPlay('play')
     } else {
       video.pause()
@@ -356,7 +310,7 @@ export function ReproductorInmersivo({
   }
 
   function onTimePersist() {
-    const video = videoRef.current
+    const video = engine.videoRef.current
     if (!video || !capsula || video.ended) return
     if (isCompleted(progresoRef.current, capsula.id)) return
     const t = video.currentTime
@@ -366,7 +320,7 @@ export function ReproductorInmersivo({
   }
 
   function onPausePersist() {
-    const video = videoRef.current
+    const video = engine.videoRef.current
     if (!video || !capsula || video.ended) return
     if (video.currentTime < 1 || isCompleted(progresoRef.current, capsula.id)) return
     const siguiente = savePosition(capsula.id, video.currentTime)
@@ -377,23 +331,31 @@ export function ReproductorInmersivo({
   function onSwipeEnd(_: unknown, info: PanInfo) {
     const y = info.offset.y
     const vy = info.velocity.y
-    const h = panelH || window.innerHeight
+    const h = videoAreaH || 1
     if (y < -80 || vy < -500) {
       if (proxima) {
-        animate(dragY, -h, { duration: 0.28, ease: EASE_REELS, onComplete: () => {
-          irA(proxima.id, true)
-          dragY.set(0)
-        } })
+        animate(dragY, -h, {
+          duration: 0.28,
+          ease: EASE_REELS,
+          onComplete: () => {
+            irA(proxima.id, true)
+            dragY.set(0)
+          },
+        })
       } else if (overlay?.tipo !== 'fin') setOverlay({ tipo: 'fin' })
       else animate(dragY, 0, { duration: 0.2 })
       return
     }
     if (y > 80 || vy > 500) {
       if (anterior) {
-        animate(dragY, h, { duration: 0.28, ease: EASE_REELS, onComplete: () => {
-          irA(anterior.id, true)
-          dragY.set(0)
-        } })
+        animate(dragY, h, {
+          duration: 0.28,
+          ease: EASE_REELS,
+          onComplete: () => {
+            irA(anterior.id, true)
+            dragY.set(0)
+          },
+        })
       } else cerrar()
       return
     }
@@ -408,7 +370,7 @@ export function ReproductorInmersivo({
   prepararSalidaRef.current = prepararSalida
 
   function onScrub(e: React.PointerEvent<HTMLDivElement>) {
-    const video = videoRef.current
+    const video = engine.videoRef.current
     const track = e.currentTarget
     if (!video || !Number.isFinite(video.duration)) return
     const rect = track.getBoundingClientRect()
@@ -425,6 +387,15 @@ export function ReproductorInmersivo({
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+  }
+
+  function verAhoraDesdeGesto(siguienteId: string) {
+    const c = lista.find((x) => x.id === siguienteId)
+    if (!c) return
+    setOverlay(null)
+    onCambiarCapsula(siguienteId)
+    sincronizarUrl(siguienteId)
+    engine.playFromGesture(c, progresoRef.current)
   }
 
   if (!montado || !capsula) return null
@@ -451,109 +422,22 @@ export function ReproductorInmersivo({
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
       style={{ height: '100dvh', overscrollBehavior: 'contain' }}
     >
-    <motion.div
-      layoutId={quieto ? undefined : `${layoutIdPrefix}-${capsula.id}`}
-      className="fixed overflow-hidden bg-black"
-      initial={abierto ? (quieto ? { opacity: 0 } : esDesktop ? { opacity: 0 } : shellAbrir) : false}
-      animate={cerrando ? shellCerrar : shellFull}
-      transition={{ duration: quieto ? 0.2 : 0.3, ease: EASE_REELS }}
-      onAnimationComplete={() => {
-        if (!abierto && salidaRect) {
-          setSalidaRect(null)
-          onSalirAnimacion()
-        }
-      }}
-    >
-      <div className="relative h-full w-full overflow-hidden bg-black">
-        {anterior && !overlay ? (
-          <motion.div className="absolute inset-0 z-0 bg-black" style={{ y: prevY }}>
-            <PosterVisual capsula={anterior} width={390} height={693} imgClassName="h-full w-full object-cover" />
-          </motion.div>
-        ) : null}
-        {proxima && !overlay ? (
-          <motion.div className="absolute inset-0 z-0 bg-black" style={{ y: nextY }}>
-            <PosterVisual capsula={proxima} width={390} height={693} imgClassName="h-full w-full object-cover" />
-          </motion.div>
-        ) : null}
       <motion.div
-        className="relative z-[1] h-full w-full bg-black"
-        style={{ y: dragY, touchAction: 'none' }}
-        drag={quieto || overlay ? false : 'y'}
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.12}
-        dragMomentum={false}
-        onDragEnd={onSwipeEnd}
-        onPointerDown={(e) => {
-          pointerStart.current = { y: e.clientY, t: Date.now() }
-        }}
-        onPointerUp={(e) => {
-          const start = pointerStart.current
-          pointerStart.current = null
-          if (!start) return
-          const dy = Math.abs(e.clientY - start.y)
-          const dt = Date.now() - start.t
-          if (dy < 12 && dt < 300) togglePlay()
+        layoutId={quieto ? undefined : `${layoutIdPrefix}-${capsula.id}`}
+        className="fixed flex flex-col overflow-hidden bg-black"
+        initial={abierto ? (quieto ? { opacity: 0 } : esDesktop ? { opacity: 0 } : shellAbrir) : false}
+        animate={cerrando ? shellCerrar : shellFull}
+        transition={{ duration: quieto ? 0.2 : 0.3, ease: EASE_REELS }}
+        onAnimationComplete={() => {
+          if (!abierto && salidaRect) {
+            setSalidaRect(null)
+            onSalirAnimacion()
+          }
         }}
       >
-        <div className="absolute inset-0 bg-black">
-          <video
-            ref={videoRef}
-            playsInline
-            preload="metadata"
-            muted={muted}
-            className={`h-full w-full bg-black ${esDesktop ? 'object-contain' : 'object-cover'}`}
-            onPlay={() => emitir('capsula_play', capsula)}
-            onPause={onPausePersist}
-            onTimeUpdate={onTimePersist}
-            onEnded={alTerminar}
-          />
-          {tapaderaCapsula ? (
-            <motion.div
-              className="pointer-events-none absolute inset-0 z-[2] bg-black"
-              initial={false}
-              animate={{ opacity: tapaderaVisible ? 1 : 0 }}
-              transition={{ duration: 0.2 }}
-              onAnimationComplete={() => {
-                if (!tapaderaVisible) setTapaderaCapsula(null)
-              }}
-            >
-              <PosterVisual
-                capsula={tapaderaCapsula}
-                width={390}
-                height={693}
-                imgClassName="h-full w-full object-cover"
-              />
-            </motion.div>
-          ) : null}
-        </div>
-
-        {checkAnim ? (
-          <div className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center">
-            <motion.span
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-6xl text-[#CC4B37]"
-            >
-              ✓
-            </motion.span>
-          </div>
-        ) : null}
-
-        {iconoPlay ? (
-          <div className="pointer-events-none absolute inset-0 z-[7] flex items-center justify-center">
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-5xl text-white/90"
-            >
-              {iconoPlay === 'pause' ? '❚❚' : '▶'}
-            </motion.span>
-          </div>
-        ) : null}
-
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/85 to-transparent px-3 pb-6 pt-[max(0.75rem,env(safe-area-inset-top))]"
+        <header
+          className="shrink-0 bg-black px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))]"
+          style={{ minHeight: 'calc(48px + env(safe-area-inset-top, 0px))' }}
         >
           <div className="mb-2 flex gap-0.5">
             {lista.map((c, i) => (
@@ -568,41 +452,202 @@ export function ReproductorInmersivo({
               </div>
             ))}
           </div>
-          <div className="pointer-events-auto flex items-center justify-between gap-3">
-            <p className="truncate text-[11px] tracking-[0.16em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}>
+          <div className="flex items-center justify-between gap-3">
+            <p
+              className="truncate text-[11px] tracking-[0.16em]"
+              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+            >
               CÁPSULA <span style={{ color: acento(capsula.color) }}>{capsula.numero}</span>
-              <span className="text-white/50"> · {String(indice + 1).padStart(2, '0')}/{lista.length}</span>
+              <span className="text-white/50">
+                {' '}
+                · {String(indice + 1).padStart(2, '0')}/{lista.length}
+              </span>
             </p>
             <button
               type="button"
               aria-label="Cerrar reproductor"
-              className={`flex h-11 w-11 items-center justify-center text-2xl text-white ${FOCUS}`}
+              className={`flex h-10 w-10 items-center justify-center text-white ${FOCUS}`}
               onClick={cerrar}
             >
-              ×
+              <X className="h-6 w-6" strokeWidth={2} aria-hidden />
             </button>
           </div>
-        </div>
+        </header>
 
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/75 to-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-20"
+        <motion.div
+          ref={videoAreaRef}
+          className="relative min-h-0 flex-1 bg-black"
+          style={{ y: dragY, touchAction: 'none' }}
+          drag={quieto || overlay ? false : 'y'}
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.12}
+          dragMomentum={false}
+          onDragEnd={onSwipeEnd}
+          onPointerDown={(e) => {
+            pointerStart.current = { y: e.clientY, t: Date.now() }
+          }}
+          onPointerUp={(e) => {
+            const start = pointerStart.current
+            pointerStart.current = null
+            if (!start) return
+            const dy = Math.abs(e.clientY - start.y)
+            const dt = Date.now() - start.t
+            if (dy < 12 && dt < 300) togglePlay()
+          }}
         >
-          <p
-            className={`text-xl uppercase ${glitch && !quieto ? 'reels-glitch' : ''}`}
-            style={{
-              fontFamily: 'Jost, sans-serif',
-              fontWeight: 900,
-            }}
-          >
-            {capsula.titulo}
-          </p>
-          {capsula.descripcion?.trim() ? (
-            <p className="mt-1 line-clamp-2 text-sm text-white/70" style={{ fontFamily: 'Lato, sans-serif' }}>
-              {capsula.descripcion}
-            </p>
+          {anterior && !overlay ? (
+            <motion.div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center bg-black" style={{ y: prevY }}>
+              <PosterVisual capsula={anterior} width={390} height={693} imgClassName="max-h-full max-w-full object-contain opacity-40" />
+            </motion.div>
           ) : null}
+          {proxima && !overlay ? (
+            <motion.div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center bg-black" style={{ y: nextY }}>
+              <PosterVisual capsula={proxima} width={390} height={693} imgClassName="max-h-full max-w-full object-contain opacity-40" />
+            </motion.div>
+          ) : null}
+
+          <div className="relative z-[1] flex h-full w-full items-center justify-center">
+            <div
+              ref={videoSlotRef}
+              className="aspect-[9/16] h-full w-auto max-h-full max-w-full"
+              data-capsula-video-slot
+            />
+          </div>
+
+          {debugCapsulas ? <ReproductorDebugPanel snap={engine.debugSnapshot} /> : null}
+
+          {checkAnim ? (
+            <div className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center">
+              <Check className="h-16 w-16 text-[#CC4B37]" strokeWidth={2.5} aria-hidden />
+            </div>
+          ) : null}
+
+          {iconoPlay ? (
+            <div className="pointer-events-none absolute inset-0 z-[7] flex items-center justify-center">
+              {iconoPlay === 'pause' ? (
+                <Pause className="h-14 w-14 text-white/90" fill="currentColor" aria-hidden />
+              ) : (
+                <Play className="h-14 w-14 text-white/90" fill="currentColor" aria-hidden />
+              )}
+            </div>
+          ) : null}
+
+          {engine.needsTapToPlay ? (
+            <div className="absolute inset-0 z-[9] flex items-center justify-center bg-black/40 px-6">
+              <button
+                type="button"
+                className={`flex flex-col items-center gap-2 rounded border border-white/30 bg-black/80 px-6 py-5 text-white ${FOCUS}`}
+                onClick={() => engine.tapToPlay()}
+              >
+                <Play className="h-12 w-12" fill="currentColor" aria-hidden />
+                <span className="text-[11px] tracking-[0.2em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}>
+                  TOCA PARA REPRODUCIR
+                </span>
+              </button>
+            </div>
+          ) : null}
+
+          {engine.loadError ? (
+            <div className="absolute inset-0 z-[9] flex flex-col items-center justify-center gap-3 bg-black/75 px-6 text-center">
+              <p className="text-sm text-white" style={{ fontFamily: 'Lato, sans-serif' }}>
+                No se pudo cargar la cápsula
+              </p>
+              <button
+                type="button"
+                className={`border border-white/40 px-4 py-2 text-[10px] tracking-[0.14em] text-white ${FOCUS}`}
+                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                onClick={() => engine.retryLoad()}
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : null}
+
+          {overlay ? (
+            <div
+              className="absolute inset-0 z-20 flex flex-col items-center justify-end bg-black/55 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+              role="status"
+            >
+              {overlay.tipo === 'siguiente' && siguienteOverlay ? (
+                <motion.div
+                  initial={{ y: 120 }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: quieto ? 0.15 : 0.28, ease: [0.2, 0.8, 0.2, 1] }}
+                  className="w-full max-w-md border border-white/20 bg-[#111] p-4"
+                >
+                  <p
+                    className="text-[10px] tracking-[0.2em] text-[#CC4B37]"
+                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+                  >
+                    SIGUIENTE TRANSMISIÓN
+                  </p>
+                  <div className="mt-3 flex gap-3">
+                    <div className="h-16 w-12 shrink-0 overflow-hidden">
+                      <PosterVisual capsula={siguienteOverlay} width={48} height={64} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold uppercase" style={{ fontFamily: 'Jost, sans-serif' }}>
+                        {siguienteOverlay.numero} · {siguienteOverlay.titulo}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <AnilloCuenta segundos={overlay.segundos} />
+                      <span className="text-[10px] text-white/60">{overlay.segundos}s</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      className={`flex-1 bg-[#CC4B37] py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+                      onClick={() => verAhoraDesdeGesto(overlay.siguienteId)}
+                    >
+                      VER AHORA
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex-1 border border-white/40 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                      onClick={() => setOverlay(null)}
+                    >
+                      CANCELAR
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="w-full max-w-md border border-white/20 bg-[#111] p-6 text-center">
+                  <p className="text-lg tracking-[0.14em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
+                    MANUAL COMPLETO
+                  </p>
+                  {hayCta ? (
+                    <a
+                      href={ctaLink}
+                      className={`mt-4 inline-block bg-[#CC4B37] px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+                    >
+                      {ctaTexto}
+                    </a>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={`mt-3 border border-white/40 px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                    onClick={() => setOverlay(null)}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </motion.div>
+
+        <footer
+          className="shrink-0 bg-black px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
+          style={{ minHeight: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+        >
           <div
-            className="pointer-events-auto relative mt-3 h-1 w-full cursor-pointer bg-white/25"
+            className="relative mb-2 h-1 w-full cursor-pointer bg-white/25"
             onPointerDown={onScrub}
             role="slider"
             aria-valuemin={0}
@@ -611,125 +656,36 @@ export function ReproductorInmersivo({
           >
             <div ref={scrubRef} className="h-full origin-left bg-[#CC4B37]" style={{ transform: 'scaleX(0)' }} />
           </div>
-          <div className="pointer-events-auto mt-3 flex gap-2">
+          <div className="flex items-center gap-2">
+            <p
+              className="min-w-0 flex-1 truncate text-xs uppercase text-white/90"
+              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+            >
+              {capsula.titulo}
+            </p>
             <button
               type="button"
-              className={`flex-1 border border-white/30 py-2.5 text-[10px] tracking-[0.14em] ${FOCUS}`}
-              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+              aria-label={avisoCopia ?? 'Compartir cápsula'}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center text-white ${FOCUS}`}
               onClick={() => compartir(capsula)}
             >
-              {avisoCopia ?? 'COMPARTIR'}
+              <Share2 className="h-5 w-5" aria-hidden />
             </button>
             <button
               type="button"
-              className={`flex-1 border border-white/30 py-2.5 text-[10px] tracking-[0.14em] ${FOCUS}`}
-              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-              onClick={() => {
-                const v = videoRef.current
-                if (!v) return
-                v.muted = !v.muted
-                setMuted(v.muted)
-              }}
+              aria-label={engine.muted ? 'Activar sonido' : 'Silenciar'}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center text-white ${FOCUS}`}
+              onClick={() => engine.setMuted(!engine.muted)}
             >
-              {muted ? 'ACTIVAR SONIDO' : 'SILENCIAR'}
+              {engine.muted ? (
+                <VolumeX className="h-5 w-5" aria-hidden />
+              ) : (
+                <Volume2 className="h-5 w-5" aria-hidden />
+              )}
             </button>
           </div>
-        </div>
-
-        {overlay ? (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-end bg-black/55 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]" role="status">
-            {overlay.tipo === 'siguiente' && siguienteOverlay ? (
-              <motion.div
-                initial={{ y: 120 }}
-                animate={{ y: 0 }}
-                transition={{ duration: quieto ? 0.15 : 0.28, ease: [0.2, 0.8, 0.2, 1] }}
-                className="w-full max-w-md border border-white/20 bg-[#111] p-4"
-              >
-                <p className="text-[10px] tracking-[0.2em] text-[#CC4B37]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}>
-                  SIGUIENTE TRANSMISIÓN
-                </p>
-                <div className="mt-3 flex gap-3">
-                  <div className="h-16 w-12 shrink-0 overflow-hidden">
-                    <PosterVisual capsula={siguienteOverlay} width={48} height={64} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold uppercase" style={{ fontFamily: 'Jost, sans-serif' }}>
-                      {siguienteOverlay.numero} · {siguienteOverlay.titulo}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <AnilloCuenta segundos={overlay.segundos} />
-                    <span className="text-[10px] text-white/60">{overlay.segundos}s</span>
-                  </div>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    className={`flex-1 bg-[#CC4B37] py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-                    onClick={() => irA(overlay.siguienteId, true)}
-                  >
-                    VER AHORA
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 border border-white/40 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                    onClick={() => setOverlay(null)}
-                  >
-                    CANCELAR
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="w-full max-w-md border border-white/20 bg-[#111] p-6 text-center">
-                <p className="text-lg tracking-[0.14em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
-                  MANUAL COMPLETO
-                </p>
-                {hayCta ? (
-                  <a
-                    href={ctaLink}
-                    className={`mt-4 inline-block bg-[#CC4B37] px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-                  >
-                    {ctaTexto}
-                  </a>
-                ) : null}
-                <button
-                  type="button"
-                  className={`mt-3 border border-white/40 px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                  onClick={() => setOverlay(null)}
-                >
-                  Cerrar
-                </button>
-              </div>
-            )}
-          </div>
-        ) : null}
+        </footer>
       </motion.div>
-      </div>
-      <style jsx>{`
-        @keyframes reels-glitch {
-          0%,
-          100% {
-            transform: translateX(0);
-            clip-path: inset(0 0 0 0);
-          }
-          33% {
-            transform: translateX(-3px);
-            clip-path: inset(0 0 45% 0);
-          }
-          66% {
-            transform: translateX(3px);
-            clip-path: inset(55% 0 0 0);
-          }
-        }
-        .reels-glitch {
-          animation: reels-glitch 0.2s ease-out;
-        }
-      `}</style>
-    </motion.div>
     </div>
   )
 
