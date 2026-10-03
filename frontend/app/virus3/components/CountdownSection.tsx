@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { CountdownConfig } from '../lib/types'
 
@@ -45,12 +45,26 @@ const TIME_VACIO = { days: 0, hours: 0, minutes: 0, seconds: 0, expired: false }
 
 export function CountdownSection({ config }: { config: CountdownConfig }) {
   const fechaInicio = config.fecha_inicio?.trim() || '2026-10-10T08:00:00-06:00'
+  const sectionRef = useRef<HTMLElement>(null)
+  const [enVista, setEnVista] = useState(false)
   // Ceros en SSR y en el primer paint del cliente para no desfasar el segundo al hidratar.
   const [time, setTime] = useState(TIME_VACIO)
   const [listo, setListo] = useState(false)
   const [pulse, setPulse] = useState(false)
 
   useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => setEnVista(Boolean(entry?.isIntersecting)), {
+      rootMargin: '120px 0px',
+      threshold: 0,
+    })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!enVista) return
     const tick = () => setTime(calcRemaining(fechaInicio))
     tick()
     setListo(true)
@@ -59,7 +73,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
       setPulse((p) => !p)
     }, 1000)
     return () => clearInterval(id)
-  }, [fechaInicio])
+  }, [fechaInicio, enVista])
 
   const pad = (n: number) => String(n).padStart(2, '0')
   const daysStr = time.days >= 100 ? String(time.days).padStart(3, '0') : pad(time.days)
@@ -67,6 +81,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
 
   return (
     <section
+      ref={sectionRef}
       data-section="countdown"
       className="relative w-full overflow-hidden bg-[#F5F3EF] py-16 text-[#111111] md:py-40"
     >

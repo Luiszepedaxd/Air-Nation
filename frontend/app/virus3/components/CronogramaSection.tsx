@@ -32,6 +32,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
   }, [inView])
 
   useEffect(() => {
+    if (!inView) return
     const update = () => {
       const d = new Date()
       const hh = String(d.getUTCHours()).padStart(2, '0')
@@ -42,7 +43,7 @@ export function CronogramaSection({ config }: { config: CronogramaConfig }) {
     update()
     const id = setInterval(update, 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [inView])
 
   const eyebrow = config.eyebrow?.trim() || 'CRONOGRAMA'
   const titulo = config.titulo?.trim() || 'LÍNEA DE TIEMPO'

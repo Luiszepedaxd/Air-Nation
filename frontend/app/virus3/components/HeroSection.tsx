@@ -1,7 +1,9 @@
 'use client'
 
+import { useRef } from 'react'
 import { motion } from 'framer-motion'
 import type { HeroConfig } from '../lib/types'
+import { usePausaVideoFueraDeVista } from '../hooks/usePausaVideoFueraDeVista'
 
 function WordSplit({ text, delay = 0 }: { text: string; delay?: number }) {
   const display = text.trim() || 'MONTAÑA DE NIEBLA'
@@ -32,6 +34,8 @@ function WordSplit({ text, delay = 0 }: { text: string; delay?: number }) {
 }
 
 export function HeroSection({ config }: { config: HeroConfig }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  usePausaVideoFueraDeVista(videoRef, { reanudarAlVolver: true })
   const eyebrow = config.eyebrow?.trim() || 'OPERACIÓN'
   const subtitulo = config.subtitulo?.trim() || 'VII · REPRESALIAS'
   const mediaUrl = config.media_url?.trim() || ''
@@ -46,11 +50,13 @@ export function HeroSection({ config }: { config: HeroConfig }) {
         <div className="absolute inset-0 z-0 min-h-[70vh] md:min-h-screen">
           {mediaType === 'video' ? (
             <video
+              ref={videoRef}
               src={mediaUrl}
               autoPlay
               muted
               loop
               playsInline
+              preload="metadata"
               className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
               style={{ filter: 'grayscale(0.2) brightness(0.7) contrast(1.05)' }}
             />

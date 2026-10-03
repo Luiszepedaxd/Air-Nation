@@ -48,7 +48,7 @@ export function LandingNav({ audioUrl, hasSession }: { audioUrl?: string; hasSes
       <nav
         className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
           scrolled
-            ? 'border-b border-[#E5E0DA] bg-[#FFFFFF]/95 backdrop-blur-md'
+            ? 'border-b border-[#E5E0DA] bg-[#FFFFFF] md:bg-[#FFFFFF]/95 md:backdrop-blur-md'
             : 'bg-transparent'
         }`}
         aria-label="Navegación del evento"
@@ -89,7 +89,7 @@ export function LandingNav({ audioUrl, hasSession }: { audioUrl?: string; hasSes
                 className={`relative flex h-8 w-8 items-center justify-center transition-all ${
                   scrolled
                     ? 'bg-[#111111] text-white hover:bg-[#CC4B37]'
-                    : 'bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm'
+                    : 'bg-white/20 text-white hover:bg-white/30 md:backdrop-blur-sm'
                 }`}
                 style={{ borderRadius: 2 }}
               >

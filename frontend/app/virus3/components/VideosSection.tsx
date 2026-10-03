@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { usePausaVideoFueraDeVista } from '../hooks/usePausaVideoFueraDeVista'
 import type { VideosConfig, VideoItem } from '../lib/types'
 
 export function VideosSection({ config }: { config: VideosConfig }) {
@@ -65,6 +66,8 @@ export function VideosSection({ config }: { config: VideosConfig }) {
 
 function VideoCard({ video, index }: { video: VideoItem; index: number }) {
   const [playing, setPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  usePausaVideoFueraDeVista(videoRef)
 
   return (
     <motion.div
@@ -75,6 +78,7 @@ function VideoCard({ video, index }: { video: VideoItem; index: number }) {
       className="relative aspect-video w-full overflow-hidden bg-black"
     >
       <video
+        ref={videoRef}
         src={video.url}
         poster={video.poster?.trim() || undefined}
         controls
