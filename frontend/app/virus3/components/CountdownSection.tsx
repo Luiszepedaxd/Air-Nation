@@ -41,14 +41,21 @@ function calcRemaining(targetIso: string) {
   return { days, hours, minutes, seconds, expired: diff === 0 }
 }
 
+const TIME_VACIO = { days: 0, hours: 0, minutes: 0, seconds: 0, expired: false }
+
 export function CountdownSection({ config }: { config: CountdownConfig }) {
   const fechaInicio = config.fecha_inicio?.trim() || '2026-10-10T08:00:00-06:00'
-  const [time, setTime] = useState(() => calcRemaining(fechaInicio))
+  // Ceros en SSR y en el primer paint del cliente para no desfasar el segundo al hidratar.
+  const [time, setTime] = useState(TIME_VACIO)
+  const [listo, setListo] = useState(false)
   const [pulse, setPulse] = useState(false)
 
   useEffect(() => {
+    const tick = () => setTime(calcRemaining(fechaInicio))
+    tick()
+    setListo(true)
     const id = setInterval(() => {
-      setTime(calcRemaining(fechaInicio))
+      tick()
       setPulse((p) => !p)
     }, 1000)
     return () => clearInterval(id)
@@ -91,7 +98,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="mt-12 md:mt-16"
+            className={`mt-12 md:mt-16 ${listo ? '' : 'invisible'}`}
           >
             <div className="flex flex-nowrap items-center justify-center gap-1.5 sm:gap-3 md:gap-8">
               <Unit value={daysStr} label="DÍAS" />
