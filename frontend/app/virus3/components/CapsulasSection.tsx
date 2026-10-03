@@ -1,15 +1,6 @@
 'use client'
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-  type SyntheticEvent,
-} from 'react'
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react'
 import type { CapsulaItem, CapsulasConfig } from '../lib/types'
 import {
   isCompleted,
@@ -82,71 +73,11 @@ type Overlay =
   | { tipo: 'siguiente'; siguienteId: string; segundos: number }
   | { tipo: 'fin' }
 
-function CarruselConFade({ firma, children }: { firma: string; children: ReactNode }) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const fadeIzq = useRef<HTMLDivElement>(null)
-  const fadeDer = useRef<HTMLDivElement>(null)
-
-  const actualizar = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const alInicio = el.scrollLeft <= 4
-    const alFinal = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4
-    if (fadeIzq.current) fadeIzq.current.style.opacity = alInicio ? '0' : '1'
-    if (fadeDer.current) fadeDer.current.style.opacity = alFinal ? '0' : '1'
-  }, [])
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    actualizar()
-    el.addEventListener('scroll', actualizar, { passive: true })
-    const ro = new ResizeObserver(actualizar)
-    ro.observe(el)
-    return () => {
-      el.removeEventListener('scroll', actualizar)
-      ro.disconnect()
-    }
-  }, [actualizar, firma])
-
-  return (
-    <div className="relative">
-      <div
-        ref={fadeIzq}
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10"
-        style={{ background: 'linear-gradient(to left, transparent, #0a0a0a)', opacity: 0 }}
-      />
-      <div
-        ref={scrollRef}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      >
-        {children}
-      </div>
-      <div
-        ref={fadeDer}
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10"
-        style={{ background: 'linear-gradient(to right, transparent, #0a0a0a)', opacity: 0 }}
-      />
-    </div>
-  )
-}
-
 export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   const lista = useMemo(() => capsulasVisibles(config), [config])
-  const grupos = useMemo(() => {
-    const vistos: string[] = []
-    for (const c of lista) {
-      const grupo = c.grupo?.trim()
-      if (grupo && !vistos.includes(grupo)) vistos.push(grupo)
-    }
-    return vistos
-  }, [lista])
 
   const [progreso, setProgreso] = useState<CapsulasProgress>(PROGRESO_VACIO)
   const [seleccionId, setSeleccionId] = useState<string | null>(lista[0]?.id ?? null)
-  const [tab, setTab] = useState('TODAS')
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   const [listo, setListo] = useState(false)
   const [avisoCopia, setAvisoCopia] = useState<string | null>(null)
@@ -156,9 +87,8 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   const quiereReproducir = useRef(false)
   const ultimoGuardado = useRef(0)
   const copiaTimer = useRef<number | null>(null)
+  const pendienteScroll = useRef(false)
 
-  const tabActual = tab === 'TODAS' || grupos.includes(tab) ? tab : 'TODAS'
-  const filtradas = tabActual === 'TODAS' ? lista : lista.filter((c) => c.grupo.trim() === tabActual)
   const seleccion = lista.find((c) => c.id === seleccionId) ?? lista[0] ?? null
   const indice = seleccion ? lista.findIndex((c) => c.id === seleccion.id) : -1
   const anterior = indice > 0 ? lista[indice - 1] : null
@@ -168,13 +98,13 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   const porcentaje = lista.length ? Math.round((hechas / lista.length) * 100) : 0
   const primeraAbierta = lista.find((c) => !isCompleted(progreso, c.id)) ?? null
   const todasHechas = lista.length > 0 && primeraAbierta === null
-  const hayProgreso = lista.some((c) => isCompleted(progreso, c.id) || (progreso.p[c.id] ?? 0) > 0)
 
   const ctaTexto = config.cta_final_texto?.trim() || ''
   const ctaLink = config.cta_final_link?.trim() || ''
   const hayCta = Boolean(ctaTexto && ctaLink && enlaceSeguro(ctaLink))
   const eyebrow = config.eyebrow?.trim() || 'MANUAL DEL OPERADOR'
   const titulo = config.titulo?.trim() || 'CÁPSULAS'
+  const notaProgreso = config.nota_progreso?.trim() || ''
 
   useEffect(() => {
     return () => {
@@ -183,7 +113,8 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   }, [])
 
   useEffect(() => {
-    setProgreso(readProgress())
+    const actual = readProgress()
+    setProgreso(actual)
     const params = new URLSearchParams(window.location.search)
     const q = params.get('capsula')
     const hash = window.location.hash.match(/^#capsula-(.+)$/)
@@ -194,12 +125,22 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
       setSeleccionId(pedido)
       scrollA('capsulas')
       if (hashId === pedido) sincronizarUrl(pedido)
+    } else {
+      const pendiente = lista.find((c) => !isCompleted(actual, c.id)) ?? lista[0]
+      if (pendiente) setSeleccionId(pendiente.id)
     }
     setListo(true)
   }, [lista])
 
   useEffect(() => {
     ultimoGuardado.current = 0
+  }, [seleccionId])
+
+  useEffect(() => {
+    if (!pendienteScroll.current) return
+    pendienteScroll.current = false
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+    scrollA('capsula-reproductor')
   }, [seleccionId])
 
   useEffect(() => {
@@ -228,7 +169,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     sincronizarUrl(id)
     if (!opts?.scrollJugador) return
     const movil = window.matchMedia('(max-width: 1023px)').matches
-    if (!opts.soloMovil || movil) scrollA('capsula-reproductor')
+    if (!opts.soloMovil || movil) pendienteScroll.current = true
   }
 
   function reiniciar() {
@@ -320,40 +261,19 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     copiaTimer.current = window.setTimeout(() => setAvisoCopia(null), 2000)
   }
 
-  function cuenta(grupo: string | null): string {
-    const subset = grupo ? lista.filter((c) => c.grupo.trim() === grupo) : lista
-    const n = subset.filter((c) => isCompleted(progreso, c.id)).length
-    return `${n}/${subset.length}`
-  }
-
-  const pestanas = [{ id: 'TODAS', label: `TODAS ${cuenta(null)}` }].concat(
-    grupos.map((grupo) => ({ id: grupo, label: `${grupo} ${cuenta(grupo)}` }))
-  )
-
-  function onTeclaTab(e: KeyboardEvent<HTMLButtonElement>, indiceTab: number) {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return
-    e.preventDefault()
-    const ultimo = pestanas.length - 1
-    const siguiente =
-      e.key === 'ArrowRight'
-        ? (indiceTab + 1) % pestanas.length
-        : e.key === 'ArrowLeft'
-          ? (indiceTab - 1 + pestanas.length) % pestanas.length
-          : e.key === 'Home'
-            ? 0
-            : ultimo
-    setTab(pestanas[siguiente].id)
-    document.getElementById(`capsula-tab-${siguiente}`)?.focus()
-  }
-
   const siguienteOverlay = overlay?.tipo === 'siguiente'
     ? lista.find((c) => c.id === overlay.siguienteId)
     : null
 
   return (
-    <section id="capsulas" className="relative w-full scroll-mt-20 bg-[#0a0a0a] py-16 text-white md:py-24" aria-labelledby="capsulas-titulo">
+    <section
+      id="capsulas"
+      className="relative w-full scroll-mt-20 bg-[#0a0a0a] py-16 text-white md:py-24"
+      aria-labelledby="capsulas-titulo"
+      style={{ ['--nav-h' as string]: '56px' }}
+    >
       <div className="mx-auto max-w-7xl px-4 md:px-8">
-        <div className="mb-10 text-center md:mb-14">
+        <div className="mb-6 text-center md:mb-14">
           <p
             className="text-[0.65rem] tracking-[0.5em] text-[#CC4B37] md:text-xs"
             style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
@@ -368,65 +288,34 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
             {titulo}
           </h2>
           {config.descripcion?.trim() ? (
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/65 md:text-base" style={{ fontFamily: 'Lato, sans-serif' }}>
+            <p
+              className="mx-auto mt-4 line-clamp-2 max-w-2xl text-sm leading-relaxed text-white/65 lg:line-clamp-none md:text-base"
+              style={{ fontFamily: 'Lato, sans-serif' }}
+            >
               {config.descripcion}
             </p>
           ) : null}
 
           {lista.length > 0 ? (
-            <div className="mx-auto mt-8 max-w-md text-left">
-              <div className="mb-2 flex items-center justify-between text-[0.65rem] tracking-[0.22em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}>
+            <div className="mx-auto mt-6 max-w-md">
+              <div
+                className="mb-2 flex items-center justify-between gap-3 text-[0.65rem] tracking-[0.22em]"
+                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+              >
                 <span>PROGRESO {hechas}/{lista.length}</span>
-                <span>{porcentaje}%</span>
+                <span className="shrink-0" style={todasHechas ? { color: '#CC4B37' } : undefined}>
+                  {todasHechas ? 'MANUAL COMPLETO ✓' : `${porcentaje}%`}
+                </span>
               </div>
               <div className="h-1.5 w-full bg-white/10" aria-hidden>
                 <div className="h-full bg-[#CC4B37]" style={{ width: `${porcentaje}%` }} />
               </div>
               <p className="sr-only">{porcentaje}% del manual completado</p>
-            </div>
-          ) : null}
-
-          <p className="mx-auto mt-3 max-w-md text-xs text-white/50" style={{ fontFamily: 'Lato, sans-serif' }}>
-            {config.nota_progreso?.trim() ? <span>{config.nota_progreso.trim()} </span> : null}
-            <button type="button" onClick={reiniciar} className={`underline decoration-white/30 underline-offset-2 hover:text-white ${FOCUS}`}>
-              Reiniciar progreso
-            </button>
-          </p>
-
-          {lista.length > 0 ? (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              {todasHechas ? (
-                <>
-                  <span
-                    className="border border-[#CC4B37] px-4 py-3 text-[11px] tracking-[0.16em] text-[#CC4B37]"
-                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-                  >
-                    MANUAL COMPLETO ✓
-                  </span>
-                  <button
-                    type="button"
-                    className={`border border-white/40 px-5 py-3 text-[11px] tracking-[0.14em] hover:border-white ${FOCUS}`}
-                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                    onClick={() => elegir(lista[0].id, { scrollJugador: true })}
-                  >
-                    VER DE NUEVO
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className={`bg-[#CC4B37] px-5 py-3 text-[11px] tracking-[0.14em] text-white hover:opacity-90 ${FOCUS}`}
-                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-                  onClick={() => {
-                    const destino = hayProgreso && primeraAbierta ? primeraAbierta : lista[0]
-                    elegir(destino.id, { scrollJugador: true })
-                  }}
-                >
-                  {hayProgreso && primeraAbierta
-                    ? `▶ CONTINUAR: ${primeraAbierta.numero} · ${primeraAbierta.titulo}`
-                    : `▶ EMPEZAR POR LA ${lista[0].numero}`}
-                </button>
-              )}
+              {notaProgreso ? (
+                <p className="mt-2 truncate text-[11px] text-white/45" style={{ fontFamily: 'Lato, sans-serif' }}>
+                  {notaProgreso}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -436,213 +325,189 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
             Cápsulas próximamente
           </p>
         ) : (
-          <>
+          <div className="lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start lg:gap-10">
             <div
-              role="tablist"
-              aria-label="Grupos de cápsulas"
-              className="mb-8 flex gap-1 overflow-x-auto border-b border-white/10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              id="capsula-reproductor"
+              className="w-full min-w-0 scroll-mt-24 lg:sticky lg:top-24 lg:max-w-[380px] lg:self-start"
             >
-              {pestanas.map((pestana, i) => {
-                const activa = pestana.id === tabActual
-                return (
-                  <button
-                    key={pestana.id}
-                    id={`capsula-tab-${i}`}
-                    type="button"
-                    role="tab"
-                    aria-selected={activa}
-                    tabIndex={activa ? 0 : -1}
-                    className={`shrink-0 border-b-2 px-3 py-2 text-[10px] tracking-[0.16em] ${FOCUS} ${
-                      activa ? 'border-[#CC4B37] text-white' : 'border-transparent text-white/45 hover:text-white'
-                    }`}
-                    style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                    onClick={() => setTab(pestana.id)}
-                    onKeyDown={(e) => onTeclaTab(e, i)}
-                  >
-                    {pestana.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start lg:gap-10">
-              <div id="capsula-reproductor" className="mx-auto w-full max-w-[380px] scroll-mt-24 lg:sticky lg:top-24 lg:mx-0 lg:self-start">
-                {seleccion ? (
-                  <>
+              {seleccion ? (
+                <>
+                  <div className="mb-2 flex items-baseline justify-between gap-3">
                     <p
-                      className="mb-3 text-sm tracking-[0.12em] md:text-base"
+                      className="min-w-0 truncate text-sm tracking-[0.12em]"
                       style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800, textTransform: 'uppercase' }}
                     >
                       CÁPSULA <span style={{ color: acento(seleccion.color) }}>{seleccion.numero}</span>
                       {seleccion.titulo?.trim() ? ` · ${seleccion.titulo}` : ''}
                     </p>
-                    <div className="relative bg-black">
-                      {listo ? (
-                        <video
-                          key={seleccion.id}
-                          src={seleccion.video_url.trim()}
-                          poster={seleccion.poster_url?.trim() || undefined}
-                          controls
-                          playsInline
-                          preload="metadata"
-                          className="aspect-[9/16] max-h-[80vh] w-full bg-black object-contain"
-                          onPlay={() => emitir('capsula_play', seleccion)}
-                          onPause={alPausa}
-                          onTimeUpdate={alTiempo}
-                          onLoadedMetadata={alMetadata}
-                          onEnded={alTerminar}
-                        />
-                      ) : (
-                        <div className="aspect-[9/16] max-h-[80vh] w-full bg-black" />
-                      )}
-                      {overlay ? (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center" role="status" aria-live="polite">
-                          {overlay.tipo === 'siguiente' && siguienteOverlay ? (
-                            <>
-                              <p className="text-sm tracking-[0.18em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}>
-                                CÁPSULA COMPLETA ✓
-                              </p>
-                              <p className="text-sm text-white/80" style={{ fontFamily: 'Lato, sans-serif' }}>
-                                Siguiente: {siguienteOverlay.numero} · {siguienteOverlay.titulo}
-                              </p>
-                              <p className="text-3xl" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
-                                {overlay.segundos}
-                              </p>
-                              <div className="flex flex-wrap justify-center gap-2">
-                                <button
-                                  type="button"
-                                  className={`bg-[#CC4B37] px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-                                  onClick={() => elegir(overlay.siguienteId, { reproducir: true })}
-                                >
-                                  Ver ahora
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`border border-white/40 px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                                  onClick={() => setOverlay(null)}
-                                >
-                                  Cancelar
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <p className="text-lg tracking-[0.14em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
-                                ¡MANUAL COMPLETO!
-                              </p>
-                              {hayCta ? (
-                                <a
-                                  href={ctaLink}
-                                  className={`bg-[#CC4B37] px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
-                                >
-                                  {ctaTexto}
-                                </a>
-                              ) : null}
+                    <span
+                      className="shrink-0 text-[11px] tracking-[0.16em] text-white/45"
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                    >
+                      {String(indice + 1).padStart(2, '0')}/{lista.length}
+                    </span>
+                  </div>
+                  <div className="relative mx-auto w-fit max-w-full bg-black">
+                    {listo ? (
+                      <video
+                        key={seleccion.id}
+                        src={seleccion.video_url.trim()}
+                        poster={seleccion.poster_url?.trim() || undefined}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="mx-auto aspect-[9/16] h-[calc(100svh-var(--nav-h)-8rem)] min-h-[320px] w-auto max-w-full bg-black object-contain lg:h-auto lg:max-h-[calc(100vh-10rem)] lg:w-full"
+                        onPlay={() => emitir('capsula_play', seleccion)}
+                        onPause={alPausa}
+                        onTimeUpdate={alTiempo}
+                        onLoadedMetadata={alMetadata}
+                        onEnded={alTerminar}
+                      />
+                    ) : (
+                      <div className="mx-auto aspect-[9/16] h-[calc(100svh-var(--nav-h)-8rem)] min-h-[320px] w-auto max-w-full bg-black lg:h-auto lg:max-h-[calc(100vh-10rem)] lg:w-full" />
+                    )}
+                    {overlay ? (
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center" role="status" aria-live="polite">
+                        {overlay.tipo === 'siguiente' && siguienteOverlay ? (
+                          <>
+                            <p className="text-sm tracking-[0.18em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}>
+                              CÁPSULA COMPLETA ✓
+                            </p>
+                            <p className="text-sm text-white/80" style={{ fontFamily: 'Lato, sans-serif' }}>
+                              Siguiente: {siguienteOverlay.numero} · {siguienteOverlay.titulo}
+                            </p>
+                            <p className="text-3xl" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
+                              {overlay.segundos}
+                            </p>
+                            <div className="flex flex-wrap justify-center gap-2">
+                              <button
+                                type="button"
+                                className={`bg-[#CC4B37] px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+                                onClick={() => elegir(overlay.siguienteId, { reproducir: true })}
+                              >
+                                Ver ahora
+                              </button>
                               <button
                                 type="button"
                                 className={`border border-white/40 px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
                                 style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
                                 onClick={() => setOverlay(null)}
                               >
-                                Cerrar
+                                Cancelar
                               </button>
-                            </>
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-                    {seleccion.descripcion?.trim() ? (
-                      <p className="mt-3 text-sm leading-relaxed text-white/70" style={{ fontFamily: 'Lato, sans-serif' }}>
-                        {seleccion.descripcion}
-                      </p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-lg tracking-[0.14em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}>
+                              ¡MANUAL COMPLETO!
+                            </p>
+                            {hayCta ? (
+                              <a
+                                href={ctaLink}
+                                className={`bg-[#CC4B37] px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800 }}
+                              >
+                                {ctaTexto}
+                              </a>
+                            ) : null}
+                            <button
+                              type="button"
+                              className={`border border-white/40 px-4 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                              style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                              onClick={() => setOverlay(null)}
+                            >
+                              Cerrar
+                            </button>
+                          </>
+                        )}
+                      </div>
                     ) : null}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={!anterior}
-                        className={`border border-white/25 px-3 py-2 text-[10px] tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS}`}
-                        style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                        onClick={() => anterior && elegir(anterior.id)}
-                      >
-                        ← Anterior
-                      </button>
-                      <button
-                        type="button"
-                        disabled={!proxima}
-                        className={`border border-white/25 px-3 py-2 text-[10px] tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS}`}
-                        style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                        onClick={() => proxima && elegir(proxima.id)}
-                      >
-                        Siguiente →
-                      </button>
-                      <button
-                        type="button"
-                        className={`border border-white/25 px-3 py-2 text-[10px] tracking-[0.14em] ${FOCUS}`}
-                        style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
-                        onClick={() => compartir(seleccion)}
-                      >
-                        {avisoCopia ?? 'Compartir'}
-                      </button>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="mt-8 lg:mt-0">
-                <div className="lg:hidden">
-                  <CarruselConFade firma={filtradas.map((c) => c.id).join('|')}>
-                    {filtradas.map((c) => (
-                      <CapsulaCard
-                        key={c.id}
-                        capsula={c}
-                        progreso={progreso}
-                        activa={seleccion?.id === c.id}
-                        className="w-[78vw] max-w-[260px] shrink-0 snap-start"
-                        onElegir={() => elegir(c.id, { scrollJugador: true, soloMovil: true })}
-                      />
-                    ))}
-                  </CarruselConFade>
-                </div>
-                <div className="hidden max-h-[calc(100vh-8rem)] flex-col gap-3 overflow-y-auto pr-1 lg:flex">
-                  {filtradas.map((c) => (
-                    <CapsulaCard
-                      key={c.id}
-                      capsula={c}
-                      progreso={progreso}
-                      activa={seleccion?.id === c.id}
-                      className="w-full shrink-0"
-                      onElegir={() => elegir(c.id)}
-                    />
-                  ))}
-                </div>
-                {filtradas.length === 0 ? (
-                  <p className="text-sm text-white/45" style={{ fontFamily: 'Lato, sans-serif' }}>
-                    No hay cápsulas en este grupo.
-                  </p>
-                ) : null}
-              </div>
+                  </div>
+                  {seleccion.descripcion?.trim() ? (
+                    <p
+                      className="mt-3 hidden text-sm leading-relaxed text-white/70 lg:block"
+                      style={{ fontFamily: 'Lato, sans-serif' }}
+                    >
+                      {seleccion.descripcion}
+                    </p>
+                  ) : null}
+                  <div className="mt-3 grid h-11 grid-cols-3 border border-white/25">
+                    <button
+                      type="button"
+                      disabled={!anterior}
+                      className={`border-r border-white/25 text-[10px] tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS}`}
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                      onClick={() => anterior && elegir(anterior.id)}
+                    >
+                      {anterior ? `‹ ${anterior.numero}` : '‹'}
+                    </button>
+                    <button
+                      type="button"
+                      className={`border-r border-white/25 text-[10px] tracking-[0.14em] ${FOCUS}`}
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                      onClick={() => compartir(seleccion)}
+                    >
+                      {avisoCopia ?? 'COMPARTIR'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!proxima}
+                      className={`text-[10px] tracking-[0.14em] disabled:cursor-not-allowed disabled:opacity-30 ${FOCUS}`}
+                      style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+                      onClick={() => proxima && elegir(proxima.id)}
+                    >
+                      {proxima ? `${proxima.numero} ›` : '›'}
+                    </button>
+                  </div>
+                </>
+              ) : null}
             </div>
-          </>
+
+            <div className="mt-6 min-w-0 lg:mt-0 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto lg:pr-1">
+              <ol>
+                {lista.map((c) => (
+                  <CapsulaFila
+                    key={c.id}
+                    capsula={c}
+                    progreso={progreso}
+                    activa={seleccion?.id === c.id}
+                    onElegir={() => {
+                      const movil = window.matchMedia('(max-width: 1023px)').matches
+                      if (movil) elegir(c.id, { scrollJugador: true, soloMovil: true, reproducir: true })
+                      else elegir(c.id, { reproducir: true })
+                    }}
+                  />
+                ))}
+              </ol>
+              <p className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={reiniciar}
+                  className={`text-[11px] text-white/45 underline decoration-white/30 underline-offset-2 hover:text-white ${FOCUS}`}
+                  style={{ fontFamily: 'Lato, sans-serif' }}
+                >
+                  Reiniciar progreso
+                </button>
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </section>
   )
 }
 
-function CapsulaCard({
+function CapsulaFila({
   capsula,
   progreso,
   activa,
-  className,
   onElegir,
 }: {
   capsula: CapsulaItem
   progreso: CapsulasProgress
   activa: boolean
-  className?: string
   onElegir: () => void
 }) {
   const color = acento(capsula.color)
@@ -652,51 +517,67 @@ function CapsulaCard({
   const pct = capsula.duracion_seg > 0 ? Math.min(100, Math.round((pos / capsula.duracion_seg) * 100)) : null
   const estado = completa ? 'Completa' : enProgreso ? 'En progreso' : 'Nueva'
   const duracion = capsula.duracion_seg > 0 ? formatearDuracion(capsula.duracion_seg) : ''
+  const poster = capsula.poster_url?.trim() || ''
 
   return (
-    <button
-      type="button"
-      aria-pressed={activa}
-      aria-label={`Cápsula ${capsula.numero}: ${capsula.titulo}. ${estado}${activa ? '. Reproduciendo' : ''}`}
-      onClick={onElegir}
-      className={`border-2 bg-[#1a1a1a] p-4 text-left ${FOCUS} ${className ?? ''}`}
-      style={{ borderColor: activa ? color : '#2a2a2a', opacity: completa ? 0.75 : 1 }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-4xl leading-none" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900, color }}>
-          {capsula.numero}
+    <li>
+      <button
+        type="button"
+        aria-current={activa ? 'true' : undefined}
+        aria-label={`Cápsula ${capsula.numero}: ${capsula.titulo}. ${estado}${activa ? '. Reproduciendo' : ''}`}
+        onClick={onElegir}
+        className={`relative flex min-h-[64px] w-full items-center gap-3 border-b border-l-2 border-white/10 px-3 py-3 text-left ${FOCUS} ${
+          activa ? 'bg-white/[0.04]' : ''
+        }`}
+        style={{
+          borderLeftColor: activa ? color : 'transparent',
+          opacity: completa ? 0.7 : 1,
+        }}
+      >
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden bg-[#1a1a1a]">
+          {poster ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          ) : null}
+          {poster ? <span className="absolute inset-0 bg-black/45" aria-hidden /> : null}
+          <span
+            className="relative text-base"
+            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900, color }}
+          >
+            {capsula.numero}
+          </span>
         </span>
-        {completa ? (
-          <span className="px-2 py-1 text-[9px] tracking-[0.14em] text-white" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800, background: color }}>
-            COMPLETA ✓
+        <span className="min-w-0 flex-1">
+          <span
+            className="block truncate text-[13px] uppercase"
+            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
+          >
+            {capsula.titulo}
           </span>
-        ) : enProgreso ? (
-          <span className="text-[9px] tracking-[0.14em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700, color }}>
-            EN PROGRESO{pct != null ? ` ${pct}%` : ''}
+          <span className="block text-[11px] text-white/45" style={{ fontFamily: 'Lato, sans-serif' }}>
+            {duracion ? `${duracion} · ${estado}` : estado}
           </span>
-        ) : (
-          <span className="border border-white/15 px-2 py-1 text-[9px] tracking-[0.14em] text-white/45" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}>
-            NUEVA
+          {activa && capsula.descripcion?.trim() ? (
+            <span className="mt-1 line-clamp-2 block text-xs text-white/60" style={{ fontFamily: 'Lato, sans-serif' }}>
+              {capsula.descripcion}
+            </span>
+          ) : null}
+        </span>
+        {activa ? (
+          <span className="shrink-0 text-sm" style={{ color }} aria-hidden>
+            ▶
           </span>
-        )}
-      </div>
-      <p className="mt-3 text-sm leading-snug" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}>
-        {capsula.titulo}
-      </p>
-      <p className="mt-2 text-[10px] tracking-[0.18em] text-white/45" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}>
-        {capsula.grupo?.trim() ? capsula.grupo.trim() : 'SIN GRUPO'}
-        {duracion ? ` · ${duracion}` : ''}
-      </p>
-      {activa ? (
-        <p className="mt-3 text-[10px] tracking-[0.16em]" style={{ fontFamily: 'Jost, sans-serif', fontWeight: 800, color }}>
-          ▶ REPRODUCIENDO
-        </p>
-      ) : null}
-      {enProgreso && pct != null ? (
-        <div className="mt-3 h-1 w-full bg-white/10" aria-hidden>
-          <div className="h-full" style={{ width: `${pct}%`, background: color }} />
-        </div>
-      ) : null}
-    </button>
+        ) : completa ? (
+          <span className="shrink-0 text-sm text-white/50" aria-hidden>
+            ✓
+          </span>
+        ) : null}
+        {enProgreso && pct != null ? (
+          <span className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10" aria-hidden>
+            <span className="block h-full" style={{ width: `${pct}%`, background: color }} />
+          </span>
+        ) : null}
+      </button>
+    </li>
   )
 }
