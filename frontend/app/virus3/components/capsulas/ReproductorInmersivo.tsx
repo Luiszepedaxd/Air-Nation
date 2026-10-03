@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, animate, motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion'
 import type { CapsulaItem } from '../../lib/types'
 import {
   isCompleted,
@@ -57,6 +57,7 @@ export function ReproductorInmersivo({
   ctaLink,
   layoutIdPrefix,
   quierePlayRef,
+  onSalirAnimacion,
 }: {
   abierto: boolean
   capsulaId: string
@@ -74,7 +75,9 @@ export function ReproductorInmersivo({
   ctaLink: string
   layoutIdPrefix: string
   quierePlayRef: MutableRefObject<boolean>
+  onSalirAnimacion: () => void
 }) {
+  const EASE_REELS = [0.2, 0.8, 0.2, 1] as const
   const videoRef = useRef<HTMLVideoElement>(null)
   const progresoRef = useRef(progreso)
   progresoRef.current = progreso
@@ -85,13 +88,26 @@ export function ReproductorInmersivo({
   const pushedRef = useRef(false)
   const pointerStart = useRef<{ y: number; t: number } | null>(null)
   const irARef = useRef<(id: string, reproducir?: boolean) => void>(() => {})
+  const prepararSalidaRef = useRef(() => {})
 
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   const [muted, setMuted] = useState(false)
   const [glitch, setGlitch] = useState(false)
-  const [iconoPlay, setIconoPlay] = useState(false)
+  const [iconoPlay, setIconoPlay] = useState<'play' | 'pause' | null>(null)
   const [montado, setMontado] = useState(false)
   const [checkAnim, setCheckAnim] = useState(false)
+  const [panelH, setPanelH] = useState(0)
+  const [salidaRect, setSalidaRect] = useState<DOMRect | null>(null)
+
+  const dragY = useMotionValue(0)
+  const nextY = useTransform(dragY, (v) => {
+    const h = panelH || 1
+    return v > 0 ? h : h + v
+  })
+  const prevY = useTransform(dragY, (v) => {
+    const h = panelH || 1
+    return v < 0 ? -h : -h + v
+  })
 
   const capsula = lista.find((c) => c.id === capsulaId) ?? lista[0]
   const indice = capsula ? lista.findIndex((c) => c.id === capsula.id) : -1
@@ -100,6 +116,24 @@ export function ReproductorInmersivo({
   const quieto = prefiereQuieto()
 
   useEffect(() => setMontado(true), [])
+
+  useEffect(() => {
+    if (!abierto) return
+    const medir = () => setPanelH(window.innerHeight)
+    medir()
+    window.addEventListener('resize', medir)
+    return () => window.removeEventListener('resize', medir)
+  }, [abierto])
+
+  useEffect(() => {
+    if (abierto) {
+      setSalidaRect(null)
+      dragY.set(0)
+      return
+    }
+    const el = document.querySelector(`[data-capsula-thumb="${capsulaId}"]`)
+    setSalidaRect(el?.getBoundingClientRect() ?? null)
+  }, [abierto, capsulaId, dragY])
 
   const actualizarBarras = useCallback(() => {
     const video = videoRef.current
@@ -191,6 +225,7 @@ export function ReproductorInmersivo({
     window.history.pushState({ capsulasModal: true }, '')
     const onPop = () => {
       pushedRef.current = false
+      prepararSalidaRef.current()
       onCerrar()
     }
     window.addEventListener('popstate', onPop)
@@ -243,6 +278,7 @@ export function ReproductorInmersivo({
   }, [overlay])
 
   function cerrar() {
+    prepararSalida()
     if (pushedRef.current) {
       pushedRef.current = false
       window.history.back()
@@ -272,10 +308,14 @@ export function ReproductorInmersivo({
   function togglePlay() {
     const video = videoRef.current
     if (!video) return
-    if (video.paused) video.play().catch(() => {})
-    else video.pause()
-    setIconoPlay(true)
-    window.setTimeout(() => setIconoPlay(false), 500)
+    if (video.paused) {
+      video.play().catch(() => {})
+      setIconoPlay('play')
+    } else {
+      video.pause()
+      setIconoPlay('pause')
+    }
+    window.setTimeout(() => setIconoPlay(null), 500)
   }
 
   function onTimePersist() {
@@ -297,19 +337,38 @@ export function ReproductorInmersivo({
     onProgreso(siguiente)
   }
 
-  function onSwipeEnd(_: unknown, info: { offset: { y: number }; velocity: { y: number } }) {
+  function onSwipeEnd(_: unknown, info: PanInfo) {
     const y = info.offset.y
     const vy = info.velocity.y
+    const h = panelH || window.innerHeight
     if (y < -80 || vy < -500) {
-      if (proxima) irA(proxima.id, true)
-      else if (overlay?.tipo !== 'fin') setOverlay({ tipo: 'fin' })
+      if (proxima) {
+        animate(dragY, -h, { duration: 0.28, ease: EASE_REELS, onComplete: () => {
+          irA(proxima.id, true)
+          dragY.set(0)
+        } })
+      } else if (overlay?.tipo !== 'fin') setOverlay({ tipo: 'fin' })
+      else animate(dragY, 0, { duration: 0.2 })
       return
     }
     if (y > 80 || vy > 500) {
-      if (anterior) irA(anterior.id, true)
-      else cerrar()
+      if (anterior) {
+        animate(dragY, h, { duration: 0.28, ease: EASE_REELS, onComplete: () => {
+          irA(anterior.id, true)
+          dragY.set(0)
+        } })
+      } else cerrar()
+      return
     }
+    animate(dragY, 0, { duration: 0.2 })
   }
+
+  function prepararSalida() {
+    const el = document.querySelector(`[data-capsula-thumb="${capsulaId}"]`)
+    setSalidaRect(el?.getBoundingClientRect() ?? null)
+  }
+
+  prepararSalidaRef.current = prepararSalida
 
   function onScrub(e: React.PointerEvent<HTMLDivElement>) {
     const video = videoRef.current
@@ -331,29 +390,24 @@ export function ReproductorInmersivo({
     window.addEventListener('pointerup', up)
   }
 
-  if (!montado || !abierto || !capsula) return null
+  if (!montado || !capsula) return null
 
   const siguienteOverlay = overlay?.tipo === 'siguiente' ? lista.find((c) => c.id === overlay.siguienteId) : null
 
   const from = originRect
-  const shellInitial =
+  const cerrando = !abierto && salidaRect != null
+  const shellFull = esDesktop
+    ? { top: '5vh', left: '50%', x: '-50%', width: 'min(420px, 90vw)', height: '90vh', opacity: 1 }
+    : { top: 0, left: 0, x: 0, width: '100%', height: '100dvh', opacity: 1 }
+
+  const shellCerrar = salidaRect
+    ? { top: salidaRect.top, left: salidaRect.left, x: 0, width: salidaRect.width, height: salidaRect.height, opacity: 1 }
+    : { opacity: 0 }
+
+  const shellAbrir =
     quieto || !from
       ? { opacity: 0 }
-      : {
-          top: from.top,
-          left: from.left,
-          width: from.width,
-          height: from.height,
-          borderRadius: 0,
-        }
-
-  const shellAnimate = quieto
-    ? { opacity: 1 }
-    : esDesktop
-      ? { opacity: 1, scale: 1 }
-      : from && !quieto
-        ? { top: 0, left: 0, width: '100%', height: '100dvh', opacity: 1 }
-        : { opacity: 1 }
+      : { top: from.top, left: from.left, x: 0, width: from.width, height: from.height, opacity: 1 }
 
   const content = (
     <div
@@ -361,18 +415,36 @@ export function ReproductorInmersivo({
       style={{ height: '100dvh', overscrollBehavior: 'contain' }}
     >
     <motion.div
-      className={`relative overflow-hidden bg-black ${esDesktop ? 'h-[90vh] w-[min(420px,90vw)]' : 'h-full w-full max-h-[100dvh]'}`}
-      initial={esDesktop ? { opacity: 0 } : shellInitial}
-      animate={shellAnimate}
-      exit={{ opacity: 0 }}
-      transition={{ duration: quieto ? 0.2 : 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+      layoutId={quieto ? undefined : `${layoutIdPrefix}-${capsula.id}`}
+      className="fixed overflow-hidden bg-black"
+      initial={abierto ? (quieto ? { opacity: 0 } : esDesktop ? { opacity: 0 } : shellAbrir) : false}
+      animate={cerrando ? shellCerrar : shellFull}
+      transition={{ duration: quieto ? 0.2 : 0.3, ease: EASE_REELS }}
+      onAnimationComplete={() => {
+        if (!abierto && salidaRect) {
+          setSalidaRect(null)
+          onSalirAnimacion()
+        }
+      }}
     >
+      <div className="relative h-full w-full overflow-hidden bg-black">
+        {anterior && !overlay ? (
+          <motion.div className="absolute inset-0 z-0 bg-black" style={{ y: prevY }}>
+            <PosterVisual capsula={anterior} width={390} height={693} imgClassName="h-full w-full object-cover" />
+          </motion.div>
+        ) : null}
+        {proxima && !overlay ? (
+          <motion.div className="absolute inset-0 z-0 bg-black" style={{ y: nextY }}>
+            <PosterVisual capsula={proxima} width={390} height={693} imgClassName="h-full w-full object-cover" />
+          </motion.div>
+        ) : null}
       <motion.div
-        layoutId={`${layoutIdPrefix}-${capsula.id}`}
-        className="relative h-full w-full bg-black"
+        className="relative z-[1] h-full w-full bg-black"
+        style={{ y: dragY, touchAction: 'none' }}
         drag={quieto || overlay ? false : 'y'}
         dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={0.15}
+        dragElastic={0.12}
+        dragMomentum={false}
         onDragEnd={onSwipeEnd}
         onPointerDown={(e) => {
           pointerStart.current = { y: e.clientY, t: Date.now() }
@@ -385,7 +457,6 @@ export function ReproductorInmersivo({
           const dt = Date.now() - start.t
           if (dy < 12 && dt < 300) togglePlay()
         }}
-        style={{ touchAction: 'none' }}
       >
         <video
           ref={videoRef}
@@ -419,7 +490,7 @@ export function ReproductorInmersivo({
               exit={{ opacity: 0 }}
               className="text-5xl text-white/90"
             >
-              ▶
+              {iconoPlay === 'pause' ? '❚❚' : '▶'}
             </motion.span>
           </div>
         ) : null}
@@ -580,6 +651,7 @@ export function ReproductorInmersivo({
           </div>
         ) : null}
       </motion.div>
+      </div>
       <style jsx>{`
         @keyframes reels-glitch {
           0%,
@@ -604,5 +676,6 @@ export function ReproductorInmersivo({
     </div>
   )
 
-  return createPortal(<AnimatePresence mode="wait">{abierto ? content : null}</AnimatePresence>, document.body)
+  const mostrar = abierto || salidaRect != null
+  return createPortal(<AnimatePresence mode="wait">{mostrar ? content : null}</AnimatePresence>, document.body)
 }

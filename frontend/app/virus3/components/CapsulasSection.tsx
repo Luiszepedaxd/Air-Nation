@@ -32,6 +32,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   const [progreso, setProgreso] = useState<CapsulasProgress>(PROGRESO_VACIO)
   const [destacadaId, setDestacadaId] = useState<string>(lista[0]?.id ?? '')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [playerMontado, setPlayerMontado] = useState(false)
   const [reproductorId, setReproductorId] = useState<string>(lista[0]?.id ?? '')
   const [originRect, setOriginRect] = useState<DOMRect | null>(null)
   const [listo, setListo] = useState(false)
@@ -112,14 +113,19 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     setReproductorId(id)
     setDestacadaId(id)
     setOriginRect(rect)
+    setPlayerMontado(true)
     setModalAbierto(true)
     sincronizarUrl(id)
   }, [])
 
   const cerrarReproductor = useCallback(() => {
     setModalAbierto(false)
-    setOriginRect(null)
     quierePlay.current = false
+  }, [])
+
+  const alSalirReproductor = useCallback(() => {
+    setPlayerMontado(false)
+    setOriginRect(null)
   }, [])
 
   function reiniciar() {
@@ -155,6 +161,8 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     copiaTimer.current = window.setTimeout(() => setAvisoCopia(null), 2000)
   }
 
+  const EASE_ENTRADA = [0.2, 0.8, 0.2, 1] as const
+
   const entrada = (delay: number) =>
     quieto
       ? {}
@@ -162,7 +170,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
           initial: { opacity: 0, y: 12 },
           whileInView: { opacity: 1, y: 0 },
           viewport: { once: true, amount: 0.25 },
-          transition: { duration: 0.45, ease: [0.2, 0.8, 0.2, 1], delay },
+          transition: { duration: 0.45, ease: EASE_ENTRADA, delay },
         }
 
   if (!listo) {
@@ -266,15 +274,19 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
         </div>
       </section>
 
-      {modalAbierto && reproductorId ? (
+      {playerMontado && reproductorId ? (
         <ReproductorInmersivo
           abierto={modalAbierto}
+          onSalirAnimacion={alSalirReproductor}
           capsulaId={reproductorId}
           lista={lista}
           progreso={progreso}
           onProgreso={setProgreso}
           onCerrar={cerrarReproductor}
-          onCambiarCapsula={setReproductorId}
+          onCambiarCapsula={(id) => {
+            setReproductorId(id)
+            setDestacadaId(id)
+          }}
           originRect={originRect}
           esDesktop={esDesktop}
           compartir={compartir}

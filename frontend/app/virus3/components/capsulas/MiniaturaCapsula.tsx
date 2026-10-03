@@ -37,6 +37,7 @@ function MiniaturaCapsulaInner({
       >
         <motion.div
           layoutId={layoutId}
+          data-capsula-thumb={capsula.id}
           className={`relative aspect-[9/16] w-[104px] overflow-hidden bg-[#1a1a1a] md:w-[140px] ${
             destacada ? 'outline outline-2 outline-offset-0' : ''
           }`}

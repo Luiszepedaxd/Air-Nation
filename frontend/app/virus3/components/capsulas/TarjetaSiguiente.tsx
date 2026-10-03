@@ -36,6 +36,7 @@ function TarjetaSiguienteInner({
     <motion.button
       type="button"
       layoutId={layoutId}
+      data-capsula-thumb={capsula.id}
       className={`relative w-full max-w-[420px] overflow-hidden text-left lg:max-w-none ${FOCUS}`}
       onClick={(e) => onAbrir(e.currentTarget.getBoundingClientRect())}
       animate={pulsar && !quieto ? { scale: [1, 1.02, 1, 1.02, 1] } : { scale: 1 }}

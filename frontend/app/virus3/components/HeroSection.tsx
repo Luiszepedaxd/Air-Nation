@@ -57,16 +57,14 @@ export function HeroSection({ config }: { config: HeroConfig }) {
               loop
               playsInline
               preload="metadata"
-              className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
-              style={{ filter: 'grayscale(0.2) brightness(0.7) contrast(1.05)' }}
+              className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen md:[filter:grayscale(0.2)_brightness(0.7)_contrast(1.05)]"
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={mediaUrl}
               alt=""
-              className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen"
-              style={{ filter: 'grayscale(0.2) brightness(0.7) contrast(1.05)' }}
+              className="h-full min-h-[70vh] w-full object-cover object-center md:min-h-screen md:[filter:grayscale(0.2)_brightness(0.7)_contrast(1.05)]"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/70" />
@@ -76,7 +74,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
       )}
 
       <div
-        className="pointer-events-none absolute inset-0 z-10 opacity-[0.08] mix-blend-overlay"
+        className="pointer-events-none absolute inset-0 z-10 hidden opacity-[0.08] mix-blend-overlay md:block"
         style={{
           backgroundImage:
             'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'200\' height=\'200\'><filter id=\'n\'><feTurbulence baseFrequency=\'0.9\' numOctaves=\'3\'/></filter><rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\'/></svg>")',

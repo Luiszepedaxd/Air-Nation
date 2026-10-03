@@ -18,7 +18,7 @@ export function RielCapsulas({
   onElegir: (id: string, rect: DOMRect) => void
   layoutIdPrefix: string
 }) {
-  const scrollRef = useRef<HTMLUListElement>(null)
+  const scrollRef = useRef<HTMLOListElement>(null)
 
   useEffect(() => {
     const root = scrollRef.current
