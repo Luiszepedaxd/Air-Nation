@@ -1,7 +1,7 @@
 import type { Virus3Block } from '../lib/types'
 import { HeroSection } from './HeroSection'
 import { NarrativaSection } from './NarrativaSection'
-import { CapsulasSection } from './CapsulasSection'
+import { CapsulasSectionServer } from './CapsulasSectionServer'
 import { SedeSection } from './SedeSection'
 import { CountdownSection } from './CountdownSection'
 import { FaccionesSection } from './FaccionesSection'
@@ -31,12 +31,14 @@ import type {
   AirnationConfig,
 } from '../lib/types'
 
-export function BlockRenderer({
+export async function BlockRenderer({
   block,
   renderedAt,
+  capsulaParam,
 }: {
   block: Virus3Block
   renderedAt: string
+  capsulaParam?: string | null
 }) {
   void renderedAt
   switch (block.slug) {
@@ -45,7 +47,12 @@ export function BlockRenderer({
     case 'narrativa':
       return <NarrativaSection config={(block.config as NarrativaConfig) ?? {}} />
     case 'capsulas':
-      return <CapsulasSection config={(block.config as CapsulasConfig) ?? {}} />
+      return (
+        <CapsulasSectionServer
+          config={(block.config as CapsulasConfig) ?? {}}
+          capsulaParam={capsulaParam}
+        />
+      )
     case 'sede':
       return <SedeSection config={(block.config as SedeConfig) ?? {}} />
     case 'countdown':

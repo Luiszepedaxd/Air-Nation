@@ -53,7 +53,21 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default async function Virus3Page() {
+type Virus3SearchParams = Record<string, string | string[] | undefined>
+
+export default async function Virus3Page(props: {
+  searchParams?: Promise<Virus3SearchParams> | Virus3SearchParams
+}) {
+  const rawParams = props.searchParams
+  const searchParams = rawParams ? await Promise.resolve(rawParams) : {}
+  const capsulaRaw = searchParams.capsula
+  const capsulaParam =
+    typeof capsulaRaw === 'string'
+      ? capsulaRaw
+      : Array.isArray(capsulaRaw)
+        ? capsulaRaw[0]
+        : undefined
+
   const blocks = await getVirus3Blocks()
   const renderedAt = new Date().toISOString()
 
@@ -122,13 +136,16 @@ export default async function Virus3Page() {
             </p>
           </div>
         ) : (
-          visibleBlocks.map((block) => (
-            <BlockRenderer
-              key={block.id}
-              block={block}
-              renderedAt={renderedAt}
-            />
-          ))
+          await Promise.all(
+            visibleBlocks.map((block) => (
+              <BlockRenderer
+                key={block.id}
+                block={block}
+                renderedAt={renderedAt}
+                capsulaParam={capsulaParam}
+              />
+            )),
+          )
         )}
       </main>
     </div>

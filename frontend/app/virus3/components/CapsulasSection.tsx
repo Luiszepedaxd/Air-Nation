@@ -32,17 +32,32 @@ const ReproductorInmersivo = dynamic(
   { ssr: false },
 )
 
-export function CapsulasSection({ config }: { config: CapsulasConfig }) {
+export function CapsulasSection({
+  config,
+  initialProgreso = PROGRESO_VACIO,
+  initialDestacadaId,
+  capsulaParam,
+}: {
+  config: CapsulasConfig
+  initialProgreso?: CapsulasProgress
+  initialDestacadaId?: string
+  capsulaParam?: string
+}) {
   const lista = useMemo(() => capsulasVisibles(config), [config])
 
-  const [progreso, setProgreso] = useState<CapsulasProgress>(PROGRESO_VACIO)
-  const [destacadaId, setDestacadaId] = useState<string>(lista[0]?.id ?? '')
+  const destacadaInicial =
+    initialDestacadaId ??
+    lista.find((c) => !isCompleted(initialProgreso, c.id))?.id ??
+    lista[0]?.id ??
+    ''
+
+  const [progreso, setProgreso] = useState<CapsulasProgress>(initialProgreso)
+  const [destacadaId, setDestacadaId] = useState<string>(destacadaInicial)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [playerMontado, setPlayerMontado] = useState(false)
-  const [reproductorId, setReproductorId] = useState<string>(lista[0]?.id ?? '')
+  const [reproductorId, setReproductorId] = useState<string>(destacadaInicial)
   const [originRect, setOriginRect] = useState<DOMRect | null>(null)
-  const [listo, setListo] = useState(false)
-  const [pulsarTarjeta, setPulsarTarjeta] = useState(false)
+  const [pulsarTarjeta, setPulsarTarjeta] = useState(Boolean(capsulaParam))
   const [avisoCopia, setAvisoCopia] = useState<string | null>(null)
   const [esDesktop, setEsDesktop] = useState(false)
 
@@ -91,12 +106,14 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   useEffect(() => {
     const actual = readProgress()
     setProgreso(actual)
+
     const params = new URLSearchParams(window.location.search)
     const q = params.get('capsula')
     const hash = window.location.hash.match(/^#capsula-(.+)$/)
     const hashId = hash ? decodificar(hash[1]) : null
     const ids = new Set(lista.map((c) => c.id))
     const pedido = [q, hashId].find((id): id is string => id != null && ids.has(id))
+
     if (pedido) {
       setDestacadaId(pedido)
       setReproductorId(pedido)
@@ -104,15 +121,22 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
       if (hashId === pedido) sincronizarUrl(pedido)
       setPulsarTarjeta(true)
       window.setTimeout(() => setPulsarTarjeta(false), 1400)
-    } else {
-      const pendiente = lista.find((c) => !isCompleted(actual, c.id)) ?? lista[0]
-      if (pendiente) {
-        setDestacadaId(pendiente.id)
-        setReproductorId(pendiente.id)
-      }
+      return
     }
-    setListo(true)
+
+    const pendiente = lista.find((c) => !isCompleted(actual, c.id)) ?? lista[0]
+    if (pendiente) {
+      setDestacadaId((prev) => (prev === pendiente.id ? prev : pendiente.id))
+      setReproductorId((prev) => (prev === pendiente.id ? prev : pendiente.id))
+    }
   }, [lista])
+
+  useEffect(() => {
+    if (!capsulaParam) return
+    scrollA('capsulas')
+    const t = window.setTimeout(() => setPulsarTarjeta(false), 1400)
+    return () => window.clearTimeout(t)
+  }, [capsulaParam])
 
   const precargarReproductor = useCallback(() => {
     void preloadReproductorInmersivo()
@@ -183,12 +207,6 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
           viewport: { once: true, amount: 0.25 },
           transition: { duration: 0.45, ease: EASE_ENTRADA, delay },
         }
-
-  if (!listo) {
-    return (
-      <section id="capsulas" className="relative w-full scroll-mt-[var(--nav-h)] bg-[#0a0a0a] py-10 text-white [--nav-h:56px] md:[--nav-h:64px]" aria-hidden />
-    )
-  }
 
   return (
     <LayoutGroup id="virus3-capsulas">
