@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties, ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import {
   DndContext,
@@ -29,7 +29,7 @@ import {
 import { MediaUploadInput } from '@/app/admin/operacionkursk2/components/MediaUploadInput'
 import { ImageUploadInput } from '@/app/admin/operacionkursk2/components/ImageUploadInput'
 import type { Virus3Slug } from '@/app/virus3/lib/types'
-import type { GaleriaImagen, VideoItem } from '@/app/virus3/lib/types'
+import type { CapsulaItem, GaleriaImagen, VideoItem } from '@/app/virus3/lib/types'
 import { VIRUS3_SLUGS } from '@/app/virus3/lib/types'
 import { VideoUploadInput } from '@/app/admin/operacionkursk2/components/VideoUploadInput'
 const jost = {
@@ -56,6 +56,7 @@ type SectionDef = {
 const SECTIONS: SectionDef[] = [
   { slug: 'hero', label: 'Hero — Cabecera', descripcion: 'Media de fondo, textos, CTAs y SEO.' },
   { slug: 'narrativa', label: 'Narrativa', descripcion: 'Bloques de texto narrativo.' },
+  { slug: 'capsulas', label: 'Cápsulas — Joulie', descripcion: 'Videos del manual del operador con progreso por cookie.' },
   { slug: 'sede', label: 'Sede', descripcion: 'Hospital abandonado, galería e info.' },
   { slug: 'countdown', label: 'Countdown', descripcion: 'Fecha objetivo.' },
   { slug: 'facciones', label: 'Facciones — 4 bandos', descripcion: 'USASF, NOVA, Resistencia Global, Mercenarios.' },
@@ -226,6 +227,13 @@ function httpUrlOk(v: string): boolean {
   return !t || /^https?:\/\//i.test(t)
 }
 
+function enlaceFinalOk(v: string): boolean {
+  const t = v.trim()
+  if (!t) return true
+  if (t.startsWith('/') && !t.startsWith('//')) return true
+  return /^https?:\/\//i.test(t)
+}
+
 type CatalogSponsor = {
   id: string
   nombre: string
@@ -373,6 +381,280 @@ function SponsorsCatalogPicker({
   )
 }
 
+function capsulaVacia(): CapsulaItem {
+  return {
+    id: 'c_' + Date.now().toString(36),
+    numero: '',
+    titulo: '',
+    descripcion: '',
+    grupo: '',
+    color: '#CC4B37',
+    duracion_seg: 0,
+    video_url: '',
+    poster_url: '',
+    activo: true,
+  }
+}
+
+function leerCapsulas(config: Record<string, unknown>): CapsulaItem[] {
+  const raw = config.capsulas
+  if (!Array.isArray(raw)) return []
+  return raw.map((row) => {
+    const o = row && typeof row === 'object' && !Array.isArray(row) ? (row as Record<string, unknown>) : {}
+    const durN = typeof o.duracion_seg === 'number' ? o.duracion_seg : Number(o.duracion_seg)
+    return {
+      ...o,
+      id: typeof o.id === 'string' ? o.id : '',
+      numero: typeof o.numero === 'string' ? o.numero : '',
+      titulo: typeof o.titulo === 'string' ? o.titulo : '',
+      descripcion: typeof o.descripcion === 'string' ? o.descripcion : '',
+      grupo: typeof o.grupo === 'string' ? o.grupo : '',
+      color: typeof o.color === 'string' && o.color ? o.color : '#CC4B37',
+      duracion_seg: Number.isFinite(durN) ? durN : 0,
+      video_url: typeof o.video_url === 'string' ? o.video_url : '',
+      poster_url: typeof o.poster_url === 'string' ? o.poster_url : '',
+      activo: o.activo !== false,
+    }
+  })
+}
+
+function esHexColor(color: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(color)
+}
+
+function SondaDuracion({
+  url,
+  duracion,
+  onDuracion,
+}: {
+  url: string
+  duracion: number
+  onDuracion: (segundos: number) => void
+}) {
+  const urlInicial = useRef(url)
+  if (!url.trim()) return null
+  return (
+    <video
+      src={url}
+      preload="metadata"
+      muted
+      playsInline
+      controls
+      className="mt-2 aspect-[9/16] max-h-52 w-24 bg-black object-contain"
+      onLoadedMetadata={(e) => {
+        const d = e.currentTarget.duration
+        if (!Number.isFinite(d) || d <= 0) return
+        const redondeada = Math.round(d)
+        const cambio = url !== urlInicial.current
+        if (!cambio && duracion > 0) return
+        urlInicial.current = url
+        if (redondeada !== duracion) onDuracion(redondeada)
+      }}
+    />
+  )
+}
+
+function EditorCapsulas({
+  config,
+  inputCls,
+  onPatch,
+}: {
+  config: Record<string, unknown>
+  inputCls: string
+  onPatch: (partial: Record<string, unknown>) => void
+}) {
+  const items = leerCapsulas(config)
+  const grupos = [...new Set(items.map((c) => c.grupo.trim()).filter(Boolean))]
+  const conVideo = items.filter((c) => c.video_url.trim()).length
+  const sinVideo = items.length - conVideo
+
+  function texto(key: string): string {
+    const v = config[key]
+    return typeof v === 'string' ? v : ''
+  }
+
+  function setItems(next: CapsulaItem[]) {
+    onPatch({ capsulas: next })
+  }
+
+  function patchItem(i: number, partial: Partial<CapsulaItem>) {
+    setItems(items.map((it, idx) => (idx === i ? { ...it, ...partial } : it)))
+  }
+
+  function mover(i: number, dir: -1 | 1) {
+    const j = i + dir
+    if (j < 0 || j >= items.length) return
+    const next = [...items]
+    const tmp = next[i]
+    next[i] = next[j]
+    next[j] = tmp
+    setItems(next)
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Field label="Eyebrow">
+        <input className={inputCls} value={texto('eyebrow')} onChange={(e) => onPatch({ eyebrow: e.target.value })} />
+      </Field>
+      <Field label="Título">
+        <input className={inputCls} value={texto('titulo')} onChange={(e) => onPatch({ titulo: e.target.value })} />
+      </Field>
+      <Field label="Descripción">
+        <textarea rows={3} className={inputCls} value={texto('descripcion')} onChange={(e) => onPatch({ descripcion: e.target.value })} />
+      </Field>
+      <Field label="Nota de progreso">
+        <input className={inputCls} value={texto('nota_progreso')} onChange={(e) => onPatch({ nota_progreso: e.target.value })} />
+      </Field>
+      <Field label="CTA final — texto">
+        <input className={inputCls} value={texto('cta_final_texto')} onChange={(e) => onPatch({ cta_final_texto: e.target.value })} />
+      </Field>
+      <Field label="CTA final — link (http(s), ruta / o vacío)">
+        <input className={inputCls} value={texto('cta_final_link')} onChange={(e) => onPatch({ cta_final_link: e.target.value })} />
+      </Field>
+
+      <div className="border-t border-[#EEEEEE] pt-4">
+        <p className="text-[12px] text-[#444444]" style={lato}>
+          {items.length === 1 ? '1 cápsula' : `${items.length} cápsulas`} · {conVideo} con video · {sinVideo} sin video
+        </p>
+        <button
+          type="button"
+          className="mt-3 border border-[#DDDDDD] bg-white px-3 py-2 text-[10px] tracking-[0.12em] disabled:opacity-40"
+          style={jost}
+          disabled={items.length >= 40}
+          onClick={() => setItems([...items, capsulaVacia()])}
+        >
+          + Cápsula
+        </button>
+        {items.length >= 40 ? (
+          <p className="mt-2 text-[11px] text-[#CC4B37]" style={lato}>Máximo 40 cápsulas.</p>
+        ) : null}
+      </div>
+
+      <datalist id="capsulas-grupos">
+        {grupos.map((g) => (
+          <option key={g} value={g} />
+        ))}
+      </datalist>
+
+      {items.map((c, i) => (
+        <div key={c.id || i} className="border border-[#EEEEEE] bg-white p-3">
+          <div className="mb-2 flex flex-wrap gap-2">
+            <button type="button" className="text-[10px] text-[#666]" style={jost} disabled={i === 0} onClick={() => mover(i, -1)}>↑</button>
+            <button type="button" className="text-[10px] text-[#666]" style={jost} disabled={i === items.length - 1} onClick={() => mover(i, 1)}>↓</button>
+            <button
+              type="button"
+              className="text-[10px] text-[#CC4B37]"
+              style={jost}
+              onClick={() => {
+                const etiqueta = c.numero.trim() || c.id || String(i + 1)
+                if (!confirm(`¿Eliminar la cápsula ${etiqueta}? El progreso de usuarios ligado a ella se ignorará.`)) return
+                setItems(items.filter((_, j) => j !== i))
+              }}
+            >
+              Eliminar
+            </button>
+          </div>
+
+          {c.activo && !c.video_url.trim() ? (
+            <p className="mb-3 bg-[#FEF3C7] px-2 py-1.5 text-[11px] text-[#92400E]" style={lato}>
+              No se mostrará en la landing hasta tener video
+            </p>
+          ) : null}
+
+          <Field label="ID">
+            <input readOnly value={c.id} className={`${inputCls} bg-[#F4F4F4] text-[#999999]`} />
+          </Field>
+          <p className="mb-3 text-[11px] text-[#999999]" style={lato}>
+            No cambia nunca; es la llave del progreso de los usuarios.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <Field label="Número">
+              <input className={inputCls} value={c.numero} onChange={(e) => patchItem(i, { numero: e.target.value })} />
+            </Field>
+            <Field label="Título">
+              <input className={inputCls} value={c.titulo} onChange={(e) => patchItem(i, { titulo: e.target.value })} />
+            </Field>
+          </div>
+
+          <Field label="Descripción (máx 140)">
+            <textarea
+              rows={3}
+              maxLength={140}
+              className={inputCls}
+              value={c.descripcion}
+              onChange={(e) => patchItem(i, { descripcion: e.target.value.slice(0, 140) })}
+            />
+          </Field>
+          <p className="mb-3 text-[11px] text-[#999999]" style={lato}>{c.descripcion.length}/140</p>
+
+          <Field label="Grupo">
+            <input
+              className={inputCls}
+              list="capsulas-grupos"
+              value={c.grupo}
+              onChange={(e) => patchItem(i, { grupo: e.target.value })}
+            />
+          </Field>
+
+          <Field label="Color">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={esHexColor(c.color) ? c.color : '#CC4B37'}
+                onChange={(e) => patchItem(i, { color: e.target.value })}
+                className="h-9 w-12 cursor-pointer border border-[#E4E4E4] bg-white"
+                aria-label={`Color de la cápsula ${c.numero || c.id}`}
+              />
+              <input
+                className={inputCls}
+                value={c.color}
+                onChange={(e) => patchItem(i, { color: e.target.value })}
+              />
+            </div>
+          </Field>
+
+          <Field label="Video">
+            <VideoUploadInput value={c.video_url} onChange={(url) => patchItem(i, { video_url: url })} />
+            <SondaDuracion url={c.video_url} duracion={c.duracion_seg} onDuracion={(segundos) => patchItem(i, { duracion_seg: segundos })} />
+          </Field>
+
+          <Field label="Duración (seg)">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              className={inputCls}
+              value={Number.isFinite(c.duracion_seg) ? c.duracion_seg : 0}
+              onChange={(e) => {
+                const n = Number(e.target.value)
+                patchItem(i, { duracion_seg: Number.isFinite(n) && n >= 0 ? n : 0 })
+              }}
+            />
+          </Field>
+
+          <Field label="Poster (opcional)">
+            <ImageUploadInput
+              slug={`capsula-${c.id || i}`}
+              value={c.poster_url ?? ''}
+              onChange={(url) => patchItem(i, { poster_url: url })}
+            />
+          </Field>
+
+          <label className="mt-2 flex items-center gap-2 text-[12px] text-[#444]" style={lato}>
+            <input
+              type="checkbox"
+              checked={c.activo}
+              onChange={(e) => patchItem(i, { activo: e.target.checked })}
+            />
+            Activo
+          </label>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function validateConfig(slug: Virus3Slug, cfg: Record<string, unknown>): string | null {
   const chk = (val: unknown) => (typeof val === 'string' ? val : '')
 
@@ -426,6 +708,41 @@ function validateConfig(slug: Virus3Slug, cfg: Record<string, unknown>): string 
             return 'Cada WhatsApp de facción debe ser URL http(s) o vacío.'
           }
         }
+      }
+    }
+  }
+  if (slug === 'capsulas') {
+    if (!enlaceFinalOk(chk(cfg.cta_final_link))) {
+      return 'El link del CTA final debe ser http(s), una ruta que empiece con / o vacío.'
+    }
+    if (cfg.capsulas == null) return null
+    if (!Array.isArray(cfg.capsulas)) return 'La lista de cápsulas no es válida.'
+    if (cfg.capsulas.length > 40) return 'Máximo 40 cápsulas.'
+    const ids = new Set<string>()
+    for (const row of cfg.capsulas) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) {
+        return 'Hay una cápsula con datos inválidos.'
+      }
+      const c = row as Record<string, unknown>
+      const id = typeof c.id === 'string' ? c.id.trim() : ''
+      const numero = typeof c.numero === 'string' ? c.numero.trim() : ''
+      const tituloCap = typeof c.titulo === 'string' ? c.titulo.trim() : ''
+      const etiqueta = numero || id || 'sin número'
+      if (!id) return 'Cada cápsula necesita un id.'
+      if (ids.has(id)) return `El id "${id}" está repetido.`
+      ids.add(id)
+      if (!numero || !tituloCap) return `La cápsula ${etiqueta} necesita número y título.`
+      const desc = typeof c.descripcion === 'string' ? c.descripcion : ''
+      if (desc.length > 140) return `La descripción de la cápsula ${etiqueta} supera 140 caracteres.`
+      const color = typeof c.color === 'string' ? c.color : ''
+      if (!/^#[0-9a-fA-F]{6}$/.test(color)) return `El color de la cápsula ${etiqueta} debe ser hex (#RRGGBB).`
+      const video = typeof c.video_url === 'string' ? c.video_url.trim() : ''
+      const poster = typeof c.poster_url === 'string' ? c.poster_url.trim() : ''
+      if (video && !/^https?:\/\//i.test(video)) return `El video de la cápsula ${etiqueta} debe ser http(s) o vacío.`
+      if (poster && !/^https?:\/\//i.test(poster)) return `El poster de la cápsula ${etiqueta} debe ser http(s) o vacío.`
+      const dur = c.duracion_seg
+      if (typeof dur !== 'number' || !Number.isFinite(dur) || dur < 0) {
+        return `La duración de la cápsula ${etiqueta} debe ser mayor o igual a 0.`
       }
     }
   }
@@ -1208,6 +1525,14 @@ export function Virus3AdminClient({
             <Field label="CTA texto"><input className={inputCls} value={str(slug, 'cta_texto')} onChange={(e) => setField(slug, 'cta_texto', e.target.value)} /></Field>
             <Field label="CTA link"><input className={inputCls} value={str(slug, 'cta_link')} onChange={(e) => setField(slug, 'cta_link', e.target.value)} /></Field>
           </div>
+        )
+      case 'capsulas':
+        return (
+          <EditorCapsulas
+            config={cfg(slug)}
+            inputCls={inputCls}
+            onPatch={(partial) => patch(slug, partial)}
+          />
         )
       default:
         return null

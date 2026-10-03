@@ -1,6 +1,7 @@
 import type { Virus3Block } from '../lib/types'
 import { HeroSection } from './HeroSection'
 import { NarrativaSection } from './NarrativaSection'
+import { CapsulasSection } from './CapsulasSection'
 import { SedeSection } from './SedeSection'
 import { CountdownSection } from './CountdownSection'
 import { FaccionesSection } from './FaccionesSection'
@@ -16,6 +17,7 @@ import { AirnationSection } from './AirnationSection'
 import type {
   HeroConfig,
   NarrativaConfig,
+  CapsulasConfig,
   SedeConfig,
   CountdownConfig,
   FaccionesConfig,
@@ -42,6 +44,8 @@ export function BlockRenderer({
       return <HeroSection config={(block.config as HeroConfig) ?? {}} />
     case 'narrativa':
       return <NarrativaSection config={(block.config as NarrativaConfig) ?? {}} />
+    case 'capsulas':
+      return <CapsulasSection config={(block.config as CapsulasConfig) ?? {}} />
     case 'sede':
       return <SedeSection config={(block.config as SedeConfig) ?? {}} />
     case 'countdown':

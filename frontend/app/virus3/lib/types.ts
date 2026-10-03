@@ -1,6 +1,7 @@
 export type Virus3Slug =
   | 'hero'
   | 'narrativa'
+  | 'capsulas'
   | 'sede'
   | 'countdown'
   | 'facciones'
@@ -16,6 +17,7 @@ export type Virus3Slug =
 export const VIRUS3_SLUGS: readonly Virus3Slug[] = [
   'hero',
   'narrativa',
+  'capsulas',
   'sede',
   'countdown',
   'facciones',
@@ -41,6 +43,29 @@ export type HeroConfig = {
   cta2_link: string
   seo_title: string
   seo_description: string
+}
+
+export type CapsulaItem = {
+  id: string
+  numero: string
+  titulo: string
+  descripcion: string
+  grupo: string
+  color: string
+  duracion_seg: number
+  video_url: string
+  poster_url?: string
+  activo: boolean
+}
+
+export type CapsulasConfig = {
+  eyebrow?: string
+  titulo?: string
+  descripcion?: string
+  nota_progreso?: string
+  cta_final_texto?: string
+  cta_final_link?: string
+  capsulas?: CapsulaItem[]
 }
 
 export type NarrativaBloque = { titulo: string; texto: string }
