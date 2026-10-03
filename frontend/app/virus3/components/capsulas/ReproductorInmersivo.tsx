@@ -98,6 +98,9 @@ export function ReproductorInmersivo({
   const [checkAnim, setCheckAnim] = useState(false)
   const [panelH, setPanelH] = useState(0)
   const [salidaRect, setSalidaRect] = useState<DOMRect | null>(null)
+  const [tapaderaCapsula, setTapaderaCapsula] = useState<CapsulaItem | null>(null)
+  const [tapaderaVisible, setTapaderaVisible] = useState(false)
+  const tapaderaListeners = useRef<(() => void) | null>(null)
 
   const dragY = useMotionValue(0)
   const nextY = useTransform(dragY, (v) => {
@@ -153,12 +156,42 @@ export function ReproductorInmersivo({
     }
   }, [capsula, indice, lista])
 
+  const retirarTapadera = useCallback(() => {
+    setTapaderaVisible(false)
+  }, [])
+
+  const mostrarTapadera = useCallback((c: CapsulaItem) => {
+    setTapaderaCapsula(c)
+    setTapaderaVisible(true)
+  }, [])
+
+  const enlazarTapaderaVideo = useCallback(
+    (video: HTMLVideoElement) => {
+      tapaderaListeners.current?.()
+      const listo = () => retirarTapadera()
+      const onPlaying = () => listo()
+      const onLoaded = () => {
+        if (video.paused) listo()
+      }
+      video.addEventListener('playing', onPlaying, { once: true })
+      video.addEventListener('loadeddata', onLoaded, { once: true })
+      tapaderaListeners.current = () => {
+        video.removeEventListener('playing', onPlaying)
+        video.removeEventListener('loadeddata', onLoaded)
+      }
+    },
+    [retirarTapadera],
+  )
+
   const cargarYReproducir = useCallback(
     (c: CapsulaItem, reproducir: boolean) => {
       const video = videoRef.current
       if (!video) return
       const src = c.video_url.trim()
-      if (!video.src.endsWith(src) && video.src !== src) {
+      const cambia = !video.src.endsWith(src) && video.src !== src
+      if (cambia) {
+        mostrarTapadera(c)
+        enlazarTapaderaVideo(video)
         video.src = src
         video.load()
       }
@@ -183,8 +216,12 @@ export function ReproductorInmersivo({
       if (video.readyState >= 1) onMeta()
       else video.addEventListener('loadedmetadata', onMeta, { once: true })
     },
-    [],
+    [enlazarTapaderaVideo, mostrarTapadera],
   )
+
+  useEffect(() => {
+    return () => tapaderaListeners.current?.()
+  }, [])
 
   const irA = useCallback(
     (id: string, reproducir = false) => {
@@ -458,17 +495,37 @@ export function ReproductorInmersivo({
           if (dy < 12 && dt < 300) togglePlay()
         }}
       >
-        <video
-          ref={videoRef}
-          playsInline
-          preload="metadata"
-          muted={muted}
-          className={`h-full w-full bg-black ${esDesktop ? 'object-contain' : 'object-cover'}`}
-          onPlay={() => emitir('capsula_play', capsula)}
-          onPause={onPausePersist}
-          onTimeUpdate={onTimePersist}
-          onEnded={alTerminar}
-        />
+        <div className="absolute inset-0 bg-black">
+          <video
+            ref={videoRef}
+            playsInline
+            preload="metadata"
+            muted={muted}
+            className={`h-full w-full bg-black ${esDesktop ? 'object-contain' : 'object-cover'}`}
+            onPlay={() => emitir('capsula_play', capsula)}
+            onPause={onPausePersist}
+            onTimeUpdate={onTimePersist}
+            onEnded={alTerminar}
+          />
+          {tapaderaCapsula ? (
+            <motion.div
+              className="pointer-events-none absolute inset-0 z-[2] bg-black"
+              initial={false}
+              animate={{ opacity: tapaderaVisible ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+              onAnimationComplete={() => {
+                if (!tapaderaVisible) setTapaderaCapsula(null)
+              }}
+            >
+              <PosterVisual
+                capsula={tapaderaCapsula}
+                width={390}
+                height={693}
+                imgClassName="h-full w-full object-cover"
+              />
+            </motion.div>
+          ) : null}
+        </div>
 
         {checkAnim ? (
           <div className="pointer-events-none absolute inset-0 z-[8] flex items-center justify-center">

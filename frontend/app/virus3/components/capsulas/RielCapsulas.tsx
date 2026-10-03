@@ -10,12 +10,14 @@ export function RielCapsulas({
   progreso,
   destacadaId,
   onElegir,
+  onPreload,
   layoutIdPrefix,
 }: {
   lista: CapsulaItem[]
   progreso: CapsulasProgress
   destacadaId: string
   onElegir: (id: string, rect: DOMRect) => void
+  onPreload?: () => void
   layoutIdPrefix: string
 }) {
   const scrollRef = useRef<HTMLOListElement>(null)
@@ -34,7 +36,8 @@ export function RielCapsulas({
   return (
     <ol
       ref={scrollRef}
-      className="mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scroll-padding-inline:1rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden"
+      id="capsulas-riel"
+      className="mt-2 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scroll-padding-inline:1rem] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden"
     >
       {lista.map((c) => (
         <MiniaturaCapsula
@@ -42,7 +45,9 @@ export function RielCapsulas({
           capsula={c}
           progreso={progreso}
           destacada={c.id === destacadaId}
+          compacto
           layoutId={`${layoutIdPrefix}-${c.id}`}
+          onPreload={onPreload}
           onElegir={(rect) => onElegir(c.id, rect)}
         />
       ))}

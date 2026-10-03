@@ -23,9 +23,9 @@ function ProgresoSegmentadoInner({
   const quieto = prefiereQuieto()
 
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="mx-auto w-full max-w-md lg:max-w-md">
       <div
-        className="mb-2 flex items-center justify-between gap-3 text-[0.65rem] tracking-[0.22em]"
+        className="mb-1 flex items-center justify-between gap-2 text-[10px] tracking-[0.18em] lg:mb-2 lg:gap-3 lg:text-[0.65rem] lg:tracking-[0.22em]"
         style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700 }}
       >
         <span>{hechas}/{lista.length} TRANSMISIONES</span>
@@ -59,7 +59,10 @@ function ProgresoSegmentadoInner({
         })}
       </div>
       {nota ? (
-        <p className="mt-2 truncate text-[11px] text-white/45" style={{ fontFamily: 'Lato, sans-serif' }}>
+        <p
+          className="mt-1 hidden truncate text-[11px] text-white/45 lg:mt-2 lg:block"
+          style={{ fontFamily: 'Lato, sans-serif' }}
+        >
           {nota}
         </p>
       ) : null}

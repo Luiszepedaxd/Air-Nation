@@ -9,12 +9,14 @@ export function GridCapsulas({
   progreso,
   destacadaId,
   onElegir,
+  onPreload,
   layoutIdPrefix,
 }: {
   lista: CapsulaItem[]
   progreso: CapsulasProgress
   destacadaId: string
   onElegir: (id: string, rect: DOMRect) => void
+  onPreload?: () => void
   layoutIdPrefix: string
 }) {
   return (
@@ -26,6 +28,7 @@ export function GridCapsulas({
           progreso={progreso}
           destacada={c.id === destacadaId}
           layoutId={`${layoutIdPrefix}-${c.id}`}
+          onPreload={onPreload}
           onElegir={(rect) => onElegir(c.id, rect)}
         />
       ))}

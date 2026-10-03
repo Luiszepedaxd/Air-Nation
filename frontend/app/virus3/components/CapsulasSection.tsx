@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { LayoutGroup, motion } from 'framer-motion'
 import type { CapsulaItem, CapsulasConfig } from '../lib/types'
 import {
@@ -11,7 +12,7 @@ import {
 } from '../lib/progreso-capsulas'
 import { GridCapsulas } from './capsulas/GridCapsulas'
 import { ProgresoSegmentado } from './capsulas/ProgresoSegmentado'
-import { ReproductorInmersivo } from './capsulas/ReproductorInmersivo'
+import { preloadReproductorInmersivo } from './capsulas/preloadReproductor'
 import { RielCapsulas } from './capsulas/RielCapsulas'
 import { TarjetaSiguiente } from './capsulas/TarjetaSiguiente'
 import {
@@ -25,6 +26,11 @@ import {
   sincronizarUrl,
 } from './capsulas/helpers'
 const LAYOUT_PREFIX = 'capsula-reel'
+
+const ReproductorInmersivo = dynamic(
+  () => import('./capsulas/ReproductorInmersivo').then((m) => ({ default: m.ReproductorInmersivo })),
+  { ssr: false },
+)
 
 export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   const lista = useMemo(() => capsulasVisibles(config), [config])
@@ -108,7 +114,12 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     setListo(true)
   }, [lista])
 
+  const precargarReproductor = useCallback(() => {
+    void preloadReproductorInmersivo()
+  }, [])
+
   const abrirReproductor = useCallback((id: string, rect: DOMRect) => {
+    void preloadReproductorInmersivo()
     quierePlay.current = true
     setReproductorId(id)
     setDestacadaId(id)
@@ -183,7 +194,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     <LayoutGroup id="virus3-capsulas">
       <section
         id="capsulas"
-        className="relative w-full scroll-mt-[var(--nav-h)] bg-[#0a0a0a] py-8 text-white [--nav-h:56px] md:py-10 md:[--nav-h:64px] lg:py-12"
+        className="relative w-full scroll-mt-[var(--nav-h)] bg-[#0a0a0a] pt-6 pb-8 text-white [--nav-h:56px] md:[--nav-h:64px] lg:py-12"
         aria-labelledby="capsulas-titulo"
       >
         <div className="mx-auto max-w-7xl px-4 md:px-8">
@@ -196,14 +207,14 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
             </p>
             <h2
               id="capsulas-titulo"
-              className="mt-2 text-2xl leading-none sm:text-3xl md:text-4xl"
+              className="mt-1.5 text-xl leading-none sm:text-2xl md:mt-2 md:text-3xl lg:text-4xl"
               style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900, letterSpacing: '-0.02em', textTransform: 'uppercase' }}
             >
               {titulo}
             </h2>
             {config.descripcion?.trim() ? (
               <p
-                className="mx-auto mt-2 line-clamp-2 max-w-2xl text-sm leading-relaxed text-white/65 md:text-base lg:line-clamp-none"
+                className="mx-auto mt-1 line-clamp-1 max-w-2xl text-sm leading-snug text-white/65 md:mt-2 md:text-base lg:line-clamp-none"
                 style={{ fontFamily: 'Lato, sans-serif' }}
               >
                 {config.descripcion}
@@ -217,7 +228,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
             </p>
           ) : (
             <>
-              <motion.div className="mt-4" {...entrada(0.06)}>
+              <motion.div className="mt-2 lg:mt-4" {...entrada(0.06)}>
                 <ProgresoSegmentado
                   lista={lista}
                   progreso={progreso}
@@ -227,7 +238,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
                 />
               </motion.div>
 
-              <div className="mt-4 lg:grid lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start lg:gap-8">
+              <div className="mt-2 lg:mt-4 lg:grid lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start lg:gap-8">
                 {destacada ? (
                   <motion.div className="flex justify-center lg:justify-start" {...entrada(0.12)}>
                     <TarjetaSiguiente
@@ -236,6 +247,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
                       todasHechas={todasHechas}
                       pulsar={pulsarTarjeta}
                       layoutId={`${LAYOUT_PREFIX}-${destacada.id}`}
+                      onPreload={precargarReproductor}
                       onAbrir={(rect) => abrirReproductor(destacada.id, rect)}
                     />
                   </motion.div>
@@ -247,6 +259,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
                     progreso={progreso}
                     destacadaId={destacada?.id ?? destacadaId}
                     layoutIdPrefix={LAYOUT_PREFIX}
+                    onPreload={precargarReproductor}
                     onElegir={abrirReproductor}
                   />
                   <GridCapsulas
@@ -254,6 +267,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
                     progreso={progreso}
                     destacadaId={destacada?.id ?? destacadaId}
                     layoutIdPrefix={LAYOUT_PREFIX}
+                    onPreload={precargarReproductor}
                     onElegir={abrirReproductor}
                   />
                 </motion.div>
