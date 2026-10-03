@@ -105,7 +105,7 @@ export default async function Virus3Page() {
   const visibleBlocks = blocks.filter((b) => b.activo)
 
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#F5F3EF] text-[#111111]">
+    <div className="min-h-screen bg-[#F5F3EF] text-[#111111]">
       <LandingNav audioUrl={audioUrl} hasSession={hasSession} />
       <script
         type="application/ld+json"

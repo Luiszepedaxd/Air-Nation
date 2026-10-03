@@ -123,7 +123,8 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
     const pedido = [q, hashId].find((id): id is string => id != null && ids.has(id))
     if (pedido) {
       setSeleccionId(pedido)
-      scrollA('capsulas')
+      const movil = window.matchMedia('(max-width: 1023px)').matches
+      scrollA(movil ? 'capsula-reproductor' : 'capsulas')
       if (hashId === pedido) sincronizarUrl(pedido)
     } else {
       const pendiente = lista.find((c) => !isCompleted(actual, c.id)) ?? lista[0]
@@ -268,9 +269,8 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
   return (
     <section
       id="capsulas"
-      className="relative w-full scroll-mt-20 bg-[#0a0a0a] py-16 text-white md:py-24"
+      className="relative w-full scroll-mt-20 bg-[#0a0a0a] py-16 text-white [--nav-h:56px] md:py-24 md:[--nav-h:64px]"
       aria-labelledby="capsulas-titulo"
-      style={{ ['--nav-h' as string]: '56px' }}
     >
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         <div className="mb-6 text-center md:mb-14">
@@ -328,7 +328,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
           <div className="lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start lg:gap-10">
             <div
               id="capsula-reproductor"
-              className="w-full min-w-0 scroll-mt-24 lg:sticky lg:top-24 lg:max-w-[380px] lg:self-start"
+              className="w-full min-w-0 scroll-mt-[var(--nav-h)] lg:sticky lg:top-24 lg:max-w-[380px] lg:self-start"
             >
               {seleccion ? (
                 <>
@@ -356,7 +356,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
                         controls
                         playsInline
                         preload="metadata"
-                        className="mx-auto aspect-[9/16] h-[calc(100svh-var(--nav-h)-8rem)] min-h-[320px] w-auto max-w-full bg-black object-contain lg:h-auto lg:max-h-[calc(100vh-10rem)] lg:w-full"
+                        className="mx-auto aspect-[9/16] h-[calc(100svh-var(--nav-h)-9rem)] min-h-[320px] w-auto max-w-full bg-black object-contain lg:h-auto lg:max-h-[calc(100vh-10rem)] lg:w-full"
                         onPlay={() => emitir('capsula_play', seleccion)}
                         onPause={alPausa}
                         onTimeUpdate={alTiempo}
@@ -364,7 +364,7 @@ export function CapsulasSection({ config }: { config: CapsulasConfig }) {
                         onEnded={alTerminar}
                       />
                     ) : (
-                      <div className="mx-auto aspect-[9/16] h-[calc(100svh-var(--nav-h)-8rem)] min-h-[320px] w-auto max-w-full bg-black lg:h-auto lg:max-h-[calc(100vh-10rem)] lg:w-full" />
+                      <div className="mx-auto aspect-[9/16] h-[calc(100svh-var(--nav-h)-9rem)] min-h-[320px] w-auto max-w-full bg-black lg:h-auto lg:max-h-[calc(100vh-10rem)] lg:w-full" />
                     )}
                     {overlay ? (
                       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/80 px-6 text-center" role="status" aria-live="polite">
