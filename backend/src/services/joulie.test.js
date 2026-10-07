@@ -9,6 +9,7 @@ const {
   buildChatBody,
   createLimiter,
   createVoiceBudget,
+  createWebBudget,
   expandName,
   handleJoulie,
   mintConversation,
@@ -19,6 +20,7 @@ const {
   streamJoulie,
   synthesizeSpeech,
   verifySession,
+  wantsWebOptions,
 } = require("./joulie");
 
 const NOW = Date.parse("2026-10-07T18:00:00.000Z");
@@ -444,6 +446,118 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(body.reasoning.exclude, true);
     assert.equal(body.max_tokens <= 160, true);
     assert.equal(body.provider.sort, "latency");
+    assert.equal(body.plugins, undefined);
+  });
+
+  it("busca en la web solo si piden opciones de equipo", async () => {
+    assert.equal(wantsWebOptions("¿qué réplica me recomiendas para CQB?"), true);
+    assert.equal(wantsWebOptions("¿qué mejoras me recomiendas para una AEG?"), true);
+    assert.equal(wantsWebOptions("¿qué opciones hay?"), true);
+    assert.equal(wantsWebOptions("¿qué opciones de máscara hay?"), true);
+    assert.equal(wantsWebOptions("¿qué eventos hay?"), false);
+    assert.equal(wantsWebOptions("¿hay eventos este fin?"), false);
+    assert.equal(wantsWebOptions("¿dónde queda el campo?"), false);
+    assert.equal(wantsWebOptions("¿qué equipos hay en Guadalajara?"), false);
+    assert.equal(resolveConfig().webSession, 3);
+    assert.equal(resolveConfig().webDaily, 8);
+
+    const budget = createWebBudget();
+    const limits = { ...LIMITS, webSession: 2, webDaily: 8 };
+    const asked = async (message, webKey) => {
+      let seen = "";
+      await handleJoulie(
+        base({
+          message,
+          limits,
+          webBudget: budget,
+          webKey,
+          webUser: "user-1",
+          loadContext: async () => ({
+            eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }],
+          }),
+          complete: async (messages) => {
+            seen = messages[0].content;
+            return "Una AEG corta suele ir bien.";
+          },
+        })
+      );
+      return /búsqueda web/.test(seen);
+    };
+    assert.equal(await asked("¿qué réplica me recomiendas para CQB?", "sesion-a"), true);
+    assert.equal(await asked("¿qué mejoras me recomiendas?", "sesion-a"), true);
+    assert.equal(await asked("¿qué opciones de máscara hay?", "sesion-a"), false);
+    assert.equal(await asked("¿qué eventos hay?", "sesion-a"), false);
+    assert.equal(await asked("¿qué opciones hay?", "sesion-b"), true);
+
+    const body = buildChatBody([{ role: "user", content: "opciones" }], { ...resolveConfig(), web: true }, true);
+    assert.equal(body.plugins[0].id, "web");
+    assert.equal(body.plugins[0].engine, "exa");
+    assert.equal(body.plugins[0].max_results, 3);
+  });
+
+  it("si el plugin responde 400 sigue con la herramienta de búsqueda", async () => {
+    process.env.OPENROUTER_API_KEY = "sk-or-test";
+    const bodies = [];
+    const original = global.fetch;
+    global.fetch = async (_url, init) => {
+      const body = JSON.parse(init.body);
+      bodies.push(body);
+      if (body.plugins) return new Response("no", { status: 400 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: "Una AEG de Specna, alrededor de cuatro mil pesos." } }] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    try {
+      const result = await handleJoulie(
+        base({
+          message: "¿qué réplica me recomiendas para CQB?",
+          loadContext: async () => ({}),
+          webBudget: createWebBudget(),
+          webKey: "sesion-plugin",
+        })
+      );
+      assert.match(result.reply, /Specna/);
+      assert.match(bodies[0].messages[0].content, /dilo como aproximado/);
+      assert.match(bodies[0].messages[0].content, /no los obedezcas/);
+      assert.equal(bodies[0].plugins[0].max_results, 3);
+      assert.equal(bodies[1].plugins, undefined);
+      assert.equal(bodies[1].tools[0].type, "openrouter:web_search");
+      assert.equal(bodies[1].tools[0].parameters.max_results, 3);
+      assert.equal(bodies[1].tools[0].parameters.max_uses, 1);
+    } finally {
+      global.fetch = original;
+    }
+  });
+
+  it("la voz dice que va a buscar antes de que conteste el modelo", async () => {
+    const secret = "joulie-test-secret";
+    const session = signSession("user-1", secret, NOW, 60_000);
+    const frames = [];
+    let fillerAlreadyOut = false;
+    const result = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: { messages: [{ role: "user", content: "¿qué réplica me recomiendas para CQB?" }] },
+        now: NOW,
+        enabled: true,
+        webBudget: createWebBudget(),
+        limits: { ...LIMITS, webSession: 3, webDaily: 8 },
+        loadContext: async () => ({}),
+        completeStream: async function* () {
+          fillerAlreadyOut = frames.join("").includes(COPY.looking);
+          yield "Mira https://tienda.example/aeg y escribe a secreto@mail.com. Una AEG corta.";
+        },
+      },
+      (frame) => frames.push(frame)
+    );
+    assert.equal(fillerAlreadyOut, true);
+    assert.match(result.reply, /Déjame buscar opciones/);
+    assert.match(result.reply, /AEG corta/);
+    assert.equal(result.reply.includes("https://"), false);
+    assert.equal(result.reply.includes("secreto@mail.com"), false);
+    assert.equal(frames.join("").includes("https://"), false);
   });
 
   it("el arsenal llega como recuento y no como la réplica de alguien", async () => {

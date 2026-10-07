@@ -4,6 +4,7 @@ const {
   COPY,
   createLimiter,
   createVoiceBudget,
+  createWebBudget,
   handleJoulie,
   mintConversation,
   runCustomLlm,
@@ -15,6 +16,7 @@ const chatLimiter = createLimiter();
 const voiceLimiter = createLimiter();
 const sessionLimiter = createLimiter();
 const voiceBudget = createVoiceBudget();
+const webBudget = createWebBudget();
 
 function db() {
   return require("../lib/supabase");
@@ -90,6 +92,7 @@ router.post("/llm/chat/completions", async (req, res) => {
         supabase: db(),
         limiter: chatLimiter,
         budget: voiceBudget,
+        webBudget,
       },
       (frame) => {
         open();
@@ -113,6 +116,9 @@ router.post("/", requireAuth, async (req, res) => {
       ip: clientIp(req),
       supabase: db(),
       limiter: chatLimiter,
+      webBudget,
+      webKey: `texto:${req.authUser?.id || clientIp(req)}`,
+      webUser: req.authUser?.id,
     });
     return sendResult(res, result);
   } catch {
