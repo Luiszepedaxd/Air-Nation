@@ -831,6 +831,45 @@ describe("JOULIE", { concurrency: 1 }, () => {
           },
         ];
       }
+      if (call.table === "fields") {
+        const rows = [
+          {
+            nombre: "Gotcha Omnilife",
+            slug: "gotcha-omnilife",
+            ciudad: "Zapopan",
+            estado: "Jalisco",
+            tipo: "publico",
+            descripcion: "CQB techado en Zapopan.",
+            horarios_json: { lunes: { abierto: true, apertura: "11:00", cierre: "19:00" }, martes: { abierto: true, apertura: "11:00", cierre: "19:00" }, miercoles: { abierto: true, apertura: "11:00", cierre: "19:00" }, jueves: { abierto: true, apertura: "11:00", cierre: "19:00" }, viernes: { abierto: true, apertura: "11:00", cierre: "19:00" }, sabado: { abierto: true, apertura: "11:00", cierre: "19:00" }, domingo: { abierto: true, apertura: "11:00", cierre: "19:00" } },
+          },
+          {
+            nombre: "Gotcha CQB Solares",
+            slug: "gotcha-cqb-solares",
+            ciudad: "Zapopan",
+            estado: "Jalisco",
+            tipo: "publico",
+          },
+          {
+            nombre: "Hospital Abandonado San Luis Potosi",
+            slug: "hospital-abandonado-san-luis-potosi",
+            ciudad: "San Luis Potosí",
+            estado: "San Luis Potosí",
+            tipo: "privado",
+          },
+          {
+            nombre: "Sykaryos Paintball",
+            slug: "sykaryos-paintball",
+            ciudad: "Ciudad de México",
+            estado: "Ciudad de México",
+            tipo: "publico",
+          },
+        ];
+        const or = call.filters.find((part) => part[0] === "or");
+        if (!or) return rows;
+        if (/jalisco/i.test(or[1])) return rows.filter((row) => /jalisco/i.test(`${row.ciudad} ${row.estado}`));
+        if (/potosi/i.test(or[1])) return rows.filter((row) => /potosi/i.test(`${row.ciudad} ${row.estado}`));
+        return [];
+      }
       if (call.table !== "teams") return [];
       const or = call.filters.find((part) => part[0] === "or");
       if (or && /potosi/i.test(or[1])) {
@@ -936,6 +975,31 @@ describe("JOULIE", { concurrency: 1 }, () => {
       (call) => call.table === "events" && call.filters.some((part) => part[0] === "gte")
     );
     assert.match(agenda.select, /estado/);
+  });
+
+  it("«qué campos hay», «campos en Jalisco» y «dónde puedo jugar» traen los campos publicados", async () => {
+    const all = await datosFor("¿qué campos hay?");
+    assert.match(all.datos, /Gotcha Omnilife/);
+    assert.match(all.datos, /Gotcha CQB Solares/);
+    assert.match(all.datos, /Sykaryos Paintball/);
+    assert.match(all.datos, /Hospital Abandonado San Luis Potosi/);
+    assert.match(all.datos, /todos los días 11:00–19:00/);
+    assert.match(all.datos, /https:\/\/www\.airnation\.online\/campos\/gotcha-omnilife/);
+    assert.equal(
+      all.calls.some((call) => call.table === "fields" && call.limit === 16 && !call.filters.some((part) => part[0] === "or")),
+      true
+    );
+
+    const jalisco = await datosFor("campos en Jalisco");
+    assert.match(jalisco.datos, /Gotcha Omnilife/);
+    assert.match(jalisco.datos, /Gotcha CQB Solares/);
+    assert.equal(jalisco.datos.includes("Sykaryos Paintball"), false);
+    assert.match(jalisco.calls.find((call) => call.table === "fields" && call.filters.some((part) => part[0] === "or")).filters.find((part) => part[0] === "or")[1], /jalisco/);
+
+    const play = await datosFor("¿dónde puedo jugar?");
+    assert.match(play.datos, /Gotcha Omnilife/);
+    assert.match(play.datos, /Sykaryos Paintball/);
+    assert.match(play.datos, /nombra los campos de DATOS/);
   });
 
   it("«¿Qué eventos hay?» sigue listando los próximos", async () => {
