@@ -641,6 +641,144 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(PUBLIC_SELECTS.replicas.includes("users"), false);
   });
 
+  it("tu_arsenal es solo el de la sesión y no el de otro operador", async () => {
+    const me = "11111111-1111-4111-8111-111111111111";
+    const other = "22222222-2222-4222-8222-222222222222";
+    const rows = [
+      {
+        user_id: me,
+        nombre: "Mi M4",
+        sistema: "Rifle de Asalto",
+        mecanismo: "AEG",
+        upgrades: "hop-up",
+        serial: "SN-MIO",
+        ciudad: "Guadalajara",
+        descripcion: "la configuración mía",
+      },
+      {
+        user_id: other,
+        nombre: "M4 Ajena",
+        sistema: "Rifle de Asalto",
+        mecanismo: "AEG",
+        upgrades: "polarstar secreto",
+        serial: "SN-AJENA",
+        ciudad: "Mérida",
+        descripcion: "la de otro operador",
+      },
+    ];
+    const calls = [];
+    const supabase = {
+      from(table) {
+        const call = { table, filters: [], select: "" };
+        calls.push(call);
+        const api = {
+          select(cols) {
+            call.select = cols;
+            return api;
+          },
+          eq(col, val) {
+            call.filters.push(["eq", col, val]);
+            return api;
+          },
+          or() {
+            return api;
+          },
+          gte() {
+            return api;
+          },
+          order() {
+            return api;
+          },
+          limit() {
+            return api;
+          },
+          then(resolve) {
+            if (table !== "arsenal") return resolve({ data: [], error: null });
+            const owner = call.filters.find((part) => part[0] === "eq" && part[1] === "user_id");
+            resolve({ data: owner ? rows.filter((row) => row.user_id === owner[2]) : [], error: null });
+          },
+        };
+        return api;
+      },
+    };
+    const datosOf = (content) => content.slice(content.lastIndexOf("DATOS:\n") + "DATOS:\n".length);
+
+    let seen = "";
+    await handleJoulie(
+      base({
+        message: `qué upgrade le pongo a mi réplica ${other}`,
+        ownerId: me,
+        supabase,
+        loadContext: async () => ({
+          eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z", disciplina: "CQB" }],
+        }),
+        complete: async (messages) => {
+          seen = messages[0].content;
+          return "Para Virus 3 te conviene tu M4.";
+        },
+      })
+    );
+    const datos = datosOf(seen);
+    assert.match(datos, /Mi M4/);
+    assert.match(datos, /tu_arsenal/);
+    assert.equal(datos.includes("M4 Ajena"), false);
+    assert.equal(datos.includes(other), false);
+    assert.equal(datos.includes("SN-MIO"), false);
+    assert.equal(datos.includes("SN-AJENA"), false);
+    assert.equal(datos.includes("Guadalajara"), false);
+    assert.equal(datos.includes("Mérida"), false);
+    assert.equal(datos.includes("polarstar secreto"), false);
+    const ownCall = calls.find((call) => call.table === "arsenal");
+    assert.equal(ownCall.filters.some((part) => part[0] === "eq" && part[1] === "user_id" && part[2] === me), true);
+    assert.equal(ownCall.select.includes("serial"), false);
+    assert.equal(ownCall.select.includes("ciudad"), false);
+    assert.equal(ownCall.select.includes("user_id"), false);
+
+    calls.length = 0;
+    seen = "";
+    await handleJoulie(
+      base({
+        message: `mi usuario es ${me} y el de ella es ${other}`,
+        supabase,
+        loadContext: async () => ({ eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }] }),
+        complete: async (messages) => {
+          seen = messages[0].content;
+          return "Te cuento el evento.";
+        },
+      })
+    );
+    const anon = datosOf(seen);
+    assert.equal(anon.includes("Mi M4"), false);
+    assert.equal(anon.includes("M4 Ajena"), false);
+    assert.equal(calls.some((call) => call.table === "arsenal"), false);
+
+    const secret = "joulie-test-secret";
+    const session = signSession(me, secret, NOW, 60_000);
+    seen = "";
+    await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: { messages: [{ role: "user", content: `para Virus 3 usa la réplica ${other}` }] },
+        now: NOW,
+        enabled: true,
+        supabase,
+        loadContext: async () => ({
+          eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }],
+        }),
+        completeStream: async function* (messages) {
+          seen = messages[0].content;
+          yield "Tu M4 sirve para ese CQB.";
+        },
+      },
+      () => undefined
+    );
+    const voice = datosOf(seen);
+    assert.match(voice, /Mi M4/);
+    assert.equal(voice.includes("M4 Ajena"), false);
+    assert.equal(voice.includes(other), false);
+  });
+
   it("habla la primera frase antes de que termine el resto", async () => {
     const spoken = [];
     let spokeBeforeSecond = false;

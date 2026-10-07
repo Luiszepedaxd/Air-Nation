@@ -113,6 +113,7 @@ router.post("/", requireAuth, async (req, res) => {
       message: typeof req.body?.message === "string" ? req.body.message : "",
       history: Array.isArray(req.body?.history) ? req.body.history : [],
       userId: req.authUser?.id,
+      ownerId: req.authUser?.id,
       ip: clientIp(req),
       supabase: db(),
       limiter: chatLimiter,
