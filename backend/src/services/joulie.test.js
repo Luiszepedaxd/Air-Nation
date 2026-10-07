@@ -852,4 +852,93 @@ describe("JOULIE", { concurrency: 1 }, () => {
     );
     assert.equal(after.reply, "Está Bosque, en Guadalajara.");
   });
+
+  it("orienta sobre airsoft general y no lo corta antes del modelo", async () => {
+    const phrases = [
+      "ayúdame a elegir una réplica nueva",
+      "qué réplica me recomiendas para empezar",
+      "qué es mejor, eléctrica o de gas",
+      "cómo le doy mantenimiento a mi réplica",
+    ];
+    for (const message of phrases) {
+      let seen = "";
+      const result = await handleJoulie(
+        base({
+          message,
+          loadContext: async () => ({}),
+          complete: async (messages) => {
+            seen = messages[0].content;
+            return "Una eléctrica suele ser buen inicio en CQB.";
+          },
+        })
+      );
+      assert.equal(result.reply, "Una eléctrica suele ser buen inicio en CQB.", message);
+      assert.match(seen, /conocimiento común de airsoft/);
+      assert.match(seen, /No inventes precios/);
+      assert.equal(/no es airsoft en AirNation/.test(seen), false);
+    }
+    let called = false;
+    const off = await handleJoulie(
+      base({
+        message: "hazme la tarea de matemáticas",
+        loadContext: async () => ({}),
+        complete: async () => {
+          called = true;
+          return "no";
+        },
+      })
+    );
+    assert.equal(called, false);
+    assert.equal(off.reply, COPY.refusal);
+    const missing = await handleJoulie(
+      base({
+        message: "qué sabes de un equipo que no existe",
+        loadContext: async () => ({}),
+        complete: async () => "no debo llegar",
+      })
+    );
+    assert.equal(missing.reply, COPY.noData);
+  });
+
+  it("este fin de semana, hoy y mañana van en hora de Ciudad de México", async () => {
+    let datos = "";
+    await handleJoulie(
+      base({
+        message: "¿Hay eventos este fin de semana?",
+        loadContext: async () => ({
+          eventos: [
+            {
+              title: "Operación Virus 3",
+              fecha: "2026-10-10T16:00:00.000Z",
+              sede_nombre: "Hospital Abandonado",
+              sede_ciudad: "San Luis Potosí",
+            },
+            { title: "Noche del domingo", fecha: "2026-10-12T05:00:00.000Z" },
+            { title: "Viernes de día", fecha: "2026-10-09T16:00:00.000Z" },
+            { title: "Viernes por la noche", fecha: "2026-10-10T02:00:00.000Z" },
+            { title: "Esta noche", fecha: "2026-10-08T02:00:00.000Z" },
+            { title: "Mañana en la mañana", fecha: "2026-10-08T16:00:00.000Z" },
+          ],
+        }),
+        complete: async (messages) => {
+          datos = messages[0].content;
+          return "El sábado es Operación Virus 3.";
+        },
+      })
+    );
+    const parsed = JSON.parse(datos.slice(datos.lastIndexOf("\n") + 1));
+    const byTitle = Object.fromEntries(parsed.eventos.map((row) => [row.title, row]));
+    assert.match(parsed.hoy, /miércoles 7 de octubre de 2026/);
+    assert.match(parsed.hoy, /sábado 10 de octubre de 2026/);
+    assert.match(parsed.hoy, /domingo 11 de octubre de 2026/);
+    assert.equal(byTitle["Operación Virus 3"].este_fin_de_semana, true);
+    assert.match(byTitle["Operación Virus 3"].cuando, /sábado 10 de octubre de 2026, 10:00/);
+    assert.equal(byTitle["Noche del domingo"].este_fin_de_semana, true);
+    assert.match(byTitle["Noche del domingo"].cuando, /domingo 11 de octubre de 2026, 23:00/);
+    assert.equal(byTitle["Viernes de día"].este_fin_de_semana, false);
+    assert.equal(byTitle["Viernes por la noche"].este_fin_de_semana, true);
+    assert.equal(byTitle["Esta noche"].es_hoy, true);
+    assert.match(byTitle["Esta noche"].cuando, /miércoles 7 de octubre de 2026, 20:00/);
+    assert.equal(byTitle["Mañana en la mañana"].es_manana, true);
+  });
 });
