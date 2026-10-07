@@ -50,7 +50,7 @@ async function api(method, path, body) {
 function agentBody(secretId, withHeader) {
   const customLlm = {
     url: LLM_URL,
-    model_id: process.env.JOULIE_MODEL || "z-ai/glm-5.3-flash",
+    model_id: process.env.JOULIE_MODEL || "google/gemini-2.5-flash",
     api_type: "chat_completions",
     api_key: { secret_id: secretId },
   };

@@ -11,7 +11,7 @@ const ELEVENLABS_MODEL = "eleven_flash_v2_5";
 const ELEVENLABS_MODELS = ["eleven_flash_v2_5", "eleven_turbo_v2_5"];
 
 const DEFAULTS = {
-  model: "z-ai/glm-5.3-flash",
+  model: "google/gemini-2.5-flash",
   maxTokens: 160,
   maxInput: 500,
   timeoutMs: 18000,
@@ -46,8 +46,7 @@ const PUBLIC_SELECTS = {
     "nombre, slug, ciudad, estado, tipo, descripcion, horarios_json, instagram, promedio_rating",
   teams:
     "nombre, slug, ciudad, estado, anio_fundacion, descripcion, historia, instagram, facebook",
-  replicas:
-    "nombre, sistema, mecanismo, condicion, ciudad, estado, descripcion, verificada, en_venta, users(alias, nombre)",
+  replicas: "id, sistema, mecanismo, upgrades",
   // El blog no tiene columna de tags: la categoría pública hace de etiqueta.
   posts: "title, slug, category, excerpt, content",
 };
@@ -268,18 +267,54 @@ function scrub(value, depth = 0) {
   return null;
 }
 
+// Una sola réplica no entra: alcanzaría para describir la de alguien.
+function arsenalReference(rows) {
+  const groups = new Map();
+  const mejoras = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    if (!row || typeof row !== "object") continue;
+    const sistema = typeof row.sistema === "string" ? row.sistema.trim() : "";
+    const mecanismo = typeof row.mecanismo === "string" ? row.mecanismo.trim() : "";
+    if (!sistema && !mecanismo) continue;
+    const key = `${sistema}\n${mecanismo}`;
+    const group = groups.get(key) || { sistema, mecanismo, n: 0 };
+    group.n += 1;
+    groups.set(key, group);
+    const seen = new Set();
+    for (const part of String(row.upgrades || "").split(/[,;\n|/]+/)) {
+      const mejora = part.trim().slice(0, 40);
+      const norm = mejora.toLowerCase();
+      if (mejora.length < 3 || seen.has(norm)) continue;
+      seen.add(norm);
+      const prev = mejoras.get(norm) || { mejora, n: 0 };
+      prev.n += 1;
+      mejoras.set(norm, prev);
+    }
+  }
+  const repeated = (map) =>
+    [...map.values()]
+      .filter((item) => item.n >= 2)
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 6);
+  return { replicas: repeated(groups), mejoras: repeated(mejoras) };
+}
+
 function shapeContext(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
+  const arsenal = arsenalReference(src.replicas);
   const datos = {
     eventos: listOf(src.eventos),
     campos: listOf(src.campos),
     equipos: listOf(src.equipos),
-    replicas: listOf(src.replicas),
+    replicas: arsenal.replicas,
+    mejoras: arsenal.mejoras,
     operadores: listOf(src.operadores),
     blog: listOf(src.blog),
   };
   while (JSON.stringify(datos).length > 2200) {
-    const key = ["blog", "replicas", "operadores", "equipos", "campos", "eventos"].find((name) => datos[name].length);
+    const key = ["blog", "mejoras", "replicas", "operadores", "equipos", "campos", "eventos"].find(
+      (name) => datos[name].length
+    );
     if (!key) break;
     datos[key].pop();
   }
@@ -300,6 +335,7 @@ function isEmptyContext(datos) {
     !datos.campos.length &&
     !datos.equipos.length &&
     !datos.replicas.length &&
+    !datos.mejoras.length &&
     !datos.operadores.length &&
     !datos.blog.length
   );
@@ -398,7 +434,8 @@ function systemPrompt(datos) {
   return [
     "Eres JOULIE, asistente de AirNation, airsoft en México. Tu respuesta se dice en voz alta: español de México, cálida, cercana y con gusto por el airsoft. Hablas de ti en femenino. A quien te escucha le hablas en neutro: nunca digas amiga ni amigo, ni supongas si es hombre o mujer.",
     "Responde en 2 o 3 frases cortas, sin emojis, sin markdown y sin listas. Puedes cerrar con una pregunta breve, como «¿Quieres que te diga dónde es?», solo si DATOS alcanza para contestarla.",
-    "Puedes orientar con conocimiento común de airsoft: elegir réplica (AEG, de gas o de muelle), CQB o campo abierto, presupuesto en rangos generales, FPS y julios, mejoras, mantenimiento, equipo, seguridad, reglas y modos de juego. Si DATOS trae réplicas, campos, eventos o un post del blog que vengan al caso, conéctalos.",
+    "Puedes orientar con conocimiento común de airsoft: elegir réplica (AEG, de gas o de muelle), CQB o campo abierto, presupuesto en rangos generales, FPS y julios, mejoras, mantenimiento, equipo, seguridad, reglas y modos de juego. Si DATOS trae campos, eventos o un post del blog que vengan al caso, conéctalos.",
+    "El arsenal en DATOS es un recuento de sistemas, mecanismos y mejoras que se repiten. No describas la réplica de una persona: ni nombre, ni ciudad, ni dueño, ni alias, ni su configuración.",
     "Si usas un post, resúmelo en tus palabras y puedes nombrarlo, por ejemplo «en el blog de AirNation hay una guía…».",
     "Si te preguntan algo de lo que ya hablaron, usa la conversación para saber a qué se refiere. Para decir dónde es un evento usa su sede o su campo, la ciudad y el estado cuando vengan en DATOS.",
     `Hoy en Ciudad de México: ${datos.hoy}. La fecha UTC de un evento puede caer en otro día: usa cuando, es_hoy, es_manana y este_fin_de_semana.`,
@@ -610,7 +647,7 @@ async function loadPublicContext(supabase, message) {
       );
       pushJob(
         "replicas",
-        supabase.from("arsenal").select(PUBLIC_SELECTS.replicas).or(filter(["nombre", "sistema"])).limit(4)
+        supabase.from("arsenal").select(PUBLIC_SELECTS.replicas).or(filter(["sistema", "mecanismo"])).limit(40)
       );
       pushJob("operadores", supabase.from("users").select("alias").or(filter(["alias"])).limit(3));
     }
@@ -636,7 +673,7 @@ async function loadPublicContext(supabase, message) {
       );
       pushJob(
         "replicas",
-        supabase.from("arsenal").select(PUBLIC_SELECTS.replicas).ilike("nombre", pattern).limit(4)
+        supabase.from("arsenal").select(PUBLIC_SELECTS.replicas).or(likeOr(["sistema", "mecanismo"], [form])).limit(40)
       );
     }
     const topics = blogTokens(message);
@@ -659,7 +696,7 @@ async function loadPublicContext(supabase, message) {
     const events = dedupe([...agenda, ...bucket.eventos], (row) => `${row.title}|${row.fecha}`);
     const fields = dedupe(bucket.campos, (row) => row.slug || row.nombre);
     const teams = dedupe(bucket.equipos, (row) => row.slug || row.nombre);
-    const replicas = dedupe(bucket.replicas, (row) => `${row.nombre}|${row.ciudad}|${row.sistema}`);
+    const replicas = dedupe(bucket.replicas, (row) => row.id || `${row.sistema}|${row.mecanismo}|${row.upgrades}`);
     const operadores = dedupe(
       bucket.operadores.map((row) => (row && row.alias ? { alias: row.alias } : null)).filter(Boolean),
       (row) => row.alias
@@ -712,11 +749,7 @@ function buildChatBody(messages, cfg, stream) {
     max_tokens: cfg.maxTokens,
     temperature: 0.3,
     stream: Boolean(stream),
-    // GLM 5.3 Flash no acepta apagar el razonamiento: low, high o max, y max es el
-    // default. max_tokens: 0 y enabled: false responden 400. low es el mínimo;
-    // exclude evita que el pensamiento viaje en la respuesta. Igual gasta parte
-    // de max_tokens, así que el primer token espera ese tramo corto.
-    reasoning: { effort: "low", exclude: true },
+    reasoning: { max_tokens: 0, exclude: true },
     provider: { sort: "latency" },
     messages,
   };
@@ -766,87 +799,7 @@ async function completeOpenRouter(messages, cfg) {
   }
   const json = await response.json();
   const content = json?.choices?.[0]?.message?.content;
-  return stripThinking(typeof content === "string" ? content : "");
-}
-
-const THINK_TAGS = [
-  ["<think>", "</think>"],
-  ["<|begin_of_thinking|>", "<|end_of_thinking|>"],
-];
-
-function stripThinking(text) {
-  return String(text || "")
-    .replace(/<think>[\s\S]*?<\/think>/gi, "")
-    .replace(/<\|begin_of_thinking\|>[\s\S]*?<\|end_of_thinking\|>/gi, "")
-    .replace(/<think>[\s\S]*$/gi, "")
-    .replace(/<\|begin_of_thinking\|>[\s\S]*$/gi, "");
-}
-
-// El pensamiento puede llegar partido. Solo sale lo que se dice.
-function openSpeech() {
-  let buf = "";
-  let close = "";
-  const held = () => {
-    const lower = buf.toLowerCase();
-    let keep = 0;
-    for (const [open] of THINK_TAGS) {
-      const max = Math.min(open.length - 1, lower.length);
-      for (let n = 1; n <= max; n++) {
-        if (open.startsWith(lower.slice(-n))) keep = Math.max(keep, n);
-      }
-    }
-    return keep;
-  };
-  const take = () => {
-    let said = "";
-    for (;;) {
-      const lower = buf.toLowerCase();
-      if (close) {
-        const end = lower.indexOf(close);
-        if (end < 0) {
-          buf = buf.slice(-close.length);
-          return said;
-        }
-        buf = buf.slice(end + close.length);
-        close = "";
-        continue;
-      }
-      let start = -1;
-      let open = "";
-      let endTag = "";
-      for (const [tag, end] of THINK_TAGS) {
-        const at = lower.indexOf(tag);
-        if (at >= 0 && (start < 0 || at < start)) {
-          start = at;
-          open = tag;
-          endTag = end;
-        }
-      }
-      if (start < 0) {
-        const cut = held();
-        const keepFrom = buf.length - cut;
-        said += buf.slice(0, keepFrom);
-        buf = buf.slice(keepFrom);
-        return said;
-      }
-      said += buf.slice(0, start);
-      buf = buf.slice(start + open.length);
-      close = endTag;
-    }
-  };
-  return {
-    push: (delta) => {
-      buf += delta;
-      return take();
-    },
-    end: () => {
-      if (close) return "";
-      const rest = buf;
-      buf = "";
-      const lower = rest.toLowerCase();
-      return THINK_TAGS.some(([open]) => open.startsWith(lower)) ? "" : rest;
-    },
-  };
+  return typeof content === "string" ? content : "";
 }
 
 function takeSentence(buffer) {
@@ -945,7 +898,6 @@ async function* iterateOpenRouter(messages, cfg, signal) {
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  const speech = openSpeech();
   let buf = "";
   while (true) {
     const { done, value } = await reader.read();
@@ -957,24 +909,16 @@ async function* iterateOpenRouter(messages, cfg, signal) {
       const trimmed = line.trim();
       if (!trimmed.startsWith("data:")) continue;
       const data = trimmed.slice(5).trim();
-      if (data === "[DONE]") {
-        const rest = speech.end();
-        if (rest) yield rest;
-        return;
-      }
+      if (data === "[DONE]") return;
       try {
         const json = JSON.parse(data);
         const delta = json?.choices?.[0]?.delta?.content;
-        if (typeof delta !== "string" || !delta) continue;
-        const said = speech.push(delta);
-        if (said) yield said;
+        if (typeof delta === "string" && delta) yield delta;
       } catch {
         /* fragmento incompleto */
       }
     }
   }
-  const rest = speech.end();
-  if (rest) yield rest;
 }
 
 async function pipeSentence(text, onChunk, signal, speakImpl) {
