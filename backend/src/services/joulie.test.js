@@ -621,6 +621,21 @@ describe("JOULIE", { concurrency: 1 }, () => {
     function answer(call) {
       const upcoming = call.filters.some((part) => part[0] === "gte" && part[1] === "fecha");
       if (call.table === "events") return upcoming ? [virus] : [];
+      if (call.table === "posts") {
+        const published = call.filters.some((part) => part[0] === "eq" && part[1] === "published" && part[2] === true);
+        const or = call.filters.find((part) => part[0] === "or");
+        if (!published || !or || !/replica|elegir/i.test(or[1])) return [];
+        return [
+          {
+            title: "Cómo elegir tu primera réplica",
+            slug: "elegir-replica",
+            category: "guias",
+            excerpt: "Una AEG es el camino corto para empezar.",
+            content: "<p>Correo secret@mail.com y el resto de la guía.</p>",
+            created_by: "22222222-2222-4222-8222-222222222222",
+          },
+        ];
+      }
       if (call.table !== "teams") return [];
       const or = call.filters.find((part) => part[0] === "or");
       if (or && /potosi/i.test(or[1])) {
@@ -940,5 +955,28 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(byTitle["Esta noche"].es_hoy, true);
     assert.match(byTitle["Esta noche"].cuando, /miércoles 7 de octubre de 2026, 20:00/);
     assert.equal(byTitle["Mañana en la mañana"].es_manana, true);
+  });
+
+  it("«ayúdame a elegir una réplica nueva» trae la guía publicada del blog", async () => {
+    const { calls, datos } = await datosFor("ayúdame a elegir una réplica nueva");
+    assert.match(datos, /Cómo elegir tu primera réplica/);
+    assert.match(datos, /https:\/\/www\.airnation\.online\/blog\/elegir-replica/);
+    assert.match(datos, /Una AEG es el camino corto para empezar/);
+    assert.match(datos, /en el blog de AirNation hay una guía/);
+    assert.equal(datos.includes("secret@mail.com"), false);
+    assert.equal(datos.includes("created_by"), false);
+    assert.equal(datos.includes("22222222-2222-4222-8222-222222222222"), false);
+    const post = calls.find((call) => call.table === "posts");
+    assert.equal(
+      post.filters.some((part) => part[0] === "eq" && part[1] === "published" && part[2] === true),
+      true
+    );
+    assert.equal(post.limit <= 2, true);
+    assert.equal(String(post.select).includes("created_by"), false);
+    const or = post.filters.find((part) => part[0] === "or")[1];
+    assert.match(or, /title\.ilike/);
+    assert.match(or, /category\.ilike/);
+    assert.match(or, /excerpt\.ilike/);
+    assert.match(or, /content\.ilike/);
   });
 });
