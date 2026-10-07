@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
-import JouliePageClient from './JouliePageClient'
+import dynamic from 'next/dynamic'
+
+const JouliePageClient = dynamic(() => import('./JouliePageClient'), { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Joulie',

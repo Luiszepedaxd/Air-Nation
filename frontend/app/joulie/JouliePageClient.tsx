@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
+import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
-import { primeJoulieAudio, speakJoulie, stopJoulieSpeech } from '@/lib/joulie-speak'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
 
@@ -19,6 +19,8 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const GREETING =
   'Hola, soy JOULIE, la asistente de AirNation. Te ayudo con eventos, campos, réplicas y equipos.'
 
+const UNAVAILABLE = 'Joulie no está disponible por ahora.'
+
 type Turn = { role: 'user' | 'assistant'; content: string }
 type Mode = 'voice' | 'text'
 
@@ -30,29 +32,6 @@ const PHASE_LABEL: Record<JouliePhase, string> = {
   listening: 'Escuchando',
   thinking: 'Pensando',
   speaking: 'Hablando',
-}
-
-type RecogResult = { isFinal: boolean } & ArrayLike<{ transcript: string }>
-
-type Recog = {
-  lang: string
-  interimResults: boolean
-  continuous: boolean
-  maxAlternatives: number
-  start: () => void
-  stop: () => void
-  onresult: ((ev: { results: ArrayLike<RecogResult> }) => void) | null
-  onerror: ((ev: { error?: string }) => void) | null
-  onend: (() => void) | null
-}
-
-function recognitionCtor(): (new () => Recog) | null {
-  if (typeof window === 'undefined') return null
-  const w = window as Window & {
-    SpeechRecognition?: new () => Recog
-    webkitSpeechRecognition?: new () => Recog
-  }
-  return w.SpeechRecognition || w.webkitSpeechRecognition || null
 }
 
 function RoundButton({
@@ -119,251 +98,186 @@ function SendIcon() {
 }
 
 export default function JouliePageClient() {
+  return (
+    <ConversationProvider>
+      <JoulieLive />
+    </ConversationProvider>
+  )
+}
+
+function JoulieLive() {
   const router = useRouter()
   const [enabled, setEnabled] = useState<boolean | null>(null)
   const [consent, setConsent] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [mode, setMode] = useState<Mode>('voice')
   const [phase, setPhase] = useState<JouliePhase>('idle')
   const [level, setLevel] = useState(0)
   const [caption, setCaption] = useState('Toca para hablar')
   const [liveOn, setLiveOn] = useState(false)
   const [muted, setMuted] = useState(false)
-  const [mode, setMode] = useState<Mode>('voice')
-  const [draft, setDraft] = useState('')
   const [turns, setTurns] = useState<Turn[]>(sessionTurns)
-  const [canListen, setCanListen] = useState(false)
-
-  const liveRef = useRef(false)
-  const mutedRef = useRef(false)
-  const modeRef = useRef<Mode>('voice')
-  const holdRef = useRef(false)
-  const busy = useRef(false)
-  const ticket = useRef(0)
-  const phaseRef = useRef<JouliePhase>('idle')
-  const recogRef = useRef<Recog | null>(null)
-  const meterStop = useRef<(() => void) | null>(null)
-  const restartTimer = useRef<number | null>(null)
-  const meterOk = useRef(true)
+  const [draft, setDraft] = useState('')
+  const waiting = useRef(false)
   const listRef = useRef<HTMLDivElement>(null)
-  const beginListenRef = useRef<() => void>(() => {})
-
-  useEffect(() => {
-    phaseRef.current = phase
-  }, [phase])
+  const busy = useRef(false)
+  const conversation = useConversation({
+    micMuted: muted,
+    onMessage: (payload) => {
+      if (!payload.message) return
+      setCaption(payload.message)
+      if (payload.source === 'user') {
+        waiting.current = true
+        setPhase('thinking')
+      }
+    },
+    onError: () => {
+      setCaption('No pude conectar la voz. Intenta de nuevo.')
+      setPhase('idle')
+      setLiveOn(false)
+    },
+    onDisconnect: () => {
+      waiting.current = false
+      setLiveOn(false)
+      setPhase('idle')
+      setLevel(0)
+    },
+  })
+  const { status, mode: agentMode, startSession, endSession, sendUserActivity, getInputVolume, getOutputVolume } =
+    conversation
+  const endRef = useRef(endSession)
+  endRef.current = endSession
 
   useEffect(() => {
     setMounted(true)
-    setCanListen(recognitionCtor() != null)
-    let cancel = false
-    void supabase
+    setConsent(!sessionAccepted)
+    let cancelled = false
+    supabase
       .from('joulie_config')
       .select('enabled')
       .eq('id', 'singleton')
       .maybeSingle()
-      .then(({ data, error }) => {
-        if (cancel) return
-        if (error || !data || typeof data.enabled !== 'boolean') setEnabled(true)
-        else setEnabled(data.enabled)
+      .then(({ data }) => {
+        if (!cancelled) setEnabled(data?.enabled !== false)
       })
     return () => {
-      cancel = true
+      cancelled = true
+      endRef.current()
     }
   }, [])
 
   useEffect(() => {
-    if (enabled === true && !sessionAccepted) setConsent(true)
-  }, [enabled])
-
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
-  }, [turns, mode])
-
-  function clearRestart() {
-    if (restartTimer.current != null) {
-      window.clearTimeout(restartTimer.current)
-      restartTimer.current = null
-    }
-  }
-
-  function stopMeterStream() {
-    meterStop.current?.()
-    meterStop.current = null
-  }
-
-  function stopRecog() {
-    clearRestart()
-    const recog = recogRef.current
-    recogRef.current = null
-    if (!recog) return
-    recog.onresult = null
-    recog.onerror = null
-    recog.onend = null
-    try {
-      recog.stop()
-    } catch {
-      /* ya estaba detenido */
-    }
-  }
-
-  function startMeter() {
-    stopMeterStream()
-    const devices = navigator.mediaDevices
-    if (!devices?.getUserMedia) return
-    void devices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        if (!liveRef.current || mutedRef.current || holdRef.current || modeRef.current !== 'voice') {
-          stream.getTracks().forEach((track) => track.stop())
-          return
-        }
-        const Ctx =
-          window.AudioContext ||
-          (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-        if (!Ctx) {
-          stream.getTracks().forEach((track) => track.stop())
-          return
-        }
-        const ctx = new Ctx()
-        const source = ctx.createMediaStreamSource(stream)
-        const analyser = ctx.createAnalyser()
-        analyser.fftSize = 256
-        source.connect(analyser)
-        const bins = new Uint8Array(analyser.frequencyBinCount)
-        let frame = 0
-        const tick = () => {
-          analyser.getByteFrequencyData(bins)
-          let sum = 0
-          for (let i = 0; i < bins.length; i++) sum += bins[i]
-          setLevel(sum / bins.length / 255)
-          frame = requestAnimationFrame(tick)
-        }
-        frame = requestAnimationFrame(tick)
-        meterStop.current = () => {
-          cancelAnimationFrame(frame)
-          stream.getTracks().forEach((track) => track.stop())
-          void ctx.close().catch(() => undefined)
-        }
-      })
-      .catch(() => undefined)
-  }
-
-  function scheduleListen() {
-    clearRestart()
-    restartTimer.current = window.setTimeout(() => {
-      restartTimer.current = null
-      beginListenRef.current()
-    }, 280)
-  }
-
-  function beginListen() {
-    if (!liveRef.current || mutedRef.current || modeRef.current !== 'voice' || holdRef.current) return
-    const Ctor = recognitionCtor()
-    if (!Ctor) {
-      setPhase('idle')
-      setLevel(0)
-      setCaption('Puedes escribirme. El micrófono no está disponible en este navegador.')
+    if (status === 'connecting') {
+      setPhase('thinking')
       return
     }
-    if (recogRef.current) return
-    const recog = new Ctor()
-    recog.lang = 'es-MX'
-    recog.interimResults = true
-    recog.continuous = false
-    recog.maxAlternatives = 1
-    recogRef.current = recog
-    setPhase('listening')
-    setLevel(0)
-    setCaption('Te escucho')
-    const withMeter = meterOk.current
-    if (withMeter) startMeter()
-    let gotFinal = false
-    let blocked: 'denied' | 'capture' | null = null
-    recog.onresult = (ev) => {
-      let interim = ''
-      let finalText = ''
-      const results = ev.results
-      for (let i = 0; i < results.length; i++) {
-        const row = results[i]
-        const said = row?.[0]?.transcript || ''
-        if (row?.isFinal) finalText += said
-        else interim += said
-      }
-      if (interim.trim()) setCaption(interim.trim())
-      const heard = finalText.trim()
-      if (!heard) return
-      gotFinal = true
-      setCaption(heard)
-      void ask(heard)
+    if (status !== 'connected') return
+    if (agentMode === 'speaking') {
+      waiting.current = false
+      setPhase('speaking')
+      return
     }
-    recog.onerror = (ev) => {
-      if (ev.error === 'not-allowed') blocked = 'denied'
-      if (ev.error === 'audio-capture') blocked = 'capture'
+    if (!waiting.current) setPhase('listening')
+  }, [status, agentMode])
+
+  useEffect(() => {
+    if (status !== 'connected') return
+    let frame = 0
+    const tick = () => {
+      const next = agentMode === 'speaking' ? getOutputVolume() : getInputVolume()
+      setLevel(Number.isFinite(next) ? next : 0)
+      frame = requestAnimationFrame(tick)
     }
-    recog.onend = () => {
-      if (recogRef.current !== recog) return
-      recogRef.current = null
-      stopMeterStream()
-      if (gotFinal || holdRef.current) return
-      if (blocked === 'capture' && withMeter) {
-        meterOk.current = false
-        scheduleListen()
-        return
-      }
-      if (blocked === 'denied' || blocked === 'capture') {
-        setPhase('idle')
-        setLevel(0)
-        setCaption('No pude usar el micrófono. Puedes escribirme.')
-        return
-      }
-      if (liveRef.current && !mutedRef.current && modeRef.current === 'voice') scheduleListen()
-      else setPhase('idle')
-    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [status, agentMode, getInputVolume, getOutputVolume])
+
+  useEffect(() => {
+    const list = listRef.current
+    if (list) list.scrollTop = list.scrollHeight
+  }, [turns, mode])
+
+  async function beginVoice() {
+    if (busy.current) return
+    busy.current = true
+    waiting.current = false
+    setPhase('thinking')
+    setCaption(GREETING)
+    setLiveOn(true)
     try {
-      recog.start()
+      const res = await apiFetch('/joulie/sesion', { method: 'POST', body: '{}' })
+      const data = (await res.json().catch(() => ({}))) as { token?: string; session?: string; error?: string }
+      if (!res.ok || !data.token || !data.session) {
+        setCaption(data.error || UNAVAILABLE)
+        setPhase('idle')
+        setLiveOn(false)
+        return
+      }
+      await Promise.resolve(
+        startSession({
+          conversationToken: data.token,
+          connectionType: 'webrtc',
+          dynamicVariables: { joulie_session: data.session },
+          overrides: { agent: { firstMessage: GREETING, language: 'es' } },
+        })
+      )
     } catch {
-      recogRef.current = null
-      stopMeterStream()
+      setCaption('No pude conectar la voz. Intenta de nuevo.')
       setPhase('idle')
+      setLiveOn(false)
+    } finally {
+      busy.current = false
     }
   }
 
-  beginListenRef.current = beginListen
+  function acceptConsent() {
+    sessionAccepted = true
+    setConsent(false)
+    void beginVoice()
+  }
 
-  useEffect(() => {
-    return () => {
-      liveRef.current = false
-      holdRef.current = false
-      ticket.current += 1
-      clearRestart()
-      const recog = recogRef.current
-      recogRef.current = null
-      if (recog) {
-        recog.onresult = null
-        recog.onerror = null
-        recog.onend = null
-        try {
-          recog.stop()
-        } catch {
-          /* ya estaba detenido */
-        }
-      }
-      meterStop.current?.()
-      meterStop.current = null
-      stopJoulieSpeech()
+  function startLive() {
+    if (!sessionAccepted) {
+      setConsent(true)
+      return
     }
-  }, [])
+    if (status === 'connected' && (phase === 'speaking' || phase === 'thinking')) {
+      sendUserActivity()
+      return
+    }
+    if (status === 'disconnected' || status === 'error') void beginVoice()
+  }
+
+  function endLive() {
+    endSession()
+    waiting.current = false
+    setLiveOn(false)
+    setMuted(false)
+    setPhase('idle')
+    setLevel(0)
+    setCaption('Toca para hablar')
+  }
+
+  function openText() {
+    endSession()
+    setLiveOn(false)
+    setPhase('idle')
+    setLevel(0)
+    setMode('text')
+  }
+
+  function backToVoice() {
+    setMode('voice')
+    setCaption('Toca para hablar')
+    setPhase('idle')
+  }
 
   async function ask(raw: string) {
     const message = raw.trim()
     if (!message || busy.current) return
     busy.current = true
-    holdRef.current = true
-    const mine = ++ticket.current
-    stopRecog()
-    stopMeterStream()
-    stopJoulieSpeech()
     setPhase('thinking')
-    setLevel(0)
+    setCaption(message)
     const history = sessionTurns.slice(-6)
     const next = [...sessionTurns, { role: 'user' as const, content: message }].slice(-12)
     sessionTurns = next
@@ -380,146 +294,12 @@ export default function JouliePageClient() {
     } catch {
       reply = 'Ahora no puedo responder. Intenta de nuevo en un momento.'
     }
-    if (mine !== ticket.current) {
-      busy.current = false
-      holdRef.current = false
-      return
-    }
     const withReply = [...sessionTurns, { role: 'assistant' as const, content: reply }].slice(-12)
     sessionTurns = withReply
     setTurns(withReply)
     setCaption(reply)
-    setPhase('thinking')
-    speakJoulie(reply, {
-      onStart: () => {
-        if (mine === ticket.current) setPhase('speaking')
-      },
-      onLevel: (value) => {
-        if (mine === ticket.current) setLevel(value)
-      },
-      onEnd: () => {
-        if (mine !== ticket.current) return
-        busy.current = false
-        holdRef.current = false
-        setLevel(0)
-        if (liveRef.current && !mutedRef.current && modeRef.current === 'voice') beginListenRef.current()
-        else setPhase('idle')
-      },
-    })
-  }
-
-  function endLive() {
-    ticket.current += 1
-    busy.current = false
-    holdRef.current = false
-    liveRef.current = false
-    mutedRef.current = false
-    stopRecog()
-    stopMeterStream()
-    stopJoulieSpeech()
-    setLiveOn(false)
-    setMuted(false)
     setPhase('idle')
-    setLevel(0)
-    setCaption('Toca para hablar')
-  }
-
-  function startLive() {
-    if (!sessionAccepted) {
-      setConsent(true)
-      return
-    }
-    if (liveRef.current && (phaseRef.current === 'speaking' || phaseRef.current === 'thinking')) {
-      ticket.current += 1
-      busy.current = false
-      holdRef.current = false
-      stopJoulieSpeech()
-      stopRecog()
-      beginListen()
-      return
-    }
-    if (liveRef.current) return
-    primeJoulieAudio()
-    liveRef.current = true
-    mutedRef.current = false
-    modeRef.current = 'voice'
-    setMode('voice')
-    setLiveOn(true)
-    setMuted(false)
-    beginListen()
-  }
-
-  function toggleMute() {
-    const next = !mutedRef.current
-    mutedRef.current = next
-    setMuted(next)
-    if (next) {
-      stopRecog()
-      stopMeterStream()
-      setLevel(0)
-      if (!holdRef.current) {
-        setPhase('idle')
-        setCaption('Micrófono silenciado')
-      }
-      return
-    }
-    if (liveRef.current && !holdRef.current && modeRef.current === 'voice') beginListen()
-  }
-
-  function openText() {
-    modeRef.current = 'text'
-    setMode('text')
-    stopRecog()
-    stopMeterStream()
-    setLevel(0)
-    if (!holdRef.current) setPhase('idle')
-  }
-
-  function backToVoice() {
-    primeJoulieAudio()
-    modeRef.current = 'voice'
-    setMode('voice')
-    liveRef.current = true
-    mutedRef.current = false
-    setLiveOn(true)
-    setMuted(false)
-    if (!holdRef.current) beginListen()
-  }
-
-  function acceptConsent() {
-    primeJoulieAudio()
-    sessionAccepted = true
-    setConsent(false)
-    const next = [...sessionTurns, { role: 'assistant' as const, content: GREETING }].slice(-12)
-    sessionTurns = next
-    setTurns(next)
-    modeRef.current = 'voice'
-    setMode('voice')
-    liveRef.current = true
-    mutedRef.current = false
-    setLiveOn(true)
-    setMuted(false)
-    holdRef.current = true
-    busy.current = true
-    const mine = ++ticket.current
-    setCaption(GREETING)
-    setPhase('thinking')
-    speakJoulie(GREETING, {
-      onStart: () => {
-        if (mine === ticket.current) setPhase('speaking')
-      },
-      onLevel: (value) => {
-        if (mine === ticket.current) setLevel(value)
-      },
-      onEnd: () => {
-        if (mine !== ticket.current) return
-        busy.current = false
-        holdRef.current = false
-        setLevel(0)
-        if (liveRef.current && !mutedRef.current && modeRef.current === 'voice') beginListenRef.current()
-        else setPhase('idle')
-      },
-    })
+    busy.current = false
   }
 
   const frame = 'flex h-[calc(100dvh-4rem-12px)] flex-col bg-[#F4F4F4] lg:h-[calc(100dvh-4rem)]'
@@ -530,7 +310,7 @@ export default function JouliePageClient() {
     return (
       <div className={`${frame} items-center justify-center px-6`}>
         <p className="text-center text-[15px] leading-relaxed text-[#666666]" style={lato}>
-          Joulie no está disponible por ahora.
+          {UNAVAILABLE}
         </p>
       </div>
     )
@@ -550,7 +330,7 @@ export default function JouliePageClient() {
                 Joulie en beta
               </h2>
               <p style={lato} className="mt-3 text-[13px] leading-relaxed text-[#666666]">
-                Estoy en beta. El texto lo responde un proveedor de inteligencia artificial y la voz puede salir de un servicio de voz. Si no está disponible, habla este dispositivo.
+                Estoy en beta. El texto lo responde un proveedor de inteligencia artificial y la voz, un servicio de voz.
               </p>
               <p style={lato} className="mt-2 text-[13px] leading-relaxed text-[#666666]">
                 No compartas datos personales. No guardo esta conversación: se pierde al cerrar o recargar la página.
@@ -591,10 +371,7 @@ export default function JouliePageClient() {
               <MicIcon />
             </RoundButton>
           </div>
-          <div className="flex justify-center py-2">
-            <JoulieAvatar phase={phase} level={level} size={88} label={PHASE_LABEL[phase]} />
-          </div>
-          <div ref={listRef} className="flex-1 space-y-4 overflow-y-auto px-5 pb-4">
+          <div ref={listRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
             {turns.length === 0 ? (
               <p className="text-center text-[15px] leading-relaxed text-[#666666]" style={lato}>
                 Pregúntame por eventos, réplicas, campos o equipos.
@@ -672,7 +449,7 @@ export default function JouliePageClient() {
         </div>
         <div className="flex items-center justify-center gap-8 pb-8">
           {liveOn ? (
-            <RoundButton label={muted ? 'Activar micrófono' : 'Silenciar micrófono'} onClick={toggleMute}>
+            <RoundButton label={muted ? 'Activar micrófono' : 'Silenciar micrófono'} onClick={() => setMuted((value) => !value)}>
               <MicIcon off={muted} />
             </RoundButton>
           ) : null}
@@ -685,9 +462,6 @@ export default function JouliePageClient() {
             <KeyboardIcon />
           </RoundButton>
         </div>
-        {!canListen && !liveOn ? (
-          <p className="sr-only">Puedes escribirme. El micrófono no está disponible en este navegador.</p>
-        ) : null}
       </div>
       {consentModal}
     </>
