@@ -7,19 +7,18 @@
  */
 const crypto = require("crypto");
 const DEFAULT_ELEVENLABS_VOICE_ID = "kcQkGnn0HAT2JRDQ4Ljp";
-const ELEVENLABS_MODEL = "eleven_flash_v2_5";
 const ELEVENLABS_MODELS = ["eleven_flash_v2_5", "eleven_turbo_v2_5"];
 
 const DEFAULTS = {
   model: "google/gemini-2.5-flash",
-  maxTokens: 160,
+  maxTokens: 70,
   maxInput: 500,
   timeoutMs: 18000,
   perMinute: 8,
   dailyCap: 40,
   voicePerMinute: 30,
   voiceDailyCap: 120,
-  dailyMinutes: 15,
+  dailyMinutes: 5,
   sessionTtlMs: 20 * 60 * 1000,
   historyTurns: 6,
   webSession: 3,
@@ -37,7 +36,7 @@ const COPY = {
     "Hola, soy Joulie. Estoy lista para ayudarte con eventos, réplicas, campos y equipos de airsoft en AirNation.",
   who:
     "Soy Joulie. Estoy lista para ayudarte con lo publicado en AirNation: eventos, réplicas, campos y equipos de airsoft.",
-  bye: "Listo. Cuando quieras, aquí sigo para lo de airsoft en AirNation.",
+  bye: "Listo. Aquí te dejo.",
   unavailable: "Joulie no está disponible por ahora.",
   looking: "Déjame buscar opciones.",
 };
@@ -111,8 +110,6 @@ const STOP = new Set(
     ","
   )
 );
-
-let warnedMissingVoiceKey = false;
 
 function intEnv(name, fallback) {
   const raw = process.env[name];
@@ -687,7 +684,7 @@ function wantsWebOptions(message) {
 function systemPrompt(datos, web) {
   return [
     "Eres JOULIE, asistente de AirNation, airsoft en México. Tu respuesta se dice en voz alta: español de México, cálida, cercana y con gusto por el airsoft. Hablas de ti en femenino. A quien te escucha le hablas en neutro: nunca digas amiga ni amigo, ni supongas si es hombre o mujer.",
-    "Responde en 2 o 3 frases cortas, sin emojis, sin markdown y sin listas. Puedes cerrar con una pregunta breve, como «¿Quieres que te diga dónde es?», solo si DATOS alcanza para contestarla.",
+    "Responde en 1 o 2 frases cortas, sin emojis, sin markdown y sin listas. Si piden el detalle de un evento (trama, horario, precio o lugar), puedes usar hasta 3 frases. Puedes cerrar con una pregunta breve, como «¿Quieres que te diga dónde es?», solo si DATOS alcanza para contestarla.",
     "Puedes orientar con conocimiento común de airsoft: elegir réplica (AEG, de gas o de muelle), CQB o campo abierto, presupuesto en rangos generales, FPS y julios, mejoras, mantenimiento, equipo, seguridad, reglas y modos de juego. Si DATOS trae campos, eventos o un post del blog que vengan al caso, conéctalos.",
     "El arsenal en DATOS es un recuento de sistemas, mecanismos y mejoras que se repiten. No describas la réplica de una persona: ni nombre, ni ciudad, ni dueño, ni alias, ni su configuración. tu_arsenal, si viene, son solo las réplicas de quien te escucha: esas sí puedes nombrar y recomendar, por ejemplo para un evento. replicas y mejoras siguen siendo el recuento de AirNation.",
     web
@@ -1454,70 +1451,6 @@ function warnVoiceStatus(status) {
   }
 }
 
-async function synthesizeSpeech(opts) {
-  const cfg = opts.limits || resolveConfig();
-  const text = typeof opts.text === "string" ? opts.text.trim() : "";
-  if (!(await readEnabled(opts.supabase, opts.enabled))) {
-    return { status: 503, error: COPY.unavailable };
-  }
-  if (!text) return { status: 400, error: COPY.empty };
-  if (text.length > cfg.maxInput) return { status: 400, error: COPY.tooLong };
-
-  const limiter = opts.limiter;
-  if (
-    limiter &&
-    !limiter.allow({
-      userId: String(opts.userId || ""),
-      ip: String(opts.ip || ""),
-      now: opts.now || Date.now(),
-      perMinute: cfg.perMinute,
-      dailyCap: cfg.dailyCap,
-    })
-  ) {
-    return { status: 429, error: COPY.limited };
-  }
-
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
-    if (!warnedMissingVoiceKey) {
-      warnedMissingVoiceKey = true;
-      console.warn("[joulie] falta ELEVENLABS_API_KEY; voz del dispositivo");
-    }
-    return { status: 503, fallback: true };
-  }
-
-  const id = voiceId();
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(id)}/stream?optimize_streaming_latency=4&output_format=mp3_22050_32`;
-  const call = opts.fetchImpl || fetch;
-  try {
-    const response = await call(url, {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-        Accept: "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text: text.slice(0, cfg.maxInput),
-        model_id: ELEVENLABS_MODEL,
-        language_code: "es",
-        voice_settings: { stability: 0.45, similarity_boost: 0.75, style: 0, use_speaker_boost: false },
-      }),
-      signal: AbortSignal.timeout(cfg.timeoutMs),
-    });
-    if (!response.ok) {
-      warnVoiceStatus(response.status);
-      return { status: 503, fallback: true };
-    }
-    const audio = Buffer.from(await response.arrayBuffer());
-    if (!audio.length) return { status: 503, fallback: true };
-    return { status: 200, audio, contentType: "audio/mpeg" };
-  } catch {
-    console.info("[joulie] tts fail");
-    return { status: 503, fallback: true };
-  }
-}
-
 function sessionSecret() {
   return strEnv("JOULIE_ELEVEN_LLM_SECRET", "");
 }
@@ -1688,6 +1621,24 @@ function createVoiceBudget() {
   return { canStart, begin, touch, liveMs };
 }
 
+// ponytail: el rol no cambia en medio de una llamada. 60 s evita pegarle a users en cada turno.
+const adminCache = new Map();
+
+async function isAppAdmin(supabase, userId) {
+  const id = String(userId || "");
+  if (!id || !supabase) return false;
+  const hit = adminCache.get(id);
+  if (hit && Date.now() - hit.at < 60_000) return hit.value;
+  try {
+    const { data, error } = await supabase.from("users").select("app_role").eq("id", id).maybeSingle();
+    const value = !error && !!data && data.app_role === "admin";
+    adminCache.set(id, { value, at: Date.now() });
+    return value;
+  } catch {
+    return false;
+  }
+}
+
 async function mintConversation(opts) {
   const secret = opts.secret || sessionSecret();
   const agentId = opts.agentId || strEnv("JOULIE_ELEVEN_AGENT_ID", "");
@@ -1698,7 +1649,8 @@ async function mintConversation(opts) {
   const cfg = opts.limits || resolveConfig();
   const now = opts.now || Date.now();
   const userId = String(opts.userId || "");
-  if (opts.budget && !opts.budget.canStart(userId, now, cfg.dailyMinutes)) {
+  const admin = await isAppAdmin(opts.supabase, userId);
+  if (opts.budget && !admin && !opts.budget.canStart(userId, now, cfg.dailyMinutes)) {
     return { status: 429, error: COPY.limited };
   }
   if (
@@ -1780,7 +1732,8 @@ async function runCustomLlm(opts, write) {
     speak("No pude validar la sesión. Entra de nuevo a Joulie.");
     return { status: 200, reply: "No pude validar la sesión. Entra de nuevo a Joulie." };
   }
-  if (opts.budget && !opts.budget.touch(sessionToken, session.userId, now, cfg.dailyMinutes)) {
+  const admin = await isAppAdmin(opts.supabase, session.userId);
+  if (opts.budget && !admin && !opts.budget.touch(sessionToken, session.userId, now, cfg.dailyMinutes)) {
     speak(COPY.limited);
     return { status: 200, reply: COPY.limited };
   }
@@ -1856,7 +1809,6 @@ module.exports = {
   COPY,
   DEFAULTS,
   DEFAULT_ELEVENLABS_VOICE_ID,
-  ELEVENLABS_MODEL,
   PUBLIC_SELECTS,
   buildChatBody,
   createLimiter,
@@ -1871,7 +1823,6 @@ module.exports = {
   shapeContext,
   signSession,
   streamJoulie,
-  synthesizeSpeech,
   verifySession,
   voiceId,
   wantsWebOptions,

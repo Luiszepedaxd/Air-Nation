@@ -10,8 +10,7 @@ const API = "https://api.elevenlabs.io/v1";
 const NAME = "JOULIE";
 const SECRET_NAME = "JOULIE_LLM";
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "kcQkGnn0HAT2JRDQ4Ljp";
-const GREETING =
-  "Hola, soy JOULIE, la asistente de AirNation. Te ayudo con eventos, campos, réplicas y equipos.";
+const GREETING = "Hola, soy JOULIE. ¿En qué te ayudo?";
 // URL base: ElevenLabs le agrega /chat/completions al llamar.
 const LLM_URL =
   process.env.JOULIE_LLM_PUBLIC_URL || "https://air-nation-production.up.railway.app/api/v1/joulie/llm";
@@ -66,12 +65,13 @@ function agentBody(secretId, withHeader) {
         first_message: GREETING,
         language: "es",
         disable_first_message_interruptions: false,
+        max_conversation_duration_message: "Listo. Aquí te dejo.",
         prompt: {
           prompt:
             "Eres JOULIE. El servidor de AirNation reemplaza este texto. Marca j9s:{{joulie_session}}.",
           llm: "custom-llm",
           temperature: 0.3,
-          max_tokens: 140,
+          max_tokens: 70,
           custom_llm: customLlm,
           // Sin LLM de respaldo: respondería sin los datos ni las reglas del servidor.
           backup_llm_config: { preference: "disabled" },
@@ -88,9 +88,10 @@ function agentBody(secretId, withHeader) {
         turn_eagerness: "eager",
         turn_timeout: 5,
         speculative_turn: true,
+        silence_end_call_timeout: 20,
       },
       conversation: {
-        max_duration_seconds: 600,
+        max_duration_seconds: 180,
       },
     },
     platform_settings: {

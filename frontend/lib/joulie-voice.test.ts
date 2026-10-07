@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { TALK_START, VAD_HOLD_MS, hearingNow, outputLevel, pickJoulieVoice, trackTalk, voiceFace } from './joulie-voice.ts'
+import { CALL_BYE_MS, CALL_LIMIT_MS, TALK_START, VAD_HOLD_MS, callClock, hearingNow, outputLevel, pickJoulieVoice, shouldHangUp, trackTalk, voiceFace } from './joulie-voice.ts'
 
 describe('voz de Joulie', () => {
   it('prefiere es-MX femenina, luego es-US femenina, luego cualquier es femenina', () => {
@@ -60,5 +60,15 @@ describe('voz de Joulie', () => {
     assert.equal(hearingNow(false, 1000, 1000 + VAD_HOLD_MS - 1, false), true)
     assert.equal(hearingNow(false, 1000, 1000 + VAD_HOLD_MS, false), false)
     assert.equal(hearingNow(true, 1000, 1000, true), false, 'el micrófono silenciado no cuenta')
+  })
+
+  it('cuelga a los 180 s y al oír el límite o la despedida', () => {
+    assert.equal(CALL_LIMIT_MS, 180_000)
+    assert.equal(callClock(CALL_BYE_MS - 1), 'open')
+    assert.equal(callClock(CALL_BYE_MS), 'bye')
+    assert.equal(callClock(CALL_LIMIT_MS), 'end')
+    assert.equal(shouldHangUp('Llegaste al límite de preguntas por ahora. Intenta más tarde.'), true)
+    assert.equal(shouldHangUp('Listo. Aquí te dejo.'), true)
+    assert.equal(shouldHangUp('Hola, soy JOULIE. ¿En qué te ayudo?'), false)
   })
 })

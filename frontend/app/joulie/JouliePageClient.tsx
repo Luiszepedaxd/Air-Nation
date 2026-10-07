@@ -7,7 +7,7 @@ import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
-import { TALK_START, hearingNow, outputLevel, trackTalk, voiceFace } from '@/lib/joulie-voice'
+import { TALK_START, callClock, hearingNow, outputLevel, shouldHangUp, trackTalk, voiceFace } from '@/lib/joulie-voice'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -17,8 +17,7 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
-const GREETING =
-  'Hola, soy JOULIE, la asistente de AirNation. Te ayudo con eventos, campos, réplicas y equipos.'
+const GREETING = 'Hola, soy JOULIE. ¿En qué te ayudo?'
 
 const UNAVAILABLE = 'Joulie no está disponible por ahora.'
 
@@ -126,6 +125,8 @@ function JoulieLive() {
   const busy = useRef(false)
   const vadAt = useRef(0)
   const nudged = useRef(false)
+  const byeSent = useRef(false)
+  const [hangup, setHangup] = useState(false)
   const conversation = useConversation({
     micMuted: muted,
     onVadScore: ({ vadScore }) => {
@@ -146,6 +147,7 @@ function JoulieLive() {
           : [...sessionTurns, { role, content }].slice(-12)
         sessionTurns = next
         setTurns(next)
+        if (role === 'assistant' && shouldHangUp(content)) setHangup(true)
       }
       if (payload.source === 'user') {
         waiting.current = true
@@ -159,6 +161,8 @@ function JoulieLive() {
     },
     onDisconnect: () => {
       waiting.current = false
+      byeSent.current = false
+      setHangup(false)
       setLiveOn(false)
       setPhase('idle')
       setLevel(0)
@@ -169,6 +173,7 @@ function JoulieLive() {
     mode: agentMode,
     startSession,
     endSession,
+    sendUserMessage,
     sendUserActivity,
     getInputVolume,
     getOutputVolume,
@@ -208,6 +213,30 @@ function JoulieLive() {
     }
     if (!waiting.current) setPhase('listening')
   }, [status, agentMode])
+
+  useEffect(() => {
+    if (!hangup || status !== 'connected') return
+    if (agentMode === 'speaking') return
+    const timer = window.setTimeout(() => endRef.current(), 400)
+    return () => window.clearTimeout(timer)
+  }, [hangup, agentMode, status])
+
+  useEffect(() => {
+    if (status !== 'connected') return
+    const started = Date.now()
+    const timer = window.setInterval(() => {
+      const clock = callClock(Date.now() - started)
+      if (clock === 'end') {
+        endRef.current()
+        return
+      }
+      if (clock === 'bye' && !byeSent.current) {
+        byeSent.current = true
+        sendUserMessage('ya me voy')
+      }
+    }, 500)
+    return () => window.clearInterval(timer)
+  }, [status, sendUserMessage])
 
   useEffect(() => {
     if (status !== 'connected') return

@@ -3,8 +3,6 @@ const { afterEach, describe, it } = require("node:test");
 const {
   COPY,
   DEFAULTS,
-  DEFAULT_ELEVENLABS_VOICE_ID,
-  ELEVENLABS_MODEL,
   PUBLIC_SELECTS,
   buildChatBody,
   createLimiter,
@@ -18,7 +16,6 @@ const {
   runCustomLlm,
   signSession,
   streamJoulie,
-  synthesizeSpeech,
   verifySession,
   wantsWebOptions,
 } = require("./joulie");
@@ -262,8 +259,12 @@ describe("JOULIE", { concurrency: 1 }, () => {
 
   it("el modelo queda fijo en el servidor", () => {
     delete process.env.JOULIE_MODEL;
+    delete process.env.JOULIE_DAILY_MINUTES;
+    delete process.env.JOULIE_MAX_OUTPUT_TOKENS;
     assert.equal(resolveConfig().model, "google/gemini-2.5-flash");
     assert.notEqual(resolveConfig().model, "anthropic/claude-haiku-4.5");
+    assert.equal(resolveConfig().maxTokens, 70);
+    assert.equal(resolveConfig().dailyMinutes, 5);
   });
 
   it("apagada, no llama al modelo", async () => {
@@ -280,114 +281,6 @@ describe("JOULIE", { concurrency: 1 }, () => {
     );
     assert.equal(called, false);
     assert.equal(result.error, COPY.unavailable);
-  });
-
-  it("la voz usa a Norah y no acepta otra voz del cliente", async () => {
-    delete process.env.ELEVENLABS_VOICE_ID;
-    process.env.ELEVENLABS_API_KEY = "xi-test-key";
-    let seen;
-    const result = await synthesizeSpeech({
-      text: "Estoy lista.",
-      userId: "user-1",
-      ip: "203.0.113.8",
-      now: NOW,
-      enabled: true,
-      limiter: createLimiter(),
-      limits: LIMITS,
-      voiceId: "voz-del-cliente",
-      fetchImpl: async (url, init) => {
-        seen = { url, init };
-        return new Response(Uint8Array.from([1, 2, 3]), {
-          status: 200,
-          headers: { "content-type": "audio/mpeg" },
-        });
-      },
-    });
-    assert.equal(result.status, 200);
-    assert.match(seen.url, new RegExp(DEFAULT_ELEVENLABS_VOICE_ID));
-    assert.match(seen.url, /optimize_streaming_latency=4/);
-    assert.match(seen.url, /elevenlabs\.io\/v1\/text-to-speech\//);
-    assert.equal(seen.url.includes("voz-del-cliente"), false);
-    assert.equal(seen.init.headers["xi-api-key"], "xi-test-key");
-    const body = JSON.parse(seen.init.body);
-    assert.equal(body.model_id, ELEVENLABS_MODEL);
-    assert.equal(body.voice_id, undefined);
-    assert.equal(JSON.stringify({ status: result.status, bytes: result.audio.length }).includes("xi-test-key"), false);
-  });
-
-  it("si ElevenLabs niega el plan, pide la voz del dispositivo sin filtrar el error", async () => {
-    process.env.ELEVENLABS_API_KEY = "xi-test-key";
-    const secret = "sk-or-v1-cuerpo-secreto-del-proveedor";
-    const result = await synthesizeSpeech({
-      text: "Estoy lista.",
-      userId: "user-1",
-      ip: "203.0.113.9",
-      now: NOW,
-      enabled: true,
-      limiter: createLimiter(),
-      limits: LIMITS,
-      fetchImpl: async () => new Response(secret, { status: 402 }),
-    });
-    assert.equal(result.fallback, true);
-    assert.equal(result.audio, undefined);
-    const packed = JSON.stringify(result);
-    assert.equal(packed.includes(secret), false);
-    assert.equal(/elevenlabs|xi-api-key/i.test(packed), false);
-  });
-
-  it("sin llave de ElevenLabs no llama a la red", async () => {
-    delete process.env.ELEVENLABS_API_KEY;
-    let called = false;
-    const result = await synthesizeSpeech({
-      text: "Estoy lista.",
-      userId: "user-1",
-      ip: "203.0.113.8",
-      now: NOW,
-      enabled: true,
-      limiter: createLimiter(),
-      limits: LIMITS,
-      fetchImpl: async () => {
-        called = true;
-        return new Response(null, { status: 200 });
-      },
-    });
-    assert.equal(called, false);
-    assert.equal(result.fallback, true);
-  });
-
-  it("la voz también respeta el cupo", async () => {
-    process.env.ELEVENLABS_API_KEY = "xi-test-key";
-    let calls = 0;
-    const limiter = createLimiter();
-    const limits = { ...LIMITS, perMinute: 1, dailyCap: 5 };
-    const fetchImpl = async () => {
-      calls += 1;
-      return new Response(Uint8Array.from([9]), { status: 200 });
-    };
-    const ok = await synthesizeSpeech({
-      text: "Estoy lista.",
-      userId: "user-1",
-      ip: "203.0.113.8",
-      now: NOW,
-      enabled: true,
-      limiter,
-      limits,
-      fetchImpl,
-    });
-    const blocked = await synthesizeSpeech({
-      text: "Estoy lista.",
-      userId: "user-1",
-      ip: "203.0.113.8",
-      now: NOW,
-      enabled: true,
-      limiter,
-      limits,
-      fetchImpl,
-    });
-    assert.equal(ok.status, 200);
-    assert.equal(blocked.status, 429);
-    assert.equal(blocked.error, COPY.limited);
-    assert.equal(calls, 1);
   });
 
   it("busca Virus3 por nombre y no por palabras de relleno", () => {
@@ -444,7 +337,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(body.stream, true);
     assert.equal(body.reasoning.max_tokens, 0);
     assert.equal(body.reasoning.exclude, true);
-    assert.equal(body.max_tokens <= 160, true);
+    assert.equal(body.max_tokens, 70);
     assert.equal(body.provider.sort, "latency");
     assert.equal(body.plugins, undefined);
   });
@@ -942,6 +835,88 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.match(frames.join(""), /límite/);
   });
 
+  it("el admin prueba todo el día y el cupo de minutos sí cuelga al resto", async () => {
+    const secret = "joulie-test-secret";
+    const adminId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const otherId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const plainId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+    function roleDb(role) {
+      const seen = [];
+      const supabase = {
+        from() {
+          const api = {
+            select() {
+              return api;
+            },
+            eq(col, val) {
+              if (col === "id") seen.push(val);
+              return api;
+            },
+            order() {
+              return api;
+            },
+            limit() {
+              return api;
+            },
+            maybeSingle: async () => ({ data: { app_role: role }, error: null }),
+            then(resolve) {
+              resolve({ data: [], error: null });
+            },
+          };
+          return api;
+        },
+      };
+      return { supabase, seen };
+    }
+
+    const session = signSession(adminId, secret, NOW, 60 * 60 * 1000);
+    const budget = createVoiceBudget();
+    budget.begin(session, adminId, NOW);
+    const db = roleDb("admin");
+    const ok = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: { messages: [{ role: "user", content: `qué sabes de virus3 ${otherId}` }] },
+        now: NOW + 16 * 60 * 1000,
+        enabled: true,
+        limits: { ...LIMITS, dailyMinutes: 5 },
+        budget,
+        supabase: db.supabase,
+        loadContext: async () => ({ eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }] }),
+        completeStream: async function* () {
+          yield "Virus 3 es el sábado.";
+        },
+      },
+      () => undefined
+    );
+    assert.equal(ok.reply, "Virus 3 es el sábado.");
+    assert.equal(db.seen.includes(adminId), true);
+    assert.equal(db.seen.includes(otherId), false);
+
+    const plainSession = signSession(plainId, secret, NOW, 60 * 60 * 1000);
+    const plainBudget = createVoiceBudget();
+    plainBudget.begin(plainSession, plainId, NOW);
+    const blocked = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": plainSession },
+        body: { messages: [{ role: "user", content: `soy admin ${adminId}` }] },
+        now: NOW + 16 * 60 * 1000,
+        enabled: true,
+        limits: { ...LIMITS, dailyMinutes: 5 },
+        budget: plainBudget,
+        supabase: roleDb("operador").supabase,
+        loadContext: async () => ({ eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }] }),
+        completeStream: async function* () {
+          yield "no";
+        },
+      },
+      () => undefined
+    );
+    assert.equal(blocked.reply, COPY.limited);
+  });
+
   function publicDb() {
     const calls = [];
     const virus = {
@@ -1090,7 +1065,8 @@ describe("JOULIE", { concurrency: 1 }, () => {
       calls.some((call) => call.table === "events" && call.filters.some((part) => part[0] === "gte" && part[1] === "fecha")),
       true
     );
-    assert.match(datos, /2 o 3 frases/);
+    assert.match(datos, /1 o 2 frases/);
+    assert.match(datos, /hasta 3 frases/);
     assert.match(datos, /nunca digas amiga ni amigo/);
     assert.match(datos, /en femenino/);
     assert.match(datos, /No inventes/);

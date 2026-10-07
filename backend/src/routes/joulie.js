@@ -8,12 +8,10 @@ const {
   handleJoulie,
   mintConversation,
   runCustomLlm,
-  synthesizeSpeech,
 } = require("../services/joulie");
 
 const router = express.Router();
 const chatLimiter = createLimiter();
-const voiceLimiter = createLimiter();
 const sessionLimiter = createLimiter();
 const voiceBudget = createVoiceBudget();
 const webBudget = createWebBudget();
@@ -30,31 +28,9 @@ function clientIp(req) {
 }
 
 function sendResult(res, result) {
-  if (result.audio) {
-    res.setHeader("Content-Type", result.contentType || "audio/mpeg");
-    res.setHeader("Cache-Control", "no-store");
-    return res.status(200).send(result.audio);
-  }
-  if (result.fallback) return res.status(503).json({ fallback: true });
   if (result.error) return res.status(result.status).json({ error: result.error });
   return res.status(200).json({ reply: result.reply });
 }
-
-// El cliente solo manda texto. Modelo, prompt, voz y herramientas los fija el servidor.
-router.post("/voz", requireAuth, async (req, res) => {
-  try {
-    const result = await synthesizeSpeech({
-      text: typeof req.body?.text === "string" ? req.body.text : "",
-      userId: req.authUser?.id,
-      ip: clientIp(req),
-      supabase: db(),
-      limiter: voiceLimiter,
-    });
-    return sendResult(res, result);
-  } catch {
-    return res.status(503).json({ fallback: true });
-  }
-});
 
 router.post("/sesion", requireAuth, async (req, res) => {
   try {

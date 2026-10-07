@@ -56,6 +56,27 @@ export function hearingNow(micTalking: boolean, vadAt: number, now: number, mute
   return micTalking || (vadAt > 0 && now - vadAt < VAD_HOLD_MS)
 }
 
+/** ElevenLabs cobra el tiempo de la llamada. 180 s es el tope, también para un admin. */
+export const CALL_LIMIT_MS = 180_000
+/** La despedida cabe en los últimos 8 s. Un evento ruidoso no acorta esto. */
+export const CALL_BYE_MS = 172_000
+
+const HANGUP_LINES = [
+  "Llegaste al límite de preguntas por ahora. Intenta más tarde.",
+  "Listo. Aquí te dejo.",
+]
+
+export function shouldHangUp(text: string): boolean {
+  const line = text.trim()
+  return HANGUP_LINES.some((item) => line === item || line.startsWith(item))
+}
+
+export function callClock(elapsedMs: number): "open" | "bye" | "end" {
+  if (elapsedMs >= CALL_LIMIT_MS) return "end"
+  if (elapsedMs >= CALL_BYE_MS) return "bye"
+  return "open"
+}
+
 /** Mientras ella habla, la voz del operador gana ya: no espera a que ElevenLabs cambie de modo. */
 export function voiceFace<T extends string>(phase: T, hearing: boolean): T | 'hearing' {
   return hearing && (phase === 'listening' || phase === 'speaking') ? 'hearing' : phase
