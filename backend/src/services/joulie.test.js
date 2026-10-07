@@ -981,6 +981,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
         if (!or) return rows;
         if (/jalisco/i.test(or[1])) return rows.filter((row) => /jalisco/i.test(`${row.ciudad} ${row.estado}`));
         if (/potosi/i.test(or[1])) return rows.filter((row) => /potosi/i.test(`${row.ciudad} ${row.estado}`));
+        if (/gotcha|omnilife/i.test(or[1])) return rows.filter((row) => /gotcha/i.test(row.nombre));
         return [];
       }
       if (call.table !== "teams") return [];
@@ -1060,7 +1061,8 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.match(datos, /Operación Virus 3/);
     assert.match(datos, /Hospital Abandonado/);
     assert.match(datos, /San Luis Potosí/);
-    assert.match(datos, /2026-10-10/);
+    assert.match(datos, /a las 10 de la mañana/);
+    assert.equal(datos.includes("T16:00"), false);
     assert.equal(
       calls.some((call) => call.table === "events" && call.filters.some((part) => part[0] === "gte" && part[1] === "fecha")),
       true
@@ -1097,7 +1099,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.match(all.datos, /Gotcha CQB Solares/);
     assert.match(all.datos, /Sykaryos Paintball/);
     assert.match(all.datos, /Hospital Abandonado San Luis Potosi/);
-    assert.match(all.datos, /todos los días 11:00–19:00/);
+    assert.match(all.datos, /todos los días de 11 de la mañana a 7 de la noche/);
     assert.match(all.datos, /https:\/\/www\.airnation\.online\/campos\/gotcha-omnilife/);
     assert.equal(
       all.calls.some((call) => call.table === "fields" && call.limit === 16 && !call.filters.some((part) => part[0] === "or")),
@@ -1114,6 +1116,12 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.match(play.datos, /Gotcha Omnilife/);
     assert.match(play.datos, /Sykaryos Paintball/);
     assert.match(play.datos, /nombra los campos de DATOS/);
+
+    const omni = await datosFor("¿qué horario tiene Gotcha Omnilife?");
+    assert.match(omni.datos, /Gotcha Omnilife/);
+    assert.match(omni.datos, /todos los días de 11 de la mañana a 7 de la noche/);
+    assert.equal(omni.datos.includes("Gotcha CQB Solares"), false);
+    assert.equal(omni.calls.some((call) => call.table === "virus3_blocks"), false);
   });
 
   it("«¿Qué eventos hay?» sigue listando los próximos", async () => {
@@ -1320,14 +1328,198 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.match(parsed.hoy, /sábado 10 de octubre de 2026/);
     assert.match(parsed.hoy, /domingo 11 de octubre de 2026/);
     assert.equal(byTitle["Operación Virus 3"].este_fin_de_semana, true);
-    assert.match(byTitle["Operación Virus 3"].cuando, /sábado 10 de octubre de 2026, 10:00/);
+    assert.match(byTitle["Operación Virus 3"].cuando, /sábado 10 de octubre de 2026, a las 10 de la mañana/);
+    assert.equal(byTitle["Operación Virus 3"].fecha, undefined);
     assert.equal(byTitle["Noche del domingo"].este_fin_de_semana, true);
-    assert.match(byTitle["Noche del domingo"].cuando, /domingo 11 de octubre de 2026, 23:00/);
+    assert.match(byTitle["Noche del domingo"].cuando, /domingo 11 de octubre de 2026, a las 11 de la noche/);
     assert.equal(byTitle["Viernes de día"].este_fin_de_semana, false);
     assert.equal(byTitle["Viernes por la noche"].este_fin_de_semana, true);
     assert.equal(byTitle["Esta noche"].es_hoy, true);
-    assert.match(byTitle["Esta noche"].cuando, /miércoles 7 de octubre de 2026, 20:00/);
+    assert.match(byTitle["Esta noche"].cuando, /miércoles 7 de octubre de 2026, a las 8 de la noche/);
     assert.equal(byTitle["Mañana en la mañana"].es_manana, true);
+  });
+
+  it("un timestamptz de las 16:00 UTC se dice a las 10 de la mañana", async () => {
+    let datos = "";
+    await handleJoulie(
+      base({
+        message: "¿a qué hora empieza Virus 3?",
+        loadContext: async () => ({
+          eventos: [
+            {
+              title: "Operación Virus 3",
+              fecha: "2026-10-10T16:00:00+00:00",
+              fecha_fin: "2026-10-11T20:00:00+00:00",
+            },
+          ],
+          ficha: [
+            {
+              slug: "cronograma",
+              activo: true,
+              config: {
+                hitos: [
+                  { hora: "10:00", titulo: "Apertura de puertas" },
+                  { hora: "11:00–13:00", titulo: "Registro" },
+                  { hora: "14:00", titulo: "Inicio de operaciones" },
+                ],
+              },
+            },
+          ],
+        }),
+        complete: async (messages) => {
+          datos = messages[0].content;
+          return "El sábado a las 10 de la mañana.";
+        },
+      })
+    );
+    const parsed = JSON.parse(datos.slice(datos.lastIndexOf("\n") + 1));
+    const event = parsed.eventos[0];
+    assert.match(event.cuando, /a las 10 de la mañana/);
+    assert.match(event.hasta, /a las 2 de la tarde/);
+    assert.equal(event.fecha, undefined);
+    assert.equal(datos.includes("T16:00"), false);
+    assert.match(datos, /10:00 · Apertura de puertas/);
+    assert.match(datos, /11:00–13:00 · Registro/);
+    assert.match(datos, /14:00 · Inicio de operaciones/);
+  });
+
+  it("el horario de un campo se dice como la ficha, y sin horas no se inventa", async () => {
+    let datos = "";
+    await handleJoulie(
+      base({
+        message: "¿qué horario tiene el campo?",
+        loadContext: async () => ({
+          foco: "campos",
+          campos: [
+            {
+              nombre: "Gotcha Predators Bosque Tlahuac",
+              slug: "gotcha-predators-bosque-tlahuac",
+              ciudad: "Ciudad de México",
+              horarios_json: {
+                sabado: { abierto: true, apertura: "10:00", cierre: "18:00" },
+                domingo: { abierto: true, apertura: "10:00", cierre: "18:00" },
+              },
+            },
+            {
+              nombre: "Gotcha Omnilife",
+              slug: "gotcha-omnilife",
+              ciudad: "Zapopan",
+              horarios_json: {
+                lunes: { abierto: false },
+                martes: { abierto: true, apertura: "11:00", cierre: "08:00" },
+                miercoles: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                jueves: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                viernes: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                sabado: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                domingo: { abierto: true, apertura: "11:00", cierre: "20:00" },
+              },
+            },
+            {
+              nombre: "Gotcha CQB Tactical La Tijera",
+              slug: "gotcha-cqb-tactical-la-tijera",
+              horarios_json: {
+                lunes: { abierto: true, apertura: "11:00", cierre: "20:30" },
+                martes: { abierto: true, apertura: "11:00", cierre: "20:30" },
+                miercoles: { abierto: true, apertura: "11:00", cierre: "20:30" },
+                jueves: { abierto: true, apertura: "11:00", cierre: "20:30" },
+                viernes: { abierto: true, apertura: "11:00", cierre: "20:30" },
+                sabado: { abierto: true, apertura: "11:00", cierre: "20:30" },
+                domingo: { abierto: true, apertura: "11:00", cierre: "20:30" },
+              },
+            },
+            {
+              nombre: "Hospital Abandonado San Luis Potosi",
+              slug: "hospital-abandonado-san-luis-potosi",
+              ciudad: "San Luis Potosí",
+              horarios_json: {
+                lunes: { abierto: false },
+                martes: { abierto: false },
+                miercoles: { abierto: false },
+                jueves: { abierto: false },
+                viernes: { abierto: false },
+                sabado: { abierto: false },
+                domingo: { abierto: false },
+              },
+            },
+          ],
+        }),
+        complete: async (messages) => {
+          datos = messages[0].content;
+          return "Te digo el horario publicado.";
+        },
+      })
+    );
+    assert.match(datos, /sábados y domingos de 10 de la mañana a 6 de la tarde/);
+    assert.match(datos, /el martes de 11 de la mañana a 8 de la mañana, y de miércoles a domingo de 11 de la mañana a 8 de la noche/);
+    assert.match(datos, /todos los días de 11 de la mañana a 8 y media de la noche/);
+    assert.equal(datos.includes("11:00–08:00"), false);
+    assert.equal(datos.includes("horarios_json"), false);
+    assert.match(datos, /no lo tienes publicado/);
+    assert.match(datos, /https:\/\/www\.airnation\.online\/campos\/hospital-abandonado-san-luis-potosi/);
+    const parsed = JSON.parse(datos.slice(datos.lastIndexOf("\n") + 1));
+    const hospital = parsed.campos.find((row) => /Hospital/.test(row.nombre));
+    assert.equal(hospital.horario, undefined);
+  });
+
+  it("la voz con el saludo de ElevenLabs manda Virus 3 en hora de México", async () => {
+    const secret = "joulie-test-secret";
+    const session = signSession("user-voice", secret, NOW, 60_000);
+    const db = publicDb();
+    let datos = "";
+    const result = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: {
+          messages: [
+            { role: "system", content: `Eres JOULIE. Marca j9s:${session}` },
+            { role: "assistant", content: "Hola, soy JOULIE. ¿En qué te ayudo?" },
+            { role: "user", content: "¿qué eventos hay?" },
+          ],
+        },
+        now: NOW,
+        enabled: true,
+        supabase: db.supabase,
+        completeStream: async function* (messages) {
+          datos = messages[0].content;
+          yield "El sábado es Operación Virus 3.";
+        },
+      },
+      () => undefined
+    );
+    assert.equal(result.reply, "El sábado es Operación Virus 3.");
+    assert.match(datos, /Operación Virus 3/);
+    assert.match(datos, /sábado 10 de octubre de 2026, a las 10 de la mañana/);
+    assert.match(datos, /este_fin_de_semana":true/);
+    assert.equal(datos.includes("T16:00"), false);
+    assert.equal(
+      db.calls.some((call) => call.table === "events" && call.filters.some((part) => part[0] === "gte" && part[1] === "fecha")),
+      true
+    );
+    const hours = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: {
+          messages: [
+            { role: "assistant", content: "Hola, soy JOULIE. ¿En qué te ayudo?" },
+            { role: "user", content: "¿qué horario tiene Gotcha Omnilife?" },
+          ],
+        },
+        now: NOW + 1000,
+        enabled: true,
+        supabase: db.supabase,
+        completeStream: async function* () {
+          yield "Te digo el horario del campo.";
+        },
+      },
+      () => undefined
+    );
+    assert.equal(hours.reply, "Te digo el horario del campo.");
+    assert.equal(
+      db.calls.some((call) => call.table === "virus3_blocks"),
+      false
+    );
   });
 
   it("«ayúdame a elegir una réplica nueva» trae la guía publicada del blog", async () => {
