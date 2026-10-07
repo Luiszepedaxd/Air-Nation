@@ -352,21 +352,6 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: '/admin/joulie',
-    label: 'JOULIE',
-    icon: (active) => (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <circle
-          cx="12"
-          cy="12"
-          r="7"
-          stroke={active ? '#CC4B37' : '#666666'}
-          strokeWidth="1.7"
-        />
-      </svg>
-    ),
-  },
-  {
     href: '/admin/configuracion',
     label: 'Configuración',
     icon: (active) => (
