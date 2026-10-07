@@ -19,6 +19,7 @@ const stripeRouter = require("./routes/stripe");
 const credencialesRouter = require("./routes/credenciales");
 const searchRouter = require('./routes/search')
 const tournamentsRouter = require("./routes/tournaments");
+const joulieRouter = require("./routes/joulie");
 const { iniciarJobIndexNow } = require("./jobs/indexnow");
 
 const app = express();
@@ -74,6 +75,7 @@ app.use("/api/v1/stripe", stripeRouter);
 app.use("/api/v1/credencial", credencialesRouter);
 app.use('/api/v1/search', searchRouter)
 app.use("/api/v1/tournaments", tournamentsRouter);
+app.use("/api/v1/joulie", joulieRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

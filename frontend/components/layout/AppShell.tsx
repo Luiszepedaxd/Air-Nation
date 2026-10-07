@@ -1,4 +1,5 @@
 import BottomNav from '@/components/dashboard/BottomNav'
+import JoulieWidget from '@/components/joulie/JoulieWidget'
 import { DarkModeInit } from '@/components/DarkModeInit'
 import { ForceUpdateGate } from '@/components/ForceUpdateGate'
 import MobileHeader from '@/components/layout/MobileHeader'
@@ -29,6 +30,7 @@ export default async function AppShell({
         {children}
       </div>
       {userId != null && userId !== '' ? <BottomNav /> : null}
+      {userId != null && userId !== '' ? <JoulieWidget /> : null}
       {userId != null && userId !== '' ? (
         <PushNotifManager userId={userId} />
       ) : null}
