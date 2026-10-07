@@ -62,10 +62,17 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/onboarding') ||
     isAdminRoute ||
     pathname === '/campos/nuevo' ||
-    pathname === '/eventos/nuevo'
+    pathname === '/eventos/nuevo' ||
+    pathname === '/joulie' ||
+    pathname.startsWith('/joulie/')
 
   if (!session && requiresAuth) {
-    if (pathname === '/campos/nuevo' || pathname === '/eventos/nuevo') {
+    if (
+      pathname === '/campos/nuevo' ||
+      pathname === '/eventos/nuevo' ||
+      pathname === '/joulie' ||
+      pathname.startsWith('/joulie/')
+    ) {
       // Conservamos el query string completo (ej: ?field_id=...&field_nombre=...)
       // para que el login regrese al destino exacto con su preselección.
       const loginUrl = new URL('/login', request.url)
@@ -127,6 +134,8 @@ export const config = {
     '/admin/:path*',
     '/campos/nuevo',
     '/eventos/nuevo',
+    '/joulie',
+    '/joulie/:path*',
     '/login',
     '/register',
   ],

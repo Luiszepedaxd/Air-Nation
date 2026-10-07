@@ -34,6 +34,7 @@
 
 .joulie-bb[data-state="listening"] .joulie-bb-ball {
   transform: scale(calc(1 + var(--joulie-level) * 0.14));
+  transition: transform 90ms linear, box-shadow 90ms linear;
   box-shadow:
     inset -7px -9px 14px rgba(17, 17, 17, 0.14),
     inset 5px 5px 8px rgba(255, 255, 255, 0.95),
@@ -47,6 +48,7 @@
 
 .joulie-bb[data-state="speaking"] .joulie-bb-ball {
   transform: scale(calc(1.02 + var(--joulie-level) * 0.12));
+  transition: transform 90ms linear, box-shadow 90ms linear;
   box-shadow:
     inset -7px -9px 14px rgba(17, 17, 17, 0.14),
     inset 5px 5px 8px rgba(255, 255, 255, 0.95),

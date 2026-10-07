@@ -12,6 +12,7 @@ const ROOT_ROUTES = new Set([
   '/dashboard/mensajes',
   '/dashboard/arsenal',
   '/campos',
+  '/joulie',
   '/login',
   '/register',
   '/onboarding',

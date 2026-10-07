@@ -99,6 +99,21 @@ const NAV_ITEMS = [
       )
     },
   },
+  {
+    label: 'Joulie',
+    href: '/joulie',
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle
+          cx="12"
+          cy="12"
+          r="7.5"
+          stroke={active ? '#CC4B37' : '#767676'}
+          strokeWidth="1.8"
+        />
+      </svg>
+    ),
+  },
 ]
 
 const NAV_ITEMS_MOBILE = [
@@ -107,6 +122,7 @@ const NAV_ITEMS_MOBILE = [
   { ...NAV_ITEMS[2], label: 'MENSAJES' },
   { ...NAV_ITEMS[3], label: 'ARSENAL' },
   { ...NAV_ITEMS[4], label: 'CAMPOS' },
+  { ...NAV_ITEMS[5], label: 'JOULIE' },
 ]
 
 function AdminShieldIcon({ active }: { active: boolean }) {
@@ -204,6 +220,7 @@ export default function BottomNav() {
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
   const [unreadMsgCount, setUnreadMsgCount] = useState(0)
   const [hasAvatar, setHasAvatar] = useState(true)
+  const [joulieEnabled, setJoulieEnabled] = useState(true)
 
   const refreshPendingJoinCount = useCallback(async () => {
     const {
@@ -227,6 +244,23 @@ export default function BottomNav() {
     }
     const n = await fetchUnreadNotifCount(supabase, user.id)
     setUnreadNotifCount(n)
+  }, [])
+
+  useEffect(() => {
+    let cancel = false
+    void supabase
+      .from('joulie_config')
+      .select('enabled')
+      .eq('id', 'singleton')
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancel) return
+        if (error || !data || typeof data.enabled !== 'boolean') return
+        setJoulieEnabled(data.enabled)
+      })
+    return () => {
+      cancel = true
+    }
   }, [])
 
   useEffect(() => {
@@ -313,6 +347,12 @@ export default function BottomNav() {
   }
 
   const adminNavActive = pathname === '/admin'
+  const desktopItems = joulieEnabled
+    ? NAV_ITEMS
+    : NAV_ITEMS.filter((item) => item.href !== '/joulie')
+  const mobileItems = joulieEnabled
+    ? NAV_ITEMS_MOBILE
+    : NAV_ITEMS_MOBILE.filter((item) => item.href !== '/joulie')
 
   return (
     <>
@@ -333,7 +373,7 @@ export default function BottomNav() {
         <SearchBar className="w-64" />
 
         <div className="flex items-center gap-1">
-          {NAV_ITEMS.map((item) => {
+          {desktopItems.map((item) => {
             const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref
             return (
@@ -387,11 +427,11 @@ export default function BottomNav() {
         </div>
       </nav>
 
-      {/* Bottom Nav — mobile (5 ítems: HOME, OPERADOR, MENSAJES, CAMPOS, ARSENAL) */}
+      {/* Bottom Nav — mobile. JOULIE se oculta si el interruptor de admin está apagado. */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] lg:hidden"
            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-        <div className="grid h-16 w-full grid-cols-5 items-center">
-          {NAV_ITEMS_MOBILE.map((item) => {
+        <div className={`grid h-16 w-full items-center ${mobileItems.length > 5 ? 'grid-cols-6' : 'grid-cols-5'}`}>
+          {mobileItems.map((item) => {
             const active = isNavItemActive(pathname, item.href)
             const isPerfil = item.href === perfilHref
             return (
@@ -422,7 +462,7 @@ export default function BottomNav() {
                   item.icon(active)
                 )}
                 <span
-                  className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
+                  className={`w-full truncate text-center text-[8px] font-bold uppercase tracking-wider leading-none ${
                     active ? 'text-[#CC4B37]' : 'text-[#767676]'
                   }`}
                 >
