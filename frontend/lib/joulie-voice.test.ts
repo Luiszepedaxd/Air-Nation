@@ -29,4 +29,12 @@ describe('voz de Joulie', () => {
     talk = trackTalk(talk, 0.12, 2400)
     assert.equal(talk.talking, false)
   })
+
+  it('un alza modesta del micrófono de teléfono cuenta como voz', () => {
+    let talk = TALK_START
+    for (let t = 0; t < 2000; t += 16) talk = trackTalk(talk, 0.1, t)
+    assert.equal(talk.talking, false)
+    talk = trackTalk(talk, 0.16, 2016)
+    assert.equal(talk.talking, true)
+  })
 })

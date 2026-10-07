@@ -11,6 +11,7 @@
   height: 100%;
   border-radius: 50%;
   position: relative;
+  z-index: 1;
   overflow: hidden;
   background:
     radial-gradient(circle at 32% 28%, #ffffff 0%, #f7f7f7 22%, #e4e4e4 58%, #c8c8c8 100%);
@@ -40,15 +41,38 @@
     0 0 10px rgba(204, 75, 55, 0.12);
 }
 
-/* El operador habla: la bola sigue su micrófono con un anillo rojo. */
+/* El operador habla: anillo rojo de marca, ya grueso con la voz apenas detectada. */
+.joulie-bb[data-state="hearing"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: calc(-14px - var(--joulie-level) * 26px);
+  border-radius: 50%;
+  border: 5px solid #cc4b37;
+  box-shadow:
+    0 0 0 4px rgba(204, 75, 55, 0.35),
+    0 0 calc(18px + var(--joulie-level) * 28px) rgba(204, 75, 55, 0.55);
+  pointer-events: none;
+}
+
+.joulie-bb[data-state="hearing"]::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -10px;
+  border-radius: 50%;
+  border: 2px solid rgba(204, 75, 55, 0.7);
+  pointer-events: none;
+  animation: joulie-hear 1.8s ease-out infinite;
+}
+
 .joulie-bb[data-state="hearing"] .joulie-bb-ball {
-  transform: scale(calc(1.02 + var(--joulie-level) * 0.3));
-  transition: transform 90ms linear, box-shadow 90ms linear;
+  transform: scale(calc(1.02 + var(--joulie-level) * 0.16));
+  transition: transform 90ms linear;
   box-shadow:
     inset -7px -9px 14px rgba(17, 17, 17, 0.14),
     inset 5px 5px 8px rgba(255, 255, 255, 0.95),
-    0 0 0 calc(2px + var(--joulie-level) * 8px) rgba(204, 75, 55, 0.35),
-    0 0 calc(10px + var(--joulie-level) * 24px) rgba(204, 75, 55, calc(0.18 + var(--joulie-level) * 0.4));
+    0 0 calc(14px + var(--joulie-level) * 22px) rgba(204, 75, 55, 0.45);
 }
 
 .joulie-bb[data-state="thinking"] .joulie-bb-ball::after {
@@ -56,13 +80,14 @@
   animation: joulie-spin 2.6s linear infinite;
 }
 
+/* JOULIE habla: la bola crece con un halo suave, sin anillo. */
 .joulie-bb[data-state="speaking"] .joulie-bb-ball {
-  transform: scale(calc(1.02 + var(--joulie-level) * 0.12));
+  transform: scale(calc(1.05 + var(--joulie-level) * 0.18));
   transition: transform 90ms linear, box-shadow 90ms linear;
   box-shadow:
     inset -7px -9px 14px rgba(17, 17, 17, 0.14),
     inset 5px 5px 8px rgba(255, 255, 255, 0.95),
-    0 0 calc(6px + var(--joulie-level) * 18px) rgba(204, 75, 55, 0.28);
+    0 0 calc(20px + var(--joulie-level) * 28px) rgba(204, 75, 55, 0.22);
 }
 
 @keyframes joulie-breathe {
@@ -81,9 +106,21 @@
   }
 }
 
+@keyframes joulie-hear {
+  0% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .joulie-bb-ball,
-  .joulie-bb-ball::after {
+  .joulie-bb-ball::after,
+  .joulie-bb::after {
     animation: none !important;
     transition: none !important;
     transform: none !important;
