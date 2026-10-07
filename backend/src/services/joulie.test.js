@@ -393,6 +393,25 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.deepEqual(expandName("virus3"), ["virus3", "virus 3", "virus"]);
   });
 
+  it("un seguimiento busca lo que JOULIE acaba de nombrar", async () => {
+    let lookup = "";
+    await handleJoulie(
+      base({
+        message: "¿Dónde es?",
+        history: [
+          { role: "user", content: "qué eventos hay" },
+          { role: "assistant", content: "El próximo es Operación Virus 3, el 10 de octubre. ¿Quieres saber dónde es?" },
+        ],
+        loadContext: async (text) => {
+          lookup = text;
+          return { eventos: [{ title: "Operación Virus 3", sede_nombre: "Campo Norte", sede_ciudad: "CDMX" }] };
+        },
+        complete: async () => "Es en Campo Norte, en CDMX.",
+      })
+    );
+    assert.deepEqual(nameTokens(lookup).slice(0, 2), ["operacion", "virus"]);
+  });
+
   it("pide el modelo sin razonamiento y con una respuesta corta", () => {
     delete process.env.JOULIE_MODEL;
     const body = buildChatBody([{ role: "user", content: "qué sabes de virus3" }], resolveConfig(), true);
