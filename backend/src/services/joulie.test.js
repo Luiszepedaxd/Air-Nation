@@ -608,4 +608,248 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(result.reply, COPY.limited);
     assert.match(frames.join(""), /límite/);
   });
+
+  function publicDb() {
+    const calls = [];
+    const virus = {
+      title: "Operación Virus 3",
+      fecha: "2026-10-10T16:00:00.000Z",
+      sede_nombre: "Hospital Abandonado",
+      sede_ciudad: "San Luis Potosí",
+      fields: { nombre: "Hospital Abandonado", ciudad: "San Luis Potosí", estado: "San Luis Potosí" },
+    };
+    function answer(call) {
+      const upcoming = call.filters.some((part) => part[0] === "gte" && part[1] === "fecha");
+      if (call.table === "events") return upcoming ? [virus] : [];
+      if (call.table !== "teams") return [];
+      const or = call.filters.find((part) => part[0] === "or");
+      if (or && /potosi/i.test(or[1])) {
+        return [{ nombre: "UNIDAD DAGGER", slug: "unidad-dagger", ciudad: "San Luis Potosí", estado: "San Luis Potosí" }];
+      }
+      if (or) return [{ nombre: "Club Proximos", slug: "club-proximos", ciudad: "León", estado: "Guanajuato" }];
+      return [];
+    }
+    function chain(table) {
+      const call = { table, filters: [] };
+      calls.push(call);
+      const api = {
+        select(cols) {
+          call.select = cols;
+          return api;
+        },
+        eq(col, val) {
+          call.filters.push(["eq", col, val]);
+          return api;
+        },
+        or(expr) {
+          call.filters.push(["or", expr]);
+          return api;
+        },
+        ilike(col, val) {
+          call.filters.push(["ilike", col, val]);
+          return api;
+        },
+        gte(col, val) {
+          call.filters.push(["gte", col, val]);
+          return api;
+        },
+        order() {
+          return api;
+        },
+        limit(n) {
+          call.limit = n;
+          return api;
+        },
+        then(resolve, reject) {
+          try {
+            resolve({ data: answer(call), error: null });
+          } catch (err) {
+            reject(err);
+          }
+        },
+      };
+      return api;
+    }
+    return { calls, supabase: { from: (table) => chain(table) } };
+  }
+
+  async function datosFor(message) {
+    const db = publicDb();
+    let datos = "";
+    const result = await handleJoulie(
+      base({
+        message,
+        supabase: db.supabase,
+        loadContext: undefined,
+        complete: async (messages) => {
+          datos = messages[0].content;
+          return "Te cuento con lo que está publicado.";
+        },
+      })
+    );
+    return { ...db, datos, result };
+  }
+
+  it("«qué eventos hay próximos» trae la agenda aunque otra búsqueda coincida", async () => {
+    assert.deepEqual(nameTokens("Órale, ¿qué eventos hay próximos?"), ["proximos"]);
+    assert.equal(nameTokens("Ay, perdón, JOULIE. Es que nos estás interrumpiendo.").includes("nos"), false);
+    const { calls, datos, result } = await datosFor("Órale, ¿qué eventos hay próximos?");
+    assert.equal(result.status, 200);
+    assert.match(datos, /Operación Virus 3/);
+    assert.match(datos, /Hospital Abandonado/);
+    assert.match(datos, /San Luis Potosí/);
+    assert.match(datos, /2026-10-10/);
+    assert.equal(
+      calls.some((call) => call.table === "events" && call.filters.some((part) => part[0] === "gte" && part[1] === "fecha")),
+      true
+    );
+    assert.match(datos, /2 o 3 frases/);
+    assert.match(datos, /nunca digas amiga ni amigo/);
+    assert.match(datos, /en femenino/);
+    assert.match(datos, /No inventes/);
+    assert.match(datos, /cuando se quiera/);
+  });
+
+  it("busca el evento por ciudad o estado y por «este fin de semana»", async () => {
+    const phrase = "Mmm, yo había visto que había un evento en San Luis Potosí este fin de semana, ¿puedes buscar?";
+    const tokens = nameTokens(phrase);
+    assert.deepEqual(tokens, ["san", "luis", "potosi"]);
+    const { calls, datos } = await datosFor(phrase);
+    assert.match(datos, /Operación Virus 3/);
+    assert.match(datos, /UNIDAD DAGGER/);
+    assert.match(datos, /Hospital Abandonado/);
+    const team = calls.find((call) => call.table === "teams" && call.filters.some((part) => part[0] === "or"));
+    const field = calls.find((call) => call.table === "fields" && call.filters.some((part) => part[0] === "or"));
+    assert.match(team.filters.find((part) => part[0] === "or")[1], /estado\.ilike\.%potosi%/);
+    assert.match(field.filters.find((part) => part[0] === "or")[1], /estado\.ilike\.%potosi%/);
+    const agenda = calls.find(
+      (call) => call.table === "events" && call.filters.some((part) => part[0] === "gte")
+    );
+    assert.match(agenda.select, /estado/);
+  });
+
+  it("«¿Qué eventos hay?» sigue listando los próximos", async () => {
+    const { datos, calls } = await datosFor("¿Qué eventos hay?");
+    assert.match(datos, /Operación Virus 3/);
+    assert.equal(
+      calls.some((call) => call.table === "events" && call.filters.some((part) => part[0] === "gte")),
+      true
+    );
+    assert.equal(
+      calls.some((call) => call.table === "teams" && call.filters.some((part) => part[0] === "or")),
+      false
+    );
+  });
+
+  it("una despedida no gasta el cupo del chat", async () => {
+    const limiter = createLimiter();
+    const limits = { ...LIMITS, perMinute: 1, dailyCap: 5 };
+    let called = false;
+    const bye = await handleJoulie(
+      base({
+        message: "No, gracias, Yoli. Sería todo por hoy.",
+        limiter,
+        limits,
+        complete: async () => {
+          called = true;
+          return "no";
+        },
+      })
+    );
+    assert.equal(called, false);
+    assert.equal(bye.status, 200);
+    assert.equal(bye.reply, COPY.bye);
+    const next = await handleJoulie(
+      base({
+        message: "qué eventos de airsoft hay",
+        limiter,
+        limits,
+        complete: async () => "Está la Copa Niebla.",
+      })
+    );
+    assert.equal(next.status, 200);
+    assert.match(next.reply, /Copa Niebla/);
+  });
+
+  it("la voz cobra el turno real y no cada reintento", async () => {
+    delete process.env.JOULIE_VOICE_RATE_PER_MIN;
+    assert.equal(resolveConfig().voicePerMinute, 30);
+    const secret = "joulie-test-secret";
+    const session = signSession("user-voice", secret, NOW, 60_000);
+    const limiter = createLimiter();
+    const limits = { ...LIMITS, perMinute: 1, dailyCap: 2, voicePerMinute: 1, voiceDailyCap: 5, dailyMinutes: 15 };
+    const budget = createVoiceBudget();
+    let calls = 0;
+    const ask = (text, at) =>
+      runCustomLlm(
+        {
+          secret,
+          headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+          body: { messages: [{ role: "user", content: text }] },
+          now: at,
+          enabled: true,
+          limiter,
+          limits,
+          budget,
+          loadContext: async () => ({
+            eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z", sede_ciudad: "San Luis Potosí" }],
+          }),
+          completeStream: async function* () {
+            calls += 1;
+            yield "Hay Operación Virus 3 en San Luis Potosí.";
+          },
+        },
+        () => undefined
+      );
+
+    for (const text of ["Órale", "Órale, ¿qué eventos", "Órale, ¿qué eventos hay próximos?"]) {
+      const result = await ask(text, NOW + calls * 300);
+      assert.equal(result.reply, "Hay Operación Virus 3 en San Luis Potosí.");
+    }
+    assert.equal(calls, 3);
+    const blocked = await ask("qué equipos hay en monterrey", NOW + 2000);
+    assert.equal(blocked.reply, COPY.limited);
+    assert.equal(calls, 3);
+
+    const later = await ask("Órale, ¿qué eventos hay próximos?", NOW + 21_000);
+    assert.equal(later.reply, COPY.limited);
+
+    const byeSession = signSession("user-bye", secret, NOW, 60_000);
+    const byeLimiter = createLimiter();
+    const bye = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": byeSession },
+        body: { messages: [{ role: "user", content: "No, gracias, Yoli. Sería todo por hoy." }] },
+        now: NOW,
+        enabled: true,
+        limiter: byeLimiter,
+        limits,
+        budget: createVoiceBudget(),
+        completeStream: async function* () {
+          yield "no";
+        },
+      },
+      () => undefined
+    );
+    assert.equal(bye.reply, COPY.bye);
+    const after = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": byeSession },
+        body: { messages: [{ role: "user", content: "qué campos hay en guadalajara" }] },
+        now: NOW + 1000,
+        enabled: true,
+        limiter: byeLimiter,
+        limits,
+        budget: createVoiceBudget(),
+        loadContext: async () => ({ campos: [{ nombre: "Bosque", ciudad: "Guadalajara", estado: "Jalisco" }] }),
+        completeStream: async function* () {
+          yield "Está Bosque, en Guadalajara.";
+        },
+      },
+      () => undefined
+    );
+    assert.equal(after.reply, "Está Bosque, en Guadalajara.");
+  });
 });
