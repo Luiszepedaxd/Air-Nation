@@ -11,7 +11,7 @@ const ELEVENLABS_MODEL = "eleven_flash_v2_5";
 const ELEVENLABS_MODELS = ["eleven_flash_v2_5", "eleven_turbo_v2_5"];
 
 const DEFAULTS = {
-  model: "google/gemini-2.5-flash",
+  model: "z-ai/glm-5.3-flash",
   maxTokens: 160,
   maxInput: 500,
   timeoutMs: 18000,
@@ -712,7 +712,11 @@ function buildChatBody(messages, cfg, stream) {
     max_tokens: cfg.maxTokens,
     temperature: 0.3,
     stream: Boolean(stream),
-    reasoning: { max_tokens: 0, exclude: true },
+    // GLM 5.3 Flash no acepta apagar el razonamiento: low, high o max, y max es el
+    // default. max_tokens: 0 y enabled: false responden 400. low es el mínimo;
+    // exclude evita que el pensamiento viaje en la respuesta. Igual gasta parte
+    // de max_tokens, así que el primer token espera ese tramo corto.
+    reasoning: { effort: "low", exclude: true },
     provider: { sort: "latency" },
     messages,
   };
@@ -762,7 +766,87 @@ async function completeOpenRouter(messages, cfg) {
   }
   const json = await response.json();
   const content = json?.choices?.[0]?.message?.content;
-  return typeof content === "string" ? content : "";
+  return stripThinking(typeof content === "string" ? content : "");
+}
+
+const THINK_TAGS = [
+  ["<think>", "</think>"],
+  ["<|begin_of_thinking|>", "<|end_of_thinking|>"],
+];
+
+function stripThinking(text) {
+  return String(text || "")
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<\|begin_of_thinking\|>[\s\S]*?<\|end_of_thinking\|>/gi, "")
+    .replace(/<think>[\s\S]*$/gi, "")
+    .replace(/<\|begin_of_thinking\|>[\s\S]*$/gi, "");
+}
+
+// El pensamiento puede llegar partido. Solo sale lo que se dice.
+function openSpeech() {
+  let buf = "";
+  let close = "";
+  const held = () => {
+    const lower = buf.toLowerCase();
+    let keep = 0;
+    for (const [open] of THINK_TAGS) {
+      const max = Math.min(open.length - 1, lower.length);
+      for (let n = 1; n <= max; n++) {
+        if (open.startsWith(lower.slice(-n))) keep = Math.max(keep, n);
+      }
+    }
+    return keep;
+  };
+  const take = () => {
+    let said = "";
+    for (;;) {
+      const lower = buf.toLowerCase();
+      if (close) {
+        const end = lower.indexOf(close);
+        if (end < 0) {
+          buf = buf.slice(-close.length);
+          return said;
+        }
+        buf = buf.slice(end + close.length);
+        close = "";
+        continue;
+      }
+      let start = -1;
+      let open = "";
+      let endTag = "";
+      for (const [tag, end] of THINK_TAGS) {
+        const at = lower.indexOf(tag);
+        if (at >= 0 && (start < 0 || at < start)) {
+          start = at;
+          open = tag;
+          endTag = end;
+        }
+      }
+      if (start < 0) {
+        const cut = held();
+        const keepFrom = buf.length - cut;
+        said += buf.slice(0, keepFrom);
+        buf = buf.slice(keepFrom);
+        return said;
+      }
+      said += buf.slice(0, start);
+      buf = buf.slice(start + open.length);
+      close = endTag;
+    }
+  };
+  return {
+    push: (delta) => {
+      buf += delta;
+      return take();
+    },
+    end: () => {
+      if (close) return "";
+      const rest = buf;
+      buf = "";
+      const lower = rest.toLowerCase();
+      return THINK_TAGS.some(([open]) => open.startsWith(lower)) ? "" : rest;
+    },
+  };
 }
 
 function takeSentence(buffer) {
@@ -861,6 +945,7 @@ async function* iterateOpenRouter(messages, cfg, signal) {
   }
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
+  const speech = openSpeech();
   let buf = "";
   while (true) {
     const { done, value } = await reader.read();
@@ -872,16 +957,24 @@ async function* iterateOpenRouter(messages, cfg, signal) {
       const trimmed = line.trim();
       if (!trimmed.startsWith("data:")) continue;
       const data = trimmed.slice(5).trim();
-      if (data === "[DONE]") return;
+      if (data === "[DONE]") {
+        const rest = speech.end();
+        if (rest) yield rest;
+        return;
+      }
       try {
         const json = JSON.parse(data);
         const delta = json?.choices?.[0]?.delta?.content;
-        if (typeof delta === "string" && delta) yield delta;
+        if (typeof delta !== "string" || !delta) continue;
+        const said = speech.push(delta);
+        if (said) yield said;
       } catch {
         /* fragmento incompleto */
       }
     }
   }
+  const rest = speech.end();
+  if (rest) yield rest;
 }
 
 async function pipeSentence(text, onChunk, signal, speakImpl) {

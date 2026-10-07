@@ -260,7 +260,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
 
   it("el modelo queda fijo en el servidor", () => {
     delete process.env.JOULIE_MODEL;
-    assert.equal(resolveConfig().model, "google/gemini-2.5-flash");
+    assert.equal(resolveConfig().model, "z-ai/glm-5.3-flash");
     assert.notEqual(resolveConfig().model, "anthropic/claude-haiku-4.5");
   });
 
@@ -435,15 +435,66 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(frames.join("").includes("-canary"), false);
   });
 
-  it("pide el modelo sin razonamiento y con una respuesta corta", () => {
+  it("pide GLM con el razonamiento al mínimo y una respuesta corta", () => {
     delete process.env.JOULIE_MODEL;
     const body = buildChatBody([{ role: "user", content: "qué sabes de virus3" }], resolveConfig(), true);
-    assert.equal(body.model, "google/gemini-2.5-flash");
+    assert.equal(body.model, "z-ai/glm-5.3-flash");
     assert.equal(body.stream, true);
-    assert.equal(body.reasoning.max_tokens, 0);
+    assert.equal(body.reasoning.effort, "low");
     assert.equal(body.reasoning.exclude, true);
+    assert.equal(body.reasoning.max_tokens, undefined);
+    assert.equal(body.reasoning.enabled, undefined);
     assert.equal(body.max_tokens <= 160, true);
     assert.equal(body.provider.sort, "latency");
+  });
+
+  it("la voz no dice el pensamiento aunque llegue partido", async () => {
+    process.env.OPENROUTER_API_KEY = "sk-or-test";
+    delete process.env.JOULIE_MODEL;
+    const secret = "joulie-test-secret";
+    const session = signSession("user-1", secret, NOW, 60_000);
+    const sse = [
+      'data: {"choices":[{"delta":{"reasoning":"pienso en secreto","reasoning_content":"pienso en secreto"}}]}\n',
+      "\n",
+      'data: {"choices":[{"delta":{"content":"<thi"}}]}\n',
+      "\n",
+      'data: {"choices":[{"delta":{"content":"nk>no digas esto</think>Hay Operación Virus 3."}}]}\n',
+      "\n",
+      'data: {"choices":[{"delta":{"content":"<|begin_of_thinking|>tampoco esto<|end_of_thinking|>"}}]}\n',
+      "\n",
+      "data: [DONE]\n",
+      "\n",
+    ].join("");
+    const original = global.fetch;
+    let posted;
+    global.fetch = async (_url, init) => {
+      posted = JSON.parse(init.body);
+      return new Response(sse, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+    };
+    try {
+      const frames = [];
+      const result = await runCustomLlm(
+        {
+          secret,
+          headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+          body: { messages: [{ role: "user", content: "qué eventos hay" }] },
+          now: NOW,
+          enabled: true,
+          loadContext: async () => ({
+            eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }],
+          }),
+        },
+        (frame) => frames.push(frame)
+      );
+      const spoken = `${frames.join("")}\n${result.reply}`;
+      assert.equal(/pienso|secreto|no digas esto|tampoco/i.test(spoken), false);
+      assert.match(result.reply, /Operación Virus 3/);
+      assert.equal(posted.model, "z-ai/glm-5.3-flash");
+      assert.equal(posted.reasoning.effort, "low");
+      assert.equal(posted.reasoning.exclude, true);
+    } finally {
+      global.fetch = original;
+    }
   });
 
   it("habla la primera frase antes de que termine el resto", async () => {
