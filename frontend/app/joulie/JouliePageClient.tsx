@@ -464,19 +464,21 @@ function JoulieLive() {
     <>
       <div className={frame}>
         <div className="flex flex-1 flex-col items-center justify-center px-6">
-          <p className="mb-8 text-[11px] tracking-[0.22em] text-[#767676]" style={jost}>
+          <p className="relative z-20 bg-[#F4F4F4] px-4 text-[11px] tracking-[0.22em] text-[#767676]" style={jost}>
             Joulie
           </p>
-          <button
-            type="button"
-            onClick={startLive}
-            className="rounded-full border-0 bg-transparent p-0"
-            aria-label={liveOn ? PHASE_LABEL[shown] : 'Toca para hablar'}
-          >
-            <JoulieAvatar phase={shown} level={level} size={208} label={PHASE_LABEL[shown]} />
-          </button>
+          <div className="joulie-stage">
+            <button
+              type="button"
+              onClick={startLive}
+              className="rounded-full border-0 bg-transparent p-0"
+              aria-label={liveOn ? PHASE_LABEL[shown] : 'Toca para hablar'}
+            >
+              <JoulieAvatar phase={shown} level={level} size={208} label={PHASE_LABEL[shown]} />
+            </button>
+          </div>
           <p
-            className="mt-6 min-h-4 max-w-sm text-center text-[11px] tracking-[0.22em] text-[#767676]"
+            className="relative z-20 min-h-4 max-w-sm bg-[#F4F4F4] px-4 text-center text-[11px] tracking-[0.22em] text-[#767676]"
             style={jost}
             aria-live="polite"
           >

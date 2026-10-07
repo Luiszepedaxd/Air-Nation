@@ -1,3 +1,13 @@
+/* 60px: el halo (inset 32, escala 1.16) y el pulso (escala 1.45) caben; el recorte es el tope. */
+.joulie-stage {
+  display: grid;
+  place-items: center;
+  width: min(100%, 328px);
+  height: 328px;
+  overflow: hidden;
+  flex: none;
+}
+
 .joulie-bb {
   --joulie-level: 0;
   position: relative;
