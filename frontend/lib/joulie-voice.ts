@@ -48,6 +48,19 @@ export function trackTalk(prev: Talk, level: number, now: number): Talk {
   return { floor, loudAt, talking: now - loudAt < 300 }
 }
 
+/** El VAD llega en eventos sueltos. 400 ms tapa el hueco sin dejar el anillo pegado. */
+export const VAD_HOLD_MS = 400
+
+export function hearingNow(micTalking: boolean, vadAt: number, now: number, muted: boolean): boolean {
+  if (muted) return false
+  return micTalking || (vadAt > 0 && now - vadAt < VAD_HOLD_MS)
+}
+
+/** Mientras ella habla, la voz del operador gana ya: no espera a que ElevenLabs cambie de modo. */
+export function voiceFace<T extends string>(phase: T, hearing: boolean): T | 'hearing' {
+  return hearing && (phase === 'listening' || phase === 'speaking') ? 'hearing' : phase
+}
+
 const OUTPUT_NOISE = 0.02
 
 /**

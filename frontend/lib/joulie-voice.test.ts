@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { TALK_START, outputLevel, pickJoulieVoice, trackTalk } from './joulie-voice.ts'
+import { TALK_START, VAD_HOLD_MS, hearingNow, outputLevel, pickJoulieVoice, trackTalk, voiceFace } from './joulie-voice.ts'
 
 describe('voz de Joulie', () => {
   it('prefiere es-MX femenina, luego es-US femenina, luego cualquier es femenina', () => {
@@ -49,5 +49,16 @@ describe('voz de Joulie', () => {
     const voice = new Uint8Array(128)
     voice.fill(180, 0, 40)
     assert.ok(outputLevel(0, voice) > 0.85, 'la banda de voz mueve el orbe aunque el volumen venga en cero')
+  })
+
+  it('pasa a escuchando en cuanto el operador habla, también si ella sigue en speaking', () => {
+    assert.equal(voiceFace('speaking', true), 'hearing')
+    assert.equal(voiceFace('listening', true), 'hearing')
+    assert.equal(voiceFace('speaking', false), 'speaking')
+    assert.equal(voiceFace('thinking', true), 'thinking')
+    assert.equal(hearingNow(true, 0, 1000, false), true)
+    assert.equal(hearingNow(false, 1000, 1000 + VAD_HOLD_MS - 1, false), true)
+    assert.equal(hearingNow(false, 1000, 1000 + VAD_HOLD_MS, false), false)
+    assert.equal(hearingNow(true, 1000, 1000, true), false, 'el micrófono silenciado no cuenta')
   })
 })

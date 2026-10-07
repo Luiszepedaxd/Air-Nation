@@ -7,7 +7,7 @@ import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
-import { TALK_START, outputLevel, trackTalk } from '@/lib/joulie-voice'
+import { TALK_START, hearingNow, outputLevel, trackTalk, voiceFace } from '@/lib/joulie-voice'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -124,8 +124,13 @@ function JoulieLive() {
   const waiting = useRef(false)
   const listRef = useRef<HTMLDivElement>(null)
   const busy = useRef(false)
+  const vadAt = useRef(0)
+  const nudged = useRef(false)
   const conversation = useConversation({
     micMuted: muted,
+    onVadScore: ({ vadScore }) => {
+      if (vadScore >= 0.5) vadAt.current = performance.now()
+    },
     onMessage: (payload) => {
       const text = payload.message?.trim()
       if (text) {
@@ -209,15 +214,24 @@ function JoulieLive() {
     let frame = 0
     let talk = TALK_START
     const tick = () => {
-      let next = 0
-      if (agentMode === 'speaking') {
-        next = outputLevel(getOutputVolume(), getOutputByteFrequencyData())
-      } else {
-        const raw = getInputVolume()
-        next = Number.isFinite(raw) ? raw : 0
-        talk = trackTalk(talk, muted ? 0 : next, performance.now())
-        setHearing(talk.talking)
+      const now = performance.now()
+      const raw = getInputVolume()
+      const mic = muted || !Number.isFinite(raw) ? 0 : raw
+      talk = trackTalk(talk, mic, now)
+      const userTalking = hearingNow(talk.talking, vadAt.current, now, muted)
+      if (userTalking && agentMode === 'speaking') {
+        if (!nudged.current) {
+          nudged.current = true
+          sendUserActivity()
+        }
+      } else if (agentMode !== 'speaking') {
+        nudged.current = false
       }
+      setHearing(userTalking)
+      const next =
+        agentMode === 'speaking' && !userTalking
+          ? outputLevel(getOutputVolume(), getOutputByteFrequencyData())
+          : mic
       const shownLevel = Math.round(next * 100) / 100
       setLevel((prev) => (prev === shownLevel ? prev : shownLevel))
       frame = requestAnimationFrame(tick)
@@ -227,7 +241,7 @@ function JoulieLive() {
       cancelAnimationFrame(frame)
       setHearing(false)
     }
-  }, [status, agentMode, muted, getInputVolume, getOutputVolume, getOutputByteFrequencyData])
+  }, [status, agentMode, muted, getInputVolume, getOutputVolume, getOutputByteFrequencyData, sendUserActivity])
 
   useEffect(() => {
     const list = listRef.current
@@ -337,7 +351,7 @@ function JoulieLive() {
     busy.current = false
   }
 
-  const shown: JouliePhase = phase === 'listening' && hearing ? 'hearing' : phase
+  const shown: JouliePhase = voiceFace(phase, hearing)
   const frame = 'flex h-[calc(100dvh-4rem-12px)] flex-col bg-[#F4F4F4] lg:h-[calc(100dvh-4rem)]'
 
   if (enabled === null) return <div className={frame} />

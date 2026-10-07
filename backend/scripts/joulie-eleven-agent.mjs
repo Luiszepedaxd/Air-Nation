@@ -65,6 +65,7 @@ function agentBody(secretId, withHeader) {
       agent: {
         first_message: GREETING,
         language: "es",
+        disable_first_message_interruptions: false,
         prompt: {
           prompt:
             "Eres JOULIE. El servidor de AirNation reemplaza este texto. Marca j9s:{{joulie_session}}.",
@@ -81,6 +82,12 @@ function agentBody(secretId, withHeader) {
         voice_id: VOICE_ID,
         model_id: "eleven_flash_v2_5",
         optimize_streaming_latency: 4,
+      },
+      // eager: cede el turno en cuanto el operador habla. Hay que volver a correr este script.
+      turn: {
+        turn_eagerness: "eager",
+        turn_timeout: 5,
+        speculative_turn: true,
       },
       conversation: {
         max_duration_seconds: 600,
