@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import './joulie-avatar.css'
 
-export type JouliePhase = 'idle' | 'listening' | 'thinking' | 'speaking'
+export type JouliePhase = 'idle' | 'listening' | 'hearing' | 'thinking' | 'speaking'
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(false)

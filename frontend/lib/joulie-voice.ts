@@ -28,3 +28,22 @@ export function pickJoulieVoice<T extends VoiceLike>(voices: T[]): T | null {
   }
   return best
 }
+
+export type Talk = { floor: number; loudAt: number; talking: boolean }
+
+export const TALK_START: Talk = { floor: 1, loudAt: -Infinity, talking: false }
+
+/**
+ * ¿Habla el operador? Nivel del micrófono (0–1) sobre su propio ruido de fondo,
+ * con 300 ms de gracia para no parpadear entre sílabas. El piso baja al instante
+ * y sube despacio, así sigue al ruido y no a la voz.
+ * ponytail: la subida va por cuadro (~60 fps) y el margen de 0.08 es empírico;
+ * si un micrófono queda siempre activo o nunca, ajusta TALK_MARGIN.
+ */
+export const TALK_MARGIN = 0.08
+
+export function trackTalk(prev: Talk, level: number, now: number): Talk {
+  const floor = level < prev.floor ? level : prev.floor + (level - prev.floor) * 0.002
+  const loudAt = level > floor + TALK_MARGIN ? now : prev.loudAt
+  return { floor, loudAt, talking: now - loudAt < 300 }
+}

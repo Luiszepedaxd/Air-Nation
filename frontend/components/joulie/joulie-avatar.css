@@ -33,12 +33,22 @@
 }
 
 .joulie-bb[data-state="listening"] .joulie-bb-ball {
-  transform: scale(calc(1 + var(--joulie-level) * 0.14));
+  animation: joulie-breathe 3.8s ease-in-out infinite;
+  box-shadow:
+    inset -7px -9px 14px rgba(17, 17, 17, 0.14),
+    inset 5px 5px 8px rgba(255, 255, 255, 0.95),
+    0 0 10px rgba(204, 75, 55, 0.12);
+}
+
+/* El operador habla: la bola sigue su micrófono con un anillo rojo. */
+.joulie-bb[data-state="hearing"] .joulie-bb-ball {
+  transform: scale(calc(1.02 + var(--joulie-level) * 0.3));
   transition: transform 90ms linear, box-shadow 90ms linear;
   box-shadow:
     inset -7px -9px 14px rgba(17, 17, 17, 0.14),
     inset 5px 5px 8px rgba(255, 255, 255, 0.95),
-    0 0 calc(8px + var(--joulie-level) * 22px) rgba(204, 75, 55, calc(0.12 + var(--joulie-level) * 0.4));
+    0 0 0 calc(2px + var(--joulie-level) * 8px) rgba(204, 75, 55, 0.35),
+    0 0 calc(10px + var(--joulie-level) * 24px) rgba(204, 75, 55, calc(0.18 + var(--joulie-level) * 0.4));
 }
 
 .joulie-bb[data-state="thinking"] .joulie-bb-ball::after {

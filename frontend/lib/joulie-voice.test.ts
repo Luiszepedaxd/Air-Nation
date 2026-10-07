@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { pickJoulieVoice } from './joulie-voice.ts'
+import { TALK_START, pickJoulieVoice, trackTalk } from './joulie-voice.ts'
 
 describe('voz de Joulie', () => {
   it('prefiere es-MX femenina, luego es-US femenina, luego cualquier es femenina', () => {
@@ -16,5 +16,17 @@ describe('voz de Joulie', () => {
   it('si no hay voz femenina usa el español disponible', () => {
     assert.equal(pickJoulieVoice([{ lang: 'es-MX', name: 'Jorge' }])?.name, 'Jorge')
     assert.equal(pickJoulieVoice([{ lang: 'en-US', name: 'Samantha' }]), null)
+  })
+
+  it('detecta la voz del operador sobre el ruido de fondo', () => {
+    let talk = TALK_START
+    for (let t = 0; t < 2000; t += 16) talk = trackTalk(talk, 0.12, t)
+    assert.equal(talk.talking, false, 'ruido constante no es voz')
+    talk = trackTalk(talk, 0.3, 2016)
+    assert.equal(talk.talking, true)
+    talk = trackTalk(talk, 0.12, 2200)
+    assert.equal(talk.talking, true, 'gracia entre sílabas')
+    talk = trackTalk(talk, 0.12, 2400)
+    assert.equal(talk.talking, false)
   })
 })

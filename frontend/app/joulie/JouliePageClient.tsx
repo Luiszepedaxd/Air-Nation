@@ -7,6 +7,7 @@ import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
+import { TALK_START, trackTalk } from '@/lib/joulie-voice'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -30,8 +31,9 @@ let sessionTurns: Turn[] = []
 const PHASE_LABEL: Record<JouliePhase, string> = {
   idle: 'Estoy lista',
   listening: 'Escuchando',
+  hearing: 'Te escucho…',
   thinking: 'Pensando',
-  speaking: 'Hablando',
+  speaking: 'JOULIE está hablando',
 }
 
 function RoundButton({
@@ -113,6 +115,7 @@ function JoulieLive() {
   const [mode, setMode] = useState<Mode>('voice')
   const [phase, setPhase] = useState<JouliePhase>('idle')
   const [level, setLevel] = useState(0)
+  const [hearing, setHearing] = useState(false)
   const [caption, setCaption] = useState('Toca para hablar')
   const [liveOn, setLiveOn] = useState(false)
   const [muted, setMuted] = useState(false)
@@ -183,14 +186,23 @@ function JoulieLive() {
   useEffect(() => {
     if (status !== 'connected') return
     let frame = 0
+    let talk = TALK_START
     const tick = () => {
-      const next = agentMode === 'speaking' ? getOutputVolume() : getInputVolume()
-      setLevel(Number.isFinite(next) ? next : 0)
+      const raw = agentMode === 'speaking' ? getOutputVolume() : getInputVolume()
+      const next = Number.isFinite(raw) ? raw : 0
+      setLevel(next)
+      if (agentMode !== 'speaking') {
+        talk = trackTalk(talk, muted ? 0 : next, performance.now())
+        setHearing(talk.talking)
+      }
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [status, agentMode, getInputVolume, getOutputVolume])
+    return () => {
+      cancelAnimationFrame(frame)
+      setHearing(false)
+    }
+  }, [status, agentMode, muted, getInputVolume, getOutputVolume])
 
   useEffect(() => {
     const list = listRef.current
@@ -302,6 +314,7 @@ function JoulieLive() {
     busy.current = false
   }
 
+  const shown: JouliePhase = phase === 'listening' && hearing ? 'hearing' : phase
   const frame = 'flex h-[calc(100dvh-4rem-12px)] flex-col bg-[#F4F4F4] lg:h-[calc(100dvh-4rem)]'
 
   if (enabled === null) return <div className={frame} />
@@ -435,12 +448,15 @@ function JoulieLive() {
             type="button"
             onClick={startLive}
             className="rounded-full border-0 bg-transparent p-0"
-            aria-label={liveOn ? PHASE_LABEL[phase] : 'Toca para hablar'}
+            aria-label={liveOn ? PHASE_LABEL[shown] : 'Toca para hablar'}
           >
-            <JoulieAvatar phase={phase} level={level} size={208} label={PHASE_LABEL[phase]} />
+            <JoulieAvatar phase={shown} level={level} size={208} label={PHASE_LABEL[shown]} />
           </button>
+          <p className="mt-6 h-4 text-[11px] tracking-[0.22em] text-[#767676]" style={jost}>
+            {liveOn ? PHASE_LABEL[shown] : ''}
+          </p>
           <p
-            className="mt-10 max-w-sm text-center text-[15px] leading-relaxed text-[#444444] line-clamp-4 min-h-[4.5rem]"
+            className="mt-4 max-w-sm text-center text-[15px] leading-relaxed text-[#444444] line-clamp-4 min-h-[4.5rem]"
             style={lato}
             aria-live="polite"
           >
