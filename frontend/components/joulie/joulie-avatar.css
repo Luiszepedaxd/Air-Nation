@@ -7,6 +7,7 @@
 }
 
 .joulie-bb-ball {
+  --joulie-wobble: 0;
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -29,65 +30,81 @@
   opacity: 0;
 }
 
-.joulie-bb[data-state="idle"] .joulie-bb-ball {
-  animation: joulie-breathe 3.8s ease-in-out infinite;
+.joulie-bb[data-state="idle"] .joulie-bb-ball,
+.joulie-bb[data-state="listening"] .joulie-bb-ball {
+  animation: joulie-breathe 3.2s ease-in-out infinite;
 }
 
 .joulie-bb[data-state="listening"] .joulie-bb-ball {
-  animation: joulie-breathe 3.8s ease-in-out infinite;
   box-shadow:
     inset -7px -9px 14px rgba(17, 17, 17, 0.14),
     inset 5px 5px 8px rgba(255, 255, 255, 0.95),
     0 0 10px rgba(204, 75, 55, 0.12);
 }
 
-/* El operador habla: anillo rojo de marca, ya grueso con la voz apenas detectada. */
+/* El operador habla: anillo rojo fijo; el volumen solo lo escala. */
 .joulie-bb[data-state="hearing"]::before {
   content: "";
   position: absolute;
   z-index: 0;
-  inset: calc(-14px - var(--joulie-level) * 26px);
+  inset: -18px;
   border-radius: 50%;
-  border: 5px solid #cc4b37;
-  box-shadow:
-    0 0 0 4px rgba(204, 75, 55, 0.35),
-    0 0 calc(18px + var(--joulie-level) * 28px) rgba(204, 75, 55, 0.55);
+  border: 6px solid #cc4b37;
   pointer-events: none;
+  transform: scale(calc(1 + var(--joulie-level) * 0.28));
 }
 
 .joulie-bb[data-state="hearing"]::after {
   content: "";
   position: absolute;
   z-index: 0;
-  inset: -10px;
+  inset: -8px;
   border-radius: 50%;
-  border: 2px solid rgba(204, 75, 55, 0.7);
+  border: 3px solid rgba(204, 75, 55, 0.85);
   pointer-events: none;
-  animation: joulie-hear 1.8s ease-out infinite;
+  animation: joulie-hear 1.6s ease-out infinite;
 }
 
 .joulie-bb[data-state="hearing"] .joulie-bb-ball {
-  transform: scale(calc(1.02 + var(--joulie-level) * 0.16));
-  transition: transform 90ms linear;
-  box-shadow:
-    inset -7px -9px 14px rgba(17, 17, 17, 0.14),
-    inset 5px 5px 8px rgba(255, 255, 255, 0.95),
-    0 0 calc(14px + var(--joulie-level) * 22px) rgba(204, 75, 55, 0.45);
+  transform: scale(calc(1.03 + var(--joulie-level) * 0.1));
 }
 
+/* Pensando: barrido rojo dentro de la bola, sin respirar. */
 .joulie-bb[data-state="thinking"] .joulie-bb-ball::after {
   opacity: 1;
-  animation: joulie-spin 2.6s linear infinite;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 48%,
+    rgba(204, 75, 55, 0.22) 62%,
+    rgba(204, 75, 55, 0.72) 74%,
+    rgba(255, 255, 255, 0.98) 84%,
+    transparent 92%
+  );
+  animation: joulie-spin 1.5s linear infinite;
 }
 
-/* JOULIE habla: la bola crece con un halo suave, sin anillo. */
+/* JOULIE habla: el wobble va por --joulie-wobble y se apaga si el nivel es 0. */
+.joulie-bb[data-state="speaking"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -32px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(204, 75, 55, 0) 68%,
+    rgba(204, 75, 55, 0.9) 84%,
+    rgba(204, 75, 55, 0) 100%
+  );
+  opacity: var(--joulie-level);
+  transform: scale(calc(1 + var(--joulie-level) * 0.16));
+  pointer-events: none;
+}
+
 .joulie-bb[data-state="speaking"] .joulie-bb-ball {
-  transform: scale(calc(1.05 + var(--joulie-level) * 0.18));
-  transition: transform 90ms linear, box-shadow 90ms linear;
-  box-shadow:
-    inset -7px -9px 14px rgba(17, 17, 17, 0.14),
-    inset 5px 5px 8px rgba(255, 255, 255, 0.95),
-    0 0 calc(20px + var(--joulie-level) * 28px) rgba(204, 75, 55, 0.22);
+  transform:
+    scaleX(calc(1 + var(--joulie-level) * (0.18 + var(--joulie-wobble) * 0.08)))
+    scaleY(calc(1 + var(--joulie-level) * (0.28 - var(--joulie-wobble) * 0.08)));
 }
 
 @keyframes joulie-breathe {
@@ -96,7 +113,7 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.04);
+    transform: scale(1.08);
   }
 }
 
@@ -109,20 +126,39 @@
 @keyframes joulie-hear {
   0% {
     transform: scale(1);
-    opacity: 0.75;
+    opacity: 0.9;
   }
   100% {
-    transform: scale(1.28);
+    transform: scale(1.45);
     opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .joulie-bb,
   .joulie-bb-ball,
   .joulie-bb-ball::after,
+  .joulie-bb::before,
   .joulie-bb::after {
     animation: none !important;
     transition: none !important;
-    transform: none !important;
+  }
+
+  .joulie-bb[data-state="idle"] .joulie-bb-ball,
+  .joulie-bb[data-state="listening"] .joulie-bb-ball {
+    transform: none;
+  }
+
+  .joulie-bb[data-state="hearing"]::after {
+    opacity: 0;
+  }
+
+  .joulie-bb[data-state="thinking"] .joulie-bb-ball::after {
+    opacity: 1;
+    transform: rotate(28deg);
+  }
+
+  .joulie-bb[data-state="speaking"] .joulie-bb-ball {
+    transform: scale(calc(1 + var(--joulie-level) * 0.2));
   }
 }

@@ -7,7 +7,7 @@ import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
-import { TALK_START, trackTalk } from '@/lib/joulie-voice'
+import { TALK_START, outputLevel, trackTalk } from '@/lib/joulie-voice'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -116,7 +116,7 @@ function JoulieLive() {
   const [phase, setPhase] = useState<JouliePhase>('idle')
   const [level, setLevel] = useState(0)
   const [hearing, setHearing] = useState(false)
-  const [caption, setCaption] = useState('Toca para hablar')
+  const [notice, setNotice] = useState('')
   const [liveOn, setLiveOn] = useState(false)
   const [muted, setMuted] = useState(false)
   const [turns, setTurns] = useState<Turn[]>(sessionTurns)
@@ -127,15 +127,28 @@ function JoulieLive() {
   const conversation = useConversation({
     micMuted: muted,
     onMessage: (payload) => {
-      if (!payload.message) return
-      setCaption(payload.message)
+      const text = payload.message?.trim()
+      if (text) {
+        const role: Turn['role'] = payload.source === 'user' ? 'user' : 'assistant'
+        const prev = sessionTurns[sessionTurns.length - 1]
+        const grown =
+          prev &&
+          prev.role === role &&
+          (text === prev.content || text.startsWith(prev.content) || prev.content.startsWith(text))
+        const content = grown && prev.content.length > text.length ? prev.content : text
+        const next = grown
+          ? [...sessionTurns.slice(0, -1), { role, content }]
+          : [...sessionTurns, { role, content }].slice(-12)
+        sessionTurns = next
+        setTurns(next)
+      }
       if (payload.source === 'user') {
         waiting.current = true
         setPhase('thinking')
       }
     },
     onError: () => {
-      setCaption('No pude conectar la voz. Intenta de nuevo.')
+      setNotice('No pude conectar la voz. Intenta de nuevo.')
       setPhase('idle')
       setLiveOn(false)
     },
@@ -146,8 +159,16 @@ function JoulieLive() {
       setLevel(0)
     },
   })
-  const { status, mode: agentMode, startSession, endSession, sendUserActivity, getInputVolume, getOutputVolume } =
-    conversation
+  const {
+    status,
+    mode: agentMode,
+    startSession,
+    endSession,
+    sendUserActivity,
+    getInputVolume,
+    getOutputVolume,
+    getOutputByteFrequencyData,
+  } = conversation
   const endRef = useRef(endSession)
   endRef.current = endSession
 
@@ -188,13 +209,17 @@ function JoulieLive() {
     let frame = 0
     let talk = TALK_START
     const tick = () => {
-      const raw = agentMode === 'speaking' ? getOutputVolume() : getInputVolume()
-      const next = Number.isFinite(raw) ? raw : 0
-      setLevel(next)
-      if (agentMode !== 'speaking') {
+      let next = 0
+      if (agentMode === 'speaking') {
+        next = outputLevel(getOutputVolume(), getOutputByteFrequencyData())
+      } else {
+        const raw = getInputVolume()
+        next = Number.isFinite(raw) ? raw : 0
         talk = trackTalk(talk, muted ? 0 : next, performance.now())
         setHearing(talk.talking)
       }
+      const shownLevel = Math.round(next * 100) / 100
+      setLevel((prev) => (prev === shownLevel ? prev : shownLevel))
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -202,7 +227,7 @@ function JoulieLive() {
       cancelAnimationFrame(frame)
       setHearing(false)
     }
-  }, [status, agentMode, muted, getInputVolume, getOutputVolume])
+  }, [status, agentMode, muted, getInputVolume, getOutputVolume, getOutputByteFrequencyData])
 
   useEffect(() => {
     const list = listRef.current
@@ -214,13 +239,13 @@ function JoulieLive() {
     busy.current = true
     waiting.current = false
     setPhase('thinking')
-    setCaption(GREETING)
+    setNotice('')
     setLiveOn(true)
     try {
       const res = await apiFetch('/joulie/sesion', { method: 'POST', body: '{}' })
       const data = (await res.json().catch(() => ({}))) as { token?: string; session?: string; error?: string }
       if (!res.ok || !data.token || !data.session) {
-        setCaption(data.error || UNAVAILABLE)
+        setNotice(data.error || UNAVAILABLE)
         setPhase('idle')
         setLiveOn(false)
         return
@@ -234,7 +259,7 @@ function JoulieLive() {
         })
       )
     } catch {
-      setCaption('No pude conectar la voz. Intenta de nuevo.')
+      setNotice('No pude conectar la voz. Intenta de nuevo.')
       setPhase('idle')
       setLiveOn(false)
     } finally {
@@ -267,7 +292,7 @@ function JoulieLive() {
     setMuted(false)
     setPhase('idle')
     setLevel(0)
-    setCaption('Toca para hablar')
+    setNotice('')
   }
 
   function openText() {
@@ -280,7 +305,7 @@ function JoulieLive() {
 
   function backToVoice() {
     setMode('voice')
-    setCaption('Toca para hablar')
+    setNotice('')
     setPhase('idle')
   }
 
@@ -289,7 +314,6 @@ function JoulieLive() {
     if (!message || busy.current) return
     busy.current = true
     setPhase('thinking')
-    setCaption(message)
     const history = sessionTurns.slice(-6)
     const next = [...sessionTurns, { role: 'user' as const, content: message }].slice(-12)
     sessionTurns = next
@@ -309,7 +333,6 @@ function JoulieLive() {
     const withReply = [...sessionTurns, { role: 'assistant' as const, content: reply }].slice(-12)
     sessionTurns = withReply
     setTurns(withReply)
-    setCaption(reply)
     setPhase('idle')
     busy.current = false
   }
@@ -452,15 +475,12 @@ function JoulieLive() {
           >
             <JoulieAvatar phase={shown} level={level} size={208} label={PHASE_LABEL[shown]} />
           </button>
-          <p className="mt-6 h-4 text-[11px] tracking-[0.22em] text-[#767676]" style={jost}>
-            {liveOn ? PHASE_LABEL[shown] : ''}
-          </p>
           <p
-            className="mt-4 max-w-sm text-center text-[15px] leading-relaxed text-[#444444] line-clamp-4 min-h-[4.5rem]"
-            style={lato}
+            className="mt-6 min-h-4 max-w-sm text-center text-[11px] tracking-[0.22em] text-[#767676]"
+            style={jost}
             aria-live="polite"
           >
-            {caption}
+            {liveOn ? PHASE_LABEL[shown] : notice}
           </p>
         </div>
         <div className="flex items-center justify-center gap-8 pb-8">

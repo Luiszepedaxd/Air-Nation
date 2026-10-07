@@ -47,3 +47,25 @@ export function trackTalk(prev: Talk, level: number, now: number): Talk {
   const loudAt = level > floor + TALK_MARGIN ? now : prev.loudAt
   return { floor, loudAt, talking: now - loudAt < 300 }
 }
+
+const OUTPUT_NOISE = 0.02
+
+/**
+ * Nivel visible del orbe (0–1). El volumen de salida de ElevenLabs suele
+ * quedarse bajo 0.3; la raíz lo sube. Si llegan bins, cuenta la banda de voz
+ * (el tercio grave: en WebRTC a 48 kHz eso es ~100–8000 Hz). Bajo 0.02, quieto.
+ */
+export function outputLevel(volume: number, bins?: ArrayLike<number> | null): number {
+  const vol = Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : 0
+  let energy = 0
+  const count = bins?.length ?? 0
+  if (count > 0 && bins) {
+    const end = Math.min(count, Math.max(24, Math.floor(count * 0.35)))
+    let sum = 0
+    for (let i = 0; i < end; i++) sum += bins[i] || 0
+    energy = sum / end / 255
+  }
+  const raw = Math.max(vol, energy)
+  if (raw <= OUTPUT_NOISE) return 0
+  return Math.min(1, Math.sqrt((raw - OUTPUT_NOISE) / (1 - OUTPUT_NOISE)) * 1.55)
+}

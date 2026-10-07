@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { TALK_START, pickJoulieVoice, trackTalk } from './joulie-voice.ts'
+import { TALK_START, outputLevel, pickJoulieVoice, trackTalk } from './joulie-voice.ts'
 
 describe('voz de Joulie', () => {
   it('prefiere es-MX femenina, luego es-US femenina, luego cualquier es femenina', () => {
@@ -36,5 +36,18 @@ describe('voz de Joulie', () => {
     assert.equal(talk.talking, false)
     talk = trackTalk(talk, 0.16, 2016)
     assert.equal(talk.talking, true)
+  })
+
+  it('sube el volumen de salida para que el orbe se note', () => {
+    assert.equal(outputLevel(0), 0)
+    assert.equal(outputLevel(Number.NaN), 0)
+    assert.equal(outputLevel(0.02), 0, 'el ruido de salida no mueve el orbe')
+    const mid = outputLevel(0.15)
+    assert.ok(mid > 0.5 && mid < 0.75, `0.15 debe verse, fue ${mid}`)
+    assert.equal(outputLevel(1), 1)
+    assert.equal(outputLevel(0, new Uint8Array(128)), 0)
+    const voice = new Uint8Array(128)
+    voice.fill(180, 0, 40)
+    assert.ok(outputLevel(0, voice) > 0.85, 'la banda de voz mueve el orbe aunque el volumen venga en cero')
   })
 })
