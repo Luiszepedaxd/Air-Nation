@@ -191,9 +191,15 @@ function logOutcome(outcome, started) {
   console.info("[joulie] %s %dms", outcome, Date.now() - started);
 }
 
+// ponytail: interruptor cacheado 30 s por proceso para ahorrar un viaje a Supabase
+// en cada turno de voz. Apagar Joulie tarda hasta 30 s en surtir efecto.
+const enabledCache = new WeakMap();
+
 async function readEnabled(supabase, enabled) {
   if (typeof enabled === "boolean") return enabled;
   if (!supabase) return true;
+  const hit = enabledCache.get(supabase);
+  if (hit && Date.now() - hit.at < 30_000) return hit.value;
   try {
     const { data, error } = await supabase
       .from("joulie_config")
@@ -201,6 +207,7 @@ async function readEnabled(supabase, enabled) {
       .eq("id", "singleton")
       .maybeSingle();
     if (error || !data || typeof data.enabled !== "boolean") return true;
+    enabledCache.set(supabase, { value: data.enabled, at: Date.now() });
     return data.enabled;
   } catch {
     return true;
@@ -1079,6 +1086,8 @@ async function runCustomLlm(opts, write) {
   };
 
   if (!secretsMatch(bearerToken(opts.headers), secret)) return { status: 401, error: "No autorizado" };
+  // Abre el stream antes de Supabase y OpenRouter: ElevenLabs recibe headers y un chunk al instante.
+  send(contentChunk("", null));
 
   const now = opts.now || Date.now();
   const cfg = opts.limits || resolveConfig();

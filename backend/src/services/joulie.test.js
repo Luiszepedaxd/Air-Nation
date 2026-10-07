@@ -528,6 +528,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
     );
     assert.equal(seen, "");
     assert.equal(result.reply, COPY.refusal);
+    assert.match(frames[0], /"delta":\{\}/);
     const packed = frames.join("");
     assert.match(packed, /Solo puedo ayudarte/);
     assert.equal(packed.includes(secret), false);
