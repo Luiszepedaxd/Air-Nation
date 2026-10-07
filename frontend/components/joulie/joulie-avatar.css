@@ -41,8 +41,20 @@
 }
 
 .joulie-bb[data-state="idle"] .joulie-bb-ball,
-.joulie-bb[data-state="listening"] .joulie-bb-ball {
+.joulie-bb[data-state="listening"] .joulie-bb-ball,
+.joulie-bb[data-state="starting"] .joulie-bb-ball {
   animation: joulie-breathe 3.2s ease-in-out infinite;
+}
+
+/* Iniciando: aro quieto, sin el giro de pensando. */
+.joulie-bb[data-state="starting"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid rgba(204, 75, 55, 0.35);
+  pointer-events: none;
 }
 
 .joulie-bb[data-state="listening"] .joulie-bb-ball {
@@ -52,7 +64,7 @@
     0 0 10px rgba(204, 75, 55, 0.12);
 }
 
-/* El operador habla: anillo rojo fijo; el volumen solo lo escala. */
+/* El operador habla: anillo rojo fijo; el volumen solo lo escala. Entra en 200 ms. */
 .joulie-bb[data-state="hearing"]::before {
   content: "";
   position: absolute;
@@ -62,6 +74,7 @@
   border: 6px solid #cc4b37;
   pointer-events: none;
   transform: scale(calc(1 + var(--joulie-level) * 0.28));
+  animation: joulie-ring-in 200ms ease;
 }
 
 .joulie-bb[data-state="hearing"]::after {
@@ -79,18 +92,18 @@
   transform: scale(calc(1.03 + var(--joulie-level) * 0.1));
 }
 
-/* Pensando: barrido rojo dentro de la bola, sin respirar. */
-.joulie-bb[data-state="thinking"] .joulie-bb-ball::after {
-  opacity: 1;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0 48%,
-    rgba(204, 75, 55, 0.22) 62%,
-    rgba(204, 75, 55, 0.72) 74%,
-    rgba(255, 255, 255, 0.98) 84%,
-    transparent 92%
-  );
-  animation: joulie-spin 1.5s linear infinite;
+/* Pensando: arco rojo alrededor de la bola. Cabe en el escenario de 328 px. */
+.joulie-bb[data-state="thinking"]::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -14px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 72%, #cc4b37 86%, transparent 100%);
+  -webkit-mask: radial-gradient(circle, transparent 64%, #000 66%);
+  mask: radial-gradient(circle, transparent 64%, #000 66%);
+  animation: joulie-spin 0.9s linear infinite;
+  pointer-events: none;
 }
 
 /* JOULIE habla: el wobble va por --joulie-wobble y se apaga si el nivel es 0. */
@@ -133,6 +146,15 @@
   }
 }
 
+@keyframes joulie-ring-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes joulie-hear {
   0% {
     transform: scale(1);
@@ -155,16 +177,22 @@
   }
 
   .joulie-bb[data-state="idle"] .joulie-bb-ball,
-  .joulie-bb[data-state="listening"] .joulie-bb-ball {
+  .joulie-bb[data-state="listening"] .joulie-bb-ball,
+  .joulie-bb[data-state="starting"] .joulie-bb-ball {
     transform: none;
+  }
+
+  .joulie-bb[data-state="hearing"]::before,
+  .joulie-bb[data-state="hearing"]::after {
+    animation: none;
   }
 
   .joulie-bb[data-state="hearing"]::after {
     opacity: 0;
   }
 
-  .joulie-bb[data-state="thinking"] .joulie-bb-ball::after {
-    opacity: 1;
+  .joulie-bb[data-state="thinking"]::before {
+    animation: none;
     transform: rotate(28deg);
   }
 

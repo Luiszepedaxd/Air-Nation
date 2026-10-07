@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import './joulie-avatar.css'
 
-export type JouliePhase = 'idle' | 'listening' | 'hearing' | 'thinking' | 'speaking'
+export type JouliePhase = 'idle' | 'starting' | 'listening' | 'hearing' | 'thinking' | 'speaking'
 
 export function JoulieAvatar({
   phase,

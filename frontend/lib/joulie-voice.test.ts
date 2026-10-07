@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { CALL_BYE_MS, CALL_LIMIT_MS, TALK_START, VAD_HOLD_MS, callClock, hearingNow, outputLevel, pickJoulieVoice, shouldHangUp, trackTalk, voiceFace } from './joulie-voice.ts'
+import { BARGE_MS, CALL_BYE_MS, CALL_LIMIT_MS, RELEASE_MS, TALK_START, VAD_HOLD_MS, bandEnergy, callClock, easeLevel, hearingNow, micAudio, orbPhase, outputLevel, pickJoulieVoice, shouldHangUp, trackTalk, voiceFace } from './joulie-voice.ts'
 
 describe('voz de Joulie', () => {
   it('prefiere es-MX femenina, luego es-US femenina, luego cualquier es femenina', () => {
@@ -56,10 +56,51 @@ describe('voz de Joulie', () => {
     assert.equal(voiceFace('listening', true), 'hearing')
     assert.equal(voiceFace('speaking', false), 'speaking')
     assert.equal(voiceFace('thinking', true), 'thinking')
+    assert.equal(voiceFace('starting', true), 'starting')
     assert.equal(hearingNow(true, 0, 1000, false), true)
     assert.equal(hearingNow(false, 1000, 1000 + VAD_HOLD_MS - 1, false), true)
     assert.equal(hearingNow(false, 1000, 1000 + VAD_HOLD_MS, false), false)
     assert.equal(hearingNow(true, 1000, 1000, true), false, 'el micrófono silenciado no cuenta')
+    assert.equal(hearingNow(false, 1000, 1000, false, true), false, 'un pico de VAD no la interrumpe')
+    assert.equal(hearingNow(true, 0, 1000, false, true), true)
+  })
+
+  it('mientras ella habla solo cuenta voz sostenida, no un pico', () => {
+    let talk = TALK_START
+    for (let t = 0; t < 2000; t += 16) talk = trackTalk(talk, 0.2, t, true)
+    assert.equal(talk.talking, false, 'el ruido del local no es voz')
+    talk = trackTalk(talk, 0.55, 2016, true)
+    assert.equal(talk.talking, false, 'un cuadro alto no basta')
+    for (let t = 2032; t < 2016 + BARGE_MS; t += 16) talk = trackTalk(talk, 0.55, t, true)
+    assert.equal(talk.talking, false)
+    talk = trackTalk(talk, 0.55, 2016 + BARGE_MS, true)
+    assert.equal(talk.talking, true)
+    talk = trackTalk(talk, 0.2, 2016 + BARGE_MS + 16, true)
+    assert.equal(talk.talking, true, 'histéresis al soltar')
+    talk = trackTalk(talk, 0.2, 2016 + BARGE_MS + 16 + RELEASE_MS, true)
+    assert.equal(talk.talking, false)
+  })
+
+  it('iniciando no es pensando, y pensando solo espera su audio', () => {
+    assert.equal(orbPhase({ status: 'connecting', agentMode: 'listening', waiting: false, userTalking: false, sheAudible: false }), 'starting')
+    assert.equal(orbPhase({ status: 'connected', agentMode: 'listening', waiting: true, userTalking: false, sheAudible: false }), 'thinking')
+    assert.equal(orbPhase({ status: 'connected', agentMode: 'speaking', waiting: false, userTalking: false, sheAudible: true }), 'speaking')
+    assert.equal(orbPhase({ status: 'connected', agentMode: 'listening', waiting: false, userTalking: false, sheAudible: true }), 'speaking')
+    assert.equal(orbPhase({ status: 'connected', agentMode: 'speaking', waiting: false, userTalking: true, sheAudible: true }), 'hearing')
+    assert.equal(orbPhase({ status: 'connected', agentMode: 'listening', waiting: false, userTalking: false, sheAudible: false }), 'listening')
+  })
+
+  it('fuerza cancelación de eco y suaviza el nivel', () => {
+    const audio = micAudio({ channelCount: { ideal: 1 }, echoCancellation: false })
+    assert.equal(audio.echoCancellation, true)
+    assert.equal(audio.noiseSuppression, true)
+    assert.equal(audio.autoGainControl, true)
+    assert.equal(micAudio(true).noiseSuppression, true)
+    const bins = new Uint8Array(128)
+    bins.fill(255, 0, 20)
+    assert.ok(bandEnergy(bins) > 0.1)
+    assert.ok(easeLevel(0, 1) > 0.2 && easeLevel(0, 1) < 0.5)
+    assert.equal(easeLevel(0.99, 1), 1)
   })
 
   it('cuelga a los 180 s y al oír el límite o la despedida', () => {

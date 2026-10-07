@@ -7,7 +7,7 @@ import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
-import { TALK_START, callClock, hearingNow, outputLevel, shouldHangUp, trackTalk, voiceFace } from '@/lib/joulie-voice'
+import { TALK_START, bandEnergy, callClock, easeLevel, hearingNow, micAudio, orbPhase, outputLevel, shouldHangUp, trackTalk, voiceFace } from '@/lib/joulie-voice'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -29,9 +29,10 @@ let sessionTurns: Turn[] = []
 
 const PHASE_LABEL: Record<JouliePhase, string> = {
   idle: 'Estoy lista',
+  starting: 'Iniciando…',
   listening: 'Escuchando',
   hearing: 'Te escucho…',
-  thinking: 'Pensando',
+  thinking: 'Pensando…',
   speaking: 'JOULIE está hablando',
 }
 
@@ -124,6 +125,8 @@ function JoulieLive() {
   const listRef = useRef<HTMLDivElement>(null)
   const busy = useRef(false)
   const vadAt = useRef(0)
+  const sheAt = useRef(0)
+  const eased = useRef(0)
   const nudged = useRef(false)
   const byeSent = useRef(false)
   const [hangup, setHangup] = useState(false)
@@ -151,7 +154,7 @@ function JoulieLive() {
       }
       if (payload.source === 'user') {
         waiting.current = true
-        setPhase('thinking')
+        if (performance.now() - sheAt.current >= 400) setPhase('thinking')
       }
     },
     onError: () => {
@@ -176,6 +179,7 @@ function JoulieLive() {
     sendUserMessage,
     sendUserActivity,
     getInputVolume,
+    getInputByteFrequencyData,
     getOutputVolume,
     getOutputByteFrequencyData,
   } = conversation
@@ -202,16 +206,21 @@ function JoulieLive() {
 
   useEffect(() => {
     if (status === 'connecting') {
-      setPhase('thinking')
+      setPhase('starting')
       return
     }
+    if (agentMode === 'speaking') waiting.current = false
     if (status !== 'connected') return
-    if (agentMode === 'speaking') {
-      waiting.current = false
-      setPhase('speaking')
-      return
-    }
-    if (!waiting.current) setPhase('listening')
+    const sheAudible = performance.now() - sheAt.current < 400
+    setPhase(
+      orbPhase({
+        status,
+        agentMode,
+        waiting: waiting.current,
+        userTalking: false,
+        sheAudible,
+      })
+    )
   }, [status, agentMode])
 
   useEffect(() => {
@@ -246,23 +255,35 @@ function JoulieLive() {
       const now = performance.now()
       const raw = getInputVolume()
       const mic = muted || !Number.isFinite(raw) ? 0 : raw
-      talk = trackTalk(talk, mic, now)
-      const userTalking = hearingNow(talk.talking, vadAt.current, now, muted)
-      if (userTalking && agentMode === 'speaking') {
+      const bins = getInputByteFrequencyData()
+      const sheAudible = now - sheAt.current < 400
+      const speaking = agentMode === 'speaking' || sheAudible
+      const heard = speaking && bins.length ? bandEnergy(bins) : mic
+      talk = trackTalk(talk, heard, now, speaking)
+      const userTalking = hearingNow(talk.talking, vadAt.current, now, muted, speaking)
+      if (userTalking && speaking) {
         if (!nudged.current) {
           nudged.current = true
           sendUserActivity()
         }
-      } else if (agentMode !== 'speaking') {
+      } else if (!speaking) {
         nudged.current = false
       }
       setHearing(userTalking)
-      const next =
-        agentMode === 'speaking' && !userTalking
-          ? outputLevel(getOutputVolume(), getOutputByteFrequencyData())
-          : mic
-      const shownLevel = Math.round(next * 100) / 100
+      const out = outputLevel(getOutputVolume(), getOutputByteFrequencyData())
+      if (out > 0.05) sheAt.current = now
+      const target = speaking && !userTalking ? out : userTalking ? mic : 0
+      eased.current = easeLevel(eased.current, target)
+      const shownLevel = Math.round(eased.current * 100) / 100
       setLevel((prev) => (prev === shownLevel ? prev : shownLevel))
+      const face = orbPhase({
+        status,
+        agentMode,
+        waiting: waiting.current,
+        userTalking,
+        sheAudible: now - sheAt.current < 400,
+      })
+      setPhase((prev) => (prev === face ? prev : face))
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -270,7 +291,7 @@ function JoulieLive() {
       cancelAnimationFrame(frame)
       setHearing(false)
     }
-  }, [status, agentMode, muted, getInputVolume, getOutputVolume, getOutputByteFrequencyData, sendUserActivity])
+  }, [status, agentMode, muted, getInputVolume, getInputByteFrequencyData, getOutputVolume, getOutputByteFrequencyData, sendUserActivity])
 
   useEffect(() => {
     const list = listRef.current
@@ -281,7 +302,7 @@ function JoulieLive() {
     if (busy.current) return
     busy.current = true
     waiting.current = false
-    setPhase('thinking')
+    setPhase('starting')
     setNotice('')
     setLiveOn(true)
     try {
@@ -293,14 +314,25 @@ function JoulieLive() {
         setLiveOn(false)
         return
       }
-      await Promise.resolve(
-        startSession({
-          conversationToken: data.token,
-          connectionType: 'webrtc',
-          dynamicVariables: { joulie_session: data.session },
-          overrides: { agent: { firstMessage: GREETING, language: 'es' } },
-        })
-      )
+      const media = navigator.mediaDevices
+      const original = media.getUserMedia.bind(media)
+      media.getUserMedia = (constraints) => {
+        const audio = !constraints || typeof constraints !== 'object' ? true : constraints.audio
+        const rest = constraints && typeof constraints === 'object' ? constraints : {}
+        return original({ ...rest, audio: audio === false ? false : micAudio(audio) })
+      }
+      try {
+        await Promise.resolve(
+          startSession({
+            conversationToken: data.token,
+            connectionType: 'webrtc',
+            dynamicVariables: { joulie_session: data.session },
+            overrides: { agent: { firstMessage: GREETING, language: 'es' } },
+          })
+        )
+      } finally {
+        media.getUserMedia = original
+      }
     } catch {
       setNotice('No pude conectar la voz. Intenta de nuevo.')
       setPhase('idle')

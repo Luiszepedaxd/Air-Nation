@@ -83,9 +83,11 @@ function agentBody(secretId, withHeader) {
         model_id: "eleven_flash_v2_5",
         optimize_streaming_latency: 4,
       },
-      // eager: cede el turno en cuanto el operador habla. Hay que volver a correr este script.
+      // normal: eager tomaba el ruido del evento como turno y la pasaba a escuchando.
+      // El cliente avisa actividad solo tras ~300 ms de voz, así una interrupción real sigue rápida.
+      // Hay que volver a correr este script.
       turn: {
-        turn_eagerness: "eager",
+        turn_eagerness: "normal",
         turn_timeout: 5,
         speculative_turn: true,
         silence_end_call_timeout: 20,
