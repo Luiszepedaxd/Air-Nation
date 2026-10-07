@@ -412,6 +412,29 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.deepEqual(nameTokens(lookup).slice(0, 2), ["operacion", "virus"]);
   });
 
+  it("el cerebro corta un marcador que llega partido entre deltas", async () => {
+    const secret = "joulie-test-secret";
+    const session = signSession("user-1", secret, NOW, 60_000);
+    const frames = [];
+    const result = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: { messages: [{ role: "user", content: "qué sabes de virus3" }] },
+        now: NOW,
+        enabled: true,
+        loadContext: async () => ({ equipos: [{ nombre: "Virus3", ciudad: "CDMX" }] }),
+        completeStream: async function* () {
+          yield "Claro. j9k";
+          yield "-canary y más";
+        },
+      },
+      (frame) => frames.push(frame)
+    );
+    assert.equal(result.reply, COPY.refusal);
+    assert.equal(frames.join("").includes("-canary"), false);
+  });
+
   it("pide el modelo sin razonamiento y con una respuesta corta", () => {
     delete process.env.JOULIE_MODEL;
     const body = buildChatBody([{ role: "user", content: "qué sabes de virus3" }], resolveConfig(), true);
