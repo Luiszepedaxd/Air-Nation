@@ -16,15 +16,15 @@ async function safeQuery(query) {
   }
 }
 
-function upcomingQuery(supabase, now) {
-  return supabase
+function upcomingQuery(supabase, now, filter) {
+  let query = supabase
     .from(ENTITIES.eventos.tabla)
     .select("title, fecha, sede_nombre, sede_ciudad, disciplina, url_externa, fields(nombre, ciudad, estado)")
     .eq("published", true)
     .eq("status", "publicado")
-    .gte("fecha", now)
-    .order("fecha", { ascending: true })
-    .limit(4);
+    .gte("fecha", now);
+  if (filter) query = query.or(filter);
+  return query.order("fecha", { ascending: true }).limit(4);
 }
 
 // ponytail: un año de historia y tres registros alcanzan para decir «antes ha
@@ -87,6 +87,31 @@ async function statesOf(supabase, places) {
     .map((estado) => estado.trim())
     .filter(Boolean);
   return [...new Set(estados)].slice(0, 3);
+}
+
+// Eventos «en» un lugar. Ni el evento ni el campo tienen por qué llamarse como
+// la pregunta: el evento guarda su propia sede y el campo guarda el municipio.
+// El estado que ubica el lugar sí los junta, así que de ahí salen los campos
+// (por su id) y sus ciudades, y con eso se filtra la agenda y lo que ya pasó.
+// Misma resolución de lugar que usan los campos: statesOf.
+async function placeFilter(supabase, places) {
+  if (!places.length) return "";
+  const estados = await statesOf(supabase, places);
+  if (!estados.length) return "";
+  const campos = await safeQuery(
+    supabase
+      .from(ENTITIES.campos.tabla)
+      .select("id, ciudad")
+      .eq("status", "aprobado")
+      .or(likeOr(["estado"], estados))
+      .limit(12)
+  );
+  const ciudades = [...new Set(campos.map((row) => (row && typeof row.ciudad === "string" ? row.ciudad : "")).filter(Boolean))];
+  const ids = campos
+    .map((row) => (row && row.id ? String(row.id).replace(/[(),]/g, "").trim() : ""))
+    .filter(Boolean)
+    .map((id) => `field_id.eq.${id}`);
+  return [likeOr(["sede_ciudad"], ciudades), ...ids].filter(Boolean).join(",");
 }
 
 async function fieldCatalog(supabase, message) {
@@ -242,6 +267,20 @@ async function loadPublicContext(supabase, message) {
     const found = await Promise.all(tagged);
     const bucket = { eventos: [], campos: [], equipos: [], tienda: [], replicas: [], operadores: [], proximos: [], pasados: [], blog: [] };
     for (const item of found) bucket[item.kind].push(...item.rows);
+    // Ningún evento se llama como la pregunta: puede que el lugar sí exista y
+    // lo guarden otras columnas. Segunda vuelta por lugar, para lo que viene y
+    // para lo que ya pasó.
+    if (wants("eventos") && !bucket.eventos.length) {
+      const porLugar = await placeFilter(supabase, placeTokens(message));
+      if (porLugar) {
+        const [prox, pas] = await Promise.all([
+          safeQuery(upcomingQuery(supabase, now, porLugar)),
+          safeQuery(pastQuery(supabase, now, porLugar)),
+        ]);
+        bucket.eventos.push(...prox);
+        bucket.pasados.push(...pas);
+      }
+    }
     const agenda = calendar ? bucket.proximos : bucket.proximos.filter((row) => matchesForms(row, forms));
     const events = dedupe([...bucket.eventos, ...agenda], (row) => `${row.title}|${row.fecha}`);
     const fields = rankByTokens(

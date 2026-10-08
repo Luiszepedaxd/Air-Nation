@@ -1,6 +1,6 @@
 // El protocolo con ElevenLabs: su voz, leer el request del custom LLM y escribirle chunks.
 // Voz Norah. Cambiar el id aquí o con ELEVENLABS_VOICE_ID (opcional).
-const { strEnv } = require("./config");
+const { COPY, strEnv } = require("./config");
 
 const DEFAULT_ELEVENLABS_VOICE_ID = "kcQkGnn0HAT2JRDQ4Ljp";
 
@@ -72,6 +72,9 @@ function priorHistory(body) {
     if (content) usable.push({ role: message.role, content });
   }
   if (usable.length && usable[usable.length - 1].role === "user") usable.pop();
+  // ElevenLabs no manda su first_message en messages: sin él el modelo cree que
+  // nadie ha abierto la llamada y vuelve a saludar. Su saludo va de primer turno.
+  if (!usable.some((turn) => turn.role === "assistant")) usable.unshift({ role: "assistant", content: COPY.greeting });
   return usable;
 }
 

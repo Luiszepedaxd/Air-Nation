@@ -6,11 +6,14 @@
  * Requiere ELEVENLABS_API_KEY con convai_read y convai_write,
  * y JOULIE_ELEVEN_LLM_SECRET (el mismo valor que en Railway).
  */
+import joulieConfig from "../src/services/joulie/config.js";
+
 const API = "https://api.elevenlabs.io/v1";
 const NAME = "JOULIE";
 const SECRET_NAME = "JOULIE_LLM";
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || "kcQkGnn0HAT2JRDQ4Ljp";
-const GREETING = "Hola, soy JOULIE. ¿En qué te ayudo?";
+// El saludo vive en un solo lugar: el mismo que el backend pone de primer turno.
+const GREETING = joulieConfig.COPY.greeting;
 // URL base: ElevenLabs le agrega /chat/completions al llamar.
 const LLM_URL =
   process.env.JOULIE_LLM_PUBLIC_URL || "https://air-nation-production.up.railway.app/api/v1/joulie/llm";

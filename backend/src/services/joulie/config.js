@@ -32,6 +32,10 @@ const COPY = {
   who:
     "Soy Joulie. Estoy lista para ayudarte con lo publicado en AirNation: eventos, réplicas, campos y equipos de airsoft.",
   bye: "Listo. Aquí te dejo.",
+  // El saludo con el que ella abre una llamada: es el first_message del agente
+  // de ElevenLabs (scripts/joulie-eleven-agent.mjs lo lee de aquí) y el primer
+  // turno suyo que ve el modelo, para que no vuelva a saludar.
+  greeting: "Hola, soy JOULIE. ¿En qué te ayudo?",
   can: "Puedo contarte los eventos, campos, equipos, réplicas y productos publicados en AirNation.",
   unavailable: "Joulie no está disponible por ahora.",
 };

@@ -2407,3 +2407,120 @@ describe("JOULIE razonamiento", () => {
     }
   });
 });
+
+describe("JOULIE eventos por lugar", () => {
+  const { priorHistory } = require("./joulie/eleven");
+  const CAMPO = { id: "campo-1", nombre: "Gotcha CQB Solares", slug: "gotcha-solares", ciudad: "Zapopan", estado: "Jalisco", tipo: "publico" };
+  const EQUIPO = { nombre: "S75 Airsoft", slug: "s75", ciudad: "Guadalajara", estado: "Jalisco" };
+  // Pasó en un campo cuyo municipio no se llama como la pregunta.
+  const PASADO = {
+    title: "Dominguera Comunidad GDL",
+    fecha: "2026-09-06T17:00:00.000Z",
+    field_id: "campo-1",
+    sede_nombre: "Gotcha CQB Solares",
+    sede_ciudad: "Zapopan",
+    disciplina: "speedsoft",
+    fields: { nombre: "Gotcha CQB Solares", ciudad: "Zapopan", estado: "Jalisco" },
+  };
+
+  // Base falsa que filtra por or() y por la ventana de fecha: sin lt/gte lo
+  // pasado saldría también como agenda.
+  function fakeDb() {
+    const plain = (value) =>
+      String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "");
+    const rowsOf = (table) => (table === "fields" ? [CAMPO] : table === "teams" ? [EQUIPO] : table === "events" ? [PASADO] : []);
+    const chain = (table) => {
+      const call = { or: null, gte: null, lt: null };
+      const keep = (row) => {
+        if (call.gte && !(row.fecha >= call.gte)) return false;
+        if (call.lt && !(row.fecha < call.lt)) return false;
+        if (!call.or) return true;
+        return call.or.split(",").some((part) => {
+          const [col, op, ...rest] = part.split(".");
+          const token = plain(rest.join(".")).replace(/[%"]/g, "");
+          if (!token) return false;
+          return op === "eq" ? plain(row[col]) === token : plain(row[col]).includes(token);
+        });
+      };
+      const api = new Proxy(
+        {
+          or(expr) {
+            call.or = expr;
+            return api;
+          },
+          gte(col, value) {
+            if (col === "fecha") call.gte = value;
+            return api;
+          },
+          lt(col, value) {
+            if (col === "fecha") call.lt = value;
+            return api;
+          },
+          then(resolve) {
+            resolve({ data: rowsOf(table).filter(keep), error: null });
+          },
+        },
+        { get: (target, key) => (key in target ? target[key] : () => api) }
+      );
+      return api;
+    };
+    return { from: chain };
+  }
+
+  async function turno(message, history) {
+    let datos = null;
+    const result = await handleJoulie(
+      base({
+        message,
+        history,
+        supabase: fakeDb(),
+        loadContext: undefined,
+        complete: async (messages) => {
+          const prompt = messages[0].content;
+          datos = JSON.parse(prompt.slice(prompt.lastIndexOf("\n") + 1));
+          return "Te cuento con lo que está publicado.";
+        },
+      })
+    );
+    return { datos, reply: result.reply };
+  }
+
+  it("«¿y ha habido eventos?» encuentra lo pasado del estado que ubica la ciudad", async () => {
+    const uno = await turno("¿Y en Guadalajara hay eventos?");
+    assert.deepEqual(uno.datos.eventos, []);
+
+    const dos = await turno("¿Y ha habido eventos?", [
+      { role: "user", content: "¿Y en Guadalajara hay eventos?" },
+      { role: "assistant", content: "No hay eventos próximos por allá." },
+    ]);
+    assert.notEqual(dos.reply, COPY.noData);
+    assert.deepEqual(dos.datos.eventos, []);
+    assert.deepEqual(
+      dos.datos.eventos_pasados.map((row) => [row.es, row.title, row.ciudad, row.estado]),
+      [[ENTITIES.eventos_pasados.tipo, "Dominguera Comunidad GDL", "Zapopan", "Jalisco"]]
+    );
+  });
+
+  it("la voz arranca con el saludo del agente de primer turno suyo", async () => {
+    assert.deepEqual(priorHistory({ messages: [{ role: "user", content: "¿qué campos hay?" }] }), [
+      { role: "assistant", content: COPY.greeting },
+    ]);
+    // Si ya contestó algo, nadie inventa un turno extra.
+    assert.deepEqual(
+      priorHistory({
+        messages: [
+          { role: "user", content: "hola" },
+          { role: "assistant", content: "Hay dos campos." },
+          { role: "user", content: "¿y en qué ciudad?" },
+        ],
+      }),
+      [
+        { role: "user", content: "hola" },
+        { role: "assistant", content: "Hay dos campos." },
+      ]
+    );
+  });
+});
