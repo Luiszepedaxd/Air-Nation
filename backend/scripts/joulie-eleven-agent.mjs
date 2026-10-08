@@ -65,7 +65,7 @@ function agentBody(secretId, withHeader) {
         first_message: GREETING,
         language: "es",
         disable_first_message_interruptions: false,
-        max_conversation_duration_message: "Listo. Aquí te dejo.",
+        max_conversation_duration_message: "Se acabó el tiempo de prueba. Gracias por probar la beta de JOULIE.",
         prompt: {
           prompt:
             "Eres JOULIE. El servidor de AirNation reemplaza este texto. Marca j9s:{{joulie_session}}.",

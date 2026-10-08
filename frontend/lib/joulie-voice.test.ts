@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { BARGE_MS, CALL_BYE_MS, CALL_LIMIT_MS, RELEASE_MS, TALK_START, VAD_HOLD_MS, bandEnergy, callClock, easeLevel, hearingNow, micAudio, orbPhase, outputLevel, pickJoulieVoice, shouldHangUp, trackTalk, voiceFace } from './joulie-voice.ts'
+import { BARGE_MS, CALL_BYE_MS, CALL_LIMIT_MS, RELEASE_MS, TALK_START, VAD_HOLD_MS, bandEnergy, callClock, callEnd, disconnectInfo, easeLevel, hearingNow, micAudio, orbPhase, outputLevel, pickJoulieVoice, shouldHangUp, trackTalk, voiceFace } from './joulie-voice.ts'
 
 describe('voz de Joulie', () => {
   it('prefiere es-MX femenina, luego es-US femenina, luego cualquier es femenina', () => {
@@ -110,6 +110,19 @@ describe('voz de Joulie', () => {
     assert.equal(callClock(CALL_LIMIT_MS), 'end')
     assert.equal(shouldHangUp('Llegaste al límite de preguntas por ahora. Intenta más tarde.'), true)
     assert.equal(shouldHangUp('Listo. Aquí te dejo.'), true)
+    assert.equal(shouldHangUp('Se acabó el tiempo de prueba. Gracias por probar la beta de JOULIE.'), true)
     assert.equal(shouldHangUp('Hola, soy JOULIE. ¿En qué te ayudo?'), false)
+    assert.equal(callEnd({ elapsedMs: 20_000, reason: 'error', message: 'websocket' }), 'error')
+    assert.equal(callEnd({ elapsedMs: CALL_LIMIT_MS, reason: 'error', message: 'Conversation has exceeded maximum duration' }), 'time')
+    assert.equal(callEnd({ elapsedMs: 1_000, reason: 'error', message: 'max_duration_exceeded' }), 'time')
+    assert.equal(callEnd({ elapsedMs: 30_000, reason: 'agent', message: 'Listo. Aquí te dejo.', userEnded: false }), 'done')
+    assert.equal(callEnd({ elapsedMs: 4_000, userEnded: true }), 'done')
+    assert.equal(callEnd({ elapsedMs: 12_000, message: 'Llegaste al límite de preguntas por ahora. Intenta más tarde.' }), 'day')
+    assert.equal(callEnd({ elapsedMs: CALL_LIMIT_MS, marked: 'day' }), 'day')
+    assert.equal(disconnectInfo({ reason: 'agent', closeReason: 'max duration' }).message, 'max duration')
+    assert.equal(
+      disconnectInfo({ reason: 'error', message: 'limit', context: { type: 'max_duration_exceeded' } }).message,
+      'limit max_duration_exceeded'
+    )
   })
 })

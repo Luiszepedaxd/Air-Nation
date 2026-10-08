@@ -111,11 +111,51 @@ export const CALL_BYE_MS = 172_000
 const HANGUP_LINES = [
   "Llegaste al límite de preguntas por ahora. Intenta más tarde.",
   "Listo. Aquí te dejo.",
+  "Se acabó el tiempo de prueba. Gracias por probar la beta de JOULIE.",
 ]
 
 export function shouldHangUp(text: string): boolean {
   const line = text.trim()
   return HANGUP_LINES.some((item) => line === item || line.startsWith(item))
+}
+
+export type CallEnd = "time" | "day" | "error" | "done"
+
+const DAY_END = /l[ií]mite de preguntas/i
+const TIME_END = /max(?:imum)?[_\s-]*duration|exceeded maximum duration|se acab[oó] el tiempo de prueba/i
+
+/** time: se cumplió el tope de la llamada. day: el cupo del día. error: un fallo de verdad. done: colgó la persona o la despedida normal. */
+export function callEnd(input: {
+  elapsedMs: number
+  reason?: string
+  message?: string
+  userEnded?: boolean
+  marked?: "time" | "day" | null
+}): CallEnd {
+  if (input.marked === "day") return "day"
+  const blob = `${input.reason || ""} ${input.message || ""}`
+  if (DAY_END.test(blob)) return "day"
+  if (input.marked === "time" || TIME_END.test(blob) || input.elapsedMs >= CALL_BYE_MS) return "time"
+  if (input.userEnded) return "done"
+  if (input.reason === "error") return "error"
+  return "done"
+}
+
+export function disconnectInfo(details: unknown): { reason: string; message: string } {
+  if (typeof details === "string") return { reason: "", message: details }
+  if (!details || typeof details !== "object") return { reason: "", message: "" }
+  const row = details as {
+    reason?: unknown
+    message?: unknown
+    closeReason?: unknown
+    context?: { reason?: unknown; type?: unknown }
+  }
+  const reason = typeof row.reason === "string" ? row.reason : ""
+  const context = row.context && typeof row.context === "object" ? row.context : {}
+  const message = [row.message, row.closeReason, context.reason, context.type]
+    .filter((part) => typeof part === "string")
+    .join(" ")
+  return { reason, message }
 }
 
 export function callClock(elapsedMs: number): "open" | "bye" | "end" {

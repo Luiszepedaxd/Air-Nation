@@ -7,7 +7,7 @@ import { ConversationProvider, useConversation } from '@elevenlabs/react'
 import { apiFetch } from '@/lib/apiFetch'
 import { supabase } from '@/lib/supabase'
 import { JoulieAvatar, type JouliePhase } from '@/components/joulie/JoulieAvatar'
-import { TALK_START, bandEnergy, callClock, easeLevel, hearingNow, micAudio, orbPhase, outputLevel, shouldHangUp, trackTalk, voiceFace } from '@/lib/joulie-voice'
+import { TALK_START, bandEnergy, callClock, callEnd, disconnectInfo, easeLevel, hearingNow, micAudio, orbPhase, outputLevel, shouldHangUp, trackTalk, voiceFace } from '@/lib/joulie-voice'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -20,6 +20,12 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const GREETING = 'Hola, soy JOULIE. ¿En qué te ayudo?'
 
 const UNAVAILABLE = 'Joulie no está disponible por ahora.'
+
+const TIME_CLOSE = 'Gracias por probar la beta de JOULIE. Seguimos mejorando.'
+
+const DAY_CLOSE = 'Hoy ya se acabó tu tiempo con JOULIE. Gracias por probar la beta.'
+
+const VOICE_ERROR = 'No pude conectar la voz. Intenta de nuevo.'
 
 type Turn = { role: 'user' | 'assistant'; content: string }
 type Mode = 'voice' | 'text'
@@ -129,7 +135,42 @@ function JoulieLive() {
   const eased = useRef(0)
   const nudged = useRef(false)
   const byeSent = useRef(false)
+  const startedAt = useRef(0)
+  const userEnded = useRef(false)
+  const marked = useRef<'time' | 'day' | null>(null)
+  const settled = useRef(false)
   const [hangup, setHangup] = useState(false)
+  const [close, setClose] = useState<'time' | 'day' | null>(null)
+
+  function finishCall(info: { reason?: string; message?: string }) {
+    if (settled.current) return
+    settled.current = true
+    const elapsed = startedAt.current ? Date.now() - startedAt.current : 0
+    const kind = callEnd({
+      elapsedMs: elapsed,
+      reason: info.reason,
+      message: info.message,
+      userEnded: userEnded.current,
+      marked: marked.current,
+    })
+    waiting.current = false
+    byeSent.current = false
+    userEnded.current = false
+    marked.current = null
+    startedAt.current = 0
+    setHangup(false)
+    setLiveOn(false)
+    setPhase('idle')
+    setLevel(0)
+    if (kind === 'time' || kind === 'day') {
+      setClose(kind)
+      setNotice('')
+      return
+    }
+    setClose(null)
+    if (kind === 'error') setNotice(VOICE_ERROR)
+  }
+
   const conversation = useConversation({
     micMuted: muted,
     onVadScore: ({ vadScore }) => {
@@ -150,25 +191,24 @@ function JoulieLive() {
           : [...sessionTurns, { role, content }].slice(-12)
         sessionTurns = next
         setTurns(next)
-        if (role === 'assistant' && shouldHangUp(content)) setHangup(true)
+        if (role === 'assistant' && shouldHangUp(content)) {
+          const elapsed = startedAt.current ? Date.now() - startedAt.current : 0
+          const kind = callEnd({ elapsedMs: elapsed, message: content, marked: marked.current })
+          if (kind === 'day' || kind === 'time') marked.current = kind
+          setHangup(true)
+        }
       }
       if (payload.source === 'user') {
         waiting.current = true
         if (performance.now() - sheAt.current >= 400) setPhase('thinking')
       }
     },
-    onError: () => {
-      setNotice('No pude conectar la voz. Intenta de nuevo.')
-      setPhase('idle')
-      setLiveOn(false)
+    onError: (message) => {
+      const info = typeof message === 'string' ? message : ''
+      finishCall({ reason: 'error', message: info })
     },
-    onDisconnect: () => {
-      waiting.current = false
-      byeSent.current = false
-      setHangup(false)
-      setLiveOn(false)
-      setPhase('idle')
-      setLevel(0)
+    onDisconnect: (details) => {
+      finishCall(disconnectInfo(details))
     },
   })
   const {
@@ -200,11 +240,15 @@ function JoulieLive() {
       })
     return () => {
       cancelled = true
+      userEnded.current = true
+      startedAt.current = 0
+      marked.current = null
       endRef.current()
     }
   }, [])
 
   useEffect(() => {
+    if (status === 'connected' && !startedAt.current) startedAt.current = Date.now()
     if (status === 'connecting') {
       setPhase('starting')
       return
@@ -232,10 +276,11 @@ function JoulieLive() {
 
   useEffect(() => {
     if (status !== 'connected') return
-    const started = Date.now()
+    if (!startedAt.current) startedAt.current = Date.now()
     const timer = window.setInterval(() => {
-      const clock = callClock(Date.now() - started)
+      const clock = callClock(Date.now() - startedAt.current)
       if (clock === 'end') {
+        if (marked.current !== 'day') marked.current = 'time'
         endRef.current()
         return
       }
@@ -302,12 +347,23 @@ function JoulieLive() {
     if (busy.current) return
     busy.current = true
     waiting.current = false
+    settled.current = false
+    userEnded.current = false
+    marked.current = null
+    startedAt.current = 0
+    setClose(null)
     setPhase('starting')
     setNotice('')
     setLiveOn(true)
     try {
       const res = await apiFetch('/joulie/sesion', { method: 'POST', body: '{}' })
       const data = (await res.json().catch(() => ({}))) as { token?: string; session?: string; error?: string }
+      if (res.status === 429) {
+        setClose('day')
+        setPhase('idle')
+        setLiveOn(false)
+        return
+      }
       if (!res.ok || !data.token || !data.session) {
         setNotice(data.error || UNAVAILABLE)
         setPhase('idle')
@@ -334,7 +390,7 @@ function JoulieLive() {
         media.getUserMedia = original
       }
     } catch {
-      setNotice('No pude conectar la voz. Intenta de nuevo.')
+      setNotice(VOICE_ERROR)
       setPhase('idle')
       setLiveOn(false)
     } finally {
@@ -361,6 +417,7 @@ function JoulieLive() {
   }
 
   function endLive() {
+    userEnded.current = true
     endSession()
     waiting.current = false
     setLiveOn(false)
@@ -371,6 +428,9 @@ function JoulieLive() {
   }
 
   function openText() {
+    userEnded.current = true
+    startedAt.current = 0
+    marked.current = null
     endSession()
     setLiveOn(false)
     setPhase('idle')
@@ -441,10 +501,7 @@ function JoulieLive() {
                 Joulie en beta
               </h2>
               <p style={lato} className="mt-3 text-[13px] leading-relaxed text-[#666666]">
-                Estoy en beta. El texto lo responde un proveedor de inteligencia artificial y la voz, un servicio de voz.
-              </p>
-              <p style={lato} className="mt-2 text-[13px] leading-relaxed text-[#666666]">
-                No compartas datos personales. No guardo esta conversación: se pierde al cerrar o recargar la página.
+                No compartas datos sensibles ni personales. Esta conversación no se guarda.
               </p>
               <div className="mt-5 flex gap-3">
                 <button
@@ -553,27 +610,50 @@ function JoulieLive() {
             </button>
           </div>
           <p
-            className="relative z-20 min-h-4 max-w-sm bg-[#F4F4F4] px-4 text-center text-[11px] tracking-[0.22em] text-[#767676]"
-            style={jost}
+            className={`relative z-20 max-w-sm px-4 text-center ${close ? 'text-[15px] leading-relaxed text-[#666666]' : 'min-h-4 bg-[#F4F4F4] text-[11px] tracking-[0.22em] text-[#767676]'}`}
+            style={close ? lato : jost}
             aria-live="polite"
           >
-            {liveOn ? PHASE_LABEL[shown] : notice}
+            {close === 'time' ? TIME_CLOSE : close === 'day' ? DAY_CLOSE : liveOn ? PHASE_LABEL[shown] : notice}
           </p>
         </div>
-        <div className="flex items-center justify-center gap-8 pb-8">
-          {liveOn ? (
-            <RoundButton label={muted ? 'Activar micrófono' : 'Silenciar micrófono'} onClick={() => setMuted((value) => !value)}>
-              <MicIcon off={muted} />
-            </RoundButton>
-          ) : null}
-          {liveOn ? (
-            <RoundButton label="Terminar" onClick={endLive} tone="end">
-              <CloseIcon />
-            </RoundButton>
-          ) : null}
-          <RoundButton label="Escribir" onClick={openText}>
-            <KeyboardIcon />
-          </RoundButton>
+        <div className={`flex items-center justify-center pb-8 ${close ? 'mx-auto w-full max-w-md gap-3 px-6' : 'gap-8'}`}>
+          {close ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void beginVoice()}
+                style={jost}
+                className="flex h-12 flex-1 items-center justify-center rounded-[2px] bg-[#CC4B37] text-[11px] tracking-wide text-[#FFFFFF]"
+              >
+                Hablar de nuevo
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard')}
+                style={jost}
+                className="flex h-12 flex-1 items-center justify-center rounded-[2px] border border-solid border-[#111111] bg-[#FFFFFF] text-[11px] tracking-wide text-[#111111]"
+              >
+                Volver
+              </button>
+            </>
+          ) : (
+            <>
+              {liveOn ? (
+                <RoundButton label={muted ? 'Activar micrófono' : 'Silenciar micrófono'} onClick={() => setMuted((value) => !value)}>
+                  <MicIcon off={muted} />
+                </RoundButton>
+              ) : null}
+              {liveOn ? (
+                <RoundButton label="Terminar" onClick={endLive} tone="end">
+                  <CloseIcon />
+                </RoundButton>
+              ) : null}
+              <RoundButton label="Escribir" onClick={openText}>
+                <KeyboardIcon />
+              </RoundButton>
+            </>
+          )}
         </div>
       </div>
       {consentModal}
