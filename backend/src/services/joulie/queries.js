@@ -1,0 +1,285 @@
+// Todo lo que se le pregunta a Supabase por datos públicos, tabla por tabla.
+const { blogCard } = require("./context");
+const { focusOf, placeTokens, titleMentioned, wantsEventSheet, wantsUpcoming } = require("./intent");
+const { dedupe, likeOr, matchesForms, rankByTokens } = require("./match");
+const { eventPageSlug, landingPage } = require("./pages");
+const { ENTITIES } = require("./schema");
+const { blogTokens, expandName, nameTokens } = require("./text");
+
+async function safeQuery(query) {
+  try {
+    const { data, error } = await query;
+    if (error || !Array.isArray(data)) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
+function upcomingQuery(supabase, now) {
+  return supabase
+    .from(ENTITIES.eventos.tabla)
+    .select("title, fecha, sede_nombre, sede_ciudad, disciplina, url_externa, fields(nombre, ciudad, estado)")
+    .eq("published", true)
+    .eq("status", "publicado")
+    .gte("fecha", now)
+    .order("fecha", { ascending: true })
+    .limit(4);
+}
+
+async function loadOwnArsenal(supabase, ownerId) {
+  const id = String(ownerId || "").trim();
+  if (!id || id.length > 80 || /\s/.test(id)) return [];
+  return safeQuery(
+    supabase
+      .from(ENTITIES.tu_arsenal.tabla)
+      .select(ENTITIES.tu_arsenal.select)
+      .eq("user_id", id)
+      .order("created_at", { ascending: false })
+      .limit(6)
+  );
+}
+
+async function fieldCatalog(supabase, message) {
+  const places = placeTokens(message);
+  const listed = (filter) => {
+    let query = supabase.from(ENTITIES.campos.tabla).select(ENTITIES.campos.select).eq("status", "aprobado");
+    if (filter) query = query.or(filter);
+    else query = query.order("nombre");
+    return safeQuery(query.limit(16));
+  };
+  if (!places.length) return listed("");
+  const matched = await listed(likeOr(["nombre", "slug", "ciudad", "estado"], places));
+  // Si el lugar no coincide con ningún campo, no hay campos: rellenar con otros
+  // mentiría sobre dónde están.
+  if (!matched.length) return [];
+  return rankByTokens(matched, places, (row) => `${row.nombre || ""} ${row.slug || ""} ${row.ciudad || ""} ${row.estado || ""}`);
+}
+
+async function loadPublicContext(supabase, message) {
+  const forms = [...new Set(nameTokens(message).flatMap(expandName))];
+  const now = new Date().toISOString();
+  const calendar = wantsUpcoming(message);
+  const foco = focusOf(message);
+  // Sin foco se consulta todo. Con foco, solo esa tabla: las demás no hacen falta
+  // y traerlas es lo que deja un equipo a mano cuando preguntaron por campos.
+  const wants = (key) => !foco || foco === key;
+  if (forms.length) {
+    const words = forms.filter((form) => !form.includes(" "));
+    const spaced = forms.filter((form) => form.includes(" "));
+    const filter = (columns) => likeOr(columns, words);
+    const tagged = [];
+    const pushJob = (kind, query) => tagged.push(safeQuery(query).then((rows) => ({ kind, rows })));
+    if (words.length) {
+      if (wants("eventos")) {
+        pushJob(
+          "eventos",
+          supabase
+            .from(ENTITIES.eventos.tabla)
+            .select(ENTITIES.eventos.select)
+            .eq("published", true)
+            .eq("status", "publicado")
+            .or(filter(["title", "sede_nombre", "sede_ciudad"]))
+            .limit(4)
+        );
+      }
+      if (wants("campos")) {
+        pushJob(
+          "campos",
+          supabase
+            .from(ENTITIES.campos.tabla)
+            .select(ENTITIES.campos.select)
+            .eq("status", "aprobado")
+            .or(filter(["nombre", "slug", "ciudad", "estado"]))
+            .limit(16)
+        );
+      }
+      if (wants("equipos")) {
+        pushJob(
+          "equipos",
+          supabase
+            .from(ENTITIES.equipos.tabla)
+            .select(ENTITIES.equipos.select)
+            .eq("status", "activo")
+            .or(filter(["nombre", "slug", "ciudad", "estado"]))
+            .limit(4)
+        );
+      }
+      if (wants("tienda")) {
+        pushJob(
+          "tienda",
+          supabase
+            .from(ENTITIES.tienda.tabla)
+            .select(ENTITIES.tienda.select)
+            .eq("activo", true)
+            .or(filter(["nombre", "slug"]))
+            .limit(4)
+        );
+      }
+      if (wants("replicas")) {
+        pushJob(
+          "replicas",
+          supabase.from(ENTITIES.replicas.tabla).select(ENTITIES.replicas.select).or(filter(["sistema", "mecanismo"])).limit(40)
+        );
+        pushJob("operadores", supabase.from(ENTITIES.operadores.tabla).select(ENTITIES.operadores.select).or(filter(["alias"])).limit(3));
+      }
+    }
+    for (const form of spaced) {
+      const pattern = `%${form}%`;
+      if (wants("eventos")) {
+        pushJob(
+          "eventos",
+          supabase
+            .from(ENTITIES.eventos.tabla)
+            .select(ENTITIES.eventos.select)
+            .eq("published", true)
+            .eq("status", "publicado")
+            .ilike("title", pattern)
+            .limit(4)
+        );
+      }
+      if (wants("campos")) {
+        pushJob(
+          "campos",
+          supabase.from(ENTITIES.campos.tabla).select(ENTITIES.campos.select).eq("status", "aprobado").ilike("nombre", pattern).limit(4)
+        );
+      }
+      if (wants("equipos")) {
+        pushJob(
+          "equipos",
+          supabase.from(ENTITIES.equipos.tabla).select(ENTITIES.equipos.select).eq("status", "activo").ilike("nombre", pattern).limit(4)
+        );
+      }
+      if (wants("tienda")) {
+        pushJob(
+          "tienda",
+          supabase.from(ENTITIES.tienda.tabla).select(ENTITIES.tienda.select).eq("activo", true).ilike("nombre", pattern).limit(4)
+        );
+      }
+      if (wants("replicas")) {
+        pushJob(
+          "replicas",
+          supabase.from(ENTITIES.replicas.tabla).select(ENTITIES.replicas.select).or(likeOr(["sistema", "mecanismo"], [form])).limit(40)
+        );
+      }
+    }
+    const topics = wants("blog") ? blogTokens(message) : [];
+    if (topics.length) {
+      pushJob(
+        "blog",
+        supabase
+          .from(ENTITIES.blog.tabla)
+          .select(ENTITIES.blog.select)
+          .eq("published", true)
+          .or(likeOr(["title", "category", "excerpt", "content"], topics))
+          .limit(2)
+      );
+    }
+    if (wants("eventos")) pushJob("proximos", upcomingQuery(supabase, now));
+    const found = await Promise.all(tagged);
+    const bucket = { eventos: [], campos: [], equipos: [], tienda: [], replicas: [], operadores: [], proximos: [], blog: [] };
+    for (const item of found) bucket[item.kind].push(...item.rows);
+    const agenda = calendar ? bucket.proximos : bucket.proximos.filter((row) => matchesForms(row, forms));
+    const events = dedupe([...bucket.eventos, ...agenda], (row) => `${row.title}|${row.fecha}`);
+    const fields = rankByTokens(
+      dedupe(bucket.campos, (row) => row.slug || row.nombre),
+      forms,
+      (row) => `${row.nombre || ""} ${row.slug || ""} ${row.ciudad || ""} ${row.estado || ""}`
+    );
+    const teams = dedupe(bucket.equipos, (row) => row.slug || row.nombre);
+    const tienda = dedupe(bucket.tienda, (row) => row.slug || row.nombre);
+    const replicas = dedupe(bucket.replicas, (row) => row.id || `${row.sistema}|${row.mecanismo}|${row.upgrades}`);
+    const operadores = dedupe(
+      bucket.operadores.map((row) => (row && row.alias ? { alias: row.alias } : null)).filter(Boolean),
+      (row) => row.alias
+    );
+    const blog = dedupe(bucket.blog.map(blogCard).filter(Boolean), (row) => row.enlace).slice(0, 2);
+    if (events.length || fields.length || teams.length || tienda.length || replicas.length || operadores.length || blog.length || foco) {
+      const packed = wants("eventos") ? await packEvents(supabase, events, message, now) : { eventos: [] };
+      // Con foco en campos el catálogo manda, aunque venga vacío: vacío significa
+      // que no hay campos ahí, no que haya que ofrecer otros.
+      const catalog = foco === "campos" ? await fieldCatalog(supabase, message) : null;
+      return {
+        eventos: packed.eventos,
+        campos: catalog || fields,
+        equipos: teams,
+        tienda,
+        replicas,
+        operadores,
+        blog,
+        ficha: packed.ficha,
+        pagina: packed.pagina,
+        foco,
+      };
+    }
+  }
+
+  const camposJob = () => {
+    if (foco === "campos") return fieldCatalog(supabase, message);
+    if (!wants("campos")) return [];
+    return safeQuery(
+      supabase
+        .from(ENTITIES.campos.tabla)
+        .select("nombre, slug, ciudad, estado")
+        .eq("status", "aprobado")
+        .order("nombre")
+        .limit(4)
+    );
+  };
+  const [upcoming, fields, teams] = await Promise.all([
+    wants("eventos") ? safeQuery(upcomingQuery(supabase, now)) : [],
+    camposJob(),
+    wants("equipos")
+      ? safeQuery(
+          supabase.from(ENTITIES.equipos.tabla).select("nombre, slug, ciudad, estado").eq("status", "activo").order("nombre").limit(4)
+        )
+      : [],
+  ]);
+  const packed = wants("eventos") ? await packEvents(supabase, upcoming, message, now) : { eventos: [] };
+  return {
+    eventos: packed.eventos,
+    campos: fields,
+    equipos: teams,
+    tienda: [],
+    replicas: [],
+    operadores: [],
+    blog: [],
+    ficha: packed.ficha,
+    pagina: packed.pagina,
+    foco,
+  };
+}
+
+async function packEvents(supabase, events, message, now) {
+  let rows = events;
+  const thin = !rows.some((row) => row && typeof row.descripcion === "string" && row.descripcion.trim());
+  if (wantsEventSheet(message) && thin) {
+    const rich = await safeQuery(
+      supabase
+        .from(ENTITIES.eventos.tabla)
+        .select(ENTITIES.eventos.select)
+        .eq("published", true)
+        .eq("status", "publicado")
+        .gte("fecha", now)
+        .order("fecha", { ascending: true })
+        .limit(3)
+    );
+    rows = dedupe([...rich, ...rows], (row) => `${row.title}|${row.fecha}`);
+  }
+  // La ficha es de un evento con página propia: el que nombra la pregunta, y si
+  // piden detalle y no nombran ninguno, el más cercano de los que tienen página.
+  const withPage = rows.filter((row) => eventPageSlug(row));
+  const host =
+    withPage.find((row) => titleMentioned(message, row.title)) || (wantsEventSheet(message) ? withPage[0] : null);
+  if (!host) return { eventos: rows, ficha: null };
+  const slug = eventPageSlug(host);
+  const ficha = await safeQuery(
+    supabase.from(`${slug}_blocks`).select("slug, config, activo").eq("activo", true).order("orden", { ascending: true })
+  );
+  return { eventos: rows, ficha, pagina: landingPage(slug) };
+}
+
+module.exports = {
+  loadOwnArsenal,
+  loadPublicContext,
+};
