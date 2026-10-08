@@ -343,7 +343,9 @@ describe("JOULIE", { concurrency: 1 }, () => {
   });
 
   it("busca en la web solo si piden opciones de equipo", async () => {
-    assert.equal(wantsWebOptions("¿qué réplica me recomiendas para CQB?"), true);
+    assert.equal(wantsWebOptions("¿qué réplica me recomiendas para CQB?"), false);
+    assert.equal(wantsWebOptions("¿con qué réplica me recomiendas jugar ahí?"), false);
+    assert.equal(wantsWebOptions("quiero comprar una réplica nueva"), true);
     assert.equal(wantsWebOptions("¿qué mejoras me recomiendas para una AEG?"), true);
     assert.equal(wantsWebOptions("¿qué opciones hay?"), true);
     assert.equal(wantsWebOptions("¿qué opciones de máscara hay?"), true);
@@ -376,7 +378,8 @@ describe("JOULIE", { concurrency: 1 }, () => {
       );
       return /búsqueda web/.test(seen);
     };
-    assert.equal(await asked("¿qué réplica me recomiendas para CQB?", "sesion-a"), true);
+    assert.equal(await asked("quiero comprar una réplica nueva", "sesion-a"), true);
+    assert.equal(await asked("¿con qué réplica me recomiendas jugar ahí?", "sesion-c"), false);
     assert.equal(await asked("¿qué mejoras me recomiendas?", "sesion-a"), true);
     assert.equal(await asked("¿qué opciones de máscara hay?", "sesion-a"), false);
     assert.equal(await asked("¿qué eventos hay?", "sesion-a"), false);
@@ -404,7 +407,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
     try {
       const result = await handleJoulie(
         base({
-          message: "¿qué réplica me recomiendas para CQB?",
+          message: "quiero comprar una réplica nueva para CQB",
           loadContext: async () => ({}),
           webBudget: createWebBudget(),
           webKey: "sesion-plugin",
@@ -432,7 +435,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
       {
         secret,
         headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
-        body: { messages: [{ role: "user", content: "¿qué réplica me recomiendas para CQB?" }] },
+        body: { messages: [{ role: "user", content: "quiero comprar una réplica nueva para CQB" }] },
         now: NOW,
         enabled: true,
         webBudget: createWebBudget(),
@@ -982,12 +985,26 @@ describe("JOULIE", { concurrency: 1 }, () => {
         if (/jalisco/i.test(or[1])) return rows.filter((row) => /jalisco/i.test(`${row.ciudad} ${row.estado}`));
         if (/potosi/i.test(or[1])) return rows.filter((row) => /potosi/i.test(`${row.ciudad} ${row.estado}`));
         if (/gotcha|omnilife/i.test(or[1])) return rows.filter((row) => /gotcha/i.test(row.nombre));
+        if (/leon|norte/i.test(or[1])) {
+          return [
+            {
+              nombre: "Norte",
+              slug: "norte-campo",
+              ciudad: "León",
+              estado: "Guanajuato",
+              tipo: "publico",
+            },
+          ];
+        }
         return [];
       }
       if (call.table !== "teams") return [];
       const or = call.filters.find((part) => part[0] === "or");
       if (or && /potosi/i.test(or[1])) {
         return [{ nombre: "UNIDAD DAGGER", slug: "unidad-dagger", ciudad: "San Luis Potosí", estado: "San Luis Potosí" }];
+      }
+      if (or && /leon|norte/i.test(or[1])) {
+        return [{ nombre: "Norte", slug: "norte-equipo", ciudad: "León", estado: "Guanajuato" }];
       }
       if (or) return [{ nombre: "Club Proximos", slug: "club-proximos", ciudad: "León", estado: "Guanajuato" }];
       return [];
@@ -1122,6 +1139,117 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.match(omni.datos, /todos los días de 11 de la mañana a 7 de la noche/);
     assert.equal(omni.datos.includes("Gotcha CQB Solares"), false);
     assert.equal(omni.calls.some((call) => call.table === "virus3_blocks"), false);
+  });
+
+  it("un campo y un equipo con el mismo nombre siguen siendo dos registros", async () => {
+    const fields = await datosFor("¿qué campos hay en León?");
+    const fieldsJson = JSON.parse(fields.datos.slice(fields.datos.lastIndexOf("\n") + 1));
+    assert.equal(fieldsJson.campos.length, 1);
+    assert.equal(fieldsJson.campos[0].nombre, "Norte");
+    assert.equal(fieldsJson.campos[0].entidad, "CAMPO");
+    assert.equal(fieldsJson.campos[0].tabla, "fields");
+    assert.equal(fieldsJson.campos[0].tipo, "publico");
+    assert.equal(fieldsJson.equipos.length, 0);
+    assert.equal(fields.calls.some((call) => call.table === "teams"), false);
+    const prompt = fields.datos.slice(0, fields.datos.lastIndexOf("DATOS:"));
+    assert.match(prompt, /grupo de jugadores/);
+    assert.match(prompt, /No es un lugar para jugar/);
+    assert.match(prompt, /Si el mismo nombre está en más de una entidad, di qué es cada una/);
+    assert.equal(prompt.includes("Norte"), false);
+    assert.equal(prompt.includes("Virus"), false);
+    assert.equal(prompt.includes("como la de"), false);
+
+    const teams = await datosFor("¿qué equipos hay en León?");
+    const teamsJson = JSON.parse(teams.datos.slice(teams.datos.lastIndexOf("\n") + 1));
+    assert.equal(teamsJson.equipos.length, 1);
+    assert.equal(teamsJson.equipos[0].nombre, "Norte");
+    assert.equal(teamsJson.equipos[0].entidad, "EQUIPO");
+    assert.equal(teamsJson.equipos[0].tabla, "teams");
+    assert.equal(teamsJson.campos.length, 0);
+    assert.equal(teams.calls.some((call) => call.table === "fields"), false);
+
+    const both = await datosFor("háblame de Norte");
+    const bothJson = JSON.parse(both.datos.slice(both.datos.lastIndexOf("\n") + 1));
+    const names = [
+      ...bothJson.campos.map((row) => `${row.entidad}:${row.tabla}:${row.nombre}`),
+      ...bothJson.equipos.map((row) => `${row.entidad}:${row.tabla}:${row.nombre}`),
+    ].sort();
+    assert.deepEqual(names, ["CAMPO:fields:Norte", "EQUIPO:teams:Norte"]);
+  });
+
+  it("una pregunta de campos no hereda otra ciudad del historial", async () => {
+    let lookup = "";
+    await handleJoulie(
+      base({
+        message: "¿qué campos hay en León?",
+        history: [
+          { role: "user", content: "¿qué eventos hay en San Luis?" },
+          { role: "assistant", content: "Es en el Hospital Abandonado." },
+        ],
+        loadContext: async (text) => {
+          lookup = text;
+          return { campos: [{ nombre: "Norte", ciudad: "León", estado: "Guanajuato", tipo: "publico", slug: "norte-campo" }] };
+        },
+        complete: async () => "Está Norte, en León.",
+      })
+    );
+    assert.match(lookup, /León/);
+    assert.equal(/san|luis|hospital/i.test(lookup), false);
+  });
+
+  it("«tu» réplica solo si está en el arsenal de la sesión", async () => {
+    let seen = "";
+    await handleJoulie(
+      base({
+        message: "¿qué va a hacer una M4, una MK18 o una M16?",
+        loadContext: async () => ({
+          eventos: [{ title: "Partida corta", fecha: "2026-10-10T16:00:00.000Z", disciplina: "CQB" }],
+        }),
+        complete: async (messages) => {
+          seen = messages[0].content;
+          return "En interior conviene una plataforma compacta.";
+        },
+      })
+    );
+    const prompt = seen.slice(0, seen.lastIndexOf("DATOS:"));
+    assert.match(prompt, /solo si ese nombre está en tu_arsenal/);
+    assert.equal(prompt.includes("MK18"), false);
+    const empty = JSON.parse(seen.slice(seen.lastIndexOf("\n") + 1));
+    assert.equal(empty.tu_arsenal.length, 0);
+
+    seen = "";
+    await handleJoulie(
+      base({
+        message: "¿qué réplica uso ahí?",
+        loadContext: async () => ({
+          tu_arsenal: [{ nombre: "MK18", sistema: "Rifle de Asalto", mecanismo: "AEG" }],
+        }),
+        complete: async (messages) => {
+          seen = messages[0].content;
+          return "Puedes usar la que ya tienes.";
+        },
+      })
+    );
+    const owned = JSON.parse(seen.slice(seen.lastIndexOf("\n") + 1));
+    assert.equal(owned.tu_arsenal[0].nombre, "MK18");
+    assert.equal(owned.tu_arsenal[0].entidad, "REPLICA");
+    assert.equal(owned.tu_arsenal[0].tabla, "arsenal");
+  });
+
+  it("«qué puedes hacer» cabe en una frase y no abre el modelo", async () => {
+    let called = false;
+    const result = await handleJoulie(
+      base({
+        message: "¿Qué onda, Julie? ¿Qué puedes hacer?",
+        complete: async () => {
+          called = true;
+          return "un discurso largo de quince segundos";
+        },
+      })
+    );
+    assert.equal(called, false);
+    assert.equal(result.reply, COPY.can);
+    assert.equal(result.reply.split(/[.!?]/).filter((part) => part.trim()).length, 1);
   });
 
   it("«¿Qué eventos hay?» sigue listando los próximos", async () => {
@@ -1415,6 +1543,19 @@ describe("JOULIE", { concurrency: 1 }, () => {
               },
             },
             {
+              nombre: "Cancha Cubierta",
+              slug: "cancha-cubierta",
+              horarios_json: {
+                lunes: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                martes: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                miercoles: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                jueves: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                viernes: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                sabado: { abierto: true, apertura: "11:00", cierre: "20:00" },
+                domingo: { abierto: true, apertura: "11:00", cierre: "20:00" },
+              },
+            },
+            {
               nombre: "Gotcha CQB Tactical La Tijera",
               slug: "gotcha-cqb-tactical-la-tijera",
               horarios_json: {
@@ -1451,6 +1592,7 @@ describe("JOULIE", { concurrency: 1 }, () => {
     );
     assert.match(datos, /sábados y domingos de 10 de la mañana a 6 de la tarde/);
     assert.match(datos, /el martes de 11 de la mañana a 8 de la mañana, y de miércoles a domingo de 11 de la mañana a 8 de la noche/);
+    assert.match(datos, /todos los días de 11 de la mañana a 8 de la noche/);
     assert.match(datos, /todos los días de 11 de la mañana a 8 y media de la noche/);
     assert.equal(datos.includes("11:00–08:00"), false);
     assert.equal(datos.includes("horarios_json"), false);
