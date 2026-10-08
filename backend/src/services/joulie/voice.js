@@ -6,6 +6,7 @@ const { FAREWELL_RE, guardReply, stripWebJunk } = require("./guards");
 const { isAppAdmin, readEnabled, voiceShouldCharge } = require("./limits");
 const { iterateOpenRouter } = require("./openrouter");
 const { secretsMatch, sessionSecret, signSession, verifySession } = require("./session");
+const { speakText, speakableCut } = require("./speech");
 
 async function mintConversation(opts) {
   const secret = opts.secret || sessionSecret();
@@ -60,7 +61,7 @@ async function runCustomLlm(opts, write) {
   const secret = opts.secret || sessionSecret();
   const send = typeof write === "function" ? write : () => undefined;
   const speak = (text) => {
-    send(contentChunk(text, null));
+    send(contentChunk(speakText(text), null));
     send(contentChunk("", "stop"));
     send("data: [DONE]\n\n");
   };
@@ -109,6 +110,7 @@ async function runCustomLlm(opts, write) {
   }
 
   let spoken = "";
+  let pending = "";
   let startedSend = false;
   try {
     for await (const delta of iterateOpenRouter(
@@ -129,7 +131,13 @@ async function runCustomLlm(opts, write) {
         return { status: 200, reply: COPY.refusal };
       }
       spoken += piece;
-      send(contentChunk(piece, null));
+      // Las cifras se dicen en palabras, y una cifra a medias espera el siguiente delta.
+      pending += piece;
+      const cut = speakableCut(pending);
+      if (cut) {
+        send(contentChunk(speakText(pending.slice(0, cut)), null));
+        pending = pending.slice(cut);
+      }
     }
   } catch (err) {
     console.info("[joulie] fail %s", err && err.name ? err.name : "error");
@@ -138,6 +146,7 @@ async function runCustomLlm(opts, write) {
       return { status: 200, reply: COPY.busy };
     }
   }
+  if (pending) send(contentChunk(speakText(pending), null));
   send(contentChunk("", "stop"));
   send("data: [DONE]\n\n");
   return { status: 200, reply: guardReply(spoken) };

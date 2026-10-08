@@ -30,21 +30,39 @@ function parseClock(value) {
   return { hour, minute };
 }
 
-function spokenClock(hour, minute) {
-  const h12 = hour % 12 || 12;
-  let part = "de la mañana";
-  if (hour === 12) part = "del día";
-  else if (hour === 0) part = "de la noche";
-  else if (hour >= 19) part = "de la noche";
-  else if (hour >= 13) part = "de la tarde";
-  const mins = minute === 0 ? "" : minute === 15 ? " y cuarto" : minute === 30 ? " y media" : ` y ${minute}`;
-  return `a las ${h12}${mins} ${part}`;
+/**
+ * La única forma hablada de una hora en todo el servicio, sin preposición:
+ * «ocho y media de la noche», «mediodía», «medianoche». La dicen el horario de
+ * un campo (aquí abajo), la fecha de un evento y la voz (speech.js), así que no
+ * pueden contradecirse. `say` decide cómo suena el número: en DATOS van las
+ * cifras y en la voz las palabras.
+ */
+function clockPhrase(hour, minute, say = String) {
+  const h = Number(hour);
+  const m = Number(minute) || 0;
+  if (!Number.isInteger(h) || h < 0 || h > 23 || m < 0 || m > 59) return "";
+  if (m === 0 && h === 12) return "mediodía";
+  if (m === 0 && h === 0) return "medianoche";
+  const said = say(h % 12 || 12);
+  // La una es femenina; las demás horas no cambian.
+  const hora = said === "uno" ? "una" : said;
+  const mins = m === 15 ? " y cuarto" : m === 30 ? " y media" : m ? ` y ${say(m)}` : "";
+  const parte =
+    h === 12 ? "del día" : h >= 19 || h === 0 ? "de la noche" : h >= 13 ? "de la tarde" : "de la mañana";
+  return `${hora}${mins} ${parte}`;
+}
+
+// La misma hora con su preposición: «a las ocho», «a la una», «al mediodía».
+function spokenClock(hour, minute, say = String) {
+  const phrase = clockPhrase(hour, minute, say);
+  if (!phrase) return "";
+  if (phrase === "mediodía") return "al mediodía";
+  if (phrase === "medianoche") return "a la medianoche";
+  return `${/^(?:1|una)\b/.test(phrase) ? "a la" : "a las"} ${phrase}`;
 }
 
 function spokenSpan(open, close) {
-  const from = spokenClock(open.hour, open.minute).replace(/^a las /, "");
-  const to = spokenClock(close.hour, close.minute).replace(/^a las /, "");
-  return `de ${from} a ${to}`;
+  return `de ${clockPhrase(open.hour, open.minute)} a ${clockPhrase(close.hour, close.minute)}`;
 }
 
 function dayPhrase(days) {
@@ -157,6 +175,7 @@ function weekendWindow(now) {
 
 module.exports = {
   WEEKDAY_ES,
+  clockPhrase,
   dayKey,
   hoursOf,
   mexicoParts,

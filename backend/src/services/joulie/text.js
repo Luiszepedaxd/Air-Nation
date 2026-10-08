@@ -50,6 +50,10 @@ function expandName(word) {
   const forms = [word];
   const split = String(word).match(/^([a-z]{3,})(\d{1,4})$/);
   if (split) forms.push(`${split[1]} ${split[2]}`, split[1]);
+  // La pregunta suele venir en plural y el registro está en singular. El
+  // singular es subcadena del plural, así que buscar por él encuentra los dos.
+  const singular = String(word).match(/^(.{4,}?)(?:es|s)$/);
+  if (singular) forms.push(singular[1]);
   return forms;
 }
 

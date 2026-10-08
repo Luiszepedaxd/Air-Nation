@@ -1,5 +1,8 @@
 const assert = require("node:assert/strict");
 const { afterEach, describe, it } = require("node:test");
+const { FEATURES } = require("./joulie/features");
+const { numberWords, speakText, speakableCut } = require("./joulie/speech");
+const { clockPhrase, hoursOf } = require("./joulie/time");
 const {
   COPY,
   DEFAULTS,
@@ -945,12 +948,25 @@ describe("JOULIE", { concurrency: 1 }, () => {
       fecha: "2026-11-01T16:00:00.000Z",
       url_externa: "https://www.airnation.online/montanadeniebla",
     };
+    const dominguera = {
+      title: "Dominguera Comunidad GDL",
+      fecha: "2026-10-04T17:00:00.000Z",
+      sede_ciudad: "Guadalajara",
+      fields: { nombre: "Campo Poniente", ciudad: "Guadalajara", estado: "Jalisco" },
+    };
     function answer(call) {
-      const upcoming = call.filters.some((part) => part[0] === "gte" && part[1] === "fecha");
+      const past = call.filters.some((part) => part[0] === "lt" && part[1] === "fecha");
+      const upcoming = !past && call.filters.some((part) => part[0] === "gte" && part[1] === "fecha");
       if (call.table === "events") {
-        if (upcoming) return [virus];
         const or = call.filters.find((part) => part[0] === "or");
-        return or && /niebla/i.test(or[1]) ? [niebla] : [];
+        const name = call.filters.find((part) => part[0] === "ilike");
+        const pedido = `${or ? or[1] : ""} ${name ? name[2] : ""}`;
+        if (past) return /dominguera/i.test(pedido) ? [dominguera] : [];
+        if (!upcoming) return [];
+        // Con filtro de nombre contesta lo que coincide; sin él, la agenda.
+        if (!or && !name) return [virus];
+        if (/niebla/i.test(pedido)) return [niebla];
+        return /virus|potosi|hospital/i.test(pedido) ? [virus] : [];
       }
       if (call.table === "posts") {
         const published = call.filters.some((part) => part[0] === "eq" && part[1] === "published" && part[2] === true);
@@ -1068,6 +1084,10 @@ describe("JOULIE", { concurrency: 1 }, () => {
         },
         gte(col, val) {
           call.filters.push(["gte", col, val]);
+          return api;
+        },
+        lt(col, val) {
+          call.filters.push(["lt", col, val]);
           return api;
         },
         order() {
@@ -1915,6 +1935,218 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(owned.tu_arsenal[0].es, "replica propia");
     // Elegir entre lo que ya tienes no busca en internet.
     assert.match(seen, /En este turno nadie buscó nada en internet/);
+  });
+
+  it("una hora, un rango y una fecha se dicen como se dicen en México", () => {
+    // La hora la dice clockPhrase: el horario de un campo y la voz no pueden discrepar.
+    assert.equal(clockPhrase(20, 30), "8 y media de la noche");
+    assert.equal(clockPhrase(20, 30, numberWords), "ocho y media de la noche");
+    assert.equal(clockPhrase(12, 0), "mediodía");
+    assert.equal(clockPhrase(0, 0), "medianoche");
+    assert.equal(clockPhrase(13, 0, numberWords), "una de la tarde");
+    assert.equal(clockPhrase(24, 0), "");
+    assert.equal(speakText("20:30"), "ocho y media de la noche");
+    assert.equal(speakText("11:00–20:00"), "de once de la mañana a ocho de la noche");
+    assert.equal(speakText("11:00 - 20:00"), "de once de la mañana a ocho de la noche");
+    assert.equal(speakText("de 11:00 a 20:00"), "de once de la mañana a ocho de la noche");
+    assert.equal(speakText("10:00 · Apertura"), "diez de la mañana · Apertura");
+    assert.equal(speakText("11 am"), "once de la mañana");
+    assert.equal(speakText("8 pm"), "ocho de la noche");
+    assert.equal(speakText("12 pm"), "mediodía");
+    assert.equal(speakText("a las 13:00"), "a las una de la tarde");
+    assert.equal(speakText("10/10"), "diez de octubre");
+    assert.equal(speakText("10/10/2026"), "diez de octubre de dos mil veintiséis");
+    assert.equal(
+      speakText("sábado 10 de octubre de 2026, a las 10 de la mañana"),
+      "sábado diez de octubre de dos mil veintiséis, a las diez de la mañana"
+    );
+    // El horario de un campo ya sale en la forma canónica, y la voz solo lo dice.
+    const horario = hoursOf({
+      lunes: { abierto: true, apertura: "11:00", cierre: "20:30" },
+      martes: { abierto: true, apertura: "12:00", cierre: "13:00" },
+    });
+    assert.equal(horario, "el lunes de 11 de la mañana a 8 y media de la noche, y el martes de mediodía a 1 de la tarde");
+    assert.equal(
+      speakText(horario),
+      "el lunes de once de la mañana a ocho y media de la noche, y el martes de mediodía a una de la tarde"
+    );
+  });
+
+  it("dinero, porcentajes, unidades y números sueltos se dicen en palabras; los modelos no", () => {
+    assert.equal(numberWords(1299), "mil doscientos noventa y nueve");
+    assert.equal(numberWords(0), "cero");
+    assert.equal(numberWords(21000), "veintiún mil");
+    assert.equal(numberWords(100), "cien");
+    assert.equal(numberWords(101), "ciento uno");
+    assert.equal(numberWords(999999999), "novecientos noventa y nueve millones novecientos noventa y nueve mil novecientos noventa y nueve");
+    // Fuera de rango o con decimales no es un entero: mejor dejar la cifra.
+    assert.equal(numberWords(1000000000), "");
+    assert.equal(numberWords(-1), "");
+    assert.equal(
+      speakText("Los boletos cuestan $1,299 MXN en preventa."),
+      "Los boletos cuestan mil doscientos noventa y nueve pesos en preventa."
+    );
+    assert.equal(speakText("Cuesta 1299 pesos."), "Cuesta mil doscientos noventa y nueve pesos.");
+    assert.equal(speakText("$1,299.50"), "mil doscientos noventa y nueve pesos con cincuenta centavos");
+    assert.equal(speakText("Cuesta $1 MXN"), "Cuesta un peso");
+    assert.equal(speakText("$1 USD"), "un dólar");
+    assert.equal(speakText("50% de descuento"), "cincuenta por ciento de descuento");
+    assert.equal(speakText("350-400 fps"), "de trescientos cincuenta a cuatrocientos fps");
+    assert.equal(speakText("de 350 a 400 fps"), "de trescientos cincuenta a cuatrocientos fps");
+    assert.equal(speakText("1.5 J"), "uno punto cinco julios");
+    assert.equal(speakText("20 mm"), "veinte milímetros");
+    assert.equal(speakText("1 m"), "un metro");
+    assert.equal(speakText("5 km"), "cinco kilómetros");
+    assert.equal(speakText("160 operadores"), "ciento sesenta operadores");
+    assert.equal(speakText("1er lugar y 2do lugar"), "primer lugar y segundo lugar");
+    // Un dígito pegado a letras es un modelo, no un número.
+    assert.equal(
+      speakText("una M4, una MK18, un AK47, un G36C y un HK416"),
+      "una M4, una MK18, un AK47, un G36C y un HK416"
+    );
+    // Una dirección no se toca.
+    assert.equal(
+      speakText("Mira https://www.airnation.online/virus3 y airnation.online/evento/2026"),
+      "Mira https://www.airnation.online/virus3 y airnation.online/evento/2026"
+    );
+    assert.equal(speakText("Hola, ¿en qué te ayudo?"), "Hola, ¿en qué te ayudo?");
+  });
+
+  it("una cifra partida entre deltas espera el resto antes de decirse", () => {
+    // Lo mismo que hace la voz: habla lo seguro y guarda la cola que puede crecer.
+    const porDeltas = (deltas) => {
+      let pending = "";
+      let dicho = "";
+      for (const delta of deltas) {
+        pending += delta;
+        const cut = speakableCut(pending);
+        dicho += speakText(pending.slice(0, cut));
+        pending = pending.slice(cut);
+      }
+      return dicho + speakText(pending);
+    };
+    assert.equal(porDeltas(["El precio es $1,2", "99 MXN."]), "El precio es mil doscientos noventa y nueve pesos.");
+    assert.equal(porDeltas(["Abre de 11:", "00–20:00."]), "Abre de once de la mañana a ocho de la noche.");
+    assert.equal(porDeltas(["Fue el 10/", "10/2026."]), "Fue el diez de octubre de dos mil veintiséis.");
+    assert.equal(porDeltas(["Van de 350-", "400 fps."]), "Van de trescientos cincuenta a cuatrocientos fps.");
+    assert.equal(porDeltas(["Son 8 ", "pm."]), "Son ocho de la noche.");
+    // Sin cifras no se guarda nada: la frase sale completa en su delta.
+    assert.equal(speakableCut("Hola, soy Joulie"), "Hola, soy Joulie".length);
+  });
+
+  it("la voz dice el precio en palabras aunque llegue partido entre deltas", async () => {
+    const secret = "joulie-test-secret";
+    const session = signSession("user-1", secret, NOW, 60_000);
+    const frames = [];
+    const result = await runCustomLlm(
+      {
+        secret,
+        headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+        body: { messages: [{ role: "user", content: "¿en cuánto está el boleto?" }] },
+        now: NOW,
+        enabled: true,
+        loadContext: async () => ({ eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }] }),
+        completeStream: async function* () {
+          yield "El boleto cuesta $1,2";
+          yield "99 MXN y abren a las 09:00.";
+        },
+      },
+      (frame) => frames.push(frame)
+    );
+    const dicho = frames.join("");
+    assert.match(dicho, /mil doscientos noventa y nueve pesos/);
+    assert.match(dicho, /nueve de la mañana/);
+    assert.equal(dicho.includes("1,2"), false);
+    assert.equal(dicho.includes("MXN"), false);
+    assert.equal(dicho.includes("09:00"), false);
+    // La respuesta guardada sigue siendo la del modelo, con sus cifras.
+    assert.match(result.reply, /\$1,299 MXN/);
+  });
+
+  it("el chat de texto no convierte las cifras: ahí se leen bien", async () => {
+    const result = await handleJoulie(
+      base({
+        message: "¿cuánto cuesta el boleto?",
+        complete: async () => "Cuesta $1,299 MXN.",
+      })
+    );
+    assert.equal(result.reply, "Cuesta $1,299 MXN.");
+  });
+
+  it("sin evento próximo que coincida, los pasados entran etiquetados como pasados", async () => {
+    const { calls, datos } = await datosFor("¿Ni siquiera domingueras?");
+    const pasada = calls.find(
+      (call) =>
+        call.table === "events" &&
+        call.filters.some((part) => part[0] === "lt" && part[1] === "fecha") &&
+        call.filters.some((part) => part[0] === "gte" && part[1] === "fecha")
+    );
+    // Acotada: una ventana hacia atrás y pocos registros.
+    assert.ok(pasada);
+    assert.ok(pasada.limit <= 3);
+    assert.match(pasada.filters.find((part) => part[0] === "or")[1], /title\.ilike\.%dominguera%/);
+    const parsed = JSON.parse(datos.slice(datos.lastIndexOf("\n") + 1));
+    assert.equal(parsed.eventos_pasados.length, 1);
+    assert.equal(parsed.eventos_pasados[0].es, "evento pasado");
+    assert.equal(parsed.eventos_pasados[0].title, "Dominguera Comunidad GDL");
+    assert.equal(parsed.eventos_pasados[0].campo, "Campo Poniente");
+    assert.match(datos, /Nunca lo ofrezcas como próximo/);
+    assert.match(datos, /preguntar directamente en el campo/);
+    // Si lo que preguntaron sí está por venir, lo pasado no estorba.
+    const proximos = await datosFor("¿qué eventos hay en San Luis Potosí?");
+    const conProximo = JSON.parse(proximos.datos.slice(proximos.datos.lastIndexOf("\n") + 1));
+    assert.match(proximos.datos, /Operación Virus 3/);
+    assert.deepEqual(conProximo.eventos_pasados, []);
+  });
+
+  it("solo ofrece lo que la app sí tiene, verificado contra las rutas del frontend", async () => {
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const app = path.join(__dirname, "..", "..", "..", "frontend", "app");
+    if (fs.existsSync(app)) {
+      for (const feature of FEATURES) {
+        const page = path.join(app, feature.ruta, "page.tsx");
+        assert.equal(fs.existsSync(page), true, feature.ruta);
+      }
+    }
+    const { datos } = await datosFor("quiero crear un evento");
+    for (const feature of FEATURES) assert.ok(datos.includes(feature.ruta), feature.ruta);
+    assert.match(datos, /no inventes pasos, formularios ni requisitos/);
+    // Nada de saludar otra vez ni de repetir la misma frase hecha.
+    assert.match(datos, /no saludes otra vez/);
+    assert.match(datos, /Si te preguntan por ti/);
+  });
+
+  it("una pregunta sobre ella misma la contesta ella, no una frase hecha", async () => {
+    let seen = "";
+    const result = await handleJoulie(
+      base({
+        message: "¿Puedes cambiar la voz?",
+        loadContext: async () => ({}),
+        complete: async (messages) => {
+          seen = messages[0].content;
+          return "No puedo cambiar mi voz, pero te ayudo con lo que necesites de airsoft.";
+        },
+      })
+    );
+    // Sin DATOS no se corta: su voz y lo que puede hacer no están en la base.
+    assert.notEqual(result.reply, COPY.noData);
+    assert.notEqual(result.reply, COPY.refusal);
+    assert.match(result.reply, /No puedo cambiar mi voz/);
+    assert.match(seen, /Si te preguntan por ti/);
+    // Un tema que no es airsoft sigue cortado antes del modelo.
+    let called = false;
+    const off = await handleJoulie(
+      base({
+        message: "escríbeme un poema",
+        complete: async () => {
+          called = true;
+          return "no";
+        },
+      })
+    );
+    assert.equal(called, false);
+    assert.equal(off.reply, COPY.refusal);
   });
 
   it("un producto de la tienda llega con su precio y sin lo que no es público", async () => {

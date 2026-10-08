@@ -242,6 +242,8 @@ function shapeContext(raw) {
   }
   const datos = {
     eventos,
+    // Lo que ya pasó va en su propia lista: así nunca se lee como lo que viene.
+    eventos_pasados: (Array.isArray(src.eventos_pasados) ? src.eventos_pasados : []).slice(0, 3).map(presentEvent).filter(Boolean),
     campos: (Array.isArray(src.campos) ? src.campos : []).slice(0, 16).map(presentField).filter(Boolean),
     equipos: listOf(src.equipos),
     tienda: (Array.isArray(src.tienda) ? src.tienda : []).slice(0, 4).map(presentStore).filter(Boolean),
@@ -261,7 +263,7 @@ function shapeContext(raw) {
   }
   const cap = eventos.some((row) => row.ficha) ? 5200 : src.foco ? 4200 : 2200;
   // Lo que pidió la pregunta se recorta al final, justo antes del arsenal propio.
-  const base = ["blog", "tienda", "mejoras", "replicas", "operadores", "equipos", "campos", "eventos", "tu_arsenal"];
+  const base = ["blog", "tienda", "mejoras", "replicas", "operadores", "equipos", "campos", "eventos_pasados", "eventos", "tu_arsenal"];
   const dropOrder = ENTITIES[src.foco]
     ? [...base.filter((key) => key !== src.foco && key !== "tu_arsenal"), src.foco, "tu_arsenal"]
     : base;
@@ -292,7 +294,7 @@ function isEmptyContext(datos) {
 function stampContext(datos, now) {
   const window = weekendWindow(now);
   const hoy = `hoy es ${WEEKDAY_ES[window.today.weekday]} ${spokenDate(window.today.date)}; mañana es ${spokenDate(window.tomorrow)}; este fin de semana es el sábado ${spokenDate(window.saturday)} y el domingo ${spokenDate(window.sunday)}, y el viernes ${spokenDate(window.friday)} desde las 18:00`;
-  const eventos = datos.eventos.map((row) => {
+  const stamp = (row) => {
     if (!row || typeof row.fecha !== "string" || !row.fecha) return row;
     const local = mexicoParts(row.fecha);
     const fridayNight = local.date === window.friday && local.hour >= 18;
@@ -311,8 +313,13 @@ function stampContext(datos, now) {
       stamped.hasta = `${WEEKDAY_ES[end.weekday]} ${spokenDate(end.date)}, ${spokenClock(end.hour, Number(end.minute))}`;
     }
     return stamped;
-  });
-  return { ...datos, eventos, hoy };
+  };
+  return {
+    ...datos,
+    eventos: datos.eventos.map(stamp),
+    eventos_pasados: (datos.eventos_pasados || []).map(stamp),
+    hoy,
+  };
 }
 
 module.exports = {

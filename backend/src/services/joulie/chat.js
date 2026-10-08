@@ -9,6 +9,7 @@ const {
   IDENTITY_RE,
   INJECTION_RE,
   OFFTOPIC_RE,
+  SELF_RE,
   guardReply,
   sanitizeHistory,
   stripWebJunk,
@@ -18,6 +19,7 @@ const { readEnabled } = require("./limits");
 const { completeOpenRouter, iterateOpenRouter } = require("./openrouter");
 const { systemPrompt } = require("./prompt");
 const { loadOwnArsenal, loadPublicContext } = require("./queries");
+const { speakText } = require("./speech");
 const { takeSentence } = require("./text");
 const { wantsWebOptions } = require("./web-search");
 
@@ -79,7 +81,11 @@ async function prepareJoulie(opts) {
   }
 
   const datos = stampContext(shapeContext(raw), opts.now || Date.now());
-  if (isEmptyContext(datos) && !wantsAdvice(text)) return finish(200, { reply: COPY.noData }, "ok");
+  // Lo que no se contesta con DATOS (consejo de airsoft, o algo sobre ella misma)
+  // no se corta por falta de DATOS.
+  if (isEmptyContext(datos) && !wantsAdvice(text) && !SELF_RE.test(text)) {
+    return finish(200, { reply: COPY.noData }, "ok");
+  }
 
   const limits = { ...(opts.limits || cfg) };
   const webBudget = opts.webBudget;
@@ -138,7 +144,9 @@ async function streamJoulie(opts, emit, signal) {
     }
   };
   const enqueue = (sentence) => {
-    const spoken = guardReply(sentence);
+    // A la voz le va la frase con las cifras en palabras; el texto de la
+    // respuesta sigue saliendo con sus números.
+    const spoken = speakText(guardReply(sentence));
     if (!spoken) return;
     chain = chain.then(async () => {
       if (signal?.aborted) return;

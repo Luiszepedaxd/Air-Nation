@@ -27,6 +27,27 @@ function upcomingQuery(supabase, now) {
     .limit(4);
 }
 
+// ponytail: un año de historia y tres registros alcanzan para decir «antes ha
+// habido algo así»; si hace falta más memoria, los dos topes viven aquí.
+const PAST_DAYS = 365;
+const PAST_LIMIT = 3;
+
+// Lo que ya pasó y coincide con la pregunta. Solo entra a DATOS cuando no hay
+// nada próximo que coincida, y nunca sirve para prometer que se repetirá.
+function pastQuery(supabase, now, filter) {
+  const since = new Date(Date.parse(now) - PAST_DAYS * 86400000).toISOString();
+  return supabase
+    .from(ENTITIES.eventos_pasados.tabla)
+    .select(ENTITIES.eventos_pasados.select)
+    .eq("published", true)
+    .eq("status", "publicado")
+    .lt("fecha", now)
+    .gte("fecha", since)
+    .or(filter)
+    .order("fecha", { ascending: false })
+    .limit(PAST_LIMIT);
+}
+
 async function loadOwnArsenal(supabase, ownerId) {
   const id = String(ownerId || "").trim();
   if (!id || id.length > 80 || /\s/.test(id)) return [];
@@ -79,6 +100,7 @@ async function loadPublicContext(supabase, message) {
             .select(ENTITIES.eventos.select)
             .eq("published", true)
             .eq("status", "publicado")
+            .gte("fecha", now)
             .or(filter(["title", "sede_nombre", "sede_ciudad"]))
             .limit(4)
         );
@@ -134,6 +156,7 @@ async function loadPublicContext(supabase, message) {
             .select(ENTITIES.eventos.select)
             .eq("published", true)
             .eq("status", "publicado")
+            .gte("fecha", now)
             .ilike("title", pattern)
             .limit(4)
         );
@@ -175,9 +198,12 @@ async function loadPublicContext(supabase, message) {
           .limit(2)
       );
     }
-    if (wants("eventos")) pushJob("proximos", upcomingQuery(supabase, now));
+    if (wants("eventos")) {
+      pushJob("proximos", upcomingQuery(supabase, now));
+      if (words.length) pushJob("pasados", pastQuery(supabase, now, filter(["title", "sede_nombre", "sede_ciudad"])));
+    }
     const found = await Promise.all(tagged);
-    const bucket = { eventos: [], campos: [], equipos: [], tienda: [], replicas: [], operadores: [], proximos: [], blog: [] };
+    const bucket = { eventos: [], campos: [], equipos: [], tienda: [], replicas: [], operadores: [], proximos: [], pasados: [], blog: [] };
     for (const item of found) bucket[item.kind].push(...item.rows);
     const agenda = calendar ? bucket.proximos : bucket.proximos.filter((row) => matchesForms(row, forms));
     const events = dedupe([...bucket.eventos, ...agenda], (row) => `${row.title}|${row.fecha}`);
@@ -194,13 +220,35 @@ async function loadPublicContext(supabase, message) {
       (row) => row.alias
     );
     const blog = dedupe(bucket.blog.map(blogCard).filter(Boolean), (row) => row.enlace).slice(0, 2);
-    if (events.length || fields.length || teams.length || tienda.length || replicas.length || operadores.length || blog.length || foco) {
+    // Si lo que preguntaron no está por venir, lo que ya pasó es la única pista.
+    // Cuenta lo que coincide con la pregunta, no la agenda completa: pedir «los
+    // próximos en tal ciudad» trae la agenda aunque ahí no haya nada.
+    const hayProximo = bucket.eventos.length > 0 || agenda.some((row) => matchesForms(row, forms));
+    const pasados = hayProximo
+      ? []
+      : rankByTokens(
+          dedupe(bucket.pasados, (row) => `${row.title}|${row.fecha}`),
+          forms,
+          (row) => `${row.title || ""} ${row.sede_nombre || ""} ${row.sede_ciudad || ""}`
+        ).slice(0, PAST_LIMIT);
+    if (
+      events.length ||
+      pasados.length ||
+      fields.length ||
+      teams.length ||
+      tienda.length ||
+      replicas.length ||
+      operadores.length ||
+      blog.length ||
+      foco
+    ) {
       const packed = wants("eventos") ? await packEvents(supabase, events, message, now) : { eventos: [] };
       // Con foco en campos el catálogo manda, aunque venga vacío: vacío significa
       // que no hay campos ahí, no que haya que ofrecer otros.
       const catalog = foco === "campos" ? await fieldCatalog(supabase, message) : null;
       return {
         eventos: packed.eventos,
+        eventos_pasados: pasados,
         campos: catalog || fields,
         equipos: teams,
         tienda,

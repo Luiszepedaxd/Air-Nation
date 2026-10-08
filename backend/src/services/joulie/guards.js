@@ -21,6 +21,15 @@ const IDENTITY_RE =
 const CAPABILITY_RE =
   /\bqu[eé] puedes hacer\b|\bqu[eé] sabes hacer\b|\ben qu[eé] (?:me )?(?:puedes|podr[ií]as) ayudar\b/i;
 
+/**
+ * Preguntas sobre ella misma: su voz, su nombre, lo que puede o no puede hacer.
+ * No se contestan con DATOS, así que tampoco se cortan cuando DATOS viene vacío:
+ * las contesta ella, corto y con la verdad. Pedirle cambiar de personaje sigue
+ * siendo inyección y se corta antes que esto.
+ */
+const SELF_RE =
+  /\b(tu|tus)\s+(voz|nombre|acento|tono)\b|\bcambia\w*\s+(?:(?:me|la|tu|de|su|otra)\s+)*voz\b|\b(puedes|podr[ií]as|sabes)\s+(?:hacer|cambiar)\b|\bte\s+pido\s+que\s+hagas\b/i;
+
 function scrubString(value, max = 280) {
   const parts = String(value).split(/(?<=[.!?\n])/);
   const kept = parts
@@ -72,6 +81,7 @@ module.exports = {
   IDENTITY_RE,
   INJECTION_RE,
   OFFTOPIC_RE,
+  SELF_RE,
   guardReply,
   sanitizeHistory,
   scrubString,

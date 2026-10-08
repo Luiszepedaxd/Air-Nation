@@ -10,6 +10,7 @@
  *   schema      el mapa de la base (ENTITIES) y las columnas privadas
  *   pages       las URLs públicas de airnation.online
  *   time        horas, fechas y horarios dichos en hora de Ciudad de México
+ *   features    lo que se puede hacer por cuenta propia en la app, con su ruta
  *   context     DATOS: cada fila convertida en ficha corta y etiquetada
  *   intent      qué tabla pide la pregunta
  *   web-search  cuándo se busca en internet y con qué cupo
@@ -17,6 +18,7 @@
  *   queries     lo que se le pregunta a Supabase
  *   limits      cupos, minutos de voz, interruptor y exención de admin
  *   session     la sesión firmada de una llamada
+ *   speech      lo que sale por la voz, con las cifras dichas en palabras
  *   eleven      el protocolo con ElevenLabs
  *   openrouter  la llamada al modelo
  *   prompt      el system prompt

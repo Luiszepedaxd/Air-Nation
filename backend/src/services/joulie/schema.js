@@ -17,6 +17,13 @@ const ENTITIES = {
     select:
       "title, descripcion, fecha, fecha_fin, cupo, disciplina, tipo, sede_nombre, sede_ciudad, url_externa, fields(nombre, slug, ciudad, estado), organizador:users!organizador_id(nombre, alias)",
   },
+  eventos_pasados: {
+    tabla: "events",
+    tipo: "evento pasado",
+    que: "un evento que ya ocurrió; sirve para contar que ahí antes hubo algo así, nunca para confirmar que volverá a haberlo",
+    claves: "title, cuando, sede, campo, ciudad y estado",
+    select: "title, fecha, sede_nombre, sede_ciudad, disciplina, fields(nombre, ciudad, estado)",
+  },
   campos: {
     tabla: "fields",
     tipo: "campo",
