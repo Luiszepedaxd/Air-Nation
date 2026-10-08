@@ -2327,3 +2327,83 @@ describe("JOULIE campos y respaldo web", () => {
     assert.match(dicho, /once de la mañana/);
   });
 });
+
+describe("JOULIE razonamiento", () => {
+  const { prepareJoulie } = require("./joulie/chat");
+  const { iterateOpenRouter } = require("./joulie/openrouter");
+  const PIENSA = { ...LIMITS, reasoningTokens: 256 };
+  const cuerpo = async (opts) => {
+    const prepared = await prepareJoulie(base({ limits: PIENSA, ...opts }));
+    return { body: buildChatBody(prepared.messages, prepared.cfg, true), reasoning: prepared.reasoning };
+  };
+
+  it("una consulta simple no piensa y conserva el presupuesto hablado", async () => {
+    const { body, reasoning } = await cuerpo({
+      message: "¿qué campos hay?",
+      loadContext: async () => ({ campos: [{ nombre: "Norte", ciudad: "León", estado: "Guanajuato" }], foco: "campos" }),
+      complete: async () => "Está Norte.",
+    });
+    assert.equal(reasoning, false);
+    assert.equal(body.reasoning.max_tokens, 0);
+    assert.equal(body.reasoning.exclude, true);
+    assert.equal(body.max_tokens, PIENSA.maxTokens);
+  });
+
+  it("un turno de consejo o con búsqueda piensa sin comerse las frases", async () => {
+    for (const opts of [
+      // Consejo: hay que razonar el escenario, no leer una fila.
+      { message: "¿qué réplica me recomiendas para empezar?", loadContext: async () => ({}) },
+      // Internet más lo de la app: combinar dos fuentes.
+      { message: "quiero comprar una réplica nueva", loadContext: async () => ({ tienda: [{ nombre: "Mira", precio: 900 }] }) },
+    ]) {
+      const { body, reasoning } = await cuerpo(opts);
+      assert.equal(reasoning, true, opts.message);
+      assert.equal(body.reasoning.max_tokens, 256, opts.message);
+      assert.equal(body.reasoning.exclude, true, opts.message);
+      // El razonamiento cuenta contra max_tokens: se suma aparte para que las
+      // frases habladas sigan cabiendo enteras.
+      assert.equal(body.max_tokens, PIENSA.maxTokens + 256, opts.message);
+    }
+  });
+
+  it("con JOULIE_REASONING_TOKENS en cero nadie piensa", async () => {
+    process.env.JOULIE_REASONING_TOKENS = "0";
+    try {
+      assert.equal(resolveConfig().reasoningTokens, 0);
+      const { body, reasoning } = await cuerpo({
+        message: "¿qué réplica me recomiendas para empezar?",
+        limits: { ...PIENSA, reasoningTokens: resolveConfig().reasoningTokens },
+        loadContext: async () => ({}),
+      });
+      assert.equal(reasoning, false);
+      assert.equal(body.reasoning.max_tokens, 0);
+      assert.equal(body.max_tokens, PIENSA.maxTokens);
+    } finally {
+      delete process.env.JOULIE_REASONING_TOKENS;
+    }
+    assert.equal(resolveConfig().reasoningTokens, DEFAULTS.reasoningTokens);
+  });
+
+  it("el razonamiento del modelo nunca sale en la respuesta", async () => {
+    process.env.OPENROUTER_API_KEY = "sk-or-test";
+    const original = global.fetch;
+    const sse = [
+      'data: {"choices":[{"delta":{"reasoning":"El usuario pregunta por "}}]}',
+      'data: {"choices":[{"delta":{"reasoning_details":[{"text":"una réplica"}]}}]}',
+      'data: {"choices":[{"delta":{"content":"Una AEG compacta."}}]}',
+      "data: [DONE]",
+      "",
+    ].join("\n\n");
+    global.fetch = async () => new Response(sse, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+    try {
+      let dicho = "";
+      for await (const delta of iterateOpenRouter([{ role: "user", content: "hola" }], { ...PIENSA, reason: 256 })) {
+        dicho += delta;
+      }
+      assert.equal(dicho, "Una AEG compacta.");
+      assert.equal(/El usuario pregunta|réplica"/.test(dicho), false);
+    } finally {
+      global.fetch = original;
+    }
+  });
+});

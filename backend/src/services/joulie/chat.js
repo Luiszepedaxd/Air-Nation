@@ -19,12 +19,13 @@ const { readEnabled } = require("./limits");
 const { completeOpenRouter, iterateOpenRouter } = require("./openrouter");
 const { systemPrompt } = require("./prompt");
 const { loadOwnArsenal, loadPublicContext } = require("./queries");
+const { reasoningPlan } = require("./reasoning");
 const { speakText } = require("./speech");
 const { takeSentence } = require("./text");
 const { wantsWebFallback, wantsWebOptions } = require("./web-search");
 
-function logOutcome(outcome, started) {
-  console.info("[joulie] %s %dms", outcome, Date.now() - started);
+function logOutcome(outcome, started, reason) {
+  console.info("[joulie] %s %dms razona:%s", outcome, Date.now() - started, reason ? "si" : "no");
 }
 
 async function prepareJoulie(opts) {
@@ -99,7 +100,13 @@ async function prepareJoulie(opts) {
     const repeated = last && (last.content === COPY.noData || last.content === COPY.clarify);
     return finish(200, { reply: repeated ? COPY.clarify : COPY.noData }, "ok");
   }
-  const used = { ...limits, web };
+  // Pensar antes de hablar solo cuando el turno lo pide: lo decide reasoning.js
+  // con las señales que ya se calcularon aquí.
+  const think = reasoningPlan(
+    { web, advice: wantsAdvice(text), hollow, foco: raw && raw.foco,  text },
+    limits
+  );
+  const used = { ...limits, web, reason: think.tokens };
 
   const messages = [
     { role: "system", content: systemPrompt(datos, web) },
@@ -107,7 +114,7 @@ async function prepareJoulie(opts) {
     { role: "user", content: text.slice(0, cfg.maxInput) },
   ];
 
-  return { cfg: used, web, started, messages };
+  return { cfg: used, web, reasoning: think.on, started, messages };
 }
 
 async function handleJoulie(opts) {
@@ -116,11 +123,11 @@ async function handleJoulie(opts) {
   try {
     const run = opts.complete || ((msgs) => completeOpenRouter(msgs, prepared.cfg));
     const reply = guardReply(await run(prepared.messages));
-    logOutcome("ok", prepared.started);
+    logOutcome("ok", prepared.started, prepared.reasoning);
     return { status: 200, reply };
   } catch (err) {
     console.info("[joulie] fail %s", err && err.name ? err.name : "error");
-    logOutcome("fail", prepared.started);
+    logOutcome("fail", prepared.started, prepared.reasoning);
     return { status: 503, error: COPY.busy };
   }
 }
@@ -189,7 +196,7 @@ async function streamJoulie(opts, emit, signal) {
   } catch (err) {
     console.info("[joulie] fail %s", err && err.name ? err.name : "error");
     if (!full.trim()) {
-      logOutcome("fail", prepared.started);
+      logOutcome("fail", prepared.started, prepared.reasoning);
       send("error", { error: COPY.busy });
       send("done", { firstAudioMs });
       return { status: 503, error: COPY.busy, firstAudioMs };
@@ -201,7 +208,7 @@ async function streamJoulie(opts, emit, signal) {
   const reply = guardReply(full.trim() || COPY.noData);
   send("reply", { reply, firstAudioMs });
   send("done", { firstAudioMs });
-  logOutcome(firstAudioMs == null ? "ok" : "audio", prepared.started);
+  logOutcome(firstAudioMs == null ? "ok" : "audio", prepared.started, prepared.reasoning);
   return { status: 200, reply, firstAudioMs };
 }
 

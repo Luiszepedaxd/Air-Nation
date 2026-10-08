@@ -1,12 +1,17 @@
 // La llamada a OpenRouter: cuerpo, reintentos y el stream de deltas.
 
 function buildChatBody(messages, cfg, stream) {
+  // cfg.reason son los tokens que este turno puede pensar (0 = no piensa, y así
+  // se manda explícito). OpenRouter cuenta razonamiento y respuesta contra el
+  // mismo max_tokens, así que el presupuesto hablado se suma aparte: pensar no
+  // se come las frases. exclude deja el razonamiento fuera de la respuesta.
+  const think = Math.max(0, Math.floor(Number(cfg.reason) || 0));
   const body = {
     model: cfg.model,
-    max_tokens: cfg.maxTokens,
+    max_tokens: cfg.maxTokens + think,
     temperature: 0.3,
     stream: Boolean(stream),
-    reasoning: { max_tokens: 0, exclude: true },
+    reasoning: { max_tokens: think, exclude: true },
     provider: { sort: "latency" },
     messages,
   };
@@ -109,6 +114,8 @@ async function* iterateOpenRouter(messages, cfg, signal) {
       if (data === "[DONE]") return;
       try {
         const json = JSON.parse(data);
+        // Solo el contenido: delta.reasoning y delta.reasoning_details nunca
+        // salen de aquí, ni al texto ni a la voz.
         const delta = json?.choices?.[0]?.delta?.content;
         if (typeof delta === "string" && delta) yield delta;
       } catch {

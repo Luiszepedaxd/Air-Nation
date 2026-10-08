@@ -3,6 +3,8 @@
 const DEFAULTS = {
   model: "google/gemini-2.5-flash",
   maxTokens: 70,
+  // Tokens de razonamiento cuando el turno los pide. 0 lo apaga del todo.
+  reasoningTokens: 256,
   maxInput: 500,
   timeoutMs: 18000,
   perMinute: 8,
@@ -34,11 +36,12 @@ const COPY = {
   unavailable: "Joulie no está disponible por ahora.",
 };
 
-function intEnv(name, fallback) {
+// min 0 para los topes que se pueden apagar poniéndolos en cero.
+function intEnv(name, fallback, min = 1) {
   const raw = process.env[name];
   if (raw == null || String(raw).trim() === "") return fallback;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) return fallback;
+  if (!Number.isFinite(n) || n < min) return fallback;
   return Math.floor(n);
 }
 
@@ -52,6 +55,7 @@ function resolveConfig() {
   return {
     model: strEnv("JOULIE_MODEL", DEFAULTS.model),
     maxTokens: intEnv("JOULIE_MAX_OUTPUT_TOKENS", DEFAULTS.maxTokens),
+    reasoningTokens: intEnv("JOULIE_REASONING_TOKENS", DEFAULTS.reasoningTokens, 0),
     maxInput: intEnv("JOULIE_MAX_INPUT_CHARS", DEFAULTS.maxInput),
     timeoutMs: intEnv("JOULIE_TIMEOUT_MS", DEFAULTS.timeoutMs),
     perMinute: intEnv("JOULIE_RATE_PER_MIN", DEFAULTS.perMinute),
