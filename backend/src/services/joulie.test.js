@@ -2031,7 +2031,10 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(porDeltas(["Van de 350-", "400 fps."]), "Van de trescientos cincuenta a cuatrocientos fps.");
     assert.equal(porDeltas(["Son 8 ", "pm."]), "Son ocho de la noche.");
     // Sin cifras no se guarda nada: la frase sale completa en su delta.
-    assert.equal(speakableCut("Hola, soy Joulie"), "Hola, soy Joulie".length);
+    // La última palabra, mientras siga pegada al final, todavía puede crecer:
+    // «S» y luego «75» es «S75». Cerrada por espacio o punto, ya se puede decir.
+    assert.equal(speakableCut("Hola, soy Joulie"), "Hola, soy ".length);
+    assert.equal(speakableCut("Hola, soy Joulie. "), "Hola, soy Joulie. ".length);
   });
 
   it("la voz dice el precio en palabras aunque llegue partido entre deltas", async () => {
@@ -2167,5 +2170,160 @@ describe("JOULIE", { concurrency: 1 }, () => {
       store.filters.some((part) => part[0] === "eq" && part[1] === "activo" && part[2] === true),
       true
     );
+  });
+});
+
+// Regresión: la pregunta por campos se quedaba sin campos. placeTokens toma por
+// lugar cualquier palabra suelta («registrados», «México») y el catálogo devolvía
+// vacío cuando nada coincidía, así que DATOS salía vacío y el turno moría en
+// COPY.noData antes del modelo.
+describe("JOULIE campos y respaldo web", () => {
+  const CAMPOS = [
+    { nombre: "Gotcha CQB Solares", slug: "gotcha-solares", ciudad: "Zapopan", estado: "Jalisco", tipo: "publico" },
+    { nombre: "Nido del Águila", slug: "nido-aguila", ciudad: "San Pedro Tlaquepaque", estado: "Jalisco", tipo: "publico" },
+    { nombre: "Hospital Abandonado", slug: "hospital", ciudad: "San Luis Potosí", estado: "San Luis Potosí", tipo: "privado" },
+  ];
+  const EQUIPOS = [{ nombre: "S75 Airsoft", slug: "s75", ciudad: "Guadalajara", estado: "Jalisco" }];
+
+  // Una base falsa que sí filtra: or("col.ilike.%tok%,...") contra las filas.
+  function fakeDb() {
+    const plain = (value) =>
+      String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "");
+    const rowsOf = (table) => (table === "fields" ? CAMPOS : table === "teams" ? EQUIPOS : []);
+    const keep = (rows, or) => {
+      if (!or) return rows;
+      const terms = or.split(",").map((part) => {
+        const [col, , ...rest] = part.split(".");
+        return [col, plain(rest.join(".")).replace(/[%"]/g, "")];
+      });
+      return rows.filter((row) => terms.some(([col, token]) => token && plain(row[col]).includes(token)));
+    };
+    const chain = (table) => {
+      const call = { table, or: null };
+      const api = new Proxy(
+        {
+          or(expr) {
+            call.or = expr;
+            return api;
+          },
+          then(resolve) {
+            resolve({ data: keep(rowsOf(table), call.or), error: null });
+          },
+        },
+        { get: (target, key) => (key in target ? target[key] : () => api) }
+      );
+      return api;
+    };
+    return { from: chain };
+  }
+
+  async function camposDe(message) {
+    let datos = null;
+    const result = await handleJoulie(
+      base({
+        message,
+        supabase: fakeDb(),
+        loadContext: undefined,
+        complete: async (messages) => {
+          const prompt = messages[0].content;
+          datos = JSON.parse(prompt.slice(prompt.lastIndexOf("\n") + 1));
+          return "Te cuento con lo que está publicado.";
+        },
+      })
+    );
+    return { campos: (datos && datos.campos) || [], reply: result.reply };
+  }
+
+  it("una ciudad sin campo propio trae los campos de su estado, no COPY.noData", async () => {
+    const gdl = await camposDe("¿Dónde puedo jugar en Guadalajara?");
+    assert.notEqual(gdl.reply, COPY.noData);
+    assert.deepEqual(
+      gdl.campos.map((row) => row.nombre).sort(),
+      ["Gotcha CQB Solares", "Nido del Águila"]
+    );
+    assert.equal(gdl.campos.every((row) => row.es === ENTITIES.campos.tipo), true);
+    // El municipio que trae cada campo viaja tal cual: nadie lo muda a Guadalajara.
+    assert.deepEqual(gdl.campos.map((row) => row.ciudad).sort(), ["San Pedro Tlaquepaque", "Zapopan"]);
+  });
+
+  it("«qué campos hay registrados» y «en México» listan campos", async () => {
+    for (const message of ["¿Qué campos hay registrados en AirNation?", "¿Dónde puedo jugar en México?", "¿qué campos hay?"]) {
+      const { campos, reply } = await camposDe(message);
+      assert.notEqual(reply, COPY.noData, message);
+      assert.equal(campos.length, 3, message);
+    }
+  });
+
+  it("sin dato en AirNation busca en internet antes de decir que no lo tiene", async () => {
+    let prompt = "";
+    const result = await handleJoulie(
+      base({
+        message: "¿cuáles son los FPS permitidos en México?",
+        loadContext: async () => ({}),
+        webBudget: createWebBudget(),
+        webKey: "sesion-fallback",
+        complete: async (messages) => {
+          prompt = messages[0].content;
+          return "En internet se maneja un tope de 400 fps para campo abierto.";
+        },
+      })
+    );
+    assert.match(prompt, /Ya corrió una búsqueda web/);
+    assert.match(prompt, /no está en AirNation/);
+    assert.notEqual(result.reply, COPY.noData);
+
+    // Lo que es un registro de AirNation no se busca fuera: si no está, no está.
+    let llamado = false;
+    const inexistente = await handleJoulie(
+      base({
+        message: "qué sabes de un equipo que no existe",
+        loadContext: async () => ({}),
+        webBudget: createWebBudget(),
+        webKey: "sesion-registro",
+        complete: async () => {
+          llamado = true;
+          return "no debo llegar";
+        },
+      })
+    );
+    assert.equal(llamado, false);
+    assert.equal(inexistente.reply, COPY.noData);
+  });
+
+  it("no repite dos veces «no tengo ese dato»: pregunta", async () => {
+    const result = await handleJoulie(
+      base({
+        message: "¿qué equipos hay en la zona de Mégère?",
+        history: [
+          { role: "user", content: "¿qué equipos hay en la cementera de SLMG?" },
+          { role: "assistant", content: COPY.noData },
+        ],
+        loadContext: async () => ({}),
+        complete: async () => "no debo llegar",
+      })
+    );
+    assert.equal(result.reply, COPY.clarify);
+  });
+
+  it("un modelo con letras pegadas a cifras no se parte ni se dice en palabras", async () => {
+    for (const token of ["S75 Airsoft", "una M4", "HK416", "G36C", "MK18", "AK47", "2GO", "3D"]) {
+      assert.equal(speakText(token), token);
+    }
+    // Y tampoco cuando llega partido entre deltas: «S» + «75 Airsoft».
+    let dicho = "";
+    let pending = "";
+    for (const delta of ["En Guadalajara está S", "75 Airsoft y el campo abre a las 11:", "00."]) {
+      pending += delta;
+      const cut = speakableCut(pending);
+      dicho += speakText(pending.slice(0, cut));
+      pending = pending.slice(cut);
+    }
+    dicho += speakText(pending);
+    assert.match(dicho, /S75 Airsoft/);
+    assert.equal(/setenta y cinco/.test(dicho), false);
+    assert.match(dicho, /once de la mañana/);
   });
 });

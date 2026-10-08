@@ -19,6 +19,8 @@ const DEFAULTS = {
 const COPY = {
   refusal: "Solo puedo ayudarte con airsoft dentro de AirNation.",
   noData: "No tengo ese dato en AirNation.",
+  // Dos veces «no tengo ese dato» no ayuda: si no se entendió, mejor preguntar.
+  clarify: "No te entendí bien. ¿Me dices el nombre del campo, el equipo o la ciudad?",
   busy: "Ahora no puedo responder. Intenta de nuevo en un momento.",
   limited: "Llegaste al límite de preguntas por ahora. Intenta más tarde.",
   tooLong: "Ese mensaje es demasiado largo. Pregúntame algo más corto sobre airsoft en AirNation.",

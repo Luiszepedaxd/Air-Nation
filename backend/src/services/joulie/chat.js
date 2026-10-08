@@ -21,7 +21,7 @@ const { systemPrompt } = require("./prompt");
 const { loadOwnArsenal, loadPublicContext } = require("./queries");
 const { speakText } = require("./speech");
 const { takeSentence } = require("./text");
-const { wantsWebOptions } = require("./web-search");
+const { wantsWebFallback, wantsWebOptions } = require("./web-search");
 
 function logOutcome(outcome, started) {
   console.info("[joulie] %s %dms", outcome, Date.now() - started);
@@ -81,20 +81,24 @@ async function prepareJoulie(opts) {
   }
 
   const datos = stampContext(shapeContext(raw), opts.now || Date.now());
-  // Lo que no se contesta con DATOS (consejo de airsoft, o algo sobre ella misma)
-  // no se corta por falta de DATOS.
-  if (isEmptyContext(datos) && !wantsAdvice(text) && !SELF_RE.test(text)) {
-    return finish(200, { reply: COPY.noData }, "ok");
-  }
-
   const limits = { ...(opts.limits || cfg) };
   const webBudget = opts.webBudget;
   const sessionKey = opts.webKey || String(opts.webUser || opts.userId || "anon");
   const webUser = String(opts.webUser || opts.userId || sessionKey);
+  // Lo que no se contesta con DATOS (consejo de airsoft, o algo sobre ella misma)
+  // no se corta por falta de DATOS.
+  const hollow = isEmptyContext(datos) && !SELF_RE.test(text);
   const web =
-    wantsWebOptions(text) &&
+    (wantsWebOptions(text) || (hollow && wantsWebFallback(text))) &&
     (!webBudget ||
       webBudget.allow(sessionKey, webUser, opts.now || Date.now(), limits.webSession, limits.webDaily));
+  // Sin DATOS, sin búsqueda y sin ser consejo no hay nada que decir. Si lo
+  // anterior ya fue un «no tengo ese dato», se pregunta en vez de repetirlo.
+  if (hollow && !web && !wantsAdvice(text)) {
+    const last = [...history].reverse().find((turn) => turn.role === "assistant");
+    const repeated = last && (last.content === COPY.noData || last.content === COPY.clarify);
+    return finish(200, { reply: repeated ? COPY.clarify : COPY.noData }, "ok");
+  }
   const used = { ...limits, web };
 
   const messages = [

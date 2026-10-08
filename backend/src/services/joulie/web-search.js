@@ -30,6 +30,18 @@ function wantsWebOptions(message) {
   return /\bopciones\b/.test(text) && /\b(que|cuales|cual|hay)\b/.test(text);
 }
 
+// Un registro de AirNation: si no está en DATOS, no existe en AirNation y buscarlo
+// en internet no lo encuentra. Lo demás (límites de FPS o julios, un lugar, tipos
+// de réplica o de equipo) sí puede estar fuera.
+const RECORD_RE =
+  /\b(equipos?|clan|clanes|escuadr\w+|eventos?|operacion|torneos?|partidas?|campos?|sedes?|tienda|productos?|blog|operador|operadores|arsenal)\b/;
+
+// Cuando AirNation no tiene la respuesta, el último intento antes de decir que no
+// hay dato. No decide el cupo: eso sigue en createWebBudget.
+function wantsWebFallback(message) {
+  return !RECORD_RE.test(plain(message));
+}
+
 // ponytail: el cupo de búsqueda vive en este proceso. A las 4000 sesiones se
 // vacía el mapa; el tope diario sigue en el otro.
 function createWebBudget() {
@@ -61,5 +73,6 @@ function createWebBudget() {
 
 module.exports = {
   createWebBudget,
+  wantsWebFallback,
   wantsWebOptions,
 };

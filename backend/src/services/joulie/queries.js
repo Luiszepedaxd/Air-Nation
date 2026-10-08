@@ -61,6 +61,34 @@ async function loadOwnArsenal(supabase, ownerId) {
   );
 }
 
+// Dónde queda un lugar que no es nombre de campo: lo dicen las otras tablas que
+// guardan ciudad y estado. Solo sirve para acotar los campos a ese estado.
+async function statesOf(supabase, places) {
+  const filtroCiudad = likeOr(["ciudad", "estado"], places);
+  if (!filtroCiudad) return [];
+  const [equipos, eventos] = await Promise.all([
+    safeQuery(
+      supabase.from(ENTITIES.equipos.tabla).select("ciudad, estado").eq("status", "activo").or(filtroCiudad).limit(4)
+    ),
+    safeQuery(
+      supabase
+        .from(ENTITIES.eventos.tabla)
+        .select("sede_ciudad, fields(estado)")
+        .eq("published", true)
+        .or(likeOr(["sede_ciudad"], places))
+        .limit(4)
+    ),
+  ]);
+  const nested = (row) => {
+    const field = row && (Array.isArray(row.fields) ? row.fields[0] : row.fields);
+    return field && typeof field.estado === "string" ? field.estado : "";
+  };
+  const estados = [...equipos.map((row) => (row && typeof row.estado === "string" ? row.estado : "")), ...eventos.map(nested)]
+    .map((estado) => estado.trim())
+    .filter(Boolean);
+  return [...new Set(estados)].slice(0, 3);
+}
+
 async function fieldCatalog(supabase, message) {
   const places = placeTokens(message);
   const listed = (filter) => {
@@ -71,10 +99,19 @@ async function fieldCatalog(supabase, message) {
   };
   if (!places.length) return listed("");
   const matched = await listed(likeOr(["nombre", "slug", "ciudad", "estado"], places));
-  // Si el lugar no coincide con ningún campo, no hay campos: rellenar con otros
-  // mentiría sobre dónde están.
-  if (!matched.length) return [];
-  return rankByTokens(matched, places, (row) => `${row.nombre || ""} ${row.slug || ""} ${row.ciudad || ""} ${row.estado || ""}`);
+  if (matched.length) {
+    return rankByTokens(matched, places, (row) => `${row.nombre || ""} ${row.slug || ""} ${row.ciudad || ""} ${row.estado || ""}`);
+  }
+  // Ningún campo se llama ni está en eso. No significa que no haya campos: la
+  // ciudad del campo es el municipio, y la palabra puede no ser un lugar. Si
+  // otra tabla ubica el lugar, los campos de ese estado; si no, el catálogo.
+  // El prompt ya obliga a decir la ciudad que trae cada campo.
+  const estados = await statesOf(supabase, places);
+  if (estados.length) {
+    const inState = await listed(likeOr(["estado"], estados));
+    if (inState.length) return inState;
+  }
+  return listed("");
 }
 
 async function loadPublicContext(supabase, message) {
@@ -243,8 +280,7 @@ async function loadPublicContext(supabase, message) {
       foco
     ) {
       const packed = wants("eventos") ? await packEvents(supabase, events, message, now) : { eventos: [] };
-      // Con foco en campos el catálogo manda, aunque venga vacío: vacío significa
-      // que no hay campos ahí, no que haya que ofrecer otros.
+      // Con foco en campos el catálogo manda: él decide qué campos salen.
       const catalog = foco === "campos" ? await fieldCatalog(supabase, message) : null;
       return {
         eventos: packed.eventos,

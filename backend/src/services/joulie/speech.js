@@ -273,7 +273,11 @@ const TAIL_RE = /(?:\bde\s+)?(?:\$|\d)[\d.,:%/–—\s-]*[A-Za-zÁÉÍÓÚáéí
 function speakableCut(buffer) {
   const text = String(buffer == null ? "" : buffer);
   const match = TAIL_RE.exec(text);
-  return match ? match.index : text.length;
+  if (match) return match.index;
+  // Una palabra a medias tampoco se dice: cortar entre la «S» y el «75» de «S75»
+  // diría «Ssetenta y cinco», porque el siguiente trozo empieza en cifra.
+  const word = /[\p{L}\p{N}]+$/u.exec(text);
+  return word ? word.index : text.length;
 }
 
 module.exports = {
