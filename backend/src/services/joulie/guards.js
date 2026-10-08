@@ -1,12 +1,9 @@
-// Lo que se filtra: los patrones que cortan un turno (inyección, fuera de tema,
+// Lo que se filtra: los patrones que cortan un turno (inyección,
 // saludo, despedida, identidad) y la limpieza de DATOS, del historial y de la respuesta.
 const { COPY } = require("./config");
 
 const INJECTION_RE =
   /ignora(?:r)?\s+(?:las\s+|tus\s+)?(?:instrucciones|reglas|prompt)|ignore\s+(?:all\s+)?(?:previous|prior|above)\s+(?:instructions|prompts|rules)|system\s*prompt|revela(?:r)?\s+(?:tu\s+)?(?:prompt|instrucciones|configuraci[oó]n|sistema)|olvida\s+(?:todo|tus\s+instrucciones)|act[uú]a\s+como|you\s+are\s+now|jailbreak|cambia(?:r)?\s+(?:de\s+)?(?:persona|personaje|rol)|developer\s+mode|<\s*system\s*>|j9k-canary/i;
-
-const OFFTOPIC_RE =
-  /\b(tarea|homework|ensayo)\b|\b(python|javascript|typescript)\b|\b(escr[ií]beme|escribe)\b.{0,40}\b(c[oó]digo|funci[oó]n|script|programa)\b|\b(elecciones|partido pol[ií]tico|campaña electoral)\b|\bpresidente de (?:m[eé]xico|la rep[uú]blica|estados unidos)\b|\b(chiste|poema|receta de cocina)\b|\b(netflix|spotify|chatgpt)\b|\bcapital de\b/i;
 
 const GREETING_RE =
   /^(hola|buenas|buenos d[ií]as|buenas tardes|buenas noches|hey|qui[uú]bole|qu[eé] tal)[!.?\s]*$/i;
@@ -80,7 +77,6 @@ module.exports = {
   GREETING_RE,
   IDENTITY_RE,
   INJECTION_RE,
-  OFFTOPIC_RE,
   SELF_RE,
   guardReply,
   sanitizeHistory,

@@ -8,7 +8,6 @@ const {
   GREETING_RE,
   IDENTITY_RE,
   INJECTION_RE,
-  OFFTOPIC_RE,
   SELF_RE,
   guardReply,
   sanitizeHistory,
@@ -44,7 +43,8 @@ async function prepareJoulie(opts) {
   if (!text) return finish(400, { error: COPY.empty }, "empty");
   if (text.length > cfg.maxInput) return finish(400, { error: COPY.tooLong }, "long");
   if (INJECTION_RE.test(text)) return finish(200, { reply: COPY.refusal }, "refuse");
-  if (OFFTOPIC_RE.test(text)) return finish(200, { reply: COPY.refusal }, "refuse");
+  // Lo que no es airsoft no se corta con una frase hecha: lo desvía ella, con
+  // calidez y con sus palabras (prompt.js). La frase fija queda para la inyección.
   if (GREETING_RE.test(text)) return finish(200, { reply: COPY.hello }, "ok");
   if (IDENTITY_RE.test(text)) return finish(200, { reply: COPY.who }, "ok");
   if (CAPABILITY_RE.test(text)) return finish(200, { reply: COPY.can }, "ok");
