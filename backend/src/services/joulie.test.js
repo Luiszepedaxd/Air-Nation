@@ -2035,6 +2035,74 @@ describe("JOULIE", { concurrency: 1 }, () => {
     // «S» y luego «75» es «S75». Cerrada por espacio o punto, ya se puede decir.
     assert.equal(speakableCut("Hola, soy Joulie"), "Hola, soy ".length);
     assert.equal(speakableCut("Hola, soy Joulie. "), "Hola, soy Joulie. ".length);
+    // Un modelo se dice igual aunque el delta parta la letra de la cifra: por
+    // cualquier corte, en dos o en tres trozos, sale tal cual.
+    const modelos = "un resorte M220 y una S75, HK416";
+    for (let i = 1; i < modelos.length; i += 1) {
+      const trozos = [modelos.slice(0, i), modelos.slice(i)];
+      assert.equal(porDeltas(trozos), modelos, trozos.join("|"));
+      for (let j = i + 1; j < modelos.length; j += 1) {
+        const tres = [modelos.slice(0, i), modelos.slice(i, j), modelos.slice(j)];
+        assert.equal(porDeltas(tres), modelos, tres.join("|"));
+      }
+    }
+  });
+
+  it("si el modelo se corta por el tope, la voz termina en frase completa", async () => {
+    const secret = "joulie-test-secret";
+    const session = signSession("user-1", secret, NOW, 60_000);
+    const hablar = async (trozos, reason) => {
+      const frames = [];
+      const result = await runCustomLlm(
+        {
+          secret,
+          headers: { authorization: `Bearer ${secret}`, "x-joulie-session": session },
+          body: { messages: [{ role: "user", content: "¿qué incluye el evento?" }] },
+          now: NOW,
+          enabled: true,
+          loadContext: async () => ({ eventos: [{ title: "Operación Virus 3", fecha: "2026-10-10T16:00:00.000Z" }] }),
+          completeStream: async function* (_messages, stop) {
+            for (const trozo of trozos) yield trozo;
+            if (reason) stop.reason = reason;
+          },
+        },
+        (frame) => frames.push(frame)
+      );
+      return { dicho: frames.join(""), result };
+    };
+
+    // Cortado por el tope: la frase a medias no se dice, ni su última palabra.
+    const corta = await hablar(["Incluye comida y renta. ", "El paquete trae hidratación incluyendo Gotcha Omnil"], "length");
+    assert.match(corta.dicho, /Incluye comida y renta\./);
+    assert.equal(corta.dicho.includes("Gotcha"), false);
+    assert.equal(corta.dicho.includes("Omnil"), false);
+    // La respuesta guardada sigue siendo la del modelo, tal cual llegó.
+    assert.match(corta.result.reply, /Gotcha Omnil/);
+
+    // Sin ninguna frase completa, hasta la última palabra entera y con punto.
+    const sinFrase = await hablar(["Las mejoras que más se repiten son el resorte y el cilin"], "length");
+    assert.match(sinFrase.dicho, /resorte y el\./);
+    assert.equal(sinFrase.dicho.includes("cilin"), false);
+
+    // Un stream que termina por su cuenta se dice completo, con punto o sin él.
+    const normal = await hablar(["Incluye comida y renta. ", "También hay préstamo de réplica"], "stop");
+    assert.match(normal.dicho, /Incluye comida y renta\./);
+    assert.match(normal.dicho, /También hay préstamo de réplica/);
+  });
+
+  it("no elige un lado cuando la respuesta depende de la réplica, y exige que el resultado web conteste", () => {
+    const { systemPrompt } = require("./joulie/prompt");
+    const sinWeb = systemPrompt({ hoy: "miércoles 7 de octubre de 2026" }, false);
+    assert.match(sinWeb, /depende del modelo, del armado o de la versión/);
+    assert.match(sinWeb, /cómo puede comprobarlo en la suya/);
+    const conWeb = systemPrompt({ hoy: "miércoles 7 de octubre de 2026" }, true);
+    assert.match(conWeb, /solo vale como respuesta si contesta justo lo que preguntaron/);
+    assert.match(conWeb, /no encontraste algo confiable/);
+    assert.match(conWeb, /pesos mexicanos cuando se pueda/);
+    // La búsqueda se pide con sesgo a México y a pesos.
+    const body = buildChatBody([{ role: "user", content: "la réplica más cara" }], { ...resolveConfig(), web: true }, true);
+    assert.match(body.plugins[0].search_prompt, /México/);
+    assert.match(body.plugins[0].search_prompt, /MXN/);
   });
 
   it("la voz dice el precio en palabras aunque llegue partido entre deltas", async () => {

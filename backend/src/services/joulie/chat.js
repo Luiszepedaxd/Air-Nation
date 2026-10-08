@@ -21,7 +21,7 @@ const { systemPrompt } = require("./prompt");
 const { loadOwnArsenal, loadPublicContext } = require("./queries");
 const { reasoningPlan } = require("./reasoning");
 const { speakText } = require("./speech");
-const { takeSentence } = require("./text");
+const { closeStream, takeSentence } = require("./text");
 const { wantsWebFallback, wantsWebOptions } = require("./web-search");
 
 function logOutcome(outcome, started, reason) {
@@ -147,6 +147,8 @@ async function streamJoulie(opts, emit, signal) {
   let pending = "";
   let firstAudioMs = null;
   let sawModel = false;
+  let flushed = false;
+  const stop = {};
   let chain = Promise.resolve();
   const noteAudio = () => {
     if (firstAudioMs == null) {
@@ -175,7 +177,7 @@ async function streamJoulie(opts, emit, signal) {
   };
 
   try {
-    for await (const delta of iterateOpenRouter(prepared.messages, { ...prepared.cfg, completeStream: opts.completeStream }, signal)) {
+    for await (const delta of iterateOpenRouter(prepared.messages, { ...prepared.cfg, completeStream: opts.completeStream }, signal, stop)) {
       if (signal?.aborted) break;
       if (prepared.web && !sawModel) {
         sawModel = true;
@@ -189,6 +191,7 @@ async function streamJoulie(opts, emit, signal) {
       let next = takeSentence(pending);
       while (next) {
         pending = next.rest;
+        flushed = true;
         enqueue(next.sentence);
         next = takeSentence(pending);
       }
@@ -203,7 +206,9 @@ async function streamJoulie(opts, emit, signal) {
     }
   }
 
-  if (pending.trim()) enqueue(pending);
+  // Si el modelo se cortó por el tope, la frase incompleta no se dice.
+  const tail = closeStream(pending, stop.reason && stop.reason !== "stop", flushed);
+  if (tail.trim()) enqueue(tail);
   await chain;
   const reply = guardReply(full.trim() || COPY.noData);
   send("reply", { reply, firstAudioMs });

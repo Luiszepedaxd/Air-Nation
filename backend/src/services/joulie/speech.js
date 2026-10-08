@@ -273,11 +273,12 @@ const TAIL_RE = /(?:\bde\s+)?(?:\$|\d)[\d.,:%/–—\s-]*[A-Za-zÁÉÍÓÚáéí
 function speakableCut(buffer) {
   const text = String(buffer == null ? "" : buffer);
   const match = TAIL_RE.exec(text);
-  if (match) return match.index;
-  // Una palabra a medias tampoco se dice: cortar entre la «S» y el «75» de «S75»
-  // diría «Ssetenta y cinco», porque el siguiente trozo empieza en cifra.
-  const word = /[\p{L}\p{N}]+$/u.exec(text);
-  return word ? word.index : text.length;
+  const cut = match ? match.index : text.length;
+  // Nunca a media palabra: la cifra que se guarda arrastra las letras pegadas
+  // antes de ella. Cortar entre la «M» y el «220» de «M220» diría «Mdoscientos
+  // veinte», porque el trozo guardado se lee solo, sin la letra.
+  const word = /[\p{L}\p{N}]+$/u.exec(text.slice(0, cut));
+  return word ? word.index : cut;
 }
 
 module.exports = {

@@ -19,7 +19,17 @@ function buildChatBody(messages, cfg, stream) {
   // Gemini 2.5 Flash no busca en la web. El plugin de OpenRouter sí, una vez,
   // con Exa y la misma llave. La herramienta openrouter:web_search puede no
   // buscar. 3 resultados.
-  body.plugins = [{ id: "web", engine: "exa", max_results: 3 }];
+  body.plugins = [
+    {
+      id: "web",
+      engine: "exa",
+      max_results: 3,
+      // Quien pregunta compra en México: resultados en español y precios en
+      // pesos. El plugin pega esta nota antes de los resultados.
+      search_prompt:
+        "Resultados de una búsqueda web. Prioriza fuentes de México y en español, y precios en pesos mexicanos (MXN); si un precio viene en otra moneda, di cuál es. Usa solo lo que responda la pregunta; si nada la responde, dilo.",
+    },
+  ];
   return body;
 }
 
@@ -88,9 +98,13 @@ async function completeOpenRouter(messages, cfg) {
   return typeof content === "string" ? content : "";
 }
 
-async function* iterateOpenRouter(messages, cfg, signal) {
+// stop, si viene, es dónde se apunta el finish_reason del stream: "length" es
+// que el modelo se quedó a media frase por el tope de tokens. Nunca sale como
+// texto ni como voz.
+async function* iterateOpenRouter(messages, cfg, signal, stop) {
+  const flag = stop && typeof stop === "object" ? stop : {};
   if (typeof cfg.completeStream === "function") {
-    yield* cfg.completeStream(messages);
+    yield* cfg.completeStream(messages, flag);
     return;
   }
   const response = await postOpenRouter(buildChatBody(messages, cfg, true), cfg, signal);
@@ -116,6 +130,8 @@ async function* iterateOpenRouter(messages, cfg, signal) {
         const json = JSON.parse(data);
         // Solo el contenido: delta.reasoning y delta.reasoning_details nunca
         // salen de aquí, ni al texto ni a la voz.
+        const reason = json?.choices?.[0]?.finish_reason;
+        if (typeof reason === "string" && reason) flag.reason = reason;
         const delta = json?.choices?.[0]?.delta?.content;
         if (typeof delta === "string" && delta) yield delta;
       } catch {

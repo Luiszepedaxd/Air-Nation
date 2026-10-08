@@ -7,6 +7,7 @@ const { isAppAdmin, readEnabled, voiceShouldCharge } = require("./limits");
 const { iterateOpenRouter } = require("./openrouter");
 const { secretsMatch, sessionSecret, signSession, verifySession } = require("./session");
 const { speakText, speakableCut } = require("./speech");
+const { closeStream, lastSentenceEnd } = require("./text");
 
 async function mintConversation(opts) {
   const secret = opts.secret || sessionSecret();
@@ -112,11 +113,14 @@ async function runCustomLlm(opts, write) {
   let spoken = "";
   let pending = "";
   let startedSend = false;
+  let flushed = false;
+  const stop = {};
   try {
     for await (const delta of iterateOpenRouter(
       prepared.messages,
       { ...prepared.cfg, completeStream: opts.completeStream },
-      opts.signal
+      opts.signal,
+      stop
     )) {
       if (!startedSend) {
         startedSend = true;
@@ -131,10 +135,13 @@ async function runCustomLlm(opts, write) {
         return { status: 200, reply: COPY.refusal };
       }
       spoken += piece;
-      // Las cifras se dicen en palabras, y una cifra a medias espera el siguiente delta.
+      // Se habla por frases completas: así, si el modelo se corta por el tope,
+      // la frase a medias todavía está aquí y no se dijo. Y una cifra a medias
+      // espera el siguiente delta, para decirla en palabras y no por trozos.
       pending += piece;
-      const cut = speakableCut(pending);
+      const cut = Math.min(lastSentenceEnd(pending), speakableCut(pending));
       if (cut) {
+        flushed = true;
         send(contentChunk(speakText(pending.slice(0, cut)), null));
         pending = pending.slice(cut);
       }
@@ -146,7 +153,8 @@ async function runCustomLlm(opts, write) {
       return { status: 200, reply: COPY.busy };
     }
   }
-  if (pending) send(contentChunk(speakText(pending), null));
+  const tail = closeStream(pending, stop.reason && stop.reason !== "stop", flushed);
+  if (tail) send(contentChunk(speakText(tail), null));
   send(contentChunk("", "stop"));
   send("data: [DONE]\n\n");
   return { status: 200, reply: guardReply(spoken) };

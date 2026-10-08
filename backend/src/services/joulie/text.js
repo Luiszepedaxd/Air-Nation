@@ -66,8 +66,39 @@ function takeSentence(buffer) {
   return { sentence, rest: buffer.slice(end).trimStart() };
 }
 
+// Hasta dónde llega la última frase cerrada del trozo. 0 si no hay ninguna.
+function lastSentenceEnd(buffer) {
+  const re = /[.!?](?:\s|$)/g;
+  let end = 0;
+  let match = re.exec(String(buffer == null ? "" : buffer));
+  while (match) {
+    end = match.index + 1;
+    match = re.exec(String(buffer));
+  }
+  return end;
+}
+
+/**
+ * El cierre del stream. Si el modelo se cortó por el tope de tokens, lo que
+ * quedó sin cerrar no se dice a medias: se habla hasta la última frase
+ * completa. Si no salió ninguna frase, hasta la última palabra entera y con
+ * punto; nunca a media palabra. Si terminó por su cuenta, la cola se dice tal
+ * cual.
+ */
+function closeStream(pending, truncated, spoke) {
+  const text = String(pending == null ? "" : pending);
+  if (!truncated) return text;
+  const end = lastSentenceEnd(text);
+  if (end) return text.slice(0, end);
+  if (spoke) return "";
+  const safe = text.trim().replace(/\S+$/, "").trim().replace(/[\s,;:(«"\u2014\u2013-]+$/, "");
+  return safe ? `${safe}.` : "";
+}
+
 module.exports = {
   blogTokens,
+  closeStream,
+  lastSentenceEnd,
   expandName,
   nameTokens,
   plain,
