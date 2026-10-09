@@ -246,7 +246,7 @@ export default function DocumentsList({
           No hay documentos en esta categoría
         </p>
       ) : (
-        <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
+        <div className="admin-cards w-full border border-solid border-[#EEEEEE] md:overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-[#111111]">
             <thead>
               <tr className="bg-[#F4F4F4]">
@@ -276,22 +276,22 @@ export default function DocumentsList({
                   key={d.id}
                   className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
                 >
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-card="title" data-label="Título" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {d.title}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Autoridad" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     <AuthorityBadge authority={d.authority} />
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Ciudad" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {d.ciudad ?? '—'}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Estado" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     <PublishedBadge published={d.published} />
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Fecha" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {formatFecha(d.created_at)}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-card="actions" data-label="Acciones" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     <div className="flex flex-wrap gap-2">
                       {d.file_url ? (
                         <a

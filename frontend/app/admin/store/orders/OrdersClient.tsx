@@ -163,14 +163,14 @@ export function OrdersClient({ orders, items }: Props) {
         </select>
       </div>
 
-      <div className="flex gap-0 border-b border-[#EEEEEE]">
+      <div className="flex flex-wrap gap-0 border-b border-[#EEEEEE]">
         {([
           { id: 'activas', label: `Activas (${activeOrders.length})` },
           { id: 'cerradas', label: `Cerradas (${closedOrders.length})` },
         ] as const).map(t => (
           <button key={t.id} type="button"
             onClick={() => { setActiveTab(t.id); setExpandedId(null) }}
-            className={`px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide transition-colors border-b-2 ${
+            className={`inline-flex min-h-11 items-center px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide transition-colors border-b-2 ${
               activeTab === t.id
                 ? 'border-[#CC4B37] text-[#CC4B37]'
                 : 'border-transparent text-[#999999] hover:text-[#111111]'
@@ -223,8 +223,8 @@ export function OrdersClient({ orders, items }: Props) {
 
                 <button type="button"
                   onClick={() => setExpandedId(isExpanded ? null : id)}
-                  className="flex w-full flex-wrap items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[#FAFAFA]">
-                  <span className="shrink-0 text-[12px] font-extrabold text-[#CC4B37]" style={jost}>
+                  className="flex w-full flex-col items-start gap-2 px-4 py-3.5 text-left transition-colors hover:bg-[#FAFAFA] md:flex-row md:flex-wrap md:items-center md:gap-3">
+                  <span className="shrink-0 text-[15px] font-extrabold text-[#CC4B37] md:text-[12px]" style={jost}>
                     #{str(order.order_number)}
                   </span>
                   {comprobante_url && !bool(order.transferencia_confirmada) && (
@@ -237,7 +237,7 @@ export function OrdersClient({ orders, items }: Props) {
                     style={{ ...jost, backgroundColor: meta.bg, color: meta.color }}>
                     {meta.labelAdmin}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[12px] text-[#333333]" style={lato}>
+                  <span className="w-full break-words text-[15px] font-semibold text-[#111111] md:min-w-0 md:w-auto md:flex-1 md:truncate md:text-[12px] md:font-normal md:text-[#333333]" style={lato}>
                     {nombreComprador}
                   </span>
                   <span className={`shrink-0 text-[10px] font-bold uppercase ${metodo === 'transferencia' ? 'text-[#1D4ED8]' : 'text-[#059669]'}`} style={jost}>
@@ -246,7 +246,7 @@ export function OrdersClient({ orders, items }: Props) {
                   <span className="shrink-0 text-[13px] font-extrabold text-[#111111]" style={jost}>
                     ${total.toLocaleString('es-MX')}
                   </span>
-                  <span className="hidden shrink-0 text-[10px] text-[#AAAAAA] md:block" style={lato}>
+                  <span className="shrink-0 text-[12px] text-[#AAAAAA] md:text-[10px]" style={lato}>
                     {fecha}
                   </span>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none"

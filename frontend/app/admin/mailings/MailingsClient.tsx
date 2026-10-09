@@ -459,7 +459,7 @@ function Step1({
         <button
           type="button"
           onClick={selectAllFiltered}
-          className="border border-solid border-[#E5E0DA] bg-white px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#111111] transition-colors hover:bg-[#F7F5F3]"
+          className="inline-flex min-h-11 items-center border border-solid border-[#E5E0DA] bg-white px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#111111] transition-colors hover:bg-[#F7F5F3] md:min-h-0"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           Seleccionar todos (filtrados)
@@ -467,7 +467,7 @@ function Step1({
         <button
           type="button"
           onClick={clearAll}
-          className="border border-solid border-[#E5E0DA] bg-white px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#666666] transition-colors hover:bg-[#F7F5F3]"
+          className="inline-flex min-h-11 items-center border border-solid border-[#E5E0DA] bg-white px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#666666] transition-colors hover:bg-[#F7F5F3] md:min-h-0"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           Deseleccionar
@@ -485,8 +485,8 @@ function Step1({
         </span>
       </div>
 
-      <div className="overflow-x-auto border border-solid border-[#E5E0DA] bg-white">
-        <table className="w-full min-w-[720px] border-collapse text-sm">
+      <div className="admin-cards border border-solid border-[#E5E0DA] bg-white md:overflow-x-auto">
+        <table className="w-full border-collapse text-sm md:min-w-[720px]">
           <thead>
             <tr className="border-b border-solid border-[#E5E0DA] bg-[#F7F5F3] text-left">
               <Th style={{ width: 40 }}></Th>
@@ -502,6 +502,7 @@ function Step1({
               <tr>
                 <td
                   colSpan={6}
+                  data-label=""
                   className="px-4 py-8 text-center text-xs text-[#666666]"
                 >
                   Sin resultados
@@ -518,7 +519,7 @@ function Step1({
                     checked ? 'bg-[rgba(204,75,55,0.04)]' : 'hover:bg-[#F7F5F3]'
                   }`}
                 >
-                  <td className="px-3 py-2">
+                  <td data-label="Seleccionar" className="px-3 py-2">
                     <input
                       type="checkbox"
                       checked={checked}
@@ -527,19 +528,19 @@ function Step1({
                       style={{ accentColor: '#CC4B37' }}
                     />
                   </td>
-                  <td className="px-3 py-2 text-[#111111]">
+                  <td data-card="title" data-label="Alias" className="px-3 py-2 text-[#111111]">
                     {u.alias || <span className="text-[#CCCCCC]">—</span>}
                   </td>
-                  <td className="px-3 py-2 text-[#444444]">
+                  <td data-label="Nombre" className="px-3 py-2 text-[#444444]">
                     {u.nombre || <span className="text-[#CCCCCC]">—</span>}
                   </td>
-                  <td className="px-3 py-2 text-[#444444]">
+                  <td data-label="Email" className="px-3 py-2 break-words text-[#444444]">
                     {u.email || <span className="text-[#CC4B37]">sin email</span>}
                   </td>
-                  <td className="px-3 py-2 text-xs text-[#666666]">
+                  <td data-label="Último acceso" className="px-3 py-2 text-xs text-[#666666]">
                     {formatDateTime(u.last_sign_in_at)}
                   </td>
-                  <td className="px-3 py-2 text-xs text-[#666666]">
+                  <td data-label="Registro" className="px-3 py-2 text-xs text-[#666666]">
                     {formatDate(u.created_at)}
                   </td>
                 </tr>
@@ -554,7 +555,7 @@ function Step1({
           type="button"
           onClick={onNext}
           disabled={selectedCount === 0}
-          className="bg-[#CC4B37] px-5 py-3 text-[0.7rem] uppercase tracking-[0.14em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-11 w-full bg-[#CC4B37] px-5 py-3 text-[0.7rem] uppercase tracking-[0.14em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           Preparar plantilla →
@@ -682,11 +683,11 @@ function Step2({
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-3">
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="border border-solid border-[#E5E0DA] bg-white px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.14em] text-[#111111] transition-colors hover:bg-[#F7F5F3]"
+          className="inline-flex min-h-11 w-full items-center justify-center border border-solid border-[#E5E0DA] bg-white px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.14em] text-[#111111] transition-colors hover:bg-[#F7F5F3] sm:w-auto"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           ← Volver
@@ -695,7 +696,7 @@ function Step2({
           type="button"
           onClick={onNext}
           disabled={!canSend}
-          className="bg-[#CC4B37] px-5 py-3 text-[0.7rem] uppercase tracking-[0.14em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-11 w-full bg-[#CC4B37] px-5 py-3 text-[0.7rem] uppercase tracking-[0.14em] text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           Enviar a {selectedCount} usuario{selectedCount === 1 ? '' : 's'} →
@@ -779,11 +780,11 @@ function Step3({
               </div>
             )}
 
-            <div className="flex items-center justify-end gap-3">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
               <button
                 type="button"
                 onClick={onCancel}
-                className="border border-solid border-[#E5E0DA] bg-white px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.14em] text-[#111111] transition-colors hover:bg-[#F7F5F3]"
+                className="inline-flex min-h-11 w-full items-center justify-center border border-solid border-[#E5E0DA] bg-white px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.14em] text-[#111111] transition-colors hover:bg-[#F7F5F3] sm:w-auto"
                 style={{ ...jostHeading, borderRadius: 2 }}
               >
                 Cancelar
@@ -791,7 +792,7 @@ function Step3({
               <button
                 type="button"
                 onClick={onConfirm}
-                className="bg-[#CC4B37] px-5 py-3 text-[0.7rem] uppercase tracking-[0.14em] text-white transition-opacity hover:opacity-90"
+                className="min-h-11 w-full bg-[#CC4B37] px-5 py-3 text-[0.7rem] uppercase tracking-[0.14em] text-white transition-opacity hover:opacity-90 sm:w-auto"
                 style={{ ...jostHeading, borderRadius: 2 }}
               >
                 Sí, enviar
@@ -873,10 +874,10 @@ function HistorySection({ history }: { history: MailingHistoryRow[] }) {
         <p className="text-xs text-[#999999]">Sin mailings registrados aún.</p>
       ) : (
         <div
-          className="overflow-x-auto border border-solid border-[#E5E0DA] bg-white"
+          className="admin-cards border border-solid border-[#E5E0DA] bg-white md:overflow-x-auto"
           style={{ borderRadius: 2 }}
         >
-          <table className="w-full min-w-[640px] border-collapse text-sm">
+          <table className="w-full border-collapse text-sm md:min-w-[640px]">
             <thead>
               <tr className="border-b border-solid border-[#E5E0DA] bg-[#F7F5F3] text-left">
                 <Th>Asunto</Th>
@@ -892,17 +893,17 @@ function HistorySection({ history }: { history: MailingHistoryRow[] }) {
                   key={h.id}
                   className="border-b border-solid border-[#EEEEEE]"
                 >
-                  <td className="max-w-[320px] truncate px-3 py-2 text-[#111111]">
+                  <td data-card="title" data-label="Asunto" className="max-w-[320px] px-3 py-2 text-[#111111] md:truncate">
                     {h.asunto}
                   </td>
-                  <td className="px-3 py-2 text-xs text-[#666666]">
+                  <td data-label="Fecha" className="px-3 py-2 text-xs text-[#666666]">
                     {formatDateTime(h.created_at)}
                   </td>
-                  <td className="px-3 py-2 text-[#444444]">
+                  <td data-label="Destinatarios" className="px-3 py-2 text-[#444444]">
                     {h.recipient_count}
                   </td>
-                  <td className="px-3 py-2 text-[#111111]">{h.sent_count}</td>
-                  <td className="px-3 py-2">
+                  <td data-label="Enviados" className="px-3 py-2 text-[#111111]">{h.sent_count}</td>
+                  <td data-label="Fallidos" className="px-3 py-2">
                     {h.failed_count > 0 ? (
                       <span
                         className="inline-block px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.1em] text-white"

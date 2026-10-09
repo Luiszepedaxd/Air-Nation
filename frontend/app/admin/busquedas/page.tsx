@@ -103,8 +103,8 @@ export default async function BusquedasPage() {
         {topSorted.length === 0 ? (
           <p style={lato} className="text-[13px] text-[#999999]">Sin datos aún.</p>
         ) : (
-          <div className="overflow-x-auto border border-[#EEEEEE]">
-            <div className="grid min-w-[32rem] grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+          <div className="border border-[#EEEEEE]">
+            <div className="hidden grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 md:grid">
               <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
               <span style={jost} className="col-span-6 text-[9px] tracking-widest text-[#999999]">Término</span>
               <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#999999]">Búsquedas</span>
@@ -113,26 +113,31 @@ export default async function BusquedasPage() {
             {topSorted.map(([query, data], i) => (
               <div
                 key={query}
-                className="grid min-w-[32rem] grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA]"
+                className="flex flex-col gap-2 border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA] md:grid md:grid-cols-12 md:items-center md:gap-0"
               >
-                <span style={lato} className="col-span-1 text-[12px] text-[#999999]">{i + 1}</span>
-                <span style={lato} className="col-span-6 text-[13px] font-semibold text-[#111111]">
+                <span style={lato} className="hidden text-[12px] text-[#999999] md:col-span-1 md:block">{i + 1}</span>
+                <span style={lato} className="break-words text-[15px] font-semibold text-[#111111] md:col-span-6 md:text-[13px]">
+                  <span className="mr-2 text-[12px] font-normal text-[#999999] md:hidden">{i + 1}.</span>
                   {query}
                 </span>
-                <span style={lato} className="col-span-2 text-right text-[13px] text-[#111111]">
+                <span style={lato} className="flex items-baseline justify-between text-[13px] text-[#111111] md:col-span-2 md:block md:text-right">
+                  <span style={jost} className="text-[10px] tracking-widest text-[#999999] md:hidden">Búsquedas</span>
                   {data.count}
                 </span>
-                <span style={lato} className="col-span-3 text-right text-[12px] text-[#666666]">
-                  {data.conResultados} / {data.count}
-                  {data.count > 0 && (
-                    <span className={`ml-1 text-[11px] ${
-                      data.conResultados / data.count >= 0.5
-                        ? 'text-green-600'
-                        : 'text-[#CC4B37]'
-                    }`}>
-                      ({Math.round((data.conResultados / data.count) * 100)}%)
-                    </span>
-                  )}
+                <span style={lato} className="flex items-baseline justify-between text-[12px] text-[#666666] md:col-span-3 md:block md:text-right">
+                  <span style={jost} className="text-[10px] tracking-widest text-[#999999] md:hidden">Con resultados</span>
+                  <span>
+                    {data.conResultados} / {data.count}
+                    {data.count > 0 && (
+                      <span className={`ml-1 text-[11px] ${
+                        data.conResultados / data.count >= 0.5
+                          ? 'text-green-600'
+                          : 'text-[#CC4B37]'
+                      }`}>
+                        ({Math.round((data.conResultados / data.count) * 100)}%)
+                      </span>
+                    )}
+                  </span>
                 </span>
               </div>
             ))}
@@ -152,8 +157,8 @@ export default async function BusquedasPage() {
         {sinResultadosSorted.length === 0 ? (
           <p style={lato} className="text-[13px] text-[#999999]">Sin búsquedas vacías aún.</p>
         ) : (
-          <div className="overflow-x-auto border border-[#EEEEEE]">
-            <div className="grid min-w-[32rem] grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+          <div className="border border-[#EEEEEE]">
+            <div className="hidden grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 md:grid">
               <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
               <span style={jost} className="col-span-9 text-[9px] tracking-widest text-[#999999]">Término</span>
               <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#999999]">Veces</span>
@@ -161,11 +166,15 @@ export default async function BusquedasPage() {
             {sinResultadosSorted.map(([query, count], i) => (
               <div
                 key={query}
-                className="grid min-w-[32rem] grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA]"
+                className="flex flex-col gap-2 border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA] md:grid md:grid-cols-12 md:items-center md:gap-0"
               >
-                <span style={lato} className="col-span-1 text-[12px] text-[#999999]">{i + 1}</span>
-                <span style={lato} className="col-span-9 break-words text-[13px] text-[#111111]">{query}</span>
-                <span style={lato} className="col-span-2 text-right text-[13px] font-semibold text-[#CC4B37]">
+                <span style={lato} className="hidden text-[12px] text-[#999999] md:col-span-1 md:block">{i + 1}</span>
+                <span style={lato} className="break-words text-[15px] text-[#111111] md:col-span-9 md:text-[13px]">
+                  <span className="mr-2 text-[12px] text-[#999999] md:hidden">{i + 1}.</span>
+                  {query}
+                </span>
+                <span style={lato} className="flex items-baseline justify-between text-[13px] font-semibold text-[#CC4B37] md:col-span-2 md:block md:text-right">
+                  <span style={jost} className="text-[10px] tracking-widest text-[#999999] md:hidden">Veces</span>
                   {count}
                 </span>
               </div>

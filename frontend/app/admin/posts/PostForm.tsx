@@ -75,7 +75,7 @@ const editorProseCss = `
   max-height: min(70vh, 900px);
   overflow-x: auto;
   overflow-y: auto;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   padding: 16px;
   outline: none;
   font-family: 'Lato', sans-serif;
@@ -113,7 +113,7 @@ const editorProseCss = `
 .post-form-tiptap .ProseMirror a {
   color: #CC4B37;
   text-decoration: underline;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .post-form-tiptap .ProseMirror img {
   max-width: 100%;
@@ -122,7 +122,7 @@ const editorProseCss = `
 .post-form-tiptap .ProseMirror pre {
   max-width: 100%;
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .post-form-tiptap .ProseMirror.is-editor-empty:first-child::before {
   color: #999999;

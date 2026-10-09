@@ -149,9 +149,10 @@ body {
   }
 }
 
-/* Admin: long tokens wrap; wide tables scroll inside .overflow-x-auto, not the page. */
+/* Admin: long URLs wrap at the edge. Words stay whole.
+   Below 768px, .admin-cards tables become stacked cards. Desktop tables are unchanged. */
 .admin-main {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .admin-main img,
 .admin-main video,
@@ -160,13 +161,92 @@ body {
   max-width: 100%;
   height: auto;
 }
-.admin-main .overflow-x-auto {
-  max-width: 100%;
-}
 @media (max-width: 767px) {
-  .admin-main .min-w-0.flex-wrap > span {
-    min-width: 0;
-    overflow-wrap: anywhere;
+  .admin-main input:not([type='checkbox']):not([type='radio']):not([type='hidden']):not([type='file']),
+  .admin-main select,
+  .admin-main textarea {
+    max-width: 100%;
+    min-height: 44px;
+  }
+
+  .admin-cards {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+  .admin-cards table {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    border: 0;
+  }
+  .admin-cards thead {
+    display: none;
+  }
+  .admin-cards tbody,
+  .admin-cards tr,
+  .admin-cards td {
+    display: block;
+    width: 100%;
+  }
+  .admin-cards tr {
+    margin-bottom: 12px;
+    border: 1px solid #eeeeee;
+    background: #ffffff;
+    padding: 12px 14px;
+  }
+  .admin-cards td {
+    border: 0 !important;
+    padding: 8px 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    max-width: none !important;
+  }
+  .admin-cards td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-family: 'Jost', sans-serif;
+    font-weight: 800;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666666;
+  }
+  .admin-cards td[data-card='title'] {
+    padding-top: 0 !important;
+    font-size: 15px;
+    font-weight: 700;
+    color: #111111;
+  }
+  .admin-cards td[data-card='title']::before,
+  .admin-cards td[data-card='actions']::before,
+  .admin-cards td[data-label='']::before {
+    display: none;
+  }
+  .admin-cards .truncate,
+  .admin-cards .line-clamp-2 {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: unset;
+    display: block;
+    -webkit-line-clamp: unset;
+  }
+  .admin-cards td[data-card='actions'] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .admin-cards td button,
+  .admin-cards td a,
+  .admin-cards td[data-card='actions'] a,
+  .admin-cards td[data-card='actions'] button {
+    min-height: 44px;
+  }
+  .admin-cards input[type='checkbox'] {
+    width: 1.375rem;
+    height: 1.375rem;
   }
 }
 

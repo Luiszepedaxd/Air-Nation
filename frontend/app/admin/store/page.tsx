@@ -140,7 +140,7 @@ export default async function AdminStorePage({
             <Link
               key={t.id}
               href={`/admin/store?tab=${t.id}`}
-              className={`px-3 py-2 text-[11px] tracking-[0.12em] transition-colors ${
+              className={`inline-flex min-h-11 items-center px-3 py-2 text-[11px] tracking-[0.12em] transition-colors md:min-h-0 ${
                 active
                   ? 'bg-[#CC4B37] text-[#FFFFFF]'
                   : 'border border-solid border-[#EEEEEE] bg-[#F4F4F4] text-[#666666] hover:text-[#111111]'

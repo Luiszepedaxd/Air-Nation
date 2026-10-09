@@ -281,7 +281,7 @@ export default async function AdminEquiposPage({
               >
                 <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-3 py-3 marker:hidden [&::-webkit-details-marker]:hidden">
                   <span
-                    className="min-w-0 flex-1 font-semibold text-[#111111]"
+                    className="w-full min-w-0 break-words font-semibold text-[#111111] md:w-auto md:flex-1"
                     style={latoBody}
                   >
                     {t.nombre}
@@ -327,7 +327,7 @@ export default async function AdminEquiposPage({
                       />
                       <button
                         type="submit"
-                        className="inline-flex items-center justify-center border border-solid bg-[#FFFFFF] px-3 py-2 text-[10px] transition-colors"
+                        className="inline-flex min-h-11 items-center justify-center border border-solid bg-[#FFFFFF] px-3 py-2 text-[10px] transition-colors md:min-h-0"
                         style={{
                           ...jostHeading,
                           borderRadius: 2,
@@ -340,7 +340,7 @@ export default async function AdminEquiposPage({
                     </form>
                     <Link
                       href={`${base}/${encodeURIComponent(t.id)}/editar`}
-                      className="inline-flex items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[10px] text-[#111111]"
+                      className="inline-flex min-h-11 items-center justify-center border border-solid border-[#111111] bg-[#FFFFFF] px-3 py-2 text-[10px] text-[#111111] md:min-h-0"
                       style={{ ...jostHeading, borderRadius: 2 }}
                     >
                       EDITAR
@@ -373,7 +373,7 @@ export default async function AdminEquiposPage({
                     ) : (
                       <Link
                         href={`${base}?askDelete=${encodeURIComponent(t.id)}`}
-                        className="inline-flex items-center justify-center border border-[#CC4B37] px-3 py-1.5 text-[10px] text-[#CC4B37]"
+                        className="inline-flex min-h-11 items-center justify-center border border-[#CC4B37] px-3 py-1.5 text-[10px] text-[#CC4B37] md:min-h-0"
                         style={{ ...jostHeading, borderRadius: 2 }}
                       >
                         ELIMINAR

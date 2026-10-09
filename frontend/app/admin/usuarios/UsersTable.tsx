@@ -338,7 +338,7 @@ export default function UsersTable({
         </div>
       )}
 
-      <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
+      <div className="admin-cards w-full border border-solid border-[#EEEEEE] md:overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm text-[#111111]">
           <thead>
             <tr className="bg-[#F4F4F4]">
@@ -374,17 +374,17 @@ export default function UsersTable({
                     i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'
                   }
                 >
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-card="title" data-label="Nombre" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {activeTab === 'pendientes'
                       ? u.nombre && u.nombre.trim() !== ''
                         ? u.nombre
                         : (u.email ?? '—')
                       : (u.nombre ?? '—')}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Alias" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {u.alias ?? '—'}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Acceso" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span
                         title="Email y contraseña"
@@ -420,22 +420,22 @@ export default function UsersTable({
                       </span>
                     </div>
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Ciudad" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {u.ciudad ?? '—'}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Rol" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {u.rol ?? '—'}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="App role" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     <AppRoleBadge role={u.app_role} />
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Nº miembro" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {u.member_number != null ? String(u.member_number) : '—'}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-label="Registro" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     {formatRegistro(u.created_at)}
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                  <td data-card="actions" data-label="Acciones" className="border border-solid border-[#EEEEEE] px-3 py-2">
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -487,7 +487,7 @@ export default function UsersTable({
                       )}
                     </div>
                   </td>
-                  <td className="border border-solid border-[#EEEEEE] px-2 py-2 align-top">
+                  <td data-card="actions" data-label="Equipo" className="border border-solid border-[#EEEEEE] px-2 py-2 align-top">
                     <button
                       type="button"
                       onClick={() =>
@@ -511,6 +511,7 @@ export default function UsersTable({
                   >
                     <td
                       colSpan={10}
+                      data-label=""
                       className="border border-solid border-[#EEEEEE] px-3 py-3"
                     >
                       <UserTeamAssignSection userId={u.id} />

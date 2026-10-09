@@ -122,7 +122,7 @@ function HorariosBlock({ value }: { value: unknown }) {
       const rows = value as Record<string, unknown>[]
       const cols = Object.keys(rows[0] as object)
       return (
-        <div className="overflow-x-auto border border-solid border-[#EEEEEE]">
+        <div className="admin-cards border border-solid border-[#EEEEEE] md:overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm text-[#111111]">
             <thead>
               <tr className="bg-[#F4F4F4]">
@@ -154,6 +154,8 @@ function HorariosBlock({ value }: { value: unknown }) {
                     return (
                       <td
                         key={c}
+                        data-card={c === cols[0] ? 'title' : undefined}
+                        data-label={c}
                         className="border border-solid border-[#EEEEEE] px-3 py-2"
                         style={latoBody}
                       >
@@ -169,7 +171,7 @@ function HorariosBlock({ value }: { value: unknown }) {
       )
     }
     return (
-      <div className="overflow-x-auto border border-solid border-[#EEEEEE]">
+      <div className="admin-cards border border-solid border-[#EEEEEE] md:overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">
           <thead>
             <tr className="bg-[#F4F4F4]">
@@ -188,6 +190,8 @@ function HorariosBlock({ value }: { value: unknown }) {
                 className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
               >
                 <td
+                  data-card="title"
+                  data-label="Horario"
                   className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#111111]"
                   style={latoBody}
                 >
@@ -211,7 +215,7 @@ function HorariosBlock({ value }: { value: unknown }) {
       )
     }
     return (
-      <div className="overflow-x-auto border border-solid border-[#EEEEEE]">
+      <div className="admin-cards border border-solid border-[#EEEEEE] md:overflow-x-auto">
         <table className="w-full border-collapse text-left text-sm">
           <thead>
             <tr className="bg-[#F4F4F4]">
@@ -236,12 +240,15 @@ function HorariosBlock({ value }: { value: unknown }) {
                 className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
               >
                 <td
+                  data-card="title"
+                  data-label="Día / clave"
                   className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#111111]"
                   style={latoBody}
                 >
                   {k}
                 </td>
                 <td
+                  data-label="Valor"
                   className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#111111]"
                   style={latoBody}
                 >

@@ -368,7 +368,7 @@ export default async function AdminCamposPage({
             No hay campos en esta categoría
           </p>
         ) : (
-          <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
+          <div className="admin-cards w-full border border-solid border-[#EEEEEE] md:overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm text-[#111111]">
               <thead>
                 <tr className="bg-[#F4F4F4]">
@@ -401,7 +401,7 @@ export default async function AdminCamposPage({
                       key={f.id}
                       className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
                     >
-                      <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
+                      <td data-label="Foto" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         {f.foto_portada_url ? (
                           <img
                             src={f.foto_portada_url}
@@ -418,7 +418,7 @@ export default async function AdminCamposPage({
                           />
                         )}
                       </td>
-                      <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-top">
+                      <td data-card="title" data-label="Nombre" className="border border-solid border-[#EEEEEE] px-3 py-2 align-top">
                         <div className="font-semibold">{f.nombre}</div>
                         {transferred ? (
                           <span
@@ -476,13 +476,13 @@ export default async function AdminCamposPage({
                           </form>
                         </details>
                       </td>
-                      <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
+                      <td data-label="Ciudad" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         {f.ciudad ?? '—'}
                       </td>
-                      <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
+                      <td data-label="Status" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         <StatusBadge status={f.status} />
                       </td>
-                      <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
+                      <td data-label="Destacado" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
                           <form action={listToggleDestacado}>
                             <input type="hidden" name="id" value={f.id} />
@@ -531,7 +531,7 @@ export default async function AdminCamposPage({
                           ) : null}
                         </div>
                       </td>
-                      <td className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
+                      <td data-card="actions" data-label="Acciones" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         <div className="flex flex-wrap gap-2">
                           <Link
                             href={`/admin/campos/${f.id}`}

@@ -32,7 +32,7 @@ export default async function AdminVideosPage() {
         </h1>
         <Link
           href="/admin/videos/nuevo"
-          className="inline-flex items-center justify-center border border-solid border-[#EEEEEE] bg-[#CC4B37] px-4 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90"
+          className="inline-flex min-h-11 items-center justify-center border border-solid border-[#EEEEEE] bg-[#CC4B37] px-4 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90 md:min-h-0"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           NUEVO VIDEO

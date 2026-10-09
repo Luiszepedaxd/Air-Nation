@@ -136,7 +136,7 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-[24px] text-[#111111]" style={{ ...jost, textTransform: 'none' }}>
+          <h1 className="break-words text-[22px] leading-tight text-[#111111] md:text-[24px]" style={{ ...jost, textTransform: 'none' }}>
             {tournament.name}
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -156,21 +156,21 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
             {tournament.players.length} jugadores · {tournament.referees.length} árbitros · {tournament.rounds.length} rondas
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <button
             type="button"
             onClick={() => void handleExport()}
             style={jost}
-            className="inline-flex bg-[#111111] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#FFFFFF] hover:bg-[#CC4B37]"
+            className="inline-flex min-h-11 items-center justify-center bg-[#111111] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#FFFFFF] hover:bg-[#CC4B37]"
           >
-            📥 DESCARGAR EXCEL
+            DESCARGAR EXCEL
           </button>
           {tournament.public_results && (
             <button
               type="button"
               onClick={() => void handleTogglePublish()}
               style={jost}
-              className="inline-flex border border-[#CC4B37] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#CC4B37] hover:bg-[#CC4B37] hover:text-[#FFFFFF]"
+              className="inline-flex min-h-11 items-center justify-center border border-[#CC4B37] px-4 py-2.5 text-[10px] tracking-[0.12em] text-[#CC4B37] hover:bg-[#CC4B37] hover:text-[#FFFFFF]"
             >
               DESPUBLICAR
             </button>
@@ -233,7 +233,7 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
                 void loadScoreboard(r.id)
               }}
               style={jost}
-              className={`border px-4 py-2 text-[10px] tracking-[0.12em] transition-colors ${
+              className={`inline-flex min-h-11 items-center border px-4 py-2 text-[10px] tracking-[0.12em] transition-colors ${
                 selectedRound === r.id
                   ? 'border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]'
                   : 'border-[#EEEEEE] text-[#666666] hover:border-[#CC4B37]'
@@ -256,11 +256,10 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
         )}
 
         {scoreboard.length > 0 && (
-          <div className="overflow-x-auto">
-          <div className="min-w-[40rem] border border-[#EEEEEE]">
+          <div className="border border-[#EEEEEE]">
             {scoreRoundGameType === 'drills' ? (
               <>
-                <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                <div className="hidden grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 md:grid">
                   <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
                   <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
                   <span style={jost} className="col-span-2 text-center text-[9px] tracking-widest text-[#999999]">TIEMPO</span>
@@ -269,20 +268,28 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
                   <span style={jost} className="col-span-3 text-right text-[9px] tracking-widest text-[#CC4B37]">FINAL</span>
                 </div>
                 {scoreboard.map((s, i) => (
-                  <div key={s.player_id} className={`grid grid-cols-12 items-center px-4 py-3 hover:bg-[#FAFAFA] ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
-                    <span className="col-span-1 text-[12px] font-bold text-[#999999]">{i + 1}</span>
-                    <div className="col-span-3 min-w-0">
-                      <p className="truncate text-[13px] font-semibold text-[#111111]">{s.name}</p>
-                      {s.team_name && <p className="truncate text-[10px] text-[#999999]">{s.team_name}</p>}
+                  <div key={s.player_id} className={`flex flex-col gap-2 px-4 py-3 hover:bg-[#FAFAFA] md:grid md:grid-cols-12 md:items-center md:gap-0 ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
+                    <span className="hidden text-[12px] font-bold text-[#999999] md:col-span-1 md:block">{i + 1}</span>
+                    <div className="min-w-0 md:col-span-3">
+                      <p className="break-words text-[15px] font-semibold text-[#111111] md:truncate md:text-[13px]">
+                        <span className="md:hidden">{i + 1}. </span>{s.name}
+                      </p>
+                      {s.team_name && <p className="break-words text-[12px] text-[#999999] md:truncate md:text-[10px]">{s.team_name}</p>}
                     </div>
-                    <span className="col-span-2 text-center text-[13px] tabular-nums text-[#111111]">
+                    <span className="flex items-baseline justify-between text-[13px] tabular-nums text-[#111111] md:col-span-2 md:block md:text-center">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Tiempo</span>
                       {formatDrillTime(s.drill_elapsed_seconds)}
                     </span>
-                    <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#CC4B37]">{s.fouls || 0}</span>
-                    <span className="col-span-2 text-center text-[13px] tabular-nums text-[#666666]">
+                    <span className="flex items-baseline justify-between text-[13px] font-bold tabular-nums text-[#CC4B37] md:col-span-1 md:block md:text-center">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Fouls</span>
+                      {s.fouls || 0}
+                    </span>
+                    <span className="flex items-baseline justify-between text-[13px] tabular-nums text-[#666666] md:col-span-2 md:block md:text-center">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Penalización</span>
                       {s.drill_penalty_seconds ? `+${s.drill_penalty_seconds}s` : '—'}
                     </span>
-                    <span className={`col-span-3 text-right text-[15px] font-bold tabular-nums ${s.drill_completed ? 'text-[#2E7D32]' : 'text-[#999999]'}`}>
+                    <span className={`flex items-baseline justify-between text-[15px] font-bold tabular-nums md:col-span-3 md:block md:text-right ${s.drill_completed ? 'text-[#2E7D32]' : 'text-[#999999]'}`}>
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Final</span>
                       {s.drill_completed ? formatDrillTime(s.drill_final_seconds) : '...'}
                     </span>
                   </div>
@@ -290,7 +297,7 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                <div className="hidden grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 md:grid">
                   <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
                   <span style={jost} className="col-span-3 text-[9px] tracking-widest text-[#999999]">JUGADOR</span>
                   <span style={jost} className="col-span-1 text-center text-[9px] tracking-widest text-[#999999]">K</span>
@@ -303,31 +310,50 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
                 {scoreboard.map((s, i) => {
                   const hasFK = s.first_kills > 0
                   return (
-                    <div key={s.player_id} className={`grid grid-cols-12 items-center px-4 py-3 hover:bg-[#FAFAFA] ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
-                      <span className="col-span-1 text-[12px] font-bold text-[#999999]">{i + 1}</span>
-                      <div className="col-span-3 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="truncate text-[13px] font-semibold text-[#111111]">{s.name}</p>
+                    <div key={s.player_id} className={`flex flex-col gap-2 px-4 py-3 hover:bg-[#FAFAFA] md:grid md:grid-cols-12 md:items-center md:gap-0 ${i < scoreboard.length - 1 ? 'border-b border-[#F4F4F4]' : ''}`}>
+                      <span className="hidden text-[12px] font-bold text-[#999999] md:col-span-1 md:block">{i + 1}</span>
+                      <div className="min-w-0 md:col-span-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="break-words text-[15px] font-semibold text-[#111111] md:truncate md:text-[13px]">
+                            <span className="md:hidden">{i + 1}. </span>{s.name}
+                          </p>
                           {hasFK && (
                             <span className="shrink-0 bg-[#CC4B37] px-1 py-0.5 text-[7px] font-bold uppercase tracking-wider text-[#FFFFFF]" style={jost}>
                               FK
                             </span>
                           )}
                         </div>
-                        {s.team_name && <p className="truncate text-[10px] text-[#999999]">{s.team_name}</p>}
+                        {s.team_name && <p className="break-words text-[12px] text-[#999999] md:truncate md:text-[10px]">{s.team_name}</p>}
                       </div>
-                      <span className="col-span-1 text-center text-[13px] font-bold tabular-nums text-[#111111]">{s.kills}</span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#666666]">{s.deaths}</span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]">{s.objectives}</span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]">{s.key_actions}</span>
-                      <span className="col-span-1 text-center text-[13px] tabular-nums text-[#111111]">{s.critical_actions}</span>
-                      <span className="col-span-2 text-right text-[15px] font-bold tabular-nums text-[#CC4B37]">{s.total_score}</span>
+                      <span className="flex items-baseline justify-between text-[13px] font-bold tabular-nums text-[#111111] md:col-span-1 md:block md:text-center">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Kills</span>
+                        {s.kills}
+                      </span>
+                      <span className="flex items-baseline justify-between text-[13px] tabular-nums text-[#666666] md:col-span-1 md:block md:text-center">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Deaths</span>
+                        {s.deaths}
+                      </span>
+                      <span className="flex items-baseline justify-between text-[13px] tabular-nums text-[#111111] md:col-span-1 md:block md:text-center">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Objetivos</span>
+                        {s.objectives}
+                      </span>
+                      <span className="flex items-baseline justify-between text-[13px] tabular-nums text-[#111111] md:col-span-1 md:block md:text-center">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Key actions</span>
+                        {s.key_actions}
+                      </span>
+                      <span className="flex items-baseline justify-between text-[13px] tabular-nums text-[#111111] md:col-span-1 md:block md:text-center">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Critical</span>
+                        {s.critical_actions}
+                      </span>
+                      <span className="flex items-baseline justify-between text-[15px] font-bold tabular-nums text-[#CC4B37] md:col-span-2 md:block md:text-right">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#999999] md:hidden" style={jost}>Total</span>
+                        {s.total_score}
+                      </span>
                     </div>
                   )
                 })}
               </>
             )}
-          </div>
           </div>
         )}
       </section>

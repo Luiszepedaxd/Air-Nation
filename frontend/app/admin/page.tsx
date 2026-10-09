@@ -142,35 +142,35 @@ export default function AdminHomePage() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/posts/nuevo"
-            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            className="inline-flex min-h-11 items-center bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] md:min-h-0"
             style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Nuevo post
           </Link>
           <Link
             href="/admin/usuarios"
-            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            className="inline-flex min-h-11 items-center bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] md:min-h-0"
             style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Ver usuarios
           </Link>
           <Link
             href="/admin/campos"
-            className="inline-flex bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+            className="inline-flex min-h-11 items-center bg-[#111111] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] md:min-h-0"
             style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Aprobar campos
           </Link>
           <Link
             href="/admin/bloodmoney2"
-            className="inline-flex bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90"
+            className="inline-flex min-h-11 items-center bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90 md:min-h-0"
             style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Landing Blood Money 2
           </Link>
           <Link
             href="/admin/virus3"
-            className="inline-flex bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90"
+            className="inline-flex min-h-11 items-center bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90 md:min-h-0"
             style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
           >
             Op. Virus 3

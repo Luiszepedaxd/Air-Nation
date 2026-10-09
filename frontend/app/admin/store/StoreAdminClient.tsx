@@ -588,7 +588,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                       </button>
 
                       {isOpen && (
-                        <div className="w-full overflow-x-auto">
+                        <div className="admin-cards w-full md:overflow-x-auto">
                           <table className="w-full border-collapse text-left text-sm text-[#111111]">
                             <thead>
                               <tr className="bg-[#FAFAFA]">
@@ -614,7 +614,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                   <Fragment key={subPath}>
                                     {showSubheader && (
                                       <tr>
-                                        <td colSpan={7} className="border-b border-t border-[#EEEEEE] p-0">
+                                        <td colSpan={7} data-label="" className="border-b border-t border-[#EEEEEE] p-0">
                                           <button
                                             type="button"
                                             onClick={() => toggleSubGroup(rootKey + '|' + subPath)}
@@ -652,7 +652,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                       if (showSubheader && !openSubGroups.has(rootKey + '|' + subPath)) return null
                                       return (
                                         <tr key={id || `${subPath}-${i}`} className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F9F9F9]'}>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                          <td data-card="title" data-label="Nombre" className="border-b border-solid border-[#EEEEEE] px-3 py-2">
                                             <button
                                               type="button"
                                               onClick={() => openEditModal(p)}
@@ -662,13 +662,13 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                               {nombre || '—'}
                                             </button>
                                           </td>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
+                                          <td data-label="Precio" className="border-b border-solid border-[#EEEEEE] px-3 py-2 tabular-nums">
                                             ${precio.toLocaleString('es-MX')}
                                           </td>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                          <td data-label="Stock" className="border-b border-solid border-[#EEEEEE] px-3 py-2">
                                             {stockLabel(stock, stock_visible)}
                                           </td>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                          <td data-label="Condición" className="border-b border-solid border-[#EEEEEE] px-3 py-2">
                                             {condicion === 'outlet' ? (
                                               <span
                                                 className="inline-block px-2 py-0.5 text-[9px] font-extrabold text-[#FFFFFF]"
@@ -685,7 +685,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                               </span>
                                             )}
                                           </td>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                          <td data-label="Destacado" className="border-b border-solid border-[#EEEEEE] px-3 py-2">
                                             <button
                                               type="button"
                                               onClick={() => onToggleDestacado(id, destacado)}
@@ -699,7 +699,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                               {destacado ? '★ Sí' : '☆ No'}
                                             </button>
                                           </td>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                          <td data-label="Activo" className="border-b border-solid border-[#EEEEEE] px-3 py-2">
                                             <button
                                               type="button"
                                               onClick={() => onToggleActivo(id, activo)}
@@ -713,7 +713,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                                               {activo ? 'Activo' : 'Inactivo'}
                                             </button>
                                           </td>
-                                          <td className="border-b border-solid border-[#EEEEEE] px-3 py-2">
+                                          <td data-card="actions" data-label="Acciones" className="border-b border-solid border-[#EEEEEE] px-3 py-2">
                                             <button
                                               type="button"
                                               onClick={() => onDeleteProduct(id)}
@@ -951,7 +951,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                         (solo réplica, sin caja — para cotizar envío)
                       </span>
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="block text-[11px] text-[#666666]">
                         Peso (kg)
                         <input
@@ -1258,7 +1258,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                         (solo réplica, sin caja — para cotizar envío)
                       </span>
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <label className="block text-[11px] text-[#666666]">
                         Peso (kg)
                         <input

@@ -113,12 +113,37 @@ export function AdminTorneosClient() {
 
           {tournaments.map(t => (
             <div key={t.id} className="grid grid-cols-1 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA] md:grid-cols-12">
-              {/* Mobile: stacked */}
               <div className="col-span-3 min-w-0">
-                <p className="truncate text-[13px] font-semibold text-[#111111]" style={latoBody}>
+                <p className="break-words text-[15px] font-semibold text-[#111111] md:truncate md:text-[13px]" style={latoBody}>
                   {t.name}
                 </p>
                 <p className="text-[11px] text-[#999999]" style={latoBody}>{formatDate(t.created_at)}</p>
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 md:hidden">
+                  <div>
+                    <dt className="text-[10px] tracking-widest text-[#999999]" style={jostHeading}>Creador</dt>
+                    <dd className="break-words text-[13px] text-[#111111]">{creatorName(t)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] tracking-widest text-[#999999]" style={jostHeading}>Tipo</dt>
+                    <dd className="text-[13px] text-[#111111]">{t.game_type === 'speedsoft' ? 'SPEED' : 'TACTICAL'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] tracking-widest text-[#999999]" style={jostHeading}>Status</dt>
+                    <dd className="text-[13px] text-[#111111]">{t.status === 'active' ? 'LIVE' : t.status === 'completed' ? 'DONE' : 'SETUP'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] tracking-widest text-[#999999]" style={jostHeading}>Rondas</dt>
+                    <dd className="text-[13px] tabular-nums text-[#111111]">{getCount(t.tournament_rounds)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] tracking-widest text-[#999999]" style={jostHeading}>Jugadores</dt>
+                    <dd className="text-[13px] tabular-nums text-[#111111]">{getCount(t.tournament_players)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] tracking-widest text-[#999999]" style={jostHeading}>Árbitros</dt>
+                    <dd className="text-[13px] tabular-nums text-[#111111]">{getCount(t.tournament_referees)}</dd>
+                  </div>
+                </dl>
               </div>
               <div className="col-span-2 hidden min-w-0 md:block">
                 <p className="truncate text-[12px] text-[#666666]" style={latoBody}>{creatorName(t)}</p>
@@ -149,11 +174,11 @@ export function AdminTorneosClient() {
               <p className="col-span-1 hidden text-center text-[13px] tabular-nums text-[#111111] md:block" style={latoBody}>
                 {getCount(t.tournament_referees)}
               </p>
-              <div className="col-span-2 mt-2 flex items-center justify-end gap-2 md:mt-0">
+              <div className="col-span-2 mt-3 flex flex-wrap items-center gap-2 md:mt-0 md:justify-end">
                 <Link
                   href={`/admin/torneos/${t.id}`}
                   style={jostHeading}
-                  className="inline-flex bg-[#111111] px-3 py-1.5 text-[9px] tracking-[0.1em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center bg-[#111111] px-3 py-1.5 text-[10px] tracking-[0.1em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] md:min-h-0 md:flex-none md:text-[9px]"
                 >
                   VER
                 </Link>
@@ -161,9 +186,9 @@ export function AdminTorneosClient() {
                   type="button"
                   onClick={() => void handleExport(t.id, t.name)}
                   style={jostHeading}
-                  className="inline-flex border border-[#EEEEEE] bg-[#FFFFFF] px-3 py-1.5 text-[9px] tracking-[0.1em] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
+                  className="inline-flex min-h-11 flex-1 items-center justify-center border border-[#EEEEEE] bg-[#FFFFFF] px-3 py-1.5 text-[10px] tracking-[0.1em] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37] md:min-h-0 md:flex-none md:text-[9px]"
                 >
-                  📥 EXCEL
+                  EXCEL
                 </button>
               </div>
             </div>

@@ -141,7 +141,7 @@ export default async function AdminMensajesPage() {
         {conversations.length === 0 ? (
           <p className="py-12 text-center text-[#666666]">No hay conversaciones</p>
         ) : (
-          <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
+          <div className="admin-cards w-full border border-solid border-[#EEEEEE] md:overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm text-[#111111]">
               <thead>
                 <tr className="bg-[#F4F4F4]">
@@ -166,7 +166,7 @@ export default async function AdminMensajesPage() {
                       i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'
                     }`}
                   >
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    <td data-card="title" data-label="Participantes" className="border border-solid border-[#EEEEEE] px-3 py-2">
                       <Link
                         href={`/admin/mensajes/${c.id}`}
                         className="text-[#111111] transition-colors group-hover:text-[#CC4B37]"
@@ -174,17 +174,17 @@ export default async function AdminMensajesPage() {
                         {c.participants}
                       </Link>
                     </td>
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
+                    <td data-label="Último mensaje" className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
                       <Link href={`/admin/mensajes/${c.id}`} className="block">
                         {c.lastMessage}
                       </Link>
                     </td>
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
+                    <td data-label="Hace cuánto" className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
                       <Link href={`/admin/mensajes/${c.id}`} className="block">
                         {c.timeAgo}
                       </Link>
                     </td>
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
+                    <td data-label="Vinculada a" className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
                       <Link href={`/admin/mensajes/${c.id}`} className="block">
                         {c.linkedTo}
                       </Link>
@@ -207,7 +207,7 @@ export default async function AdminMensajesPage() {
         {groups.length === 0 ? (
           <p className="py-12 text-center text-[#666666]">No hay grupos</p>
         ) : (
-          <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]">
+          <div className="admin-cards w-full border border-solid border-[#EEEEEE] md:overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm text-[#111111]">
               <thead>
                 <tr className="bg-[#F4F4F4]">
@@ -232,7 +232,7 @@ export default async function AdminMensajesPage() {
                       i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'
                     }`}
                   >
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+                    <td data-card="title" data-label="Nombre" className="border border-solid border-[#EEEEEE] px-3 py-2">
                       <Link
                         href={`/admin/mensajes/grupo/${g.id}`}
                         className="text-[#111111] transition-colors group-hover:text-[#CC4B37]"
@@ -240,17 +240,17 @@ export default async function AdminMensajesPage() {
                         {g.name}
                       </Link>
                     </td>
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
+                    <td data-label="Equipo" className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
                       <Link href={`/admin/mensajes/grupo/${g.id}`} className="block">
                         {g.team}
                       </Link>
                     </td>
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
+                    <td data-label="Último mensaje" className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
                       <Link href={`/admin/mensajes/grupo/${g.id}`} className="block">
                         {g.lastMessage}
                       </Link>
                     </td>
-                    <td className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
+                    <td data-label="Hace cuánto" className="border border-solid border-[#EEEEEE] px-3 py-2 text-[#666666]">
                       <Link href={`/admin/mensajes/grupo/${g.id}`} className="block">
                         {g.timeAgo}
                       </Link>

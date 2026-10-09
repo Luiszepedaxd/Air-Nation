@@ -365,8 +365,8 @@ export default async function AdminEventosPage({
           })}
         </div>
 
-        <div className="overflow-x-auto border border-solid border-[#EEEEEE]">
-          <table className="w-full min-w-[800px] border-collapse text-left text-sm">
+        <div className="admin-cards border border-solid border-[#EEEEEE] md:overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm md:min-w-[800px]">
             <thead>
               <tr className="border-b border-solid border-[#EEEEEE] bg-[#F4F4F4]">
                 <th className="p-3 text-[10px] text-[#666666]" style={jostHeading}>
@@ -409,6 +409,7 @@ export default async function AdminEventosPage({
                 <tr>
                   <td
                     colSpan={11}
+                    data-label=""
                     className="p-8 text-center text-[#666666]"
                     style={latoBody}
                   >
@@ -425,7 +426,7 @@ export default async function AdminEventosPage({
                       key={r.id}
                       className="border-b border-solid border-[#EEEEEE] align-middle"
                     >
-                      <td className="p-2">
+                      <td data-label="Imagen" className="p-2">
                         <div className="h-12 w-12 overflow-hidden bg-[#111111]">
                           {r.imagen_url?.trim() ? (
                             <img
@@ -440,7 +441,7 @@ export default async function AdminEventosPage({
                           )}
                         </div>
                       </td>
-                      <td className="max-w-[200px] p-2 align-top">
+                      <td data-card="title" data-label="Título" className="max-w-[200px] p-2 align-top">
                         <p
                           className="line-clamp-2 font-semibold text-[#111111]"
                           style={latoBody}
@@ -502,10 +503,10 @@ export default async function AdminEventosPage({
                           </form>
                         </details>
                       </td>
-                      <td className="max-w-[120px] p-2 text-[12px] text-[#666666]" style={latoBody}>
+                      <td data-label="Creador" className="max-w-[120px] p-2 text-[12px] text-[#666666]" style={latoBody}>
                         {r.creador_label?.trim() || '—'}
                       </td>
-                      <td className="max-w-[140px] p-2 text-[13px] text-[#666666]" style={latoBody}>
+                      <td data-label="Campo" className="max-w-[140px] p-2 text-[13px] text-[#666666]" style={latoBody}>
                         {r.field_nombre?.trim() || '—'}
                         {r.field_ciudad?.trim() ? (
                           <span className="block text-[11px] text-[#AAAAAA]">
@@ -513,24 +514,24 @@ export default async function AdminEventosPage({
                           </span>
                         ) : null}
                       </td>
-                      <td className="whitespace-nowrap p-2 text-[12px] text-[#666666]" style={latoBody}>
+                      <td data-label="Fecha" className="whitespace-nowrap p-2 text-[12px] text-[#666666]" style={latoBody}>
                         {formatFecha(r.fecha)}
                       </td>
-                      <td className="p-2 text-[12px] text-[#666666]" style={latoBody}>
+                      <td data-label="Cupo" className="p-2 text-[12px] text-[#666666]" style={latoBody}>
                         {r.cupo <= 0 ? '∞' : r.cupo}
                       </td>
-                      <td className="p-2 text-[11px] uppercase text-[#666666]" style={jostHeading}>
+                      <td data-label="Disciplina" className="p-2 text-[11px] uppercase text-[#666666]" style={jostHeading}>
                         {(r.disciplina ?? 'airsoft').slice(0, 8)}
                       </td>
-                      <td className="p-2 text-[11px]" style={jostHeading}>
+                      <td data-label="Tipo" className="p-2 text-[11px]" style={jostHeading}>
                         {tipoLabel(r.tipo)}
                       </td>
-                      <td className="p-2">{statusBadge(r.status, r.published)}</td>
-                      <td className="p-2 text-[12px]" style={latoBody}>
+                      <td data-label="Estado" className="p-2">{statusBadge(r.status, r.published)}</td>
+                      <td data-label="Publicado" className="p-2 text-[12px]" style={latoBody}>
                         {r.published ? 'Sí' : 'No'}
                       </td>
-                      <td className="p-2">
-                        <div className="flex flex-col gap-1">
+                      <td data-card="actions" data-label="Acciones" className="p-2">
+                        <div className="flex flex-col gap-1 md:flex-col">
                           <Link
                             href={`/admin/eventos/${r.id}/editar`}
                             className="inline-block bg-[#EEEEEE] px-2 py-1 text-center text-[9px] text-[#111111] hover:bg-[#DDDDDD]"
