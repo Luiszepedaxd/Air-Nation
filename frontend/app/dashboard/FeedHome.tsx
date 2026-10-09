@@ -25,7 +25,6 @@ import { PatrocinadoBadge } from '@/components/eventos/PatrocinadoBadge'
 import { esEventoPatrocinado, resolveEventHref } from '@/lib/evento-links'
 import { getBlockedUserIds } from '@/lib/user-blocks'
 import { uploadFile, uploadVideo } from '@/lib/apiFetch'
-import { CropModal } from '@/components/posts/CropModal'
 import { MentionInput } from '@/components/posts/MentionInput'
 import { VideoTrimmer } from '@/components/posts/VideoTrimmer'
 import { PostContent } from '@/components/feed/PostContent'
@@ -816,8 +815,6 @@ export function PostBox({
     null | 'photos' | 'video' | 'post'
   >(null)
   const [publishError, setPublishError] = useState<string | null>(null)
-  const [cropQueue, setCropQueue] = useState<{ file: File; src: string }[]>([])
-  const [currentCrop, setCurrentCrop] = useState<{ file: File; src: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const postAsOptions: PostAs[] = [
@@ -846,38 +843,18 @@ export function PostBox({
   const addFiles = (files: FileList | null) => {
     if (!files?.length) return
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    const queue: { file: File; src: string }[] = []
+    const next: { id: string; file: File; preview: string }[] = []
     for (const file of Array.from(files)) {
-      if (pendingPhotos.length + queue.length >= 4) break
+      if (pendingPhotos.length + next.length >= 4) break
       if (!allowed.includes(file.type)) continue
-      queue.push({ file, src: URL.createObjectURL(file) })
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`
+      next.push({ id, file, preview: URL.createObjectURL(file) })
     }
-    if (!queue.length) return
-    setCropQueue(queue.slice(1))
-    setCurrentCrop(queue[0])
-  }
-
-  const handleCropConfirm = (croppedFile: File, preview: string) => {
-    const id =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`
-    setPendingPhotos((p) => [...p, { id, file: croppedFile, preview }])
-    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
-
-    if (cropQueue.length > 0) {
-      setCurrentCrop(cropQueue[0])
-      setCropQueue((q) => q.slice(1))
-    } else {
-      setCurrentCrop(null)
-    }
-  }
-
-  const handleCropCancel = () => {
-    if (currentCrop) URL.revokeObjectURL(currentCrop.src)
-    for (const q of cropQueue) URL.revokeObjectURL(q.src)
-    setCropQueue([])
-    setCurrentCrop(null)
+    if (next.length) setPendingPhotos((p) => [...p, ...next])
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const clearPendingPhotos = () => {
@@ -1223,7 +1200,7 @@ export function PostBox({
               key={p.id}
               className="relative h-16 w-16 overflow-hidden bg-[#F4F4F4]"
             >
-              <img loading="lazy" decoding="async" src={p.preview} alt="" className="h-full w-full object-cover" />
+              <img loading="lazy" decoding="async" src={p.preview} alt="" className="h-full w-full object-contain" />
               <button
                 type="button"
                 onClick={() => {
@@ -1403,15 +1380,6 @@ export function PostBox({
           </div>
         </div>
       </div>
-
-      {currentCrop && (
-        <CropModal
-          imageSrc={currentCrop.src}
-          originalFile={currentCrop.file}
-          onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
-        />
-      )}
 
       {showVideoTrimmer && (
         <div

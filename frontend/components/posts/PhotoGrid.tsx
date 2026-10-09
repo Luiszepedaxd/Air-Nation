@@ -1,17 +1,19 @@
 'use client'
 
 import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
+import { clampFeedAspect, feedBlurSrc, feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
 import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
 
 function FeedImg({
   url,
   priority,
   className,
+  onLoad,
 }: {
   url: string
   priority?: boolean
   className?: string
+  onLoad?: (img: HTMLImageElement) => void
 }) {
   const meta = feedPhotoSrcSet(url)
   const [src, setSrc] = useState(meta.src)
@@ -36,6 +38,7 @@ function FeedImg({
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
       {...(priority ? { fetchPriority: 'high' as const } : {})}
+      onLoad={(e) => onLoad?.(e.currentTarget)}
       onError={() => {
         if (fellBack.current) return
         fellBack.current = true
@@ -43,6 +46,56 @@ function FeedImg({
         setSrcSet('')
       }}
     />
+  )
+}
+
+function FeedPhotoFrame({
+  url,
+  priority,
+  lockAspect,
+}: {
+  url: string
+  priority?: boolean
+  /** Carrusel: el cuadro ya tiene proporción. Una sola foto: se acota al cargar. */
+  lockAspect?: boolean
+}) {
+  const [aspect, setAspect] = useState(1)
+  const sharp = feedPhotoSrcSet(url)
+  const [blur, setBlur] = useState(() => feedBlurSrc(url))
+
+  useEffect(() => {
+    setBlur(feedBlurSrc(url))
+    if (!lockAspect) setAspect(1)
+  }, [url, lockAspect])
+
+  return (
+    <div
+      className={`relative w-full overflow-hidden bg-[#111111] ${lockAspect ? 'h-full' : ''}`}
+      style={lockAspect ? undefined : { aspectRatio: aspect }}
+    >
+      <img
+        src={blur}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover blur-2xl"
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        onError={() => {
+          if (blur !== sharp.src) setBlur(sharp.src)
+        }}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-black/40" />
+      <FeedImg
+        url={url}
+        priority={priority}
+        className="pointer-events-none absolute inset-0 z-[1] h-full w-full object-contain"
+        onLoad={(img) => {
+          if (lockAspect) return
+          setAspect(clampFeedAspect(img.naturalWidth, img.naturalHeight))
+        }}
+      />
+    </div>
   )
 }
 
@@ -340,15 +393,17 @@ export function PhotoGrid({
             {photos.map((url, i) => (
               <div
                 key={`photo-${i}`}
-                className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-[#F4F4F4]"
+                className={`w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-[#111111] ${
+                  slideCount > 1 ? 'aspect-square' : ''
+                }`}
                 onClick={() => {
                   if (!dragMoved.current) setLightboxIndex(i)
                 }}
               >
-                <FeedImg
+                <FeedPhotoFrame
                   url={url}
                   priority={i < priorityCount}
-                  className="pointer-events-none h-full w-full object-cover object-center"
+                  lockAspect={slideCount > 1}
                 />
               </div>
             ))}

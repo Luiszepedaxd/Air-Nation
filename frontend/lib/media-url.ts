@@ -38,6 +38,16 @@ export function cfImageDeliveryUrl(
   return `${base}/${parts.join(',')}${qs}`
 }
 
+/** Instagram-style feed frame: no taller than 4:5, no wider than 1.91:1. */
+export const FEED_MIN_ASPECT = 4 / 5
+export const FEED_MAX_ASPECT = 1.91
+
+export function clampFeedAspect(width: number, height: number): number {
+  if (!width || !height) return 1
+  const ratio = width / height
+  return Math.min(FEED_MAX_ASPECT, Math.max(FEED_MIN_ASPECT, ratio))
+}
+
 const FEED_WIDTHS = [400, 828, 1200] as const
 
 export function feedPhotoSrcSet(url: string): {
@@ -56,10 +66,10 @@ export function feedPhotoSrcSet(url: string): {
     }
   }
   const srcSet = FEED_WIDTHS.map(
-    (w) => `${cfImageDeliveryUrl(url, { width: w, quality: 75, fit: 'cover' })} ${w}w`
+    (w) => `${cfImageDeliveryUrl(url, { width: w, quality: 75, fit: 'scale-down' })} ${w}w`
   ).join(', ')
   return {
-    src: cfImageDeliveryUrl(url, { width: 828, quality: 75, fit: 'cover' }),
+    src: cfImageDeliveryUrl(url, { width: 828, quality: 75, fit: 'scale-down' }),
     srcSet,
     sizes: '(max-width: 640px) 100vw, 640px',
     original,
@@ -77,6 +87,12 @@ export function feedAvatarUrl(
     quality: 70,
     fit: 'cover',
   })
+}
+
+/** Tiny delivery for the blurred backdrop. CSS does the blur. */
+export function feedBlurSrc(url: string): string {
+  if (!url || !isCloudflareImagesUrl(url)) return url
+  return cfImageDeliveryUrl(url, { width: 48, quality: 30, fit: 'scale-down' })
 }
 
 export function lightboxImageUrl(url: string): string {
