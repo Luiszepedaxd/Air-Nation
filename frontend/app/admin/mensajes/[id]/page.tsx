@@ -100,14 +100,14 @@ export default async function AdminConversacionPage({
         </Link>
         <span className="text-[#CCCCCC]">|</span>
         <h1
-          className="text-lg tracking-[0.1em] text-[#111111] md:text-xl"
+          className="min-w-0 break-words text-lg tracking-[0.1em] text-[#111111] md:text-xl"
           style={jostHeading}
         >
           {p1Name} ↔ {p2Name}
         </h1>
         {listing?.titulo?.trim() ? (
           <span
-            className="ml-auto inline-block border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-2 py-1 text-[10px] tracking-[0.08em] text-[#666666]"
+            className="ml-auto inline-block max-w-full break-words border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-2 py-1 text-[10px] tracking-[0.08em] text-[#666666]"
             style={{ ...jostHeading, borderRadius: 2 }}
           >
             Marketplace: {listing.titulo}
@@ -145,7 +145,7 @@ export default async function AdminConversacionPage({
                   ) : null}
                 </span>
                 <div
-                  className={`max-w-[75%] px-3 py-2 ${
+                  className={`min-w-0 max-w-[75%] overflow-hidden px-3 py-2 ${
                     isP1
                       ? 'bg-[#F4F4F4] text-[#111111]'
                       : 'bg-[#111111] text-white'
@@ -160,7 +160,7 @@ export default async function AdminConversacionPage({
                     <img
                       src={imageUrl}
                       alt=""
-                      className={`max-h-48 rounded object-contain ${content ? 'mt-2' : ''}`}
+                      className={`max-h-48 max-w-full rounded object-contain ${content ? 'mt-2' : ''}`}
                     />
                   ) : null}
                 </div>

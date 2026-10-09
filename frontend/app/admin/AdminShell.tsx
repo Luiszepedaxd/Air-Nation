@@ -451,7 +451,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               <button
                 type="button"
                 onClick={() => setSponsorsExpanded((o) => !o)}
-                className={`flex w-full items-center gap-3 px-3 py-2.5 text-left text-[0.7rem] tracking-[0.12em] transition-colors ${
+                className={`flex min-h-11 w-full items-center gap-3 px-3 py-2.5 text-left text-[0.7rem] tracking-[0.12em] transition-colors ${
                   gActive
                     ? 'bg-[#EEEEEE] text-[#CC4B37]'
                     : 'text-[#666666] hover:bg-[#EEEEEE]/70 hover:text-[#111111]'
@@ -481,7 +481,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                         key={sub.href}
                         href={sub.href}
                         onClick={onNavigate}
-                        className={`py-2 pl-4 pr-3 text-[0.62rem] tracking-[0.1em] transition-colors ${
+                        className={`flex min-h-11 items-center py-2 pl-4 pr-3 text-[0.62rem] tracking-[0.1em] transition-colors ${
                           subActive
                             ? 'border-l-2 border-[#CC4B37] bg-[#EEEEEE]/80 text-[#CC4B37]'
                             : 'border-l-2 border-transparent text-[#666666] hover:bg-[#EEEEEE]/70 hover:text-[#111111]'
@@ -504,7 +504,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 px-3 py-2.5 text-[0.7rem] tracking-[0.12em] transition-colors ${
+            className={`flex min-h-11 items-center gap-3 px-3 py-2.5 text-[0.7rem] tracking-[0.12em] transition-colors ${
               active
                 ? 'bg-[#EEEEEE] text-[#CC4B37]'
                 : 'text-[#666666] hover:bg-[#EEEEEE]/70 hover:text-[#111111]'
@@ -539,7 +539,7 @@ export default function AdminShell({
 
   return (
     <div
-      className="flex min-h-screen min-h-dvh bg-[#FFFFFF] text-[#111111]"
+      className="flex min-h-screen min-h-dvh max-w-full overflow-x-hidden bg-[#FFFFFF] text-[#111111]"
       style={latoBody}
     >
       {mobileOpen && (
@@ -570,12 +570,12 @@ export default function AdminShell({
         </div>
       </aside>
 
-      <div className="flex min-h-screen min-h-dvh flex-1 flex-col md:ml-[220px]">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 md:h-[3.75rem] md:px-6">
-          <div className="flex items-center gap-3">
+      <div className="flex min-h-screen min-h-dvh w-full min-w-0 max-w-full flex-1 flex-col md:ml-[220px]">
+        <header className="sticky top-0 z-30 flex h-14 min-w-0 shrink-0 items-center justify-between gap-2 border-b border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 md:h-[3.75rem] md:px-6">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
-              className="flex h-9 w-9 items-center justify-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] md:hidden"
+              className="flex h-11 w-11 shrink-0 items-center justify-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] md:hidden"
               style={{ borderRadius: 2 }}
               aria-expanded={mobileOpen}
               aria-label="Abrir menú"
@@ -591,16 +591,16 @@ export default function AdminShell({
               </svg>
             </button>
             <span
-              className="text-[0.6rem] tracking-[0.18em] text-[#CC4B37] sm:text-[0.65rem] sm:tracking-[0.2em]"
+              className="truncate text-[0.6rem] tracking-[0.18em] text-[#CC4B37] sm:text-[0.65rem] sm:tracking-[0.2em]"
               style={jostHeading}
             >
               AIRNATION ADMIN
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
             <span
-              className="max-w-[140px] truncate text-sm text-[#666666] md:max-w-[240px]"
+              className="hidden max-w-[140px] truncate text-sm text-[#666666] sm:inline md:max-w-[240px]"
               style={latoBody}
             >
               {displayName}
@@ -608,15 +608,16 @@ export default function AdminShell({
             <button
               type="button"
               onClick={handleLogout}
-              className="bg-[#111111] px-3 py-2 text-[0.65rem] uppercase tracking-[0.14em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+              className="inline-flex min-h-11 items-center bg-[#111111] px-3 py-2 text-[0.65rem] uppercase tracking-[0.14em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
               style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
             >
-              Cerrar sesión
+              <span className="sm:hidden">Salir</span>
+              <span className="hidden sm:inline">Cerrar sesión</span>
             </button>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-[#FFFFFF] px-4 py-6 md:px-8 md:py-8">
+        <main className="admin-main min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto bg-[#FFFFFF] px-4 py-6 md:overflow-x-visible md:px-8 md:py-8">
           {children}
         </main>
       </div>

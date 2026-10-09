@@ -238,7 +238,7 @@ export default async function AdminAssetsPage({
   const errId = searchParams.err ?? "";
 
   return (
-    <div className="min-w-[375px] p-6">
+    <div className="p-6">
       <style>{`
         @keyframes admin-asset-flash-success {
           0%, 100% { border-color: #EEEEEE; }

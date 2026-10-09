@@ -39,7 +39,7 @@ export default function DeleteConfirmModal({
           id="delete-confirm-title"
           className="font-body text-sm leading-relaxed text-[#111111]"
         >
-          ¿Eliminar {resourceLabel}? Esta acción no se puede deshacer.
+          <span className="break-words">¿Eliminar {resourceLabel}? Esta acción no se puede deshacer.</span>
         </p>
 
         {error ? (
@@ -51,7 +51,7 @@ export default function DeleteConfirmModal({
             type="button"
             disabled={loading}
             onClick={onConfirm}
-            className="inline-flex items-center justify-center bg-[#CC4B37] px-4 py-2 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white transition-opacity disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center bg-[#CC4B37] px-4 py-2 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-white transition-opacity disabled:opacity-60"
             style={{ borderRadius: 2 }}
           >
             {loading ? '…' : 'ELIMINAR'}
@@ -60,7 +60,7 @@ export default function DeleteConfirmModal({
             type="button"
             disabled={loading}
             onClick={onClose}
-            className="inline-flex items-center justify-center border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#444444] transition-colors hover:bg-[#F4F4F4] disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#444444] transition-colors hover:bg-[#F4F4F4] disabled:opacity-60"
             style={{ borderRadius: 2 }}
           >
             CANCELAR

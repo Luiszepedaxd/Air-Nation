@@ -96,8 +96,52 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
     )
   }
 
+  const actions = (p: PostListItem) => (
+    <div className="flex flex-wrap gap-2">
+      <Link
+        href={`/admin/posts/${p.id}/editar`}
+        className="inline-flex min-h-11 items-center justify-center bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] md:min-h-0"
+        style={{
+          ...jostHeading,
+          fontSize: 11,
+          padding: '4px 10px',
+          borderRadius: 2,
+        }}
+      >
+        EDITAR
+      </Link>
+      <button
+        type="button"
+        disabled={deletingId === p.id}
+        onClick={() => openDelete(p)}
+        className="inline-flex min-h-11 items-center border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50 md:min-h-0"
+        style={{ borderRadius: 2 }}
+      >
+        {deletingId === p.id ? '…' : 'ELIMINAR'}
+      </button>
+    </div>
+  )
+
   return (
-    <div className="w-full overflow-x-auto border border-solid border-[#EEEEEE]" style={latoBody}>
+    <>
+      <ul className="flex flex-col gap-3 md:hidden" style={latoBody}>
+        {posts.map((p) => (
+          <li
+            key={p.id}
+            className="border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+          >
+            <p className="break-words text-sm font-semibold text-[#111111]">{p.title}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#666666]">
+              <span>{p.category}</span>
+              <EstadoBadge published={p.published} />
+              <span>{formatFecha(p.created_at)}</span>
+            </div>
+            <div className="mt-3">{actions(p)}</div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden w-full overflow-x-auto border border-solid border-[#EEEEEE] md:block" style={latoBody}>
       <table className="w-full border-collapse text-left text-sm text-[#111111]">
         <thead>
           <tr className="bg-[#F4F4F4]">
@@ -120,7 +164,7 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
               key={p.id}
               className={i % 2 === 0 ? 'bg-[#FFFFFF]' : 'bg-[#F4F4F4]'}
             >
-              <td className="border border-solid border-[#EEEEEE] px-3 py-2">
+              <td className="border border-solid border-[#EEEEEE] px-3 py-2 break-words">
                 {p.title}
               </td>
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
@@ -133,34 +177,13 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
                 {formatFecha(p.created_at)}
               </td>
               <td className="border border-solid border-[#EEEEEE] px-3 py-2">
-                <div className="flex flex-wrap gap-2">
-                  <Link
-                    href={`/admin/posts/${p.id}/editar`}
-                    className="inline-flex items-center justify-center bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
-                    style={{
-                      ...jostHeading,
-                      fontSize: 11,
-                      padding: '4px 10px',
-                      borderRadius: 2,
-                    }}
-                  >
-                    EDITAR
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={deletingId === p.id}
-                    onClick={() => openDelete(p)}
-                    className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white disabled:opacity-50"
-                    style={{ borderRadius: 2 }}
-                  >
-                    {deletingId === p.id ? '…' : 'ELIMINAR'}
-                  </button>
-                </div>
+                {actions(p)}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
 
       <DeleteConfirmModal
         open={pendingDelete !== null}
@@ -170,6 +193,6 @@ export default function PostsList({ posts: initialPosts }: { posts: PostListItem
         onClose={closeDelete}
         onConfirm={() => void handleConfirmDelete()}
       />
-    </div>
+    </>
   )
 }

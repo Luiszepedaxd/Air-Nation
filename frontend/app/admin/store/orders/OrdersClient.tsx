@@ -237,7 +237,7 @@ export function OrdersClient({ orders, items }: Props) {
                     style={{ ...jost, backgroundColor: meta.bg, color: meta.color }}>
                     {meta.labelAdmin}
                   </span>
-                  <span className="flex-1 truncate text-[12px] text-[#333333]" style={lato}>
+                  <span className="min-w-0 flex-1 truncate text-[12px] text-[#333333]" style={lato}>
                     {nombreComprador}
                   </span>
                   <span className={`shrink-0 text-[10px] font-bold uppercase ${metodo === 'transferencia' ? 'text-[#1D4ED8]' : 'text-[#059669]'}`} style={jost}>

@@ -26,7 +26,7 @@ export default async function AdminEditarEquipoPage({
   const slug = team.slug as string
 
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
+    <div className="min-h-screen bg-[#FFFFFF] text-[#111111]">
       <EditTeamClient
         teamId={team.id as string}
         team={{

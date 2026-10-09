@@ -30,7 +30,7 @@ const jostHeading = {
 const latoBody = { fontFamily: "'Lato', sans-serif" }
 
 const inputClass =
-  'w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[#111111] outline-none focus:border-[#CC4B37]'
+  'w-full min-h-11 max-w-full border border-solid border-[#EEEEEE] bg-[#FFFFFF] px-3 py-2 text-[#111111] outline-none focus:border-[#CC4B37]'
 
 const CATEGORIES = [
   { value: 'noticias', label: 'Noticias' },
@@ -66,10 +66,16 @@ function slugifyTitle(title: string): string {
 }
 
 const editorProseCss = `
+.post-form-tiptap {
+  max-width: 100%;
+  overflow-x: auto;
+}
 .post-form-tiptap .ProseMirror {
   min-height: 500px;
   max-height: min(70vh, 900px);
+  overflow-x: auto;
   overflow-y: auto;
+  overflow-wrap: anywhere;
   padding: 16px;
   outline: none;
   font-family: 'Lato', sans-serif;
@@ -107,10 +113,16 @@ const editorProseCss = `
 .post-form-tiptap .ProseMirror a {
   color: #CC4B37;
   text-decoration: underline;
+  overflow-wrap: anywhere;
 }
 .post-form-tiptap .ProseMirror img {
   max-width: 100%;
   height: auto;
+}
+.post-form-tiptap .ProseMirror pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .post-form-tiptap .ProseMirror.is-editor-empty:first-child::before {
   color: #999999;
@@ -118,6 +130,7 @@ const editorProseCss = `
 .post-form-tiptap .ProseMirror table {
   border-collapse: collapse;
   width: 100%;
+  max-width: 100%;
   margin: 0 0 1em;
 }
 .post-form-tiptap .ProseMirror th,
@@ -157,7 +170,7 @@ function ToolbarButton({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className={`flex h-8 w-8 shrink-0 items-center justify-center border border-solid transition-colors ${
+      className={`flex h-11 w-11 shrink-0 items-center justify-center border border-solid transition-colors md:h-8 md:w-8 ${
         active
           ? 'border-[#CC4B37] bg-[#F4F4F4] text-[#CC4B37]'
           : 'border-[#EEEEEE] bg-[#FFFFFF] text-[#111111] hover:border-[#CCCCCC]'
@@ -390,7 +403,7 @@ export default function PostForm({
               type="button"
               disabled={togglePending}
               onClick={() => void setVisibility(true)}
-              className={`px-3 py-2 text-[0.65rem] tracking-[0.12em] transition-colors disabled:opacity-50 ${
+              className={`inline-flex min-h-11 items-center px-3 py-2 text-[0.65rem] tracking-[0.12em] transition-colors disabled:opacity-50 ${
                 published
                   ? 'bg-[#CC4B37] text-[#FFFFFF]'
                   : 'bg-[#FFFFFF] text-[#666666] hover:text-[#111111]'
@@ -403,7 +416,7 @@ export default function PostForm({
               type="button"
               disabled={togglePending}
               onClick={() => void setVisibility(false)}
-              className={`border-l border-solid border-[#EEEEEE] px-3 py-2 text-[0.65rem] tracking-[0.12em] transition-colors disabled:opacity-50 ${
+              className={`inline-flex min-h-11 items-center border-l border-solid border-[#EEEEEE] px-3 py-2 text-[0.65rem] tracking-[0.12em] transition-colors disabled:opacity-50 ${
                 !published
                   ? 'bg-[#EEEEEE] text-[#666666]'
                   : 'bg-[#FFFFFF] text-[#666666] hover:text-[#111111]'
@@ -512,7 +525,7 @@ export default function PostForm({
             type="button"
             onClick={() => coverInputRef.current?.click()}
             disabled={coverUploading}
-            className="inline-flex items-center gap-2 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-sm text-[#111111] disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-3 py-2 text-sm text-[#111111] disabled:opacity-50"
             style={{ borderRadius: 2, ...latoBody }}
           >
             {coverUploading && (
@@ -855,7 +868,7 @@ export default function PostForm({
           type="button"
           disabled={pending !== null}
           onClick={() => void submit(false)}
-          className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#111111] transition-colors hover:border-[#CCCCCC] disabled:opacity-50"
+          className="inline-flex min-h-11 items-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#111111] transition-colors hover:border-[#CCCCCC] disabled:opacity-50"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           {pending === 'draft' ? 'GUARDANDO…' : 'GUARDAR BORRADOR'}
@@ -864,7 +877,7 @@ export default function PostForm({
           type="button"
           disabled={pending !== null}
           onClick={() => void submit(true)}
-          className="border border-solid border-[#CC4B37] bg-[#CC4B37] px-4 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90 disabled:opacity-50"
+          className="inline-flex min-h-11 items-center border border-solid border-[#CC4B37] bg-[#CC4B37] px-4 py-2.5 text-[0.7rem] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90 disabled:opacity-50"
           style={{ ...jostHeading, borderRadius: 2 }}
         >
           {pending === 'publish' ? 'PUBLICANDO…' : 'PUBLICAR'}
@@ -872,8 +885,8 @@ export default function PostForm({
       </div>
 
       {htmlModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-2xl bg-[#FFFFFF] p-6 shadow-xl"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto bg-[#FFFFFF] p-4 shadow-xl sm:p-6"
             style={{ borderRadius: 2 }}>
             <p className="mb-3 text-[0.65rem] tracking-[0.12em] text-[#666666]"
               style={jostHeading}>
@@ -887,11 +900,11 @@ export default function PostForm({
               style={{ borderRadius: 2, resize: 'vertical' }}
               placeholder="Pega el HTML aquí..."
             />
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={applyHtml}
-                className="border border-solid border-[#CC4B37] bg-[#CC4B37] px-4 py-2 text-[0.65rem] tracking-[0.12em] text-white"
+                className="inline-flex min-h-11 items-center border border-solid border-[#CC4B37] bg-[#CC4B37] px-4 py-2 text-[0.65rem] tracking-[0.12em] text-white"
                 style={{ ...jostHeading, borderRadius: 2 }}
               >
                 APLICAR
@@ -899,7 +912,7 @@ export default function PostForm({
               <button
                 type="button"
                 onClick={() => { setHtmlModalOpen(false); setHtmlModalValue('') }}
-                className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 text-[0.65rem] tracking-[0.12em] text-[#111111]"
+                className="inline-flex min-h-11 items-center border border-solid border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2 text-[0.65rem] tracking-[0.12em] text-[#111111]"
                 style={{ ...jostHeading, borderRadius: 2 }}
               >
                 CANCELAR

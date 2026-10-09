@@ -103,8 +103,8 @@ export default async function BusquedasPage() {
         {topSorted.length === 0 ? (
           <p style={lato} className="text-[13px] text-[#999999]">Sin datos aún.</p>
         ) : (
-          <div className="border border-[#EEEEEE]">
-            <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+          <div className="overflow-x-auto border border-[#EEEEEE]">
+            <div className="grid min-w-[32rem] grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
               <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
               <span style={jost} className="col-span-6 text-[9px] tracking-widest text-[#999999]">Término</span>
               <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#999999]">Búsquedas</span>
@@ -113,7 +113,7 @@ export default async function BusquedasPage() {
             {topSorted.map(([query, data], i) => (
               <div
                 key={query}
-                className="grid grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA]"
+                className="grid min-w-[32rem] grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA]"
               >
                 <span style={lato} className="col-span-1 text-[12px] text-[#999999]">{i + 1}</span>
                 <span style={lato} className="col-span-6 text-[13px] font-semibold text-[#111111]">
@@ -152,8 +152,8 @@ export default async function BusquedasPage() {
         {sinResultadosSorted.length === 0 ? (
           <p style={lato} className="text-[13px] text-[#999999]">Sin búsquedas vacías aún.</p>
         ) : (
-          <div className="border border-[#EEEEEE]">
-            <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+          <div className="overflow-x-auto border border-[#EEEEEE]">
+            <div className="grid min-w-[32rem] grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
               <span style={jost} className="col-span-1 text-[9px] tracking-widest text-[#999999]">#</span>
               <span style={jost} className="col-span-9 text-[9px] tracking-widest text-[#999999]">Término</span>
               <span style={jost} className="col-span-2 text-right text-[9px] tracking-widest text-[#999999]">Veces</span>
@@ -161,10 +161,10 @@ export default async function BusquedasPage() {
             {sinResultadosSorted.map(([query, count], i) => (
               <div
                 key={query}
-                className="grid grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA]"
+                className="grid min-w-[32rem] grid-cols-12 items-center border-b border-[#F4F4F4] px-4 py-3 last:border-0 hover:bg-[#FAFAFA]"
               >
                 <span style={lato} className="col-span-1 text-[12px] text-[#999999]">{i + 1}</span>
-                <span style={lato} className="col-span-9 text-[13px] text-[#111111]">{query}</span>
+                <span style={lato} className="col-span-9 break-words text-[13px] text-[#111111]">{query}</span>
                 <span style={lato} className="col-span-2 text-right text-[13px] font-semibold text-[#CC4B37]">
                   {count}
                 </span>

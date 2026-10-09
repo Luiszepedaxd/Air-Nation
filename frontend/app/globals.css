@@ -149,6 +149,27 @@ body {
   }
 }
 
+/* Admin: long tokens wrap; wide tables scroll inside .overflow-x-auto, not the page. */
+.admin-main {
+  overflow-wrap: anywhere;
+}
+.admin-main img,
+.admin-main video,
+.admin-main iframe,
+.admin-main canvas {
+  max-width: 100%;
+  height: auto;
+}
+.admin-main .overflow-x-auto {
+  max-width: 100%;
+}
+@media (max-width: 767px) {
+  .admin-main .min-w-0.flex-wrap > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* ── Blog: TipTap HTML (página post) ───────────────────────────────────────── */
 .prose-airnation {
   font-family: 'Lato', sans-serif;

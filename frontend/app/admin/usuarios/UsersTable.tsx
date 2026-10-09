@@ -279,7 +279,7 @@ export default function UsersTable({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar por nombre o alias..."
-        className="mb-6 w-full max-w-[400px] text-[#111111] outline-none placeholder:text-[#999999]"
+        className="mb-6 min-h-11 w-full max-w-[400px] text-[#111111] outline-none placeholder:text-[#999999]"
         style={{
           ...latoBody,
           border: '1px solid #EEEEEE',
@@ -288,12 +288,12 @@ export default function UsersTable({
         }}
       />
 
-      <div className="mb-6 flex gap-0 border-b border-[#EEEEEE]">
+      <div className="mb-6 flex flex-wrap gap-0 border-b border-[#EEEEEE]">
         <button
           type="button"
           onClick={() => setActiveTab('verificados')}
           style={jostHeading}
-          className={`border-b-2 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
+          className={`inline-flex min-h-11 items-center border-b-2 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors sm:px-5 ${
             activeTab === 'verificados'
               ? 'border-[#CC4B37] text-[#111111]'
               : 'border-transparent text-[#999999]'
@@ -305,7 +305,7 @@ export default function UsersTable({
           type="button"
           onClick={() => setActiveTab('pendientes')}
           style={jostHeading}
-          className={`border-b-2 px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors ${
+          className={`inline-flex min-h-11 items-center border-b-2 px-4 py-3 text-[11px] font-extrabold uppercase tracking-wide transition-colors sm:px-5 ${
             activeTab === 'pendientes'
               ? 'border-[#CC4B37] text-[#111111]'
               : 'border-transparent text-[#999999]'
@@ -316,7 +316,7 @@ export default function UsersTable({
       </div>
 
       {activeTab === 'pendientes' && (
-        <div className="mb-4 flex items-center gap-4">
+        <div className="mb-4 flex flex-wrap items-center gap-4">
           <button
             type="button"
             onClick={() => void handleSendReminders()}
@@ -324,7 +324,7 @@ export default function UsersTable({
               sendingMail || filteredPendientes.filter((u) => u.email).length === 0
             }
             style={jostHeading}
-            className="bg-[#CC4B37] px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
+            className="inline-flex min-h-11 max-w-full items-center whitespace-normal bg-[#CC4B37] px-5 py-2.5 text-left text-[11px] font-extrabold uppercase tracking-wide text-white disabled:opacity-50"
           >
             {sendingMail
               ? 'ENVIANDO...'
@@ -440,7 +440,7 @@ export default function UsersTable({
                       <button
                         type="button"
                         onClick={() => openModal(u)}
-                        className="bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+                        className="inline-flex min-h-11 items-center bg-[#111111] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37] md:min-h-0"
                         style={{
                           ...jostHeading,
                           fontSize: 11,
@@ -454,7 +454,7 @@ export default function UsersTable({
                         <button
                           type="button"
                           onClick={() => openDeleteModal(u)}
-                          className="border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white"
+                          className="inline-flex min-h-11 items-center border border-[#CC4B37] px-3 py-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.15em] text-[#CC4B37] transition-colors hover:bg-[#CC4B37] hover:text-white md:min-h-0"
                           style={{ borderRadius: 2 }}
                         >
                           ELIMINAR
@@ -467,7 +467,7 @@ export default function UsersTable({
                             disabled={!!sendingMailId}
                             onClick={() => void handleSendReminderOne(u)}
                             style={jostHeading}
-                            className="border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-1.5 text-[10px] font-extrabold uppercase text-[#111111] hover:bg-[#EEEEEE] disabled:opacity-50"
+                            className="inline-flex min-h-11 items-center border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-1.5 text-[10px] font-extrabold uppercase text-[#111111] hover:bg-[#EEEEEE] disabled:opacity-50 md:min-h-0"
                           >
                             {sendingMailId === u.id ? '...' : 'RECORDATORIO'}
                           </button>
@@ -495,7 +495,7 @@ export default function UsersTable({
                           prev === u.id ? null : u.id
                         )
                       }
-                      className="whitespace-nowrap border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-1.5 text-[10px] text-[#111111] transition-colors hover:bg-[#EEEEEE]"
+                      className="inline-flex min-h-11 items-center whitespace-nowrap border border-solid border-[#111111] bg-[#FFFFFF] px-2 py-1.5 text-[10px] text-[#111111] transition-colors hover:bg-[#EEEEEE] md:min-h-0"
                       style={{ ...jostHeading, borderRadius: 2 }}
                       aria-expanded={teamAssignUserId === u.id}
                     >

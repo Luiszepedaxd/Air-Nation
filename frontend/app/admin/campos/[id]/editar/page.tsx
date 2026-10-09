@@ -44,7 +44,7 @@ export default async function AdminEditarCampoPage({
     : []
 
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
+    <div className="min-h-screen bg-[#FFFFFF] text-[#111111]">
       <EditCampoClient
         fieldId={field.id as string}
         publicSlug={slug}

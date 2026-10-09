@@ -487,7 +487,7 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
 
             return (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 border border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
                   <span className="text-[11px] text-[#666666]" style={latoBody}>
                     {products.length} producto{products.length !== 1 ? 's' : ''} en {totalGrupos} categoría{totalGrupos !== 1 ? 's' : ''}
                   </span>
@@ -1604,8 +1604,8 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                 .filter((c) => c.parent_id === null)
                 .map((nivel1) => (
                   <div key={nivel1.id}>
-                    <div className="flex items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2.5">
-                      <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2.5">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                         <span className="text-[10px] text-[#AAAAAA]" style={jostHeading}>
                           {'\u25B6'}
                         </span>
@@ -1637,8 +1637,8 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                       .filter((c) => c.parent_id === nivel1.id)
                       .map((nivel2) => (
                         <div key={nivel2.id}>
-                          <div className="flex items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2 pl-8">
-                            <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#FFFFFF] px-4 py-2 pl-8">
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                               <span className="text-[10px] text-[#CCCCCC]">└</span>
                               <span className="text-[12px] font-semibold text-[#333333]">
                                 {nivel2.nombre}
@@ -1669,9 +1669,9 @@ export function StoreAdminClient({ products, categories, brands, initialTab }: P
                             .map((nivel3) => (
                               <div
                                 key={nivel3.id}
-                                className="flex items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#FAFAFA] px-4 py-2 pl-14"
+                                className="flex flex-wrap items-center justify-between gap-2 border-b border-[#EEEEEE] bg-[#FAFAFA] px-4 py-2 pl-14"
                               >
-                                <div className="flex min-w-0 items-center gap-2">
+                                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                                   <span className="text-[10px] text-[#CCCCCC]">└</span>
                                   <span className="text-[11px] text-[#555555]">{nivel3.nombre}</span>
                                   <span className="text-[10px] text-[#AAAAAA]" style={latoBody}>

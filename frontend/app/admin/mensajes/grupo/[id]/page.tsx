@@ -133,7 +133,7 @@ export default async function AdminGrupoConversacionPage({
         </Link>
         <span className="text-[#CCCCCC]">|</span>
         <h1
-          className="text-lg tracking-[0.1em] text-[#111111] md:text-xl"
+          className="min-w-0 break-words text-lg tracking-[0.1em] text-[#111111] md:text-xl"
           style={jostHeading}
         >
           {groupName}
@@ -206,7 +206,7 @@ export default async function AdminGrupoConversacionPage({
                   {senderName}
                 </span>
                 <div
-                  className="max-w-[75%] bg-[#F4F4F4] px-3 py-2 text-[#111111]"
+                  className="min-w-0 max-w-[75%] overflow-hidden bg-[#F4F4F4] px-3 py-2 text-[#111111]"
                   style={{ borderRadius: 2 }}
                 >
                   {content ? (
@@ -217,7 +217,7 @@ export default async function AdminGrupoConversacionPage({
                     <img
                       src={imageUrl}
                       alt=""
-                      className={`max-h-48 rounded object-contain ${content ? 'mt-2' : ''}`}
+                      className={`max-h-48 max-w-full rounded object-contain ${content ? 'mt-2' : ''}`}
                     />
                   ) : null}
                 </div>

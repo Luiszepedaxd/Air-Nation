@@ -256,7 +256,8 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
         )}
 
         {scoreboard.length > 0 && (
-          <div className="border border-[#EEEEEE]">
+          <div className="overflow-x-auto">
+          <div className="min-w-[40rem] border border-[#EEEEEE]">
             {scoreRoundGameType === 'drills' ? (
               <>
                 <div className="grid grid-cols-12 border-b border-[#EEEEEE] bg-[#F4F4F4] px-4 py-2">
@@ -326,6 +327,7 @@ export function AdminTorneoDetail({ tournamentId }: { tournamentId: string }) {
                 })}
               </>
             )}
+          </div>
           </div>
         )}
       </section>
