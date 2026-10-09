@@ -4,10 +4,18 @@
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
+export type GeneratedAdminPhoto = {
+  mediaType: string;
+  b64: string;
+  ext: string;
+};
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers);
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
     ...options,
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Error desconocido" }));
@@ -27,6 +35,16 @@ export const api = {
     get: (id: string) => request<{ user: any }>(`/users/${id}`),
     register: (data: { username: string; email: string; team_id?: string }) =>
       request<{ user: any }>("/users/register", { method: "POST", body: JSON.stringify(data) }),
+  },
+
+  admin: {
+    generarFoto: (accessToken: string, body: { prompt: string; model: string }) =>
+      request<GeneratedAdminPhoto>("/admin/fotos", {
+        method: "POST",
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(body),
+      }),
   },
 
   replicas: {

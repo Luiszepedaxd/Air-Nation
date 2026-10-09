@@ -352,6 +352,35 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
+    href: '/admin/fotos',
+    label: 'Generar fotos',
+    icon: (active) => (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect
+          x="3"
+          y="5"
+          width="18"
+          height="14"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="3"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+        />
+        <path
+          d="M8 5l1.2-2h5.6L16 5"
+          stroke={active ? '#CC4B37' : '#666666'}
+          strokeWidth="1.7"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/joulie',
     label: 'JOULIE',
     icon: (active) => (
