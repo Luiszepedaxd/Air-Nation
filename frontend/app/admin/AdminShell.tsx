@@ -552,11 +552,11 @@ export default function AdminShell({
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 h-full w-[220px] border-r border-solid border-[#EEEEEE] bg-[#F4F4F4] transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 flex h-dvh w-[220px] flex-col overflow-hidden border-r border-solid border-[#EEEEEE] bg-[#F4F4F4] transition-transform duration-200 md:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:flex md:flex-col`}
+        }`}
       >
-        <div className="flex h-14 items-center border-b border-solid border-[#EEEEEE] px-4 md:h-[3.75rem]">
+        <div className="flex h-14 shrink-0 items-center border-b border-solid border-[#EEEEEE] px-4 md:h-[3.75rem]">
           <span
             className="text-[0.65rem] tracking-[0.2em] text-[#CC4B37]"
             style={jostHeading}
@@ -565,7 +565,7 @@ export default function AdminShell({
             <span className="text-[#666666]"> ADMIN</span>
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-[env(safe-area-inset-bottom)]">
           <SidebarNav onNavigate={() => setMobileOpen(false)} />
         </div>
       </aside>
