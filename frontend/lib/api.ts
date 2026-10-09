@@ -38,12 +38,17 @@ export const api = {
   },
 
   admin: {
-    generarFoto: (accessToken: string, body: { prompt: string; model: string }) =>
+    generarFoto: (
+      accessToken: string,
+      body: { prompt: string; model: string; references?: { b64: string }[] },
+      signal?: AbortSignal
+    ) =>
       request<GeneratedAdminPhoto>("/admin/fotos", {
         method: "POST",
         cache: "no-store",
         headers: { Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify(body),
+        signal,
       }),
   },
 

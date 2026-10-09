@@ -1,7 +1,10 @@
 const assert = require("node:assert/strict");
 const { describe, it } = require("node:test");
 const {
+  REF_MAX_BYTES,
+  REF_MAX_COUNT,
   validateFotoInput,
+  toInputReferences,
   imageFromOpenRouter,
   mapUpstreamError,
 } = require("./openrouterImage");
@@ -53,5 +56,30 @@ describe("generar foto", () => {
     );
     const leaked = mapUpstreamError(500, "falló sk-or-v1-supersecrettoken");
     assert.equal(/sk-or-/i.test(leaked.error), false);
+    assert.match(
+      mapUpstreamError(400, '{"error":{"message":"input_references is not supported"}}').error,
+      /no acepta imágenes de referencia/
+    );
+  });
+
+  it("arma input_references y rechaza formato, tope y cantidad", () => {
+    const ok = validateFotoInput("ponlo en el mockup", "google/gemini-2.5-flash-image", [
+      { b64: PNG },
+    ]);
+    assert.equal(ok.references.length, 1);
+    assert.equal(ok.references[0].mediaType, "image/png");
+    assert.deepEqual(toInputReferences(ok.references), [
+      { type: "image_url", image_url: { url: `data:image/png;base64,${PNG}` } },
+    ]);
+
+    const gif = Buffer.from("GIF89a").toString("base64");
+    assert.match(validateFotoInput("x", "a/b", [{ b64: gif }]).error, /JPG, PNG o WebP/);
+
+    const over = Buffer.alloc(REF_MAX_BYTES + 1, 0xff).toString("base64");
+    assert.match(validateFotoInput("x", "a/b", [{ b64: over }]).error, /8 MB/);
+
+    const many = Array.from({ length: REF_MAX_COUNT + 1 }, () => ({ b64: PNG }));
+    assert.match(validateFotoInput("x", "a/b", many).error, /6 imágenes/);
+    assert.deepEqual(validateFotoInput("x", "a/b").references, []);
   });
 });
