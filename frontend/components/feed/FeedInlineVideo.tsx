@@ -11,6 +11,7 @@ import {
   setFeedAudioMuted,
   subscribeFeedAudioMuted,
 } from '@/lib/feed-audio-preference'
+import { clampFeedAspect } from '@/lib/media-url'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -121,7 +122,9 @@ function supportsNativeHls(video: HTMLVideoElement): boolean {
 }
 
 /**
- * Video estilo reel (9:16 por defecto; 16:9 si horizontal).
+ * Video del feed a ancho completo, sin recorte.
+ * La caja usa la proporción real, acotada como las fotos (4:5 … 1.91:1):
+ * si el video es más extremo, se ve entero con bandas, no se corta.
  * HLS (Cloudflare Stream) vía nativo en Safari/iOS o hls.js en el resto;
  * MP4 progresivo para los videos legacy de R2.
  * No descarga nada hasta estar cerca del viewport; tope de concurrencia;
@@ -131,13 +134,13 @@ export function FeedInlineVideo({
   src,
   videoMp4Url,
   poster,
-  forceSquare = false,
+  fill = false,
 }: {
   src: string
   videoMp4Url?: string | null
   poster?: string | null
-  /** Match photo carousel slides (1:1) instead of tall 9/16. */
-  forceSquare?: boolean
+  /** El padre ya tiene altura (slide del carrusel). */
+  fill?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -155,21 +158,11 @@ export function FeedInlineVideo({
   const [videoError, setVideoError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [isMuted, setIsMuted] = useState(() => getFeedAudioMuted())
-  const [isLandscape, setIsLandscape] = useState<boolean | null>(null)
+  const [aspect, setAspect] = useState(1)
   const [armed, setArmed] = useState(false)
   const [posterUrl, setPosterUrl] = useState<string | null>(
     () => poster || posterCache.get(mediaUrl) || null
   )
-
-  // Default square (feed-friendly) until metadata loads; avoid tall 9/16 flash.
-  // Portrait → 4/5; landscape → 16/9; forceSquare keeps 1:1 inside carousels.
-  const aspectClass = forceSquare
-    ? 'aspect-square'
-    : isLandscape === true
-      ? 'aspect-video'
-      : isLandscape === false
-        ? 'aspect-[4/5]'
-        : 'aspect-square'
 
   useEffect(() => {
     if (poster) setPosterUrl(poster)
@@ -379,10 +372,16 @@ export function FeedInlineVideo({
     }
   }
 
+  const frameClass = fill
+    ? 'relative block h-full w-full overflow-hidden bg-black'
+    : 'relative block w-full overflow-hidden bg-black'
+  const frameStyle = fill ? undefined : { aspectRatio: aspect }
+
   if (videoError) {
     return (
       <div
-        className={`flex w-full flex-col items-center justify-center bg-black ${aspectClass}`}
+        className={`flex w-full flex-col items-center justify-center bg-black ${fill ? 'h-full' : ''}`}
+        style={frameStyle}
       >
         <p className="mt-3 text-center text-sm text-white" style={lato}>
           {retryCount >= 8 ? 'No se pudo cargar el video.' : 'Procesando video…'}
@@ -394,13 +393,14 @@ export function FeedInlineVideo({
   return (
     <div
       ref={wrapRef}
-      className={`relative block w-full overflow-hidden bg-black ${aspectClass}`}
+      className={frameClass}
+      style={frameStyle}
     >
       <video
         ref={videoRef}
         width="100%"
         height="100%"
-        className="absolute inset-0 h-full w-full cursor-pointer object-cover"
+        className="absolute inset-0 h-full w-full cursor-pointer object-contain"
         muted={isMuted}
         playsInline
         loop
@@ -409,7 +409,9 @@ export function FeedInlineVideo({
         onClick={togglePlayPause}
         onLoadedMetadata={(e) => {
           const v = e.currentTarget
-          setIsLandscape(v.videoWidth > v.videoHeight)
+          if (v.videoWidth && v.videoHeight) {
+            setAspect(clampFeedAspect(v.videoWidth, v.videoHeight))
+          }
           if (!posterUrl) {
             const p = capturePoster(v, mediaUrl)
             if (p) setPosterUrl(p)

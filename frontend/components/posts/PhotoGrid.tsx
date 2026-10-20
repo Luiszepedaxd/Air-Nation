@@ -1,7 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent } from 'react'
-import { clampFeedAspect, feedBlurSrc, feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
+import { useState, useEffect, useRef, type TouchEvent, type PointerEvent as ReactPointerEvent, type MouseEvent as ReactMouseEvent } from 'react'
+import { clampFeedAspect, feedPhotoSrcSet, lightboxImageUrl } from '@/lib/media-url'
+import {
+  clampFeedZoom,
+  zoomKeepingPoint,
+  FEED_ZOOM_DOUBLE,
+  FEED_ZOOM_RESET,
+  type FeedZoom,
+} from '@/lib/feed-zoom'
 import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
 
 function FeedImg({
@@ -27,8 +34,16 @@ function FeedImg({
     fellBack.current = false
   }, [url])
 
+  const report = (img: HTMLImageElement) => {
+    if (img.naturalWidth) onLoad?.(img)
+  }
+
   return (
     <img
+      ref={(node) => {
+        // Cached images can finish before React binds onLoad.
+        if (node?.complete) report(node)
+      }}
       src={src}
       srcSet={srcSet || undefined}
       sizes={meta.sizes}
@@ -38,7 +53,7 @@ function FeedImg({
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
       {...(priority ? { fetchPriority: 'high' as const } : {})}
-      onLoad={(e) => onLoad?.(e.currentTarget)}
+      onLoad={(e) => report(e.currentTarget)}
       onError={() => {
         if (fellBack.current) return
         fellBack.current = true
@@ -52,51 +67,55 @@ function FeedImg({
 function FeedPhotoFrame({
   url,
   priority,
-  lockAspect,
+  onAspect,
 }: {
   url: string
   priority?: boolean
-  /** Carrusel: el cuadro ya tiene proporción. Una sola foto: se acota al cargar. */
-  lockAspect?: boolean
+  /** Primera foto del post: fija la proporción del carrusel. */
+  onAspect?: (width: number, height: number) => void
 }) {
-  const [aspect, setAspect] = useState(1)
-  const sharp = feedPhotoSrcSet(url)
-  const [blur, setBlur] = useState(() => feedBlurSrc(url))
-
-  useEffect(() => {
-    setBlur(feedBlurSrc(url))
-    if (!lockAspect) setAspect(1)
-  }, [url, lockAspect])
-
   return (
-    <div
-      className={`relative w-full overflow-hidden bg-[#111111] ${lockAspect ? 'h-full' : ''}`}
-      style={lockAspect ? undefined : { aspectRatio: aspect }}
-    >
-      <img
-        src={blur}
-        alt=""
-        aria-hidden
-        draggable={false}
-        className="pointer-events-none absolute inset-0 h-full w-full scale-125 object-cover blur-2xl"
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        onError={() => {
-          if (blur !== sharp.src) setBlur(sharp.src)
-        }}
-      />
-      <div className="pointer-events-none absolute inset-0 bg-black/40" />
+    <div className="relative h-full w-full bg-[#111111]">
+      {/* ponytail: object-cover solo recorta lo que se pasa de 4:5–1.91.
+          La foto entera se ve en el lightbox. No vuelve el crop de subida. */}
       <FeedImg
         url={url}
         priority={priority}
-        className="pointer-events-none absolute inset-0 z-[1] h-full w-full object-contain"
-        onLoad={(img) => {
-          if (lockAspect) return
-          setAspect(clampFeedAspect(img.naturalWidth, img.naturalHeight))
-        }}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        onLoad={(img) => onAspect?.(img.naturalWidth, img.naturalHeight)}
       />
     </div>
   )
+}
+
+type PinchGesture = {
+  mode: 'pinch'
+  dist: number
+  zoom: FeedZoom
+  fx: number
+  fy: number
+}
+
+type DragGesture = {
+  mode: 'drag'
+  x: number
+  y: number
+  zoom: FeedZoom
+  moved: boolean
+}
+
+function focalFrom(img: HTMLImageElement, clientX: number, clientY: number) {
+  const r = img.getBoundingClientRect()
+  return {
+    x: clientX - (r.left + r.width / 2),
+    y: clientY - (r.top + r.height / 2),
+    w: img.clientWidth,
+    h: img.clientHeight,
+  }
+}
+
+function touchDist(a: { clientX: number; clientY: number }, b: { clientX: number; clientY: number }) {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 }
 
 export function Lightbox({ urls, startIndex, onClose }: {
@@ -105,9 +124,14 @@ export function Lightbox({ urls, startIndex, onClose }: {
   onClose: () => void
 }) {
   const [idx, setIdx] = useState(startIndex)
-  const touchStartX = useRef<number | null>(null)
-  const touchStartY = useRef<number | null>(null)
-  const dragging = useRef(false)
+  const [zoom, setZoom] = useState<FeedZoom>(FEED_ZOOM_RESET)
+  const [gesturing, setGesturing] = useState(false)
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const imgRef = useRef<HTMLImageElement>(null)
+  const gesture = useRef<PinchGesture | DragGesture | null>(null)
+  const moved = useRef(false)
+  const lastTap = useRef<{ t: number; x: number; y: number } | null>(null)
   const [lbSrc, setLbSrc] = useState(() => lightboxImageUrl(urls[startIndex] ?? ''))
   const lbFellBack = useRef(false)
 
@@ -118,47 +142,199 @@ export function Lightbox({ urls, startIndex, onClose }: {
       if (e.key === 'ArrowLeft') setIdx(i => Math.max(i - 1, 0))
     }
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', handler)
+      document.body.style.overflow = prevOverflow
+    }
   }, [urls.length, onClose])
 
   useEffect(() => {
     const raw = urls[idx] ?? ''
     setLbSrc(lightboxImageUrl(raw))
     lbFellBack.current = false
+    setZoom(FEED_ZOOM_RESET)
+    gesture.current = null
+    lastTap.current = null
   }, [idx, urls])
 
+  const applyZoomAt = (clientX: number, clientY: number, nextScale: number) => {
+    const img = imgRef.current
+    if (!img) return
+    const f = focalFrom(img, clientX, clientY)
+    const start = zoomRef.current
+    setZoom(zoomKeepingPoint(start, nextScale, f.x, f.y, f.x, f.y, f.w, f.h))
+  }
+
   const onTouchStart = (e: TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX
-    touchStartY.current = e.touches[0].clientY
-    dragging.current = false
+    if ((e.target as HTMLElement).closest('button')) return
+    const img = imgRef.current
+    if (!img) return
+    setGesturing(true)
+    if (e.touches.length >= 2) {
+      const f = focalFrom(
+        img,
+        (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      )
+      gesture.current = {
+        mode: 'pinch',
+        dist: Math.max(1, touchDist(e.touches[0], e.touches[1])),
+        zoom: zoomRef.current,
+        fx: f.x,
+        fy: f.y,
+      }
+      moved.current = true
+      return
+    }
+    gesture.current = {
+      mode: 'drag',
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      zoom: zoomRef.current,
+      moved: false,
+    }
+    moved.current = false
   }
 
   const onTouchMove = (e: TouchEvent) => {
-    if (touchStartX.current === null) return
-    const dx = Math.abs(e.touches[0].clientX - touchStartX.current)
-    if (dx > 10) dragging.current = true
+    const img = imgRef.current
+    const g = gesture.current
+    if (!img || !g) return
+    if (e.touches.length >= 2) {
+      const dist = Math.max(1, touchDist(e.touches[0], e.touches[1]))
+      const f = focalFrom(
+        img,
+        (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      )
+      const base = g.mode === 'pinch' ? g : {
+        mode: 'pinch' as const,
+        dist,
+        zoom: zoomRef.current,
+        fx: f.x,
+        fy: f.y,
+      }
+      if (g.mode !== 'pinch') gesture.current = base
+      const start = g.mode === 'pinch' ? g : base
+      setZoom(zoomKeepingPoint(
+        start.zoom,
+        start.zoom.scale * (dist / start.dist),
+        start.fx,
+        start.fy,
+        f.x,
+        f.y,
+        img.clientWidth,
+        img.clientHeight,
+      ))
+      moved.current = true
+      return
+    }
+    if (g.mode !== 'drag' || e.touches.length !== 1) return
+    const dx = e.touches[0].clientX - g.x
+    const dy = e.touches[0].clientY - g.y
+    if (Math.hypot(dx, dy) > 8) {
+      g.moved = true
+      moved.current = true
+    }
+    if (g.zoom.scale > 1) {
+      setZoom(clampFeedZoom(
+        g.zoom.scale,
+        g.zoom.x + dx,
+        g.zoom.y + dy,
+        img.clientWidth,
+        img.clientHeight,
+      ))
+    }
   }
 
   const onTouchEnd = (e: TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return
-    const dx = e.changedTouches[0].clientX - touchStartX.current
-    const dy = e.changedTouches[0].clientY - touchStartY.current
+    const g = gesture.current
+    if (e.touches.length >= 1) return
+    setGesturing(false)
+    gesture.current = null
+    if (!g) return
+
+    if (zoomRef.current.scale < 1.05) {
+      zoomRef.current = FEED_ZOOM_RESET
+      setZoom(FEED_ZOOM_RESET)
+    }
+
+    if (g.mode === 'pinch') return
+
+    const x = e.changedTouches[0].clientX
+    const y = e.changedTouches[0].clientY
+
+    if (!g.moved) {
+      const now = Date.now()
+      const prev = lastTap.current
+      if (prev && now - prev.t < 300 && Math.hypot(x - prev.x, y - prev.y) < 28) {
+        lastTap.current = null
+        const next = zoomRef.current.scale > 1 ? 1 : FEED_ZOOM_DOUBLE
+        applyZoomAt(x, y, next)
+      } else {
+        lastTap.current = { t: now, x, y }
+      }
+      return
+    }
+
+    if (g.zoom.scale > 1) return
+
+    const dx = x - g.x
+    const dy = y - g.y
     const absDx = Math.abs(dx)
     const absDy = Math.abs(dy)
 
     if (absDx > absDy && absDx > 40) {
       if (dx < 0) setIdx(i => Math.min(i + 1, urls.length - 1))
       else setIdx(i => Math.max(i - 1, 0))
-    } else if (absDy > absDx && absDy > 80) {
-      if (dy > 0) onClose()
+      return
     }
-
-    touchStartX.current = null
-    touchStartY.current = null
+    if (absDy > absDx && dy > 80) onClose()
   }
 
-  const handleOverlayClick = () => {
-    if (!dragging.current) onClose()
+  const onDoubleClick = (e: ReactMouseEvent<HTMLImageElement>) => {
+    e.stopPropagation()
+    e.preventDefault()
+    const next = zoomRef.current.scale > 1 ? 1 : FEED_ZOOM_DOUBLE
+    applyZoomAt(e.clientX, e.clientY, next)
+  }
+
+  const onPointerDown = (e: ReactPointerEvent<HTMLImageElement>) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    if (zoomRef.current.scale <= 1) return
+    gesture.current = {
+      mode: 'drag',
+      x: e.clientX,
+      y: e.clientY,
+      zoom: zoomRef.current,
+      moved: false,
+    }
+    setGesturing(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const onPointerMove = (e: ReactPointerEvent<HTMLImageElement>) => {
+    const g = gesture.current
+    const img = imgRef.current
+    if (!img || !g || g.mode !== 'drag' || e.pointerType !== 'mouse') return
+    if (g.zoom.scale <= 1) return
+    setZoom(clampFeedZoom(
+      g.zoom.scale,
+      g.zoom.x + (e.clientX - g.x),
+      g.zoom.y + (e.clientY - g.y),
+      img.clientWidth,
+      img.clientHeight,
+    ))
+    g.moved = true
+    moved.current = true
+  }
+
+  const onPointerUp = (e: ReactPointerEvent<HTMLImageElement>) => {
+    if (e.pointerType !== 'mouse') return
+    gesture.current = null
+    setGesturing(false)
   }
 
   const original = urls[idx] ?? ''
@@ -166,7 +342,13 @@ export function Lightbox({ urls, startIndex, onClose }: {
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 touch-none"
-      onClick={handleOverlayClick}
+      onClick={(e) => {
+        if (moved.current) {
+          moved.current = false
+          return
+        }
+        if (e.target === e.currentTarget) onClose()
+      }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -193,11 +375,24 @@ export function Lightbox({ urls, startIndex, onClose }: {
       )}
 
       <img
+        ref={imgRef}
         src={lbSrc}
         alt=""
         loading="eager"
         decoding="async"
-        className="max-h-[90vh] max-w-[95vw] object-contain select-none pointer-events-none"
+        draggable={false}
+        onDoubleClick={onDoubleClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        className={`max-h-[90vh] max-w-[95vw] object-contain select-none touch-none ${
+          zoom.scale > 1 ? 'cursor-grab' : 'cursor-zoom-in'
+        }`}
+        style={{
+          transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`,
+          transition: gesturing ? 'none' : 'transform 0.18s ease-out',
+        }}
         onError={() => {
           if (lbFellBack.current || !original) return
           lbFellBack.current = true
@@ -265,6 +460,16 @@ export function PhotoGrid({
   const photos = urls.filter(Boolean)
   const hasVideo = Boolean(video?.src)
   const slideCount = photos.length + (hasVideo ? 1 : 0)
+  const frameKey = `${photos[0] ?? ''}|${video?.src ?? ''}`
+  const [frame, setFrame] = useState<{ key: string; aspect: number }>({ key: '', aspect: 1 })
+  const frameAspect = frame.key === frameKey ? frame.aspect : 1
+  const lockFrame = (width: number, height: number) => {
+    setFrame((prev) =>
+      prev.key === frameKey
+        ? prev
+        : { key: frameKey, aspect: clampFeedAspect(width, height) },
+    )
+  }
 
   if (slideCount === 0) return null
 
@@ -393,9 +598,8 @@ export function PhotoGrid({
             {photos.map((url, i) => (
               <div
                 key={`photo-${i}`}
-                className={`w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-[#111111] ${
-                  slideCount > 1 ? 'aspect-square' : ''
-                }`}
+                className="relative w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-[#111111]"
+                style={{ aspectRatio: frameAspect }}
                 onClick={() => {
                   if (!dragMoved.current) setLightboxIndex(i)
                 }}
@@ -403,7 +607,7 @@ export function PhotoGrid({
                 <FeedPhotoFrame
                   url={url}
                   priority={i < priorityCount}
-                  lockAspect={slideCount > 1}
+                  onAspect={i === 0 ? lockFrame : undefined}
                 />
               </div>
             ))}
@@ -411,13 +615,14 @@ export function PhotoGrid({
             {hasVideo && video ? (
               <div
                 key="video"
-                className="aspect-square w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-black"
+                className="relative w-full min-w-full max-w-full flex-[0_0_100%] overflow-hidden bg-black"
+                style={{ aspectRatio: frameAspect }}
               >
                 <FeedInlineVideo
                   src={video.src}
                   videoMp4Url={video.videoMp4Url}
                   poster={video.poster}
-                  forceSquare
+                  fill
                 />
               </div>
             ) : null}

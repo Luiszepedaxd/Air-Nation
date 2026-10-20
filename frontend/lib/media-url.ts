@@ -89,12 +89,6 @@ export function feedAvatarUrl(
   })
 }
 
-/** Tiny delivery for the blurred backdrop. CSS does the blur. */
-export function feedBlurSrc(url: string): string {
-  if (!url || !isCloudflareImagesUrl(url)) return url
-  return cfImageDeliveryUrl(url, { width: 48, quality: 30, fit: 'scale-down' })
-}
-
 export function lightboxImageUrl(url: string): string {
   if (!isCloudflareImagesUrl(url)) return url
   return cfImageDeliveryUrl(url, { width: 1600, quality: 82 })

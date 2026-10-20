@@ -653,6 +653,12 @@ function HighlightBadge() {
   )
 }
 
+/** Sin caja: el medio sangra y cancela el padding de la página. Los posts se separan con una línea. */
+const feedPostShell =
+  'min-w-0 -mx-4 w-[calc(100%+2rem)] border-b border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6 md:w-[calc(100%+3rem)]'
+const feedPostShellHi =
+  'min-w-0 -mx-4 w-[calc(100%+2rem)] border-b border-[#CC4B37] bg-[#FFF8F7] md:-mx-6 md:w-[calc(100%+3rem)]'
+
 function formatEventDate(iso: string) {
   try {
     // ponytail: fixed CDMX offset (-6h, no DST since 2022), same as isoToMxLocal in format-evento-fecha.ts
@@ -1486,8 +1492,9 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
   return (
     <div
       id={`feed-item-${item.id}`}
-      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border border-[#EEEEEE] bg-[#FFFFFF]'} p-4 min-w-0`}
+      className={highlighted ? feedPostShellHi : feedPostShell}
     >
+      <div className="px-4 pt-3">
       {highlighted && <HighlightBadge />}
       <div className="flex items-center gap-3 mb-3">
         <Link href={`/equipos/${item.team.slug}`}>
@@ -1539,7 +1546,9 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
           className="mb-3"
         />
       )}
+      </div>
       <PostMedia urls={fotos} />
+      <div className="px-4 pb-3">
       <PostActions
         {...feedEngagementProps(item)}
         postType="team"
@@ -1552,6 +1561,7 @@ function TeamPostCard({ item, currentUserId, currentUserAlias, currentUserAvatar
         shareTitle={`${item.team.nombre} en AirNation`}
         postHref={`/dashboard?highlight_id=${item.id}&highlight_type=team`}
       />
+      </div>
     </div>
   )
 }
@@ -1584,8 +1594,9 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   return (
     <div
       id={`feed-item-${item.id}`}
-      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border border-[#EEEEEE] bg-[#FFFFFF]'} p-4 min-w-0`}
+      className={highlighted ? feedPostShellHi : feedPostShell}
     >
+      <div className="px-4 pt-3">
       {highlighted && <HighlightBadge />}
       <div className="mb-3">
         <div className="flex items-center gap-3">
@@ -1645,61 +1656,47 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatPostTimestamp(item.created_at)}</p>
       </div>
-      {item.replica_id ? (
-        <>
-          {item.content?.trim() && (
-            <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
-              <PostContent
-                content={item.content}
-                mentionIds={item.mentions ?? null}
-                mentionAliasById={item.mentionAliasById ?? null}
-                className="mb-3"
-              />
-            </Link>
-          )}
-          <PostMedia
-            urls={fotos}
-            video={
-              item.video_url
-                ? {
-                    src: item.video_url,
-                    videoMp4Url: item.video_mp4_url,
-                    poster: item.thumbnail_url,
-                  }
-                : null
-            }
-          />
-          <Link
-            href={`/replicas/${item.replica_id}`}
-            className="block text-[12px] text-[#888888] mt-2 hover:underline"
-          >
-            Ver réplica
-          </Link>
-        </>
-      ) : (
-        <>
-          {item.content?.trim() && (
+      {item.content?.trim() && (
+        item.replica_id ? (
+          <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
             <PostContent
               content={item.content}
               mentionIds={item.mentions ?? null}
               mentionAliasById={item.mentionAliasById ?? null}
               className="mb-3"
             />
-          )}
-          <PostMedia
-            urls={fotos}
-            video={
-              item.video_url
-                ? {
-                    src: item.video_url,
-                    videoMp4Url: item.video_mp4_url,
-                    poster: item.thumbnail_url,
-                  }
-                : null
-            }
+          </Link>
+        ) : (
+          <PostContent
+            content={item.content}
+            mentionIds={item.mentions ?? null}
+            mentionAliasById={item.mentionAliasById ?? null}
+            className="mb-3"
           />
-        </>
+        )
       )}
+      </div>
+      <PostMedia
+        urls={fotos}
+        video={
+          item.video_url
+            ? {
+                src: item.video_url,
+                videoMp4Url: item.video_mp4_url,
+                poster: item.thumbnail_url,
+              }
+            : null
+        }
+      />
+      <div className="px-4 pb-3">
+      {item.replica_id ? (
+        <Link
+          href={`/replicas/${item.replica_id}`}
+          className="block text-[12px] text-[#888888] mt-2 hover:underline"
+        >
+          Ver réplica
+        </Link>
+      ) : null}
       <PostActions
         {...feedEngagementProps(item)}
         postType="player"
@@ -1712,6 +1709,7 @@ function PlayerPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
         postHref={`/dashboard?highlight_id=${item.id}&highlight_type=player`}
       />
+      </div>
     </div>
   )
 }
@@ -1738,8 +1736,9 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
   return (
     <div
       id={`feed-item-${item.id}`}
-      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border-2 border-[#CC4B37] bg-[#FFFFFF]'} p-4 min-w-0`}
+      className={highlighted ? feedPostShellHi : feedPostShell}
     >
+      <div className="px-4 pt-3">
       <div className="mb-2 flex items-center gap-1.5 flex-wrap">
         {highlighted && <HighlightBadge />}
         <span
@@ -1802,61 +1801,47 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         </div>
         <p style={lato} className="text-[11px] text-[#999999] mt-0.5 ml-12">{formatPostTimestamp(item.created_at)}</p>
       </div>
-      {item.replica_id ? (
-        <>
-          {item.content?.trim() && (
-            <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
-              <PostContent
-                content={item.content}
-                mentionIds={item.mentions ?? null}
-                mentionAliasById={item.mentionAliasById ?? null}
-                className="mb-3"
-              />
-            </Link>
-          )}
-          <PostMedia
-            urls={fotos}
-            video={
-              item.video_url
-                ? {
-                    src: item.video_url,
-                    videoMp4Url: item.video_mp4_url,
-                    poster: item.thumbnail_url,
-                  }
-                : null
-            }
-          />
-          <Link
-            href={`/replicas/${item.replica_id}`}
-            className="block text-[12px] text-[#888888] mt-2 hover:underline"
-          >
-            Ver réplica
-          </Link>
-        </>
-      ) : (
-        <>
-          {item.content?.trim() && (
+      {item.content?.trim() && (
+        item.replica_id ? (
+          <Link href={`/replicas/${item.replica_id}`} className="block cursor-pointer">
             <PostContent
               content={item.content}
               mentionIds={item.mentions ?? null}
               mentionAliasById={item.mentionAliasById ?? null}
               className="mb-3"
             />
-          )}
-          <PostMedia
-            urls={fotos}
-            video={
-              item.video_url
-                ? {
-                    src: item.video_url,
-                    videoMp4Url: item.video_mp4_url,
-                    poster: item.thumbnail_url,
-                  }
-                : null
-            }
+          </Link>
+        ) : (
+          <PostContent
+            content={item.content}
+            mentionIds={item.mentions ?? null}
+            mentionAliasById={item.mentionAliasById ?? null}
+            className="mb-3"
           />
-        </>
+        )
       )}
+      </div>
+      <PostMedia
+        urls={fotos}
+        video={
+          item.video_url
+            ? {
+                src: item.video_url,
+                videoMp4Url: item.video_mp4_url,
+                poster: item.thumbnail_url,
+              }
+            : null
+        }
+      />
+      <div className="px-4 pb-3">
+      {item.replica_id ? (
+        <Link
+          href={`/replicas/${item.replica_id}`}
+          className="block text-[12px] text-[#888888] mt-2 hover:underline"
+        >
+          Ver réplica
+        </Link>
+      ) : null}
       <PostActions
         {...feedEngagementProps(item)}
         postType="player"
@@ -1869,6 +1854,7 @@ function PinnedPostCard({ item, currentUserId, currentUserAlias, currentUserAvat
         shareTitle={`${item.user.alias ?? item.user.nombre ?? 'Jugador'} en AirNation`}
         postHref={`/dashboard?highlight_id=${item.id}&highlight_type=player`}
       />
+      </div>
     </div>
   )
 }
@@ -1895,8 +1881,9 @@ function FieldPostCard({
   return (
     <div
       id={`feed-item-${item.id}`}
-      className={`${highlighted ? 'border-2 border-[#CC4B37] bg-[#FFF8F7]' : 'border border-[#EEEEEE] bg-[#FFFFFF]'} p-4 min-w-0`}
+      className={highlighted ? feedPostShellHi : feedPostShell}
     >
+      <div className="px-4 pt-3">
       {highlighted && <HighlightBadge />}
       <div className="mb-3 flex items-center gap-3">
         <Link href={`/campos/${item.field.slug}`}>
@@ -1960,7 +1947,9 @@ function FieldPostCard({
           className="mb-3"
         />
       )}
+      </div>
       <PostMedia urls={fotos} />
+      <div className="px-4 pb-3">
       <PostActions
         {...feedEngagementProps(item)}
         postType="field"
@@ -1973,6 +1962,7 @@ function FieldPostCard({
         shareUrl={`/campos/${item.field.slug}`}
         shareTitle={`${item.field.nombre} en AirNation`}
       />
+      </div>
     </div>
   )
 }
@@ -3294,16 +3284,16 @@ function FeedTab({
   if (loading) return (
     <div className="flex flex-col gap-3">
       {[0, 1, 2].map(i => (
-        <div key={i} className="border border-[#EEEEEE] p-4">
-          <div className="flex gap-3 mb-3">
-            <div className="w-9 h-9 bg-[#F4F4F4] animate-pulse shrink-0" />
+        <div key={i} className={feedPostShell}>
+          <div className="flex gap-3 mb-3 px-4 pt-3">
+            <div className="w-9 h-9 bg-[#F4F4F4] animate-pulse shrink-0 rounded-full" />
             <div className="flex-1 space-y-2">
               <div className="h-3 w-24 bg-[#F4F4F4] animate-pulse" />
               <div className="h-2 w-16 bg-[#F4F4F4] animate-pulse" />
             </div>
           </div>
-          <div className="h-4 w-full bg-[#F4F4F4] animate-pulse mb-2" />
-          <div className="h-4 w-3/4 bg-[#F4F4F4] animate-pulse" />
+          <div className="mx-4 mb-3 h-4 w-2/3 bg-[#F4F4F4] animate-pulse" />
+          <div className="aspect-[4/5] w-full bg-[#F4F4F4] animate-pulse" />
         </div>
       ))}
     </div>
@@ -3317,7 +3307,7 @@ function FeedTab({
   )
 
   return (
-    <div className="flex flex-col gap-3 overflow-x-hidden">
+    <div className="flex flex-col gap-3">
       {items.map(item => {
         if (item.kind === 'pinned_post') return (
           <PinnedPostCard
