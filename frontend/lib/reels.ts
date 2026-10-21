@@ -33,7 +33,7 @@ export type Reel = ReelRankInput & {
 const PAGE = 24
 
 const PLAYER_COLS =
-  'id, user_id, content, video_url, video_mp4_url, thumbnail_url, created_at, users(alias, nombre, avatar_url)'
+  'id, user_id, content, video_url, video_mp4_url, thumbnail_url, video_duration_s, created_at, users(alias, nombre, avatar_url)'
 // team_posts no tiene thumbnail_url ni video_mp4_url. Esa columna no existe:
 // seleccionarla tumba la query. El poster sale del thumbnail de Stream.
 const TEAM_COLS =
@@ -115,12 +115,24 @@ function streamPoster(src: string): string | null {
   }
 }
 
+/**
+ * El trimmer wasm subió estos R2 `clip.mp4` sin pista de video
+ * (duration 0, sin thumbnail). El feed y el perfil los dejan; Reels no.
+ */
+function legacyAudioOnlyClip(row: Record<string, unknown>, src: string): boolean {
+  if (str(row.thumbnail_url)) return false
+  const duration = Number(row.video_duration_s)
+  if (Number.isFinite(duration) && duration > 0) return false
+  const path = src.split('?')[0].toLowerCase()
+  return path.includes('.r2.dev/') && path.endsWith('-clip.mp4')
+}
+
 function mapPlayerRow(row: Record<string, unknown>): Reel | null {
   const mp4 = str(row.video_mp4_url)
   const src = str(row.video_url) || mp4
   const id = str(row.id)
   const userId = str(row.user_id)
-  if (!src || !id || !userId) return null
+  if (!src || !id || !userId || legacyAudioOnlyClip(row, src)) return null
   const u = one(row.users)
   const name = str(u?.alias)?.trim() || str(u?.nombre)?.trim() || 'Jugador'
   return {
