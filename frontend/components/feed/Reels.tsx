@@ -509,10 +509,15 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   }
 
   const share = async (reel: Reel) => {
-    if ((await sharePost(reel.shareUrl, `${reel.authorName} en AirNation`)) === 'copied') {
-      setToast('¡Enlace copiado!')
-      setTimeout(() => setToast(null), 2000)
-    }
+    const caption = reel.content?.trim().replace(/\s+/g, ' ').slice(0, 120)
+    const result = await sharePost(
+      reel.shareUrl,
+      `${reel.authorName} en AirNation`,
+      caption ? `${reel.authorName}: ${caption}` : `Video de ${reel.authorName} en AirNation`
+    )
+    if (result === 'shared' || result === 'cancelled') return
+    setToast(result === 'copied' ? 'Link copiado' : 'No se pudo compartir')
+    setTimeout(() => setToast(null), 2000)
   }
 
   useEffect(() => {

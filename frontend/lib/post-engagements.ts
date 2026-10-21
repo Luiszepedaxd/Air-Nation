@@ -332,21 +332,37 @@ export async function togglePostLike(args: {
   )
 }
 
-/** Share nativo con fallback a copiar al portapapeles. */
+/**
+ * Share nativo con fallback a copiar al portapapeles.
+ * Compartido por la card del feed (`PostActions`) y el modo Reels.
+ *
+ * El WKWebView de la app (Capacitor) no implementa Web Share: `navigator.share`
+ * o no existe o rechaza al instante con AbortError. Antes cualquier error se
+ * tragaba y el botón quedaba muerto; ahora solo el cancel real del usuario
+ * (AbortError después de que la hoja se vio) es silencioso, lo demás copia.
+ */
 export async function sharePost(
   shareUrl: string,
-  shareTitle: string
-): Promise<'shared' | 'copied' | 'failed'> {
-  const fullUrl =
-    shareUrl.startsWith('http://') || shareUrl.startsWith('https://')
-      ? shareUrl
-      : `https://airnation.online${shareUrl}`
-  if (navigator.share) {
+  shareTitle: string,
+  shareText?: string
+): Promise<'shared' | 'copied' | 'cancelled' | 'failed'> {
+  const fullUrl = /^https?:\/\//.test(shareUrl)
+    ? shareUrl
+    : `https://www.airnation.online${shareUrl}`
+  if (typeof navigator.share === 'function') {
+    const started = Date.now()
     try {
-      await navigator.share({ title: shareTitle, url: fullUrl })
+      await navigator.share({ title: shareTitle, text: shareText, url: fullUrl })
       return 'shared'
-    } catch {
-      return 'failed' // cancelado
+    } catch (err) {
+      // ponytail: umbral de tiempo para distinguir "el usuario canceló" de
+      // "la plataforma no abrió la hoja". Si algún día hay @capacitor/share,
+      // usarlo en app nativa y borrar el umbral.
+      const cancelled =
+        err instanceof DOMException &&
+        err.name === 'AbortError' &&
+        Date.now() - started > 400
+      if (cancelled) return 'cancelled'
     }
   }
   try {
