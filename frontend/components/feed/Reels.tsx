@@ -655,12 +655,14 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
               </button>
             </div>
 
-            {/* Autor + descripción */}
-            <div className={`absolute inset-x-0 bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-10 pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10 lg:bottom-[env(safe-area-inset-bottom)] ${commentsFor ? 'invisible' : ''}`}>
+            {/* Autor + descripción. inset-x-0 pasa por debajo de la columna de
+                acciones (mismo z-20, pero va después en el DOM): sin
+                pointer-events-none se tragaba el tap de comentar/compartir. */}
+            <div className={`pointer-events-none absolute inset-x-0 bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-10 pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10 lg:bottom-[env(safe-area-inset-bottom)] ${commentsFor ? 'invisible' : ''}`}>
               <Link
                 href={reel.authorHref}
                 onClick={() => closeReels()}
-                className="flex w-fit items-center gap-2"
+                className="pointer-events-auto flex w-fit items-center gap-2"
               >
                 <span className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/40 bg-black/40">
                   {reel.authorAvatar ? (
@@ -684,7 +686,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
               </Link>
 
               {reel.content?.trim() ? (
-                <div className="mt-2 max-h-[40dvh] overflow-y-auto">
+                <div className="pointer-events-auto mt-2 max-h-[40dvh] overflow-y-auto">
                   <p
                     style={lato}
                     className={`whitespace-pre-wrap break-words text-[13px] text-white/95 ${
