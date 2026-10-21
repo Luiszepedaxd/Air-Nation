@@ -1983,7 +1983,7 @@ function TournamentResultCard({
   })()
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+    <div className={feedPostShell}>
       <Link href={`/torneos/${item.public_slug}`} className="block">
         <div className="relative w-full overflow-hidden bg-[#111111] px-5 py-6">
           <div className="flex items-center gap-3">
@@ -2013,7 +2013,7 @@ function TournamentResultCard({
           </div>
         </div>
       </Link>
-      <div className="px-3">
+      <div className="px-4 pb-3">
         <PostActions
           {...feedEngagementProps(item)}
           postType="event"
@@ -2046,7 +2046,7 @@ function EventCard({
   const imagenFinal = item.imagen_url?.trim() || item.field_foto?.trim() || null
   const eventHref = resolveEventHref(item.url_externa, item.id)
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+    <div className={feedPostShell}>
       <Link href={eventHref} className="block">
         <div className="relative aspect-video w-full overflow-hidden bg-[#111111]">
           {imagenFinal
@@ -2077,7 +2077,7 @@ function EventCard({
           </div>
         </div>
       </Link>
-      <div className="px-3">
+      <div className="px-4 pb-3">
         <PostActions
           {...feedEngagementProps(item)}
           postType="event"
@@ -2108,7 +2108,7 @@ function NewTeamCard({
 }) {
   const initial = (item.nombre.trim()[0] || '?').toUpperCase()
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+    <div className={feedPostShell}>
       <Link href={`/equipos/${encodeURIComponent(item.slug)}`} className="block">
         {item.foto_portada_url && (
           <div className="relative h-[140px] w-full overflow-hidden bg-[#111111]">
@@ -2116,7 +2116,7 @@ function NewTeamCard({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
         )}
-        <div className="flex items-center gap-3 p-3">
+        <div className="flex items-center gap-3 px-4 py-3">
           <div className="w-12 h-12 shrink-0 overflow-hidden bg-[#F4F4F4] border border-[#EEEEEE]">
             {item.logo_url
               ? <img loading="lazy" decoding="async" src={item.logo_url} alt="" className="w-full h-full object-cover" />
@@ -2133,7 +2133,7 @@ function NewTeamCard({
           </svg>
         </div>
       </Link>
-      <div className="px-3">
+      <div className="px-4 pb-3">
         <PostActions
           {...feedEngagementProps(item)}
           postType="new_team"
@@ -2172,7 +2172,7 @@ function VideoCard({
   if (!videoId) return null
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+    <div className={feedPostShell}>
       <div className="relative aspect-video w-full bg-[#111111]">
         {playing ? (
           <iframe
@@ -2200,13 +2200,13 @@ function VideoCard({
           </button>
         )}
       </div>
-      <div className="p-3">
+      <div className="px-4 pt-3">
         <p style={lato} className="text-[11px] text-[#999999] mb-1">Video</p>
         <h3 style={jost} className="line-clamp-2 text-[13px] font-extrabold uppercase leading-snug text-[#111111]">
           {item.title}
         </h3>
       </div>
-      <div className="px-3">
+      <div className="px-4 pb-3">
         <PostActions
           {...feedEngagementProps(item)}
           postType="video"
@@ -2236,14 +2236,14 @@ function NoticiaFeedCard({
   currentUserAvatar: string | null
 }) {
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] overflow-hidden">
+    <div className={feedPostShell}>
       <Link href={`/blog/${item.slug}`} className="block">
         {item.cover_url && (
           <div className="aspect-[16/7] w-full overflow-hidden bg-[#F4F4F4]">
             <img loading="lazy" decoding="async" src={item.cover_url} alt="" className="w-full h-full object-cover" />
           </div>
         )}
-        <div className="p-3">
+        <div className="px-4 pt-3">
           {item.category && (
             <p style={jost} className="text-[10px] font-extrabold uppercase text-[#CC4B37] mb-1">
               {item.category}
@@ -2262,7 +2262,7 @@ function NoticiaFeedCard({
           </p>
         </div>
       </Link>
-      <div className="px-3">
+      <div className="px-4 pb-3">
         <PostActions
           {...feedEngagementProps(item)}
           postType="noticia"
@@ -2286,8 +2286,8 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
   const sublabel = item.supercategoria?.trim() || 'Marketplace'
 
   return (
-    <div className="border border-[#EEEEEE] bg-[#FFFFFF] p-4">
-      <div className="flex items-center gap-3">
+    <div className={feedPostShell}>
+      <div className="flex items-center gap-3 px-4 pt-3">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4F4F4]"
           aria-hidden
@@ -2334,7 +2334,7 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
           )}
         </div>
 
-        <div className="pt-3">
+        <div className="px-4 pt-3">
           <p style={lato} className="line-clamp-2 text-[15px] font-medium leading-snug text-[#111111]">
             {item.titulo}
           </p>
@@ -2361,7 +2361,7 @@ function MarketplaceFeedCard({ item }: { item: Extract<FeedItem, { kind: 'market
         </div>
       </Link>
 
-      <div className="mt-3 flex items-center justify-between border-t border-[#EEEEEE] pt-3">
+      <div className="mx-4 mt-3 flex items-center justify-between border-t border-[#EEEEEE] pb-3 pt-3">
         <Link
           href={`/marketplace/${item.id}`}
           style={jost}
