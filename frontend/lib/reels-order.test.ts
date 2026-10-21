@@ -24,19 +24,28 @@ function reel(
 /** Sin azar: el orden depende solo de recencia + engagement. */
 const noRandom = () => 0
 
+/** Semilla fija: el orden de una sesión tiene que poder repetirse en el test. */
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = Math.imul(state ^ (state >>> 15), 1 | state)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 describe('reelScore', () => {
   it('prefiere lo reciente con el mismo engagement', () => {
-    assert.ok(reelScore(reel('a', 'u1', 0), NOW, 0) > reelScore(reel('b', 'u2', 10), NOW, 0))
+    assert.ok(reelScore(reel('a', 'u1', 0), NOW) > reelScore(reel('b', 'u2', 10), NOW))
   })
 
   it('prefiere más engagement con la misma fecha', () => {
-    assert.ok(
-      reelScore(reel('a', 'u1', 3, 20, 5), NOW, 0) > reelScore(reel('b', 'u2', 3, 0, 0), NOW, 0)
-    )
+    assert.ok(reelScore(reel('a', 'u1', 3, 20, 5), NOW) > reelScore(reel('b', 'u2', 3, 0, 0), NOW))
   })
 
   it('no explota con fechas inválidas', () => {
-    const score = reelScore({ ...reel('a', 'u1', 0), createdAt: 'no-es-fecha' }, NOW, 0)
+    const score = reelScore({ ...reel('a', 'u1', 0), createdAt: 'no-es-fecha' }, NOW)
     assert.ok(Number.isFinite(score))
   })
 })
@@ -73,16 +82,55 @@ describe('orderReels', () => {
     assert.deepEqual(out.map((i) => i.key), ['a1', 'a2'])
   })
 
-  it('el azar puede alterar el orden', () => {
-    const items = [reel('a', 'u1', 0), reel('b', 'u2', 2)]
-    const flipped = orderReels(items, {
-      now: NOW,
-      // 0 para el primero, 1 para el segundo: el azar vence a la recencia.
-      random: (() => {
-        let n = 0
-        return () => (n++ === 0 ? 0 : 1)
-      })(),
-    })
-    assert.deepEqual(flipped.map((i) => i.key), ['b', 'a'])
+  it('un roll alto adelanta un video viejo; sin azar manda el puntaje', () => {
+    // 30 días de recencia valen más que el ruido de 0.5 que antes no movía nada.
+    const items = [reel('fresh', 'u1', 0), reel('old', 'u2', 30)]
+    assert.equal(orderReels(items, { now: NOW, random: () => 0 })[0].key, 'fresh')
+    assert.equal(orderReels(items, { now: NOW, random: () => 0.99 })[0].key, 'old')
+  })
+
+  it('cada semilla puede dar un orden distinto', () => {
+    const items = [
+      reel('a', 'u1', 0),
+      reel('b', 'u2', 10),
+      reel('c', 'u3', 20),
+      reel('d', 'u4', 30),
+    ]
+    const orders = new Set<string>()
+    for (let seed = 1; seed <= 24; seed++) {
+      orders.add(
+        orderReels(items, { now: NOW, random: mulberry32(seed) })
+          .map((item) => item.key)
+          .join(',')
+      )
+    }
+    assert.ok(orders.size > 1)
+  })
+
+  it('lo reciente sigue saliendo antes que lo viejo', () => {
+    const items = [reel('old', 'u1', 30), reel('fresh', 'u2', 0)]
+    let freshFirst = 0
+    const trials = 80
+    for (let seed = 1; seed <= trials; seed++) {
+      const out = orderReels(items, { now: NOW, random: mulberry32(seed) })
+      if (out[0].key === 'fresh') freshFirst++
+    }
+    assert.ok(freshFirst > trials * 0.65)
+    assert.ok(freshFirst < trials)
+  })
+
+  it('separa autores también cuando el azar reordena', () => {
+    const items = [
+      reel('a1', 'u1', 0),
+      reel('a2', 'u1', 1),
+      reel('b1', 'u2', 2),
+      reel('b2', 'u2', 3),
+    ]
+    for (let seed = 1; seed <= 40; seed++) {
+      const out = orderReels(items, { now: NOW, random: mulberry32(seed) })
+      for (let i = 1; i < out.length; i++) {
+        assert.notEqual(out[i].authorId, out[i - 1].authorId)
+      }
+    }
   })
 })

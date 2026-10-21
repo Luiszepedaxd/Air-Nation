@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -109,6 +110,13 @@ function capturePoster(video: HTMLVideoElement, key: string): string | null {
 
 let slotSeq = 0
 
+type BoundHls = {
+  destroy: () => void
+  stopLoad: () => void
+  startLoad: (startPosition?: number) => void
+  config: { maxBufferLength: number; maxMaxBufferLength: number }
+}
+
 /** HLS: manifiesto .m3u8 propio o de Cloudflare Stream. */
 function isHlsUrl(url: string): boolean {
   if (!url) return false
@@ -134,6 +142,7 @@ function supportsNativeHls(video: HTMLVideoElement): boolean {
  * MP4 progresivo para los videos legacy de R2.
  * No descarga nada hasta estar cerca del viewport; tope de concurrencia;
  * libera el src al alejarse; cachea poster en memoria.
+ * En Reels (`intent`) el feed no cambia: se calientan solo los vecinos.
  */
 export function FeedInlineVideo({
   src,
@@ -142,6 +151,8 @@ export function FeedInlineVideo({
   fill = false,
   reels = false,
   holdPaused = false,
+  intent = 'play',
+  mediaRef,
 }: {
   src: string
   videoMp4Url?: string | null
@@ -152,17 +163,36 @@ export function FeedInlineVideo({
   reels?: boolean
   /** Pausa forzada desde fuera (modal "¿sigues ahí?" del modo Reels). */
   holdPaused?: boolean
+  /**
+   * Solo Reels. `prime` baja el manifiesto y el primer segmento, sin reproducir.
+   * `hold` pausa y deja de pedir datos, pero conserva lo ya bufferizado.
+   */
+  intent?: 'play' | 'prime' | 'hold'
+  mediaRef?: (el: HTMLVideoElement | null) => void
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const slotIdRef = useRef(`fv-${++slotSeq}`)
   const releaseRef = useRef<(() => void) | null>(null)
   const unloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const nearRef = useRef(false)
   const visibleRef = useRef(false)
-  const hlsRef = useRef<{ destroy: () => void } | null>(null)
+  const hlsRef = useRef<BoundHls | null>(null)
   /** URL efectivamente cargada en el <video> (con hls.js el src es un blob). */
   const loadedRef = useRef<string | null>(null)
+  /** Reels: ya hay ~1 segmento y no hay que seguir pidiendo hasta que se vea. */
+  const primedRef = useRef(false)
+  const loadHeldRef = useRef(false)
+  const intentRef = useRef(intent)
+  intentRef.current = intent
+  /** Pausa del tap en Reels: un loadeddata tardío no debe volver a reproducir. */
+  const userPausedRef = useRef(false)
+  const mediaRefProp = useRef(mediaRef)
+  mediaRefProp.current = mediaRef
+  const setVideoNode = useCallback((node: HTMLVideoElement | null) => {
+    videoRef.current = node
+    mediaRefProp.current?.(node)
+  }, [])
 
   const hls = isHlsUrl(src)
   const mediaUrl = hls ? src : videoMp4Url ?? src
@@ -364,7 +394,129 @@ export function FeedInlineVideo({
     }
   }
 
+  const stopReelsLoad = (el: HTMLVideoElement) => {
+    const bound = hlsRef.current
+    if (bound) {
+      bound.stopLoad()
+      loadHeldRef.current = true
+      return
+    }
+    el.preload = 'none'
+  }
+
+  /** Reels: reproducir, calentar un segmento, o congelar el buffer. El feed no pasa por aquí. */
+  const applyReelsIntent = () => {
+    const el = videoRef.current
+    if (!el || loadedRef.current !== mediaUrl) return
+    const want = intentRef.current
+    const bound = hlsRef.current
+    if (blockedRef.current || want === 'hold') {
+      el.pause()
+      stopReelsLoad(el)
+      return
+    }
+    if (want === 'prime') {
+      el.pause()
+      if (primedRef.current) stopReelsLoad(el)
+      else if (bound && loadHeldRef.current) {
+        bound.config.maxBufferLength = 2
+        bound.config.maxMaxBufferLength = 4
+        bound.startLoad()
+        loadHeldRef.current = false
+      } else if (!bound) {
+        el.preload = 'auto'
+      }
+      return
+    }
+    if (bound) {
+      bound.config.maxBufferLength = 30
+      bound.config.maxMaxBufferLength = 600
+      if (loadHeldRef.current) {
+        bound.startLoad()
+        loadHeldRef.current = false
+      }
+    } else {
+      el.preload = 'auto'
+    }
+    if (!userPausedRef.current) void playWithAudioPreference(el)
+  }
+
   useEffect(() => {
+    if (!reels) return
+    const el = videoRef.current
+    if (!el || videoError) return
+    let cancelled = false
+    // ponytail: Safari no corta un fragmento a medias. Con ~1s ya se puede
+    // arrancar y preload=none le pide al browser que no siga.
+    const capNative = () => {
+      if (intentRef.current !== 'prime') return
+      const end = el.buffered.length ? el.buffered.end(el.buffered.length - 1) : 0
+      if (end - el.currentTime >= 1) {
+        primedRef.current = true
+        el.preload = 'none'
+      }
+    }
+
+    const run = async () => {
+      primedRef.current = false
+      loadHeldRef.current = false
+      el.preload = 'auto'
+      if (hls && !supportsNativeHls(el)) {
+        const { default: Hls } = await import('hls.js')
+        if (cancelled || videoRef.current !== el) return
+        if (Hls.isSupported()) {
+          const instance = new Hls({
+            // El nivel más bajo pinta el primer cuadro; después el ABR sube.
+            startLevel: 0,
+            capLevelToPlayerSize: false,
+            maxBufferLength: 2,
+            maxMaxBufferLength: 4,
+          })
+          instance.on(Hls.Events.ERROR, (_evt, data) => {
+            if (data.fatal) setVideoError(true)
+          })
+          instance.on(Hls.Events.FRAG_BUFFERED, () => {
+            if (intentRef.current !== 'prime' || blockedRef.current) return
+            primedRef.current = true
+            instance.stopLoad()
+            loadHeldRef.current = true
+          })
+          instance.loadSource(mediaUrl)
+          instance.attachMedia(el)
+          hlsRef.current = instance
+        } else {
+          el.src = mediaUrl
+        }
+      } else {
+        el.src = mediaUrl
+        el.addEventListener('progress', capNative)
+      }
+      if (cancelled) return
+      loadedRef.current = mediaUrl
+      setArmed(true)
+      applyReelsIntent()
+    }
+    void run()
+    return () => {
+      cancelled = true
+      el.removeEventListener('progress', capNative)
+      detachSrc()
+    }
+    // applyReelsIntent lee intención y bloqueo por refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reels, mediaUrl, videoError, retryCount])
+
+  useEffect(() => {
+    if (!reels) return
+    // Entrar a este video (o salir de la pausa de inactividad) vuelve a reproducir.
+    // Un tap de pausa no cambia estas deps, así que no se pisa.
+    if (intent === 'play' && blockedRef.current === false) userPausedRef.current = false
+    applyReelsIntent()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reels, intent, blocked, mediaUrl])
+
+  useEffect(() => {
+    if (reels) return
     const wrap = wrapRef.current
     if (!wrap) return
 
@@ -422,7 +574,7 @@ export function FeedInlineVideo({
     }
     // mediaUrl / retry resets observers via remount of video below
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaUrl, videoError, retryCount])
+  }, [mediaUrl, videoError, retryCount, reels])
 
   useEffect(() => {
     if (retryCount === 0) return
@@ -433,6 +585,16 @@ export function FeedInlineVideo({
   const togglePlayPause = () => {
     const el = videoRef.current
     if (!el) return
+    if (reels) {
+      if (el.paused) {
+        userPausedRef.current = false
+        void playWithAudioPreference(el)
+      } else {
+        userPausedRef.current = true
+        el.pause()
+      }
+      return
+    }
     if (!loadedRef.current) {
       nearRef.current = true
       void armAndMaybePlay()
@@ -444,6 +606,7 @@ export function FeedInlineVideo({
 
   // Pausa/reanuda desde fuera: inactividad en Reels, o Reels abierto encima.
   useEffect(() => {
+    if (reels) return
     const el = videoRef.current
     if (!el) return
     if (blocked) {
@@ -456,7 +619,7 @@ export function FeedInlineVideo({
     else if (nearRef.current) void armAndMaybePlay()
     // playWithAudioPreference lee el estado por refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blocked])
+  }, [blocked, reels])
 
   /** Feed: tocar abre Reels en este video. Reels: tocar pausa/reanuda. */
   const handleTap = (e: MouseEvent<HTMLVideoElement>) => {
@@ -507,7 +670,7 @@ export function FeedInlineVideo({
   return (
     <div ref={wrapRef} className={frameClass} style={frameStyle}>
       <video
-        ref={videoRef}
+        ref={setVideoNode}
         width="100%"
         height="100%"
         className="absolute inset-0 h-full w-full cursor-pointer object-cover"
@@ -534,7 +697,11 @@ export function FeedInlineVideo({
             const p = capturePoster(e.currentTarget, mediaUrl)
             if (p) setPosterUrl(p)
           }
-          if (visibleRef.current) {
+          if (reels) {
+            if (intentRef.current === 'play' && !blockedRef.current && !userPausedRef.current) {
+              void playWithAudioPreference(e.currentTarget)
+            }
+          } else if (visibleRef.current) {
             void playWithAudioPreference(e.currentTarget)
           }
         }}

@@ -8,6 +8,8 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
 import { CommentsSection, HeartIcon } from '@/components/posts/PostInteractions'
@@ -39,11 +41,35 @@ const IDLE_PAUSE_MS = 5 * 60 * 1000
 const DESC_PREVIEW_CHARS = 80
 /** Videos restantes a partir de los cuales se pide la siguiente página. */
 const PREFETCH_AT = 3
+/** Siguientes que calientan manifiesto + primer segmento, sin reproducirse. */
+const PRELOAD_AHEAD = 2
+
+function reelIntent(i: number, index: number): 'play' | 'prime' | 'hold' | null {
+  if (i === index) return 'play'
+  if (i === index - 1) return 'hold'
+  if (i > index && i <= index + PRELOAD_AHEAD) return 'prime'
+  return null
+}
+
+function preconnectOrigin(src: string) {
+  try {
+    const origin = new URL(src).origin
+    if (document.head.querySelector(`link[data-reel-origin="${origin}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'preconnect'
+    link.href = origin
+    link.crossOrigin = 'anonymous'
+    link.dataset.reelOrigin = origin
+    document.head.appendChild(link)
+  } catch {
+    /* url rara: el video igual intenta cargar */
+  }
+}
 
 /**
  * Modo Reels: pantalla completa vertical con scroll-snap (un video por
- * pantalla). Solo el visible monta <video>; el resto muestra su poster.
- * Montado una vez en el layout raíz; se abre con `openReels(videoUrl)`.
+ * pantalla). El visible se reproduce; el anterior conserva el buffer y los
+ * dos siguientes se calientan. Montado una vez en el layout raíz.
  */
 export function ReelsHost() {
   const open = useSyncExternalStore(subscribeReels, getReelsOpen, () => null)
@@ -52,6 +78,169 @@ export function ReelsHost() {
 }
 
 type Me = { id: string; alias: string | null; avatar: string | null }
+
+function ReelScrubber({
+  video,
+  onActivity,
+}: {
+  video: HTMLVideoElement | null
+  onActivity: () => void
+}) {
+  const barRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<number | null>(null)
+  const [time, setTime] = useState(0)
+  const [dur, setDur] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const [dragRatio, setDragRatio] = useState(0)
+
+  useEffect(() => {
+    if (!video) return
+    const sync = () => {
+      const nextDur = Number.isFinite(video.duration) ? video.duration : 0
+      setDur(nextDur)
+      if (dragRef.current == null) setTime(video.currentTime || 0)
+    }
+    video.addEventListener('timeupdate', sync)
+    video.addEventListener('durationchange', sync)
+    video.addEventListener('loadedmetadata', sync)
+    sync()
+    return () => {
+      video.removeEventListener('timeupdate', sync)
+      video.removeEventListener('durationchange', sync)
+      video.removeEventListener('loadedmetadata', sync)
+    }
+  }, [video])
+
+  const ratioFromX = (clientX: number) => {
+    const rect = barRef.current?.getBoundingClientRect()
+    if (!rect || rect.width <= 0) return 0
+    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+  }
+
+  const applyRatio = (ratio: number) => {
+    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return
+    const next = ratio * video.duration
+    try {
+      video.currentTime = next
+    } catch {
+      /* el browser a veces rechaza el seek antes de tener metadata */
+    }
+    setTime(next)
+  }
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!video) return
+    event.stopPropagation()
+    event.preventDefault()
+    barRef.current?.setPointerCapture(event.pointerId)
+    const ratio = ratioFromX(event.clientX)
+    dragRef.current = ratio
+    setDragging(true)
+    setDragRatio(ratio)
+    applyRatio(ratio)
+    onActivity()
+  }
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragRef.current == null) return
+    event.stopPropagation()
+    const ratio = ratioFromX(event.clientX)
+    dragRef.current = ratio
+    setDragRatio(ratio)
+    applyRatio(ratio)
+  }
+
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragRef.current == null) return
+    event.stopPropagation()
+    const ratio = dragRef.current
+    dragRef.current = null
+    setDragging(false)
+    applyRatio(ratio)
+    onActivity()
+  }
+
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!video || dur <= 0) return
+    let next = video.currentTime
+    if (event.key === 'ArrowRight') next += 2
+    else if (event.key === 'ArrowLeft') next -= 2
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = dur
+    else return
+    event.preventDefault()
+    event.stopPropagation()
+    applyRatio(Math.min(1, Math.max(0, next / dur)))
+    onActivity()
+  }
+
+  const shown = dragging ? dragRatio : dur > 0 ? Math.min(1, time / dur) : 0
+  const shownSeconds = Math.round(dragging ? dragRatio * dur : time)
+
+  return (
+    <div
+      ref={barRef}
+      role="slider"
+      aria-label="Posición del video"
+      aria-valuemin={0}
+      aria-valuemax={Math.max(0, Math.round(dur))}
+      aria-valuenow={Math.max(0, shownSeconds)}
+      aria-orientation="horizontal"
+      tabIndex={video ? 0 : -1}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onKeyDown={onKeyDown}
+      onClick={(event) => event.stopPropagation()}
+      className="absolute inset-x-0 bottom-0 z-30 flex touch-none items-end"
+      style={{ height: 28 }}
+    >
+      <div
+        className={`w-full bg-white/35 transition-[height] duration-150 ${dragging ? 'h-[5px]' : 'h-[2px]'}`}
+      >
+        <div className="h-full bg-an-accent" style={{ width: `${shown * 100}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function ReelMedia({
+  reel,
+  intent,
+  idle,
+  onActivity,
+}: {
+  reel: Reel
+  intent: 'play' | 'prime' | 'hold' | null
+  idle: boolean
+  onActivity: () => void
+}) {
+  const [video, setVideo] = useState<HTMLVideoElement | null>(null)
+  return (
+    <>
+      {intent ? (
+        <FeedInlineVideo
+          src={reel.src}
+          videoMp4Url={reel.videoMp4Url}
+          poster={reel.poster}
+          fill
+          reels
+          intent={intent}
+          holdPaused={idle}
+          mediaRef={setVideo}
+        />
+      ) : reel.poster ? (
+        <img
+          src={reel.poster}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-70"
+        />
+      ) : null}
+      <ReelScrubber video={video} onActivity={onActivity} />
+    </>
+  )
+}
 
 function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   const [items, setItems] = useState<Reel[]>([])
@@ -173,6 +362,16 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
 
   const current = items[index] ?? null
   const currentKey = current?.key
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const armIdle = useCallback(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current)
+    idleTimer.current = setTimeout(() => setIdle(true), IDLE_PAUSE_MS)
+  }, [])
+  /** Seek y cambio de video reinician los 5 min. No rerenderiza si ya estaba activo. */
+  const noteActivity = useCallback(() => {
+    setIdle(false)
+    armIdle()
+  }, [armIdle])
 
   // Cambiar de video: cuenta como visto y reinicia inactividad y "ver más".
   useEffect(() => {
@@ -180,14 +379,19 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
     markReelSeen(currentKey)
     setExpanded(false)
     setIdle(false)
-  }, [currentKey])
+    armIdle()
+    return () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+    }
+  }, [currentKey, armIdle])
 
-  // Inactividad: 5 min en el mismo video (el loop cuenta) → pausa + modal.
+  // El video tocado ya trae el origen; preconnect antes de que llegue la lista.
   useEffect(() => {
-    if (!currentKey || idle) return
-    const timer = setTimeout(() => setIdle(true), IDLE_PAUSE_MS)
-    return () => clearTimeout(timer)
-  }, [currentKey, idle])
+    preconnectOrigin(seedSrc)
+    const next = items[0]?.src
+    if (next) preconnectOrigin(next)
+    void import('hls.js')
+  }, [seedSrc, items])
 
   const onScroll = () => {
     const el = scrollerRef.current
@@ -252,24 +456,12 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             key={reel.key}
             className="relative h-full w-full snap-start snap-always overflow-hidden bg-black"
           >
-            {/* ponytail: solo el visible carga video; precargar el siguiente
-                sería montar también i === index ± 1 (más datos de Stream). */}
-            {i === index ? (
-              <FeedInlineVideo
-                src={reel.src}
-                videoMp4Url={reel.videoMp4Url}
-                poster={reel.poster}
-                fill
-                reels
-                holdPaused={idle}
-              />
-            ) : reel.poster ? (
-              <img
-                src={reel.poster}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-70"
-              />
-            ) : null}
+            <ReelMedia
+              reel={reel}
+              intent={reelIntent(i, index)}
+              idle={idle}
+              onActivity={noteActivity}
+            />
 
             {/* Acciones: like, comentarios, compartir */}
             <div className="absolute bottom-[calc(env(safe-area-inset-bottom)_+_7rem)] right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
@@ -449,7 +641,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             </p>
             <button
               type="button"
-              onClick={() => setIdle(false)}
+              onClick={noteActivity}
               style={jost}
               className="mt-4 w-full bg-[#CC4B37] px-4 py-2 text-[10px] font-extrabold uppercase text-white"
             >

@@ -37,7 +37,7 @@ const MIN_RECENT = 8
 
 const PLAYER_COLS =
   'id, user_id, content, video_url, video_mp4_url, thumbnail_url, created_at, users(alias, nombre, avatar_url)'
-// team_posts no tiene thumbnail_url: el poster lo saca el <video> del primer frame.
+// team_posts no tiene thumbnail_url: el poster sale del thumbnail de Stream.
 const TEAM_COLS =
   'id, team_id, created_by, content, video_url, video_mp4_url, created_at, teams(nombre, slug, logo_url)'
 
@@ -96,6 +96,20 @@ function str(value: unknown): string | null {
   return value == null ? null : String(value)
 }
 
+/** Primer frame de Cloudflare Stream, mismo origen que el manifiesto. */
+function streamPoster(src: string): string | null {
+  try {
+    const url = new URL(src)
+    const host = url.hostname.toLowerCase()
+    if (!host.includes('cloudflarestream.com') && !host.includes('videodelivery.net')) return null
+    const uid = url.pathname.split('/').filter(Boolean)[0]
+    if (!uid || uid === 'manifest') return null
+    return `${url.origin}/${uid}/thumbnails/thumbnail.jpg?time=0s&height=640`
+  } catch {
+    return null
+  }
+}
+
 function mapPlayerRow(row: Record<string, unknown>): Reel | null {
   const src = str(row.video_url)
   const id = str(row.id)
@@ -115,7 +129,7 @@ function mapPlayerRow(row: Record<string, unknown>): Reel | null {
     content: str(row.content),
     src,
     videoMp4Url: str(row.video_mp4_url),
-    poster: str(row.thumbnail_url),
+    poster: str(row.thumbnail_url) || streamPoster(src),
     shareUrl: `/u/${userId}#post-${id}`,
     postHref: `/dashboard?highlight_id=${id}&highlight_type=player`,
     createdAt: String(row.created_at ?? ''),
@@ -143,7 +157,7 @@ function mapTeamRow(row: Record<string, unknown>): Reel | null {
     content: str(row.content),
     src,
     videoMp4Url: str(row.video_mp4_url),
-    poster: null,
+    poster: streamPoster(src),
     shareUrl: `/equipos/${slug}`,
     postHref: `/dashboard?highlight_id=${id}&highlight_type=team`,
     createdAt: String(row.created_at ?? ''),

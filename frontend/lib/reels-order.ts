@@ -13,19 +13,24 @@ export type ReelRankInput = {
   commentCount: number
 }
 
-/** Pesos del puntaje. Subir RANDOM_W = más sorpresa, menos recencia. */
+/** Pesos del puntaje (sin azar: el azar entra al muestrear). */
 const RECENCY_W = 1
 const ENGAGEMENT_W = 0.8
-const RANDOM_W = 0.5
 /** A los 7 días la recencia vale la mitad. */
 const RECENCY_HALF_LIFE_DAYS = 7
 /** Un comentario pesa como 2 likes; 50 interacciones ya es engagement pleno. */
 const COMMENT_WEIGHT = 2
 const ENGAGEMENT_FULL = 50
+/**
+ * Piso del peso. Sumar ruido chico al score no cambiaba el orden: la recencia
+ * entre videos a días de distancia vale más que 0.5. El piso deja que uno viejo
+ * salga primero de vez en cuando sin ganarle siempre a lo reciente.
+ */
+const WEIGHT_FLOOR = 0.2
 
 const DAY_MS = 86_400_000
 
-export function reelScore(item: ReelRankInput, now: number, random: number): number {
+export function reelScore(item: ReelRankInput, now: number): number {
   const ageDays = (now - Date.parse(item.createdAt)) / DAY_MS
   const recency = Number.isFinite(ageDays)
     ? 2 ** (-Math.max(0, ageDays) / RECENCY_HALF_LIFE_DAYS)
@@ -33,13 +38,14 @@ export function reelScore(item: ReelRankInput, now: number, random: number): num
   const interactions =
     Math.max(0, item.likeCount) + COMMENT_WEIGHT * Math.max(0, item.commentCount)
   const engagement = Math.min(1, Math.log1p(interactions) / Math.log1p(ENGAGEMENT_FULL))
-  return RECENCY_W * recency + ENGAGEMENT_W * engagement + RANDOM_W * random
+  return RECENCY_W * recency + ENGAGEMENT_W * engagement
 }
 
 /**
- * Puntúa, descarta lo ya visto y separa autores repetidos.
- * ponytail: ranking por página (O(n²) al separar autores, n ≈ 24). Un ranking
- * global pediría un endpoint/RPC con el corpus completo.
+ * Puntúa, descarta lo ya visto, saca sin reemplazo con peso = puntaje + piso
+ * y separa autores repetidos. `random() === 0` devuelve el orden por puntaje.
+ * ponytail: ranking por página (O(n²), n ≈ 24). Un ranking global pediría
+ * un endpoint/RPC con el corpus completo.
  */
 export function orderReels<T extends ReelRankInput>(
   items: T[],
@@ -48,12 +54,30 @@ export function orderReels<T extends ReelRankInput>(
   const now = opts.now ?? Date.now()
   const random = opts.random ?? Math.random
   const seen = opts.seen
-  const scored = items
+  const rest = items
     .filter((item) => !seen?.has(item.key))
-    .map((item) => ({ item, score: reelScore(item, now, random()) }))
+    .map((item) => ({ item, score: reelScore(item, now) }))
     .sort((a, b) => b.score - a.score)
-    .map((s) => s.item)
-  return spreadAuthors(scored)
+  const picked: T[] = []
+  while (rest.length > 0) {
+    let total = 0
+    const weights = rest.map((entry) => {
+      const weight = entry.score + WEIGHT_FLOOR
+      total += weight
+      return weight
+    })
+    let ticket = random() * total
+    let idx = rest.length - 1
+    for (let i = 0; i < rest.length; i++) {
+      ticket -= weights[i]
+      if (ticket < 0) {
+        idx = i
+        break
+      }
+    }
+    picked.push(rest.splice(idx, 1)[0].item)
+  }
+  return spreadAuthors(picked)
 }
 
 /** Adelanta al siguiente de otro autor cuando el mejor repite el anterior. */
