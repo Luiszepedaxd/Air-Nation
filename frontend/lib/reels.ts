@@ -29,17 +29,15 @@ export type Reel = ReelRankInput & {
   likedByMe: boolean
 }
 
-/** Videos por página. */
+/** Videos por página. Sin tope de fecha: el cursor camina hasta el post más viejo. */
 const PAGE = 24
-/** Ventana de "recientes"; si hay menos de MIN_RECENT se cae a los más viejos. */
-const RECENT_DAYS = 30
-const MIN_RECENT = 8
 
 const PLAYER_COLS =
   'id, user_id, content, video_url, video_mp4_url, thumbnail_url, created_at, users(alias, nombre, avatar_url)'
-// team_posts no tiene thumbnail_url: el poster sale del thumbnail de Stream.
+// team_posts no tiene thumbnail_url ni video_mp4_url. Esa columna no existe:
+// seleccionarla tumba la query. El poster sale del thumbnail de Stream.
 const TEAM_COLS =
-  'id, team_id, created_by, content, video_url, video_mp4_url, created_at, teams(nombre, slug, logo_url)'
+  'id, team_id, created_by, content, video_url, created_at, teams(nombre, slug, logo_url)'
 
 // ---------------------------------------------------------------- estado
 
@@ -118,7 +116,8 @@ function streamPoster(src: string): string | null {
 }
 
 function mapPlayerRow(row: Record<string, unknown>): Reel | null {
-  const src = str(row.video_url)
+  const mp4 = str(row.video_mp4_url)
+  const src = str(row.video_url) || mp4
   const id = str(row.id)
   const userId = str(row.user_id)
   if (!src || !id || !userId) return null
@@ -135,7 +134,7 @@ function mapPlayerRow(row: Record<string, unknown>): Reel | null {
     authorHref: `/u/${userId}`,
     content: str(row.content),
     src,
-    videoMp4Url: str(row.video_mp4_url),
+    videoMp4Url: mp4,
     poster: str(row.thumbnail_url) || streamPoster(src),
     shareUrl: `/u/${userId}#post-${id}`,
     postHref: `/dashboard?highlight_id=${id}&highlight_type=player`,
@@ -147,7 +146,8 @@ function mapPlayerRow(row: Record<string, unknown>): Reel | null {
 }
 
 function mapTeamRow(row: Record<string, unknown>): Reel | null {
-  const src = str(row.video_url)
+  const mp4 = str(row.video_mp4_url)
+  const src = str(row.video_url) || mp4
   const id = str(row.id)
   const t = one(row.teams)
   const slug = str(t?.slug)
@@ -163,7 +163,7 @@ function mapTeamRow(row: Record<string, unknown>): Reel | null {
     authorHref: `/equipos/${slug}`,
     content: str(row.content),
     src,
-    videoMp4Url: str(row.video_mp4_url),
+    videoMp4Url: mp4,
     poster: streamPoster(src),
     shareUrl: `/equipos/${slug}`,
     postHref: `/dashboard?highlight_id=${id}&highlight_type=team`,
@@ -177,14 +177,14 @@ function mapTeamRow(row: Record<string, unknown>): Reel | null {
 type TablePage = { reels: Reel[]; next: string | null }
 
 /**
- * Una página de una tabla. `next` = created_at más viejo traído, o null si la
- * tabla ya se agotó. Un cursor por tabla: con un cursor único, una tabla con
- * pocos videos viejos se saltaría todos los recientes de la otra.
+ * Una página de una tabla, de nuevos a viejos, sin ventana de fechas.
+ * `next` = created_at más viejo traído, o null si la tabla ya se agotó
+ * (página corta). Un cursor por tabla: con uno solo, la tabla chica
+ * cortaría el historial de la otra.
  */
 async function fetchTablePage(
   table: 'player_posts' | 'team_posts',
   before: string | null,
-  since: string | null,
   exhausted: boolean
 ): Promise<TablePage> {
   if (exhausted) return { reels: [], next: null }
@@ -193,9 +193,14 @@ async function fetchTablePage(
     .from(table)
     .select(isPlayer ? PLAYER_COLS : TEAM_COLS)
     .eq('published', true)
-    .not('video_url', 'is', null)
+    // player_posts: Stream/R2 en video_url, o solo el mp4 en posts viejos.
+    // team_posts no tiene video_mp4_url; ese filtro tumba la query.
+    .or(
+      isPlayer
+        ? 'video_url.not.is.null,video_mp4_url.not.is.null'
+        : 'video_url.not.is.null'
+    )
   if (before) query = query.lt('created_at', before)
-  if (since) query = query.gte('created_at', since)
 
   const { data, error } = await query
     .order('created_at', { ascending: false })
@@ -205,7 +210,7 @@ async function fetchTablePage(
     return { reels: [], next: null }
   }
 
-  const rows = (data ?? []) as Record<string, unknown>[]
+  const rows = (data ?? []) as unknown as Record<string, unknown>[]
   const reels: Reel[] = []
   for (const row of rows) {
     const reel = isPlayer ? mapPlayerRow(row) : mapTeamRow(row)
@@ -276,21 +281,11 @@ export async function loadReelsPage(
 ): Promise<{ reels: Reel[]; cursor: ReelsCursor; done: boolean }> {
   const first = cursor === null
   const prev: ReelsCursor = cursor ?? { player: null, team: null }
-  const since = first
-    ? new Date(Date.now() - RECENT_DAYS * 86_400_000).toISOString()
-    : null
 
-  let [player, team] = await Promise.all([
-    fetchTablePage('player_posts', prev.player, since, !first && prev.player === null),
-    fetchTablePage('team_posts', prev.team, since, !first && prev.team === null),
+  const [player, team] = await Promise.all([
+    fetchTablePage('player_posts', prev.player, !first && prev.player === null),
+    fetchTablePage('team_posts', prev.team, !first && prev.team === null),
   ])
-  // Pocos videos recientes → se abre la ventana a los más antiguos.
-  if (first && player.reels.length + team.reels.length < MIN_RECENT) {
-    ;[player, team] = await Promise.all([
-      fetchTablePage('player_posts', null, null, false),
-      fetchTablePage('team_posts', null, null, false),
-    ])
-  }
 
   const raw = [...player.reels, ...team.reels]
   const blocked = await blockedIdsFor(currentUserId)
