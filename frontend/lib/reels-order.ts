@@ -80,6 +80,30 @@ export function orderReels<T extends ReelRankInput>(
   return spreadAuthors(picked)
 }
 
+/**
+ * Catálogo agotado: reordena lo ya mostrado, sin el video en pantalla, y si
+ * puede no arranca con el mismo autor. La lista puede traer repetidos; se
+ * queda la copia más reciente.
+ */
+export function recycleReels<T extends ReelRankInput>(
+  items: T[],
+  currentKey: string | null,
+  opts: { now?: number; random?: () => number } = {}
+): T[] {
+  const current = currentKey ? items.find((item) => item.key === currentKey) : undefined
+  const unique = new Map<string, T>()
+  for (const item of items) {
+    if (item.key !== currentKey) unique.set(item.key, item)
+  }
+  const ordered = orderReels([...unique.values()], opts)
+  if (!current || ordered.length < 2 || ordered[0].authorId !== current.authorId) return ordered
+  const other = ordered.findIndex((item) => item.authorId !== current.authorId)
+  if (other <= 0) return ordered
+  const [next] = ordered.splice(other, 1)
+  ordered.unshift(next)
+  return ordered
+}
+
 /** Adelanta al siguiente de otro autor cuando el mejor repite el anterior. */
 function spreadAuthors<T extends ReelRankInput>(list: T[]): T[] {
   const out: T[] = []

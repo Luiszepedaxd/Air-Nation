@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { orderReels, reelScore, type ReelRankInput } from './reels-order.ts'
+import { orderReels, recycleReels, reelScore, type ReelRankInput } from './reels-order.ts'
 
 const NOW = Date.parse('2026-10-20T12:00:00.000Z')
 const DAY = 86_400_000
@@ -117,6 +117,26 @@ describe('orderReels', () => {
     }
     assert.ok(freshFirst > trials * 0.65)
     assert.ok(freshFirst < trials)
+  })
+
+  it('una apertura nueva no hereda los vistos: sin seen vuelve el catálogo', () => {
+    const items = [reel('a', 'u1', 0), reel('b', 'u2', 1), reel('c', 'u3', 5)]
+    const seen = new Set(items.map((item) => item.key))
+    assert.equal(orderReels(items, { now: NOW, seen, random: noRandom }).length, 0)
+    assert.deepEqual(
+      orderReels(items, { now: NOW, random: noRandom }).map((item) => item.key),
+      ['a', 'b', 'c']
+    )
+  })
+
+  it('al agotar el pool recicla sin repetir el video ni el autor en pantalla', () => {
+    const items = [reel('a1', 'u1', 0), reel('a2', 'u1', 1), reel('b1', 'u2', 2)]
+    const out = recycleReels([...items, items[0]], 'a1', { now: NOW, random: noRandom })
+    assert.deepEqual(
+      out.map((item) => item.key).sort(),
+      ['a2', 'b1']
+    )
+    assert.notEqual(out[0].authorId, 'u1')
   })
 
   it('separa autores también cuando el azar reordena', () => {

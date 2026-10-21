@@ -23,10 +23,12 @@ import {
   getSeenReels,
   loadReelsPage,
   markReelSeen,
+  resetSeenReels,
   subscribeReels,
   type Reel,
   type ReelsCursor,
 } from '@/lib/reels'
+import { recycleReels } from '@/lib/reels-order'
 import { supabase } from '@/lib/supabase'
 
 const jost = {
@@ -261,6 +263,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   meRef.current = me
   const cursorRef = useRef<ReelsCursor | null>(null)
   const doneRef = useRef(false)
+  const indexRef = useRef(0)
   const loadingRef = useRef(false)
   const pushedRef = useRef(false)
   const pathRef = useRef(pathname)
@@ -361,9 +364,11 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
           })
         }
       }
+      if (cancelled) return
+      resetSeenReels()
       const [seed, page] = await Promise.all([
         fetchReelBySrc(seedSrc, uid),
-        loadReelsPage(null, uid, getSeenReels()),
+        loadReelsPage(null, uid, new Set(getSeenReels())),
       ])
       if (cancelled) return
       cursorRef.current = page.cursor
@@ -379,34 +384,51 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
     }
   }, [seedSrc])
 
+  const appendRecycle = useCallback(() => {
+    const list = itemsRef.current
+    const more = recycleReels(list, list[indexRef.current]?.key ?? null)
+    if (more.length === 0) return
+    setItems((prev) => [...prev, ...more])
+  }, [])
+
   const loadMore = useCallback(async () => {
-    if (loadingRef.current || doneRef.current) return
+    if (loadingRef.current) return
+    if (doneRef.current) {
+      appendRecycle()
+      return
+    }
     loadingRef.current = true
     try {
-      // Una página puede venir entera repetida: avanza el cursor y reintenta.
-      for (let attempt = 0; attempt < 3; attempt++) {
+      // Páginas enteras ya vistas: sigue hasta encontrar algo o agotar la tabla.
+      let guard = 0
+      while (guard++ < 40) {
         const cursor = cursorRef.current
         if (!cursor || doneRef.current) break
         const seen = new Set(getSeenReels())
         for (const r of itemsRef.current) seen.add(r.key)
         const page = await loadReelsPage(cursor, meRef.current?.id ?? null, seen)
+        const stalled =
+          page.cursor.player === cursor.player && page.cursor.team === cursor.team
         cursorRef.current = page.cursor
         doneRef.current = page.done
         if (page.reels.length > 0) {
           setItems((prev) => [...prev, ...page.reels])
-          break
+          return
         }
+        if (page.done || stalled) break
       }
+      appendRecycle()
     } finally {
       loadingRef.current = false
     }
-  }, [])
+  }, [appendRecycle])
 
   useEffect(() => {
     if (!ready) return
     if (items.length - index <= PREFETCH_AT) void loadMore()
   }, [ready, index, items.length, loadMore])
 
+  indexRef.current = index
   const current = items[index] ?? null
   const currentKey = current?.key
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -500,7 +522,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
       >
         {items.map((reel, i) => (
           <section
-            key={reel.key}
+            key={`${reel.key}:${i}`}
             className="relative h-full w-full snap-start snap-always overflow-hidden bg-black"
           >
             <ReelMedia

@@ -47,15 +47,21 @@ type ReelsOpen = { src: string } | null
 
 let openState: ReelsOpen = null
 const listeners = new Set<() => void>()
-/** Keys ya vistas en esta sesión (se reinicia al recargar). */
+/** Keys ya vistas en esta apertura. Se vacía al abrir y al cerrar. */
 const seenKeys = new Set<string>()
 
 function emit() {
   for (const listener of listeners) listener()
 }
 
+export function resetSeenReels() {
+  seenKeys.clear()
+}
+
 export function openReels(src: string) {
   if (!src) return
+  // Cada apertura es una lista nueva. Lo visto de la anterior no puede vaciarla.
+  resetSeenReels()
   openState = { src }
   emit()
 }
@@ -63,6 +69,7 @@ export function openReels(src: string) {
 export function closeReels() {
   if (!openState) return
   openState = null
+  resetSeenReels()
   emit()
 }
 
