@@ -492,6 +492,266 @@ export function PostActions({
 
 const REPLIES_PAGE_SIZE = 2
 const COMMENTS_PAGE_SIZE = 3
+const REEL_COMMENT_LIMIT = 150
+const REEL_CACHE_MS = 60_000
+
+type ReelThread = { comments: PostComment[]; total: number; at: number }
+
+const reelCommentCache = new Map<string, ReelThread>()
+const reelCommentInflight = new Map<string, Promise<ReelThread>>()
+
+function reelCacheKey(postType: string, postId: string, userId: string | null) {
+  return `${postType}:${postId}:${userId ?? ''}`
+}
+
+function freshReelThread(key: string): ReelThread | null {
+  const hit = reelCommentCache.get(key)
+  if (!hit || Date.now() - hit.at > REEL_CACHE_MS) return null
+  return hit
+}
+
+function commentAuthor(row: Record<string, unknown>) {
+  const u = Array.isArray(row.users) ? row.users[0] : row.users
+  const uo = (u ?? {}) as Record<string, unknown>
+  return {
+    alias: uo.alias ? String(uo.alias) : null,
+    nombre: uo.nombre ? String(uo.nombre) : null,
+    avatar_url: uo.avatar_url ? String(uo.avatar_url) : null,
+  }
+}
+
+function displayName(user: { alias: string | null; nombre: string | null }) {
+  return user.alias?.trim() || user.nombre?.trim() || 'Jugador'
+}
+
+/** "13 h" — solo la hoja de Reels. El feed conserva el texto largo. */
+function formatSheetTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  if (!Number.isFinite(diff) || diff < 0) return 'ahora'
+  const min = Math.floor(diff / 60000)
+  if (min < 1) return 'ahora'
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `${h} h`
+  const d = Math.floor(h / 24)
+  if (d < 7) return `${d} d`
+  return `${Math.floor(d / 7)} sem`
+}
+
+/**
+ * Un viaje por los comentarios del post (raíz y respuestas juntas) y otro
+ * en paralelo por likes y alias que falten. Antes eran cinco idas y vueltas.
+ */
+async function fetchReelThread(
+  postType: FeedPostType,
+  postId: string,
+  currentUserId: string | null
+): Promise<ReelThread> {
+  const { data, error } = await supabase
+    .from('post_comments')
+    .select(
+      `id, user_id, content, created_at, parent_id, reply_to_user_id,
+       users!user_id ( alias, nombre, avatar_url )`
+    )
+    .eq('post_type', postType)
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+    .limit(REEL_COMMENT_LIMIT)
+
+  if (error) throw error
+  if (!data) return { comments: [], total: 0, at: Date.now() }
+
+  const rows = data as Record<string, unknown>[]
+  const ids = rows.map((r) => String(r.id))
+  const aliasById: Record<string, string> = {}
+  for (const row of rows) {
+    const user = commentAuthor(row)
+    aliasById[String(row.user_id)] = displayName(user)
+  }
+  const missingAlias = Array.from(
+    new Set(
+      rows
+        .map((r) => (r.reply_to_user_id ? String(r.reply_to_user_id) : null))
+        .filter((id): id is string => !!id && !aliasById[id])
+    )
+  )
+
+  const [aliasRes, likeRes] = await Promise.all([
+    missingAlias.length > 0
+      ? supabase.from('users').select('id, alias, nombre').in('id', missingAlias)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    ids.length > 0
+      ? supabase
+          .from('post_reactions')
+          .select('post_id, user_id')
+          .eq('post_type', 'comment')
+          .in('post_id', ids)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+  ])
+
+  for (const u of (aliasRes.data ?? []) as Record<string, unknown>[]) {
+    aliasById[String(u.id)] =
+      (u.alias ? String(u.alias) : null) ??
+      (u.nombre ? String(u.nombre) : null) ??
+      'Jugador'
+  }
+  const likeMap: Record<string, number> = {}
+  const liked = new Set<string>()
+  for (const lc of likeRes.data ?? []) {
+    const row = lc as Record<string, unknown>
+    const pid = String(row.post_id)
+    likeMap[pid] = (likeMap[pid] ?? 0) + 1
+    if (currentUserId && String(row.user_id) === currentUserId) liked.add(pid)
+  }
+
+  const build = (r: Record<string, unknown>): PostComment => {
+    const rtuid = r.reply_to_user_id ? String(r.reply_to_user_id) : null
+    return {
+      id: String(r.id),
+      user_id: String(r.user_id),
+      content: String(r.content),
+      created_at: String(r.created_at),
+      parent_id: r.parent_id ? String(r.parent_id) : null,
+      reply_to_user_id: rtuid,
+      reply_to_user_alias: rtuid ? (aliasById[rtuid] ?? null) : null,
+      user: commentAuthor(r),
+      likeCount: likeMap[String(r.id)] ?? 0,
+      likedByMe: liked.has(String(r.id)),
+      replies: [],
+      repliesShown: 0,
+    }
+  }
+
+  const repliesByParent: Record<string, PostComment[]> = {}
+  const roots: PostComment[] = []
+  for (const row of rows) {
+    const comment = build(row)
+    if (comment.parent_id) {
+      if (!repliesByParent[comment.parent_id]) repliesByParent[comment.parent_id] = []
+      repliesByParent[comment.parent_id].push(comment)
+    } else {
+      roots.push(comment)
+    }
+  }
+  for (const root of roots) root.replies = repliesByParent[root.id] ?? []
+  roots.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+  return { comments: roots, total: roots.length, at: Date.now() }
+}
+
+function loadReelThread(
+  postType: FeedPostType,
+  postId: string,
+  currentUserId: string | null
+): Promise<ReelThread> {
+  const key = reelCacheKey(postType, postId, currentUserId)
+  const fresh = freshReelThread(key)
+  if (fresh) return Promise.resolve(fresh)
+  const pending = reelCommentInflight.get(key)
+  if (pending) return pending
+  const task = fetchReelThread(postType, postId, currentUserId)
+    .then((thread) => {
+      reelCommentCache.set(key, thread)
+      reelCommentInflight.delete(key)
+      return thread
+    })
+    .catch((err) => {
+      reelCommentInflight.delete(key)
+      throw err
+    })
+  reelCommentInflight.set(key, task)
+  return task
+}
+
+/** Calienta el hilo del video visible y del siguiente. */
+export function prefetchReelComments(
+  postType: FeedPostType,
+  postId: string,
+  currentUserId: string | null
+) {
+  if (!postId) return
+  void loadReelThread(postType, postId, currentUserId).catch(() => undefined)
+}
+
+function SheetAvatar({
+  url,
+  name,
+  size,
+}: {
+  url: string | null
+  name: string
+  size: number
+}) {
+  return (
+    <span
+      className="inline-flex shrink-0 overflow-hidden rounded-full bg-[#F2F2F2]"
+      style={{ width: size, height: size }}
+    >
+      {url ? (
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span
+          style={jost}
+          className="flex h-full w-full items-center justify-center text-[11px] text-[#CC4B37]"
+        >
+          {name[0]?.toUpperCase() ?? 'A'}
+        </span>
+      )}
+    </span>
+  )
+}
+
+function SheetHeart({
+  filled,
+  count,
+  disabled,
+  onClick,
+}: {
+  filled: boolean
+  count: number
+  disabled: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-8 shrink-0 flex-col items-center gap-0.5 pt-1 disabled:opacity-30"
+      aria-label={filled ? 'Quitar me gusta' : 'Me gusta'}
+    >
+      <HeartIcon filled={filled} size={16} />
+      {count > 0 ? (
+        <span style={lato} className="text-[11px] text-[#8A8A8A]">
+          {count}
+        </span>
+      ) : null}
+    </button>
+  )
+}
+
+function sameBody(a: PostComment, b: PostComment) {
+  return a.user_id === b.user_id && a.content === b.content
+}
+
+/** El refresh no debe pisar un envío que todavía no volvió del servidor. */
+function keepDrafts(prev: PostComment[], next: PostComment[]): PostComment[] {
+  const draftRoots = prev.filter(
+    (c) => c.id.startsWith('tmp-') && !next.some((n) => sameBody(n, c))
+  )
+  const draftReplies = new Map<string, PostComment[]>()
+  for (const root of prev) {
+    const server = next.find((n) => n.id === root.id)
+    const drafts = root.replies.filter(
+      (r) => r.id.startsWith('tmp-') && !server?.replies.some((s) => sameBody(s, r))
+    )
+    if (drafts.length > 0) draftReplies.set(root.id, drafts)
+  }
+  const merged = next.map((root) => {
+    const extra = draftReplies.get(root.id)
+    return extra ? { ...root, replies: [...root.replies, ...extra] } : root
+  })
+  return [...draftRoots, ...merged]
+}
 
 export function CommentsSection({
   postType,
@@ -502,6 +762,7 @@ export function CommentsSection({
   currentUserAvatar,
   postHref,
   onCommentCountChange,
+  variant = 'inline',
 }: {
   postType: FeedPostType
   postId: string
@@ -511,17 +772,27 @@ export function CommentsSection({
   currentUserAvatar: string | null
   postHref: string
   onCommentCountChange?: (delta: number) => void
+  /** `sheet` es la hoja de Reels. El feed sigue en `inline`. */
+  variant?: 'inline' | 'sheet'
 }) {
-  const [comments, setComments] = useState<PostComment[]>([])
-  const [total, setTotal] = useState(0)
+  const warmed =
+    variant === 'sheet' ? freshReelThread(reelCacheKey(postType, postId, currentUserId)) : null
+  const [comments, setComments] = useState<PostComment[]>(warmed?.comments ?? [])
+  const [total, setTotal] = useState(warmed?.total ?? 0)
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [sheetLoading, setSheetLoading] = useState(variant === 'sheet' && !warmed)
+  const [sheetError, setSheetError] = useState(false)
+  const [sheetTry, setSheetTry] = useState(0)
   const [text, setText] = useState('')
   const [posting, setPosting] = useState(false)
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null)
   const [replyText, setReplyText] = useState('')
   const [replyPosting, setReplyPosting] = useState(false)
+  const [openThreads, setOpenThreads] = useState<Record<string, boolean>>({})
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const mounted = useRef(true)
+  const sending = useRef(false)
 
   const loadComments = async (pageNum: number, append = false) => {
     const from = 0
@@ -647,10 +918,51 @@ export function CommentsSection({
   }
 
   useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (variant !== 'sheet') return
+    let cancelled = false
+    const key = reelCacheKey(postType, postId, currentUserId)
+    if (!freshReelThread(key)) setSheetLoading(true)
+    setSheetError(false)
+    void loadReelThread(postType, postId, currentUserId)
+      .then((thread) => {
+        if (cancelled) return
+        setComments((prev) => keepDrafts(prev, thread.comments))
+        setTotal(thread.total)
+        setSheetLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        reelCommentCache.delete(key)
+        setSheetError(true)
+        setSheetLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [variant, postId, postType, currentUserId, sheetTry])
+
+  useEffect(() => {
+    if (variant !== 'sheet' || sheetLoading) return
+    reelCommentCache.set(reelCacheKey(postType, postId, currentUserId), {
+      comments,
+      total,
+      at: Date.now(),
+    })
+  }, [variant, sheetLoading, comments, total, postType, postId, currentUserId])
+
+  useEffect(() => {
+    if (variant === 'sheet') return
     setPage(1)
     void loadComments(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload comments when post identity or user changes
-  }, [postId, postType, currentUserId])
+  }, [variant, postId, postType, currentUserId])
 
   const handleLoadMore = async () => {
     setLoadingMore(true)
@@ -885,8 +1197,360 @@ export function CommentsSection({
     onCommentCountChange?.(-1)
   }
 
+  const sendSheet = async () => {
+    if (!currentUserId || !text.trim() || sending.current) return
+    sending.current = true
+    const trimmed = text.trim()
+    const replying = replyTarget
+    const tempId = `tmp-${Date.now()}`
+    const mine = {
+      alias: currentUserAlias,
+      nombre: null,
+      avatar_url: currentUserAvatar,
+    }
+    const draft: PostComment = {
+      id: tempId,
+      user_id: currentUserId,
+      content: trimmed,
+      created_at: new Date().toISOString(),
+      parent_id: replying ? replying.rootCommentId : null,
+      reply_to_user_id: replying ? replying.replyToUserId : null,
+      reply_to_user_alias: replying ? replying.replyToUserAlias : null,
+      user: mine,
+      likeCount: 0,
+      likedByMe: false,
+      replies: [],
+      repliesShown: 0,
+    }
+    setPosting(true)
+    setText('')
+    setReplyTarget(null)
+    if (replying) {
+      setOpenThreads((prev) => ({ ...prev, [replying.rootCommentId]: true }))
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === replying.rootCommentId ? { ...c, replies: [...c.replies, draft] } : c
+        )
+      )
+    } else {
+      setComments((prev) => [draft, ...prev])
+      setTotal((t) => t + 1)
+    }
+    onCommentCountChange?.(1)
+
+    let data: Record<string, unknown> | null = null
+    let error: { message: string } | null = null
+    try {
+      const inserted = await supabase
+        .from('post_comments')
+        .insert({
+          user_id: currentUserId,
+          post_type: postType,
+          post_id: postId,
+          content: trimmed,
+          parent_id: replying ? replying.rootCommentId : null,
+          reply_to_user_id: replying ? replying.replyToUserId : null,
+        })
+        .select(
+          `id, user_id, content, created_at, parent_id, reply_to_user_id, users!user_id(alias, nombre, avatar_url)`
+        )
+        .single()
+      data = (inserted.data as Record<string, unknown> | null) ?? null
+      error = inserted.error
+    } catch {
+      error = { message: 'network' }
+    }
+
+    if (error || !data) {
+      onCommentCountChange?.(-1)
+      if (!mounted.current) {
+        reelCommentCache.delete(reelCacheKey(postType, postId, currentUserId))
+        sending.current = false
+        return
+      }
+      setComments((prev) =>
+        prev
+          .filter((c) => c.id !== tempId)
+          .map((c) => ({ ...c, replies: c.replies.filter((r) => r.id !== tempId) }))
+      )
+      if (!replying) setTotal((t) => Math.max(0, t - 1))
+      setText(trimmed)
+      if (replying) setReplyTarget(replying)
+      setPosting(false)
+      sending.current = false
+      return
+    }
+
+    const saved = data as Record<string, unknown>
+    const realId = String(saved.id)
+    const savedUser = commentAuthor(saved)
+    const createdAt = String(saved.created_at)
+    if (!mounted.current) {
+      reelCommentCache.delete(reelCacheKey(postType, postId, currentUserId))
+      sending.current = false
+    } else {
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === tempId) return { ...c, id: realId, created_at: createdAt, user: savedUser }
+          if (!c.replies.some((r) => r.id === tempId)) return c
+          return {
+            ...c,
+            replies: c.replies.map((r) =>
+              r.id === tempId ? { ...r, id: realId, created_at: createdAt, user: savedUser } : r
+            ),
+          }
+        })
+      )
+    }
+    setPosting(false)
+    sending.current = false
+    const notifyId = replying ? replying.replyToUserId : postOwnerId
+    if (notifyId && notifyId !== currentUserId) {
+      await supabase.from('user_notifications').insert({
+        recipient_id: notifyId,
+        actor_id: currentUserId,
+        type: replying ? 'reply_comment' : 'comment_post',
+        post_type: replying ? postType : postType,
+        post_id: postId,
+        ...(replying ? { comment_id: replying.rootCommentId } : {}),
+        href: postHref,
+      })
+      notifyNotifUpdated()
+      void sendPushNotif(
+        notifyId,
+        replying ? 'Nueva respuesta' : 'Nuevo comentario',
+        `${currentUserAlias ?? 'Alguien'}: ${trimmed.length > 50 ? trimmed.slice(0, 50) + '…' : trimmed}`,
+        postHref
+      )
+    }
+  }
+
   const displayedComments = comments.slice(0, page * COMMENTS_PAGE_SIZE)
   const hasMore = total > displayedComments.length
+
+  if (variant === 'sheet') {
+    const mine = currentUserAlias ?? 'U'
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {sheetLoading && comments.length === 0 ? (
+            <div className="space-y-4 py-3" aria-hidden>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3">
+                  <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-[#F0F0F0]" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <div className="h-2.5 w-16 animate-pulse rounded bg-[#F0F0F0]" />
+                    <div className="h-3.5 w-full animate-pulse rounded bg-[#F0F0F0]" />
+                    <div className="h-3.5 w-2/3 animate-pulse rounded bg-[#F0F0F0]" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : sheetError && comments.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <p style={lato} className="text-[14px] text-[#888888]">
+                No se pudieron cargar los comentarios
+              </p>
+              <button
+                type="button"
+                style={lato}
+                className="mt-3 text-[14px] font-semibold text-[#CC4B37]"
+                onClick={() => setSheetTry((n) => n + 1)}
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : comments.length === 0 ? (
+            <p style={lato} className="px-6 py-16 text-center text-[14px] text-[#888888]">
+              Sé el primero en comentar
+            </p>
+          ) : (
+            <ul className="space-y-4 py-3">
+              {comments.map((c) => {
+                const name = displayName(c.user)
+                const open = openThreads[c.id] === true
+                return (
+                  <li key={c.id}>
+                    <div className="flex gap-3">
+                      <Link href={`/u/${c.user_id}`} className="shrink-0" aria-label={name}>
+                        <SheetAvatar url={c.user.avatar_url} name={name} size={36} />
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <p style={lato} className="text-[12px] text-[#8A8A8A]">
+                          {name}
+                        </p>
+                        <p style={lato} className="mt-0.5 break-words text-[15px] leading-snug text-[#111111]">
+                          {c.content}
+                        </p>
+                        <div className="mt-1.5 flex items-center gap-3">
+                          <span style={lato} className="text-[12px] text-[#8A8A8A]">
+                            {formatSheetTime(c.created_at)}
+                          </span>
+                          {currentUserId ? (
+                            <button
+                              type="button"
+                              style={lato}
+                              className="text-[12px] font-semibold text-[#8A8A8A]"
+                              onClick={() => {
+                                setReplyTarget({
+                                  rootCommentId: c.id,
+                                  replyToUserId: c.user_id,
+                                  replyToUserAlias: name,
+                                })
+                                setText(`@${name} `)
+                                inputRef.current?.focus()
+                              }}
+                            >
+                              Responder
+                            </button>
+                          ) : null}
+                          {currentUserId === c.user_id ? (
+                            <button
+                              type="button"
+                              style={lato}
+                              className="text-[12px] text-[#8A8A8A]"
+                              onClick={() => void handleDeleteComment(c.id, true)}
+                            >
+                              Eliminar
+                            </button>
+                          ) : null}
+                        </div>
+                        {c.replies.length > 0 && !open ? (
+                          <button
+                            type="button"
+                            style={lato}
+                            className="mt-2 text-[13px] font-semibold text-[#8A8A8A]"
+                            onClick={() => setOpenThreads((prev) => ({ ...prev, [c.id]: true }))}
+                          >
+                            Ver {c.replies.length} respuesta{c.replies.length === 1 ? '' : 's'}
+                          </button>
+                        ) : null}
+                        {open
+                          ? c.replies.map((rep) => {
+                              const repName = displayName(rep.user)
+                              return (
+                                <div key={rep.id} className="mt-3 flex gap-2.5">
+                                  <Link href={`/u/${rep.user_id}`} className="shrink-0" aria-label={repName}>
+                                    <SheetAvatar url={rep.user.avatar_url} name={repName} size={28} />
+                                  </Link>
+                                  <div className="min-w-0 flex-1">
+                                    <p style={lato} className="text-[12px] text-[#8A8A8A]">
+                                      {repName}
+                                    </p>
+                                    <p style={lato} className="mt-0.5 break-words text-[15px] leading-snug text-[#111111]">
+                                      {rep.content}
+                                    </p>
+                                    <div className="mt-1.5 flex items-center gap-3">
+                                      <span style={lato} className="text-[12px] text-[#8A8A8A]">
+                                        {formatSheetTime(rep.created_at)}
+                                      </span>
+                                      {currentUserId ? (
+                                        <button
+                                          type="button"
+                                          style={lato}
+                                          className="text-[12px] font-semibold text-[#8A8A8A]"
+                                          onClick={() => {
+                                            setReplyTarget({
+                                              rootCommentId: c.id,
+                                              replyToUserId: rep.user_id,
+                                              replyToUserAlias: repName,
+                                            })
+                                            setText(`@${repName} `)
+                                            inputRef.current?.focus()
+                                          }}
+                                        >
+                                          Responder
+                                        </button>
+                                      ) : null}
+                                      {currentUserId === rep.user_id ? (
+                                        <button
+                                          type="button"
+                                          style={lato}
+                                          className="text-[12px] text-[#8A8A8A]"
+                                          onClick={() => void handleDeleteComment(rep.id, false)}
+                                        >
+                                          Eliminar
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                  <SheetHeart
+                                    filled={rep.likedByMe}
+                                    count={rep.likeCount}
+                                    disabled={!currentUserId}
+                                    onClick={() => void handleLikeComment(rep.id, rep.likedByMe)}
+                                  />
+                                </div>
+                              )
+                            })
+                          : null}
+                      </div>
+                      <SheetHeart
+                        filled={c.likedByMe}
+                        count={c.likeCount}
+                        disabled={!currentUserId}
+                        onClick={() => void handleLikeComment(c.id, c.likedByMe)}
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+        <div className="shrink-0 border-t border-[#F2F2F2] bg-white px-3 pt-2 pb-2">
+          {replyTarget ? (
+            <div className="mb-1.5 flex items-center px-1">
+              <p style={lato} className="text-[12px] text-[#8A8A8A]">
+                Respondiendo a @{replyTarget.replyToUserAlias}
+              </p>
+              <button
+                type="button"
+                className="ml-auto px-1 text-[#8A8A8A]"
+                aria-label="Cancelar respuesta"
+                onClick={() => {
+                  setReplyTarget(null)
+                  setText('')
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          ) : null}
+          <div className="flex items-end gap-2">
+            <SheetAvatar url={currentUserAvatar} name={mine} size={32} />
+            <textarea
+              ref={inputRef}
+              value={text}
+              rows={1}
+              enterKeyHint="send"
+              placeholder="Agregar comentario..."
+              style={lato}
+              onChange={(e) => setText(e.target.value.slice(0, 500))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  void sendSheet()
+                }
+              }}
+              className="max-h-24 min-h-9 flex-1 resize-none rounded-full bg-[#F2F2F2] px-4 py-2 text-[15px] text-[#111111] placeholder:text-[#9A9A9A] focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void sendSheet()}
+              disabled={!text.trim() || !currentUserId}
+              style={jost}
+              className="mb-0.5 shrink-0 rounded-full bg-[#CC4B37] px-3 py-2 text-[10px] font-extrabold uppercase text-white disabled:opacity-40"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mt-3 border-t border-[#EEEEEE] pt-3 space-y-3">

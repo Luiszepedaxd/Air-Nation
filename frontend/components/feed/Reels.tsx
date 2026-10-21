@@ -13,7 +13,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
-import { CommentsSection, HeartIcon } from '@/components/posts/PostInteractions'
+import {
+  CommentsSection,
+  HeartIcon,
+  prefetchReelComments,
+} from '@/components/posts/PostInteractions'
 import { feedAvatarUrl } from '@/lib/media-url'
 import { sharePost, togglePostLike } from '@/lib/post-engagements'
 import {
@@ -253,6 +257,10 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   const [idle, setIdle] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [commentsFor, setCommentsFor] = useState<Reel | null>(null)
+  const [sheetDrag, setSheetDrag] = useState(0)
+  const [sheetDragging, setSheetDragging] = useState(false)
+  const [keyboardInset, setKeyboardInset] = useState(0)
+  const sheetDragRef = useRef({ y: 0, t: 0, on: false })
   const [me, setMe] = useState<Me | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
@@ -463,6 +471,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   }, [seedSrc, items])
 
   const onScroll = () => {
+    if (commentsFor) return
     const el = scrollerRef.current
     if (!el) return
     const height = el.clientHeight || 1
@@ -506,6 +515,55 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
     }
   }
 
+  useEffect(() => {
+    const uid = me?.id ?? null
+    const cur = items[index]
+    const nxt = items[index + 1]
+    if (cur) prefetchReelComments(cur.postType, cur.postId, uid)
+    if (nxt) prefetchReelComments(nxt.postType, nxt.postId, uid)
+  }, [index, items, me?.id])
+
+  useEffect(() => {
+    setSheetDrag(0)
+    setSheetDragging(false)
+    if (!commentsFor) {
+      setKeyboardInset(0)
+      return
+    }
+    const vv = window.visualViewport
+    if (!vv) return
+    const sync = () => {
+      setKeyboardInset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop))
+    }
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+    }
+  }, [commentsFor])
+
+  const onSheetPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return
+    sheetDragRef.current = { y: event.clientY, t: Date.now(), on: true }
+    setSheetDragging(true)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  const onSheetPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!sheetDragRef.current.on) return
+    setSheetDrag(Math.max(0, event.clientY - sheetDragRef.current.y))
+  }
+  const onSheetPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!sheetDragRef.current.on) return
+    const dy = Math.max(0, event.clientY - sheetDragRef.current.y)
+    const dt = Math.max(1, Date.now() - sheetDragRef.current.t)
+    sheetDragRef.current.on = false
+    setSheetDragging(false)
+    if (dy > 96 || (dy > 36 && dy / dt > 0.65)) setCommentsFor(null)
+    else setSheetDrag(0)
+  }
+
   const bumpCommentCount = (key: string, delta: number) =>
     setItems((prev) =>
       prev.map((r) =>
@@ -518,12 +576,26 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
       <div
         ref={scrollerRef}
         onScroll={onScroll}
-        className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={
+          commentsFor
+            ? 'h-full w-full overflow-hidden'
+            : 'h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+        }
       >
         {items.map((reel, i) => (
           <section
             key={`${reel.key}:${i}`}
             className="relative h-full w-full snap-start snap-always overflow-hidden bg-black"
+            style={
+              commentsFor && i === index
+                ? {
+                    transform: `translateY(8px) scale(${Math.min(1, 0.34 + sheetDrag / 560)})`,
+                    transformOrigin: 'center top',
+                    transition: sheetDragging ? 'none' : 'transform 280ms ease',
+                    borderRadius: 14,
+                  }
+                : undefined
+            }
           >
             <ReelMedia
               reel={reel}
@@ -533,7 +605,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             />
 
             {/* Acciones: like, comentarios, compartir */}
-            <div className="absolute bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px)+2.75rem)] right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] lg:bottom-[calc(env(safe-area-inset-bottom)+5rem)]">
+            <div className={`absolute bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px)+2.75rem)] right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] lg:bottom-[calc(env(safe-area-inset-bottom)+5rem)] ${commentsFor ? 'invisible' : ''}`}>
               <button
                 type="button"
                 onClick={() => void toggleLike(reel)}
@@ -584,7 +656,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             </div>
 
             {/* Autor + descripción */}
-            <div className="absolute inset-x-0 bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-10 pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10 lg:bottom-[env(safe-area-inset-bottom)]">
+            <div className={`absolute inset-x-0 bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-10 pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10 lg:bottom-[env(safe-area-inset-bottom)] ${commentsFor ? 'invisible' : ''}`}>
               <Link
                 href={reel.authorHref}
                 onClick={() => closeReels()}
@@ -646,7 +718,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
       <button
         type="button"
         onClick={dismiss}
-        className="absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[max(0.5rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white"
+        className={`absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[max(0.5rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white ${commentsFor ? 'invisible' : ''}`}
         aria-label="Cerrar reels"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -662,7 +734,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
 
       <p
         style={lato}
-        className="pointer-events-none absolute left-1/2 top-[max(0.6rem,env(safe-area-inset-top))] z-30 max-w-[58%] -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-center text-[10px] leading-tight text-white/85"
+        className={`pointer-events-none absolute left-1/2 top-[max(0.6rem,env(safe-area-inset-top))] z-30 max-w-[58%] -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-center text-[10px] leading-tight text-white/85 ${commentsFor ? 'invisible' : ''}`}
       >
         Beta: esta sección está en pruebas y puede tener errores
       </p>
@@ -721,22 +793,44 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
       ) : null}
 
       {commentsFor ? (
-        <div className="absolute inset-0 z-40 flex flex-col justify-end">
+        <div className="absolute inset-0 z-40">
           <button
             type="button"
             aria-label="Cerrar comentarios"
             onClick={() => setCommentsFor(null)}
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0"
           />
-          <div className="relative mb-[calc(4rem+max(env(safe-area-inset-bottom),12px))] max-h-[72%] overflow-y-auto bg-white px-4 pb-4 pt-3 lg:mb-0 lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <div className="flex items-center justify-between">
-              <p style={jost} className="text-[12px] text-[#111111]">
-                Comentarios
+          <div
+            className={`absolute inset-x-0 z-10 flex flex-col rounded-t-2xl bg-white ${
+              keyboardInset > 0
+                ? ''
+                : 'bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] lg:bottom-[env(safe-area-inset-bottom)]'
+            }`}
+            style={{
+              height: keyboardInset > 0 ? `calc(100% - ${keyboardInset}px - 18%)` : '70%',
+              maxHeight: '70%',
+              transform: `translateY(${sheetDrag}px)`,
+              transition: sheetDragging ? 'none' : 'transform 220ms ease',
+              ...(keyboardInset > 0 ? { bottom: keyboardInset } : {}),
+            }}
+          >
+            <div
+              className="relative shrink-0 touch-none px-10 pb-2 pt-2"
+              onPointerDown={onSheetPointerDown}
+              onPointerMove={onSheetPointerMove}
+              onPointerUp={onSheetPointerUp}
+              onPointerCancel={onSheetPointerUp}
+            >
+              <div className="mx-auto mt-1 h-1 w-9 rounded-full bg-black/15" />
+              <p style={lato} className="pt-2 text-center text-[13px] font-semibold text-[#111111]">
+                {(items.find((r) => r.key === commentsFor.key)?.commentCount ??
+                  commentsFor.commentCount)}{' '}
+                comentarios
               </p>
               <button
                 type="button"
                 onClick={() => setCommentsFor(null)}
-                className="p-1 text-[#666666]"
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center text-[#111111]"
                 aria-label="Cerrar comentarios"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -750,6 +844,8 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
               </button>
             </div>
             <CommentsSection
+              key={commentsFor.key}
+              variant="sheet"
               postType={commentsFor.postType}
               postId={commentsFor.postId}
               postOwnerId={commentsFor.postOwnerId}
