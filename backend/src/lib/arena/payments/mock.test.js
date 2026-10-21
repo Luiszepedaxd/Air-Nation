@@ -3,7 +3,7 @@ const crypto = require("node:crypto");
 const { describe, it, before } = require("node:test");
 
 process.env.ARENA_PUBLIC_URL = "https://www.airnation.online";
-process.env.SUPABASE_SERVICE_KEY = "service-key-de-prueba";
+process.env.ARENA_MOCK_WEBHOOK_SECRET = "secreto-webhook-de-prueba";
 
 const mock = require("./mock");
 
@@ -29,7 +29,7 @@ describe("proveedor mock", () => {
     body: Buffer.from(JSON.stringify(body)),
     headers: {
       "x-arena-mock-signature": crypto
-        .createHmac("sha256", process.env.SUPABASE_SERVICE_KEY)
+        .createHmac("sha256", process.env.ARENA_MOCK_WEBHOOK_SECRET)
         .update(Buffer.from(JSON.stringify(body)))
         .digest("hex"),
     },
@@ -67,6 +67,17 @@ describe("proveedor mock", () => {
     const bueno = firmar({ provider_ref: "mock_abc", status: "fallido" });
     bueno.body = Buffer.from(JSON.stringify({ provider_ref: "mock_abc", status: "pagado" }));
     assert.throws(() => mock.parseWebhook(bueno), /firma_invalida/);
+  });
+
+  it("sin ARENA_MOCK_WEBHOOK_SECRET el webhook queda cerrado", () => {
+    const firmado = firmar({ provider_ref: "mock_abc", status: "pagado" });
+    const secreto = process.env.ARENA_MOCK_WEBHOOK_SECRET;
+    delete process.env.ARENA_MOCK_WEBHOOK_SECRET;
+    try {
+      assert.throws(() => mock.parseWebhook(firmado), /secreto_faltante/);
+    } finally {
+      process.env.ARENA_MOCK_WEBHOOK_SECRET = secreto;
+    }
   });
 
   it("refund devuelve reembolsado", async () => {

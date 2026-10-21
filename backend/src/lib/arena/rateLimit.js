@@ -27,23 +27,19 @@ function createIpLimit(perMinute) {
 }
 
 /**
- * IP real del cliente. La app no activa `trust proxy`, así que `req.ip` sería
- * la del proxy de Railway y todas las peticiones caerían en el mismo cupo.
+ * Middleware de Express: 429 con mensaje en español.
+ * `req.ip` ya es la IP real del cliente porque index.js activa
+ * `trust proxy = 1`; leer x-forwarded-for a mano dejaría elegir el cupo a
+ * quien mande la cabecera.
  */
-function clientIp(req) {
-  const fwd = String(req.headers?.["x-forwarded-for"] || "").split(",")[0].trim();
-  return fwd || req.ip || req.socket?.remoteAddress || "desconocida";
-}
-
-/** Middleware de Express: 429 con mensaje en español. */
 function ipRateLimit(perMinute) {
   const allow = createIpLimit(perMinute);
   return function limite(req, res, next) {
-    if (!allow(clientIp(req))) {
+    if (!allow(req.ip)) {
       return res.status(429).json({ error: "Demasiados intentos. Espera un minuto." });
     }
     next();
   };
 }
 
-module.exports = { createIpLimit, clientIp, ipRateLimit };
+module.exports = { createIpLimit, ipRateLimit };

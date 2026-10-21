@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const { describe, it } = require("node:test");
-const { createIpLimit, clientIp } = require("./rateLimit");
+const { createIpLimit, ipRateLimit } = require("./rateLimit");
 
 describe("createIpLimit", () => {
   it("deja pasar el cupo y corta el siguiente, por IP", () => {
@@ -14,13 +14,27 @@ describe("createIpLimit", () => {
   });
 });
 
-describe("clientIp", () => {
-  it("usa el primer x-forwarded-for porque la app no activa trust proxy", () => {
-    assert.equal(
-      clientIp({ headers: { "x-forwarded-for": "187.1.2.3, 10.0.0.1" }, ip: "10.0.0.1" }),
-      "187.1.2.3"
+describe("ipRateLimit", () => {
+  // Pide con la IP que resolvió Express (trust proxy) y una x-forwarded-for
+  // falsificada distinta: si el middleware hiciera caso a la cabecera, cada
+  // petición tendría cupo nuevo y nunca saldría el 429.
+  const pedir = (middleware, ip) => {
+    let status = null;
+    middleware(
+      { ip, headers: { "x-forwarded-for": `9.9.9.${Math.random()}` } },
+      { status: (c) => ((status = c), { json: () => {} }) },
+      () => (status = 200)
     );
-    assert.equal(clientIp({ headers: {}, ip: "187.9.9.9" }), "187.9.9.9");
-    assert.equal(clientIp({ headers: {} }), "desconocida");
+    return status;
+  };
+
+  it("cuenta por req.ip e ignora x-forwarded-for", () => {
+    const middleware = ipRateLimit(2);
+    assert.deepEqual(
+      [pedir(middleware, "187.1.2.3"), pedir(middleware, "187.1.2.3"), pedir(middleware, "187.1.2.3")],
+      [200, 200, 429]
+    );
+    // Otro cliente sigue pasando.
+    assert.equal(pedir(middleware, "187.4.5.6"), 200);
   });
 });

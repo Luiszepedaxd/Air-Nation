@@ -194,6 +194,7 @@ Todo el dinero pasa por AirNation. Como el proveedor aún no se decide, se const
 
 - `ARENA_PAYMENT_PROVIDER` = `mock` en dev y staging. Vacío = ARENA no acepta reservas (botón RESERVAR oculto, `POST /bookings` → `arena_inactivo`).
 - `mock` con `NODE_ENV=production` → el backend no arranca.
+- `ARENA_MOCK_WEBHOOK_SECRET` firma `x-arena-mock-signature` (HMAC-SHA256 del cuerpo crudo). Vacío = `POST /arena/payments/webhook/mock` → 503.
 
 **Flujo:** reserva `pendiente_pago` → checkout → webhook marca `arena_payments` y llama `arena_mark_paid` → `confirmada` → email con QR al jugador y push al dueño. El webhook nunca baja un estado ya pagado. Un pago tardío se confirma igual; si la reserva estaba cancelada, se reembolsa.
 

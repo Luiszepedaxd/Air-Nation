@@ -112,7 +112,9 @@ router.post("/webhook/:provider", async (req, res) => {
   try {
     evento = provider.parseWebhook(req);
   } catch (err) {
-    console.error(`[arena:webhook ${req.params.provider}] firma inválida:`, err.message);
+    console.error(`[arena:webhook ${req.params.provider}] ${err.message}`);
+    // Sin secreto para verificar, el webhook está sin configurar, no rechazado.
+    if (err.message === "secreto_faltante") return res.status(503).send("Webhook sin configurar");
     return res.status(400).send("Firma inválida");
   }
 

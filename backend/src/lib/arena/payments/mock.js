@@ -17,17 +17,21 @@ async function createCheckout({ booking }) {
 
 /**
  * El webhook genérico tiene que quedar cerrado también para el mock: si no,
- * cualquiera podría marcar una reserva como pagada. Se firma con la service
- * key que el backend ya tiene, en `x-arena-mock-signature`.
+ * cualquiera podría marcar una reserva como pagada. Se firma con
+ * `ARENA_MOCK_WEBHOOK_SECRET` en `x-arena-mock-signature` — un secreto propio,
+ * para no darle a un proveedor de prueba la llave que abre toda la base.
+ * Sin secreto configurado el webhook no se puede verificar y queda cerrado
+ * (`secreto_faltante` → 503).
  * Los botones de la pantalla de prueba no pasan por aquí: llaman a
  * POST /arena/payments/mock/:paymentId/complete, que ya identifica el pago.
  */
 function parseWebhook(req) {
   const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body || ""));
-  const secret = process.env.SUPABASE_SERVICE_KEY || "";
+  const secret = process.env.ARENA_MOCK_WEBHOOK_SECRET || "";
+  if (!secret) throw new Error("secreto_faltante");
   const firma = String(req.headers["x-arena-mock-signature"] || "");
   const esperada = crypto.createHmac("sha256", secret).update(raw).digest("hex");
-  if (!secret || firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) {
+  if (firma.length !== esperada.length || !crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada))) {
     throw new Error("firma_invalida");
   }
 

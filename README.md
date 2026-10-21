@@ -109,6 +109,9 @@ ALLOWED_ORIGINS=http://localhost:3000,https://airnation.online
 # no arranca a propósito.
 ARENA_PAYMENT_PROVIDER=mock
 ARENA_PUBLIC_URL=https://www.airnation.online
+# Firma del webhook del proveedor mock (x-arena-mock-signature, HMAC-SHA256 del
+# cuerpo crudo). Vacío = POST /arena/payments/webhook/mock responde 503.
+ARENA_MOCK_WEBHOOK_SECRET=
 ```
 
 ### Frontend (.env.local)

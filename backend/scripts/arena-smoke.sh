@@ -7,6 +7,7 @@
 #   export ARENA_OWNER_TOKEN=<JWT de un miembro del campo>   # opcional
 #   export ARENA_FIELD_ID=<uuid de un campo ya cargado>
 #   export ARENA_USER_ID=<uuid de la cuenta a ligar>         # opcional
+#   export ARENA_MOCK_WEBHOOK_SECRET=<mismo valor que el backend>  # opcional
 #   bash backend/scripts/arena-smoke.sh
 set -u
 
@@ -215,10 +216,26 @@ llamar GET "$OWNER" "/arena/me/bookings"
 paso "GET /arena/checkin con QR inventado (espera 404)"
 llamar GET "$OWNER" "/arena/checkin/$(printf 'a%.0s' $(seq 64))"
 
-paso "POST webhook mock sin firma (espera 400)"
+# Sin ARENA_MOCK_WEBHOOK_SECRET en el backend no hay con qué verificar la firma
+# y el webhook responde 503 en vez de 400.
+if [ -n "${ARENA_MOCK_WEBHOOK_SECRET:-}" ]; then
+  paso "POST webhook mock sin firma (espera 400)"
+else
+  paso "POST webhook mock sin ARENA_MOCK_WEBHOOK_SECRET (espera 503)"
+fi
 curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
   -X POST "$API/arena/payments/webhook/mock" -H 'Content-Type: application/json' \
   -d '{"provider_ref":"mock_x","status":"pagado"}'
+
+if [ -n "${ARENA_MOCK_WEBHOOK_SECRET:-}" ]; then
+  paso "POST webhook mock firmado con provider_ref inventado (espera 200 ignorado)"
+  CUERPO='{"provider_ref":"mock_inventado","status":"pagado"}'
+  FIRMA="$(printf '%s' "$CUERPO" \
+    | openssl dgst -sha256 -hmac "$ARENA_MOCK_WEBHOOK_SECRET" -r | cut -d' ' -f1)"
+  curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/payments/webhook/mock" -H 'Content-Type: application/json' \
+    -H "x-arena-mock-signature: $FIRMA" -d "$CUERPO"
+fi
 
 # ─── Reservas de admin y liquidaciones ───────────────────────────────────────
 

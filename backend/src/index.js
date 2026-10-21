@@ -31,6 +31,10 @@ const arenaRouter = require("./routes/arena");
 const { iniciarJobIndexNow } = require("./jobs/indexnow");
 
 const app = express();
+// Railway pone exactamente un proxy delante: con esto `req.ip` es la IP real
+// del cliente (último salto de x-forwarded-for) y el rate limit cuenta por
+// cliente, no por proxy. Un número fijo evita confiar en cabeceras falsificadas.
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 4000;
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
