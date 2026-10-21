@@ -35,6 +35,8 @@ export type PlayerPostRow = {
   fotos_urls: string[] | null
   created_at: string
   video_url?: string | null
+  video_mp4_url?: string | null
+  thumbnail_url?: string | null
   video_duration_s?: number | null
   /** Ids (uuid) de usuarios @mencionados; columna en DB: `mentions` */
   mentions?: string[] | null

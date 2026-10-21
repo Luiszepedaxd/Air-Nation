@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { PostMedia } from '@/components/posts/PhotoGrid'
+import { postCardColumn, postCardShell } from '@/components/posts/post-card'
 import { parseContentWithMentions } from '@/app/dashboard/FeedHome'
 import { formatPostTimestamp } from '@/lib/format-post-timestamp'
 import { supabase } from '@/lib/supabase'
@@ -127,9 +128,10 @@ export function EventoPostsTab({
   }
 
   return (
-    <div className="px-4 py-6 md:px-6 md:py-8">
+    <div className="py-6 md:py-8">
+      <div className={postCardColumn}>
       {canPublish && sessionUserId ? (
-        <div className="mx-auto mb-6 w-full max-w-[600px]">
+        <div className="mb-6">
           <EventoPostBoxMini
             eventId={eventId}
             userId={sessionUserId}
@@ -148,7 +150,7 @@ export function EventoPostsTab({
           Aún no hay publicaciones de este evento.
         </p>
       ) : (
-        <div className="mx-auto flex w-full max-w-[600px] flex-col gap-4">
+        <div className="flex flex-col">
           {posts.map((post) => {
             const fotos = (post.fotos_urls ?? []).slice(0, 4)
             const authorName = (post.author_nombre || post.author_alias || '—').trim()
@@ -162,8 +164,9 @@ export function EventoPostsTab({
             return (
               <article
                 key={`${post.kind}-${post.id}`}
-                className="border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+                className={postCardShell}
               >
+                <div className="px-4 pt-3">
                 <div className="mb-3 flex items-center gap-3">
                   <Link href={href}>
                     <div className="h-9 w-9 shrink-0 overflow-hidden bg-[#F4F4F4]">
@@ -223,6 +226,7 @@ export function EventoPostsTab({
                     )}
                   </p>
                 ) : null}
+                </div>
 
                 <PostMedia
                   urls={fotos}
@@ -237,6 +241,7 @@ export function EventoPostsTab({
           })}
         </div>
       )}
+      </div>
     </div>
   )
 }

@@ -10,6 +10,7 @@ import {
 import { PostContent } from '@/components/feed/PostContent'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PostMedia } from '@/components/posts/PhotoGrid'
+import { postCardBreakout, postCardColumn, postCardShell } from '@/components/posts/post-card'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { adminDeletePlayerPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
@@ -156,9 +157,10 @@ export function PlayerProfileClient({
 
       <div className="mx-auto max-w-[960px] px-4 py-6 md:px-6 md:py-8">
         {tab === 'posts' ? (
-          <>
+          <div className={postCardBreakout}>
+            <div className={postCardColumn}>
             {showPostBox && currentUserId ? (
-              <div className="mx-auto mb-4 w-full max-w-[600px]">
+              <div className="mb-4">
                 <PostBox
                   userId={currentUserId}
                   userAlias={user.alias}
@@ -171,7 +173,7 @@ export function PlayerProfileClient({
                     const { data } = await supabase
                       .from('player_posts')
                       .select(
-                        'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
+                        'id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, mentions, created_at'
                       )
                       .eq('user_id', user.id)
                       .eq('published', true)
@@ -194,7 +196,8 @@ export function PlayerProfileClient({
                 setPostsState((prev) => prev.filter((p) => p.id !== postId))
               }
             />
-          </>
+            </div>
+          </div>
         ) : null}
 
         {tab === 'replicas' ? (
@@ -246,8 +249,9 @@ function PostsPanel({
           <article
             id={`post-${post.id}`}
             key={post.id}
-            className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+            className={postCardShell}
           >
+            <div className="px-4 pt-3">
             <div className="flex items-center justify-between mb-2">
               <p
                 className="text-[11px] text-[#999999]"
@@ -297,10 +301,20 @@ function PostsPanel({
                 className="mb-3"
               />
             ) : null}
+            </div>
             <PostMedia
               urls={urls}
-              video={post.video_url ? { src: post.video_url } : null}
+              video={
+                post.video_url
+                  ? {
+                      src: post.video_url,
+                      videoMp4Url: post.video_mp4_url,
+                      poster: post.thumbnail_url,
+                    }
+                  : null
+              }
             />
+            <div className="px-4 pb-3">
             <PostActions
               postType="player"
               postId={post.id}
@@ -312,6 +326,7 @@ function PostsPanel({
               shareUrl={`/u/${profileUserId}#post-${post.id}`}
               shareTitle="Publicación en AirNation"
             />
+            </div>
           </article>
         )
       })}

@@ -138,7 +138,7 @@ async function fetchPosts(teamId: string): Promise<TeamPostRow[]> {
   const supabase = createPublicSupabaseClient()
   const { data, error } = await supabase
     .from('team_posts')
-    .select('id, content, fotos_urls, created_at, created_by')
+    .select('id, content, fotos_urls, video_url, video_mp4_url, created_at, created_by')
     .eq('team_id', teamId)
     .eq('published', true)
     .order('created_at', { ascending: false })

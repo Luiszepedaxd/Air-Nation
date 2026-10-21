@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostMedia } from '@/components/posts/PhotoGrid'
+import { postCardBreakout, postCardColumn, postCardShell } from '@/components/posts/post-card'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import { notifyPendingJoinUpdated } from '@/lib/pending-join-requests'
@@ -661,13 +662,14 @@ function PostsTabListSkeleton() {
     <ul className="flex flex-col" aria-busy aria-label="Cargando publicaciones">
       {[0, 1, 2].map((k) => (
         <li key={k} className="list-none">
-          <div className="mx-auto mb-4 w-full max-w-[600px] animate-pulse border border-solid border-[#EEEEEE] p-4">
-            <div className="mb-3 h-4 max-w-[85%] rounded-sm bg-[#EEEEEE]" />
-            <div className="grid grid-cols-2 gap-[2px]">
-              <div className="h-[140px] bg-[#EEEEEE]" />
-              <div className="h-[140px] bg-[#F4F4F4]" />
+          <div className="w-full animate-pulse border-b border-[#EEEEEE]">
+            <div className="px-4 pt-3">
+              <div className="mb-3 h-4 max-w-[85%] rounded-sm bg-[#EEEEEE]" />
             </div>
-            <div className="mt-3 h-3 w-24 rounded-sm bg-[#F4F4F4]" />
+            <div className="aspect-[4/5] bg-[#EEEEEE]" />
+            <div className="px-4 py-3">
+              <div className="h-3 w-24 rounded-sm bg-[#F4F4F4]" />
+            </div>
           </div>
         </li>
       ))}
@@ -1474,7 +1476,8 @@ function PostsTab({
   }
 
   return (
-    <div className="pb-10">
+    <div className={`${postCardBreakout} pb-10`}>
+      <div className={postCardColumn}>
       <div>
         <div className="relative">
           <textarea
@@ -1584,7 +1587,8 @@ function PostsTab({
             const urls = postUrls(post)
             return (
               <li key={post.id} className="list-none">
-                <div className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] p-4">
+                <div className={postCardShell}>
+                  <div className="px-4 pt-3">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-[11px] text-[#999999]" style={lato}>
                       {relativeTime(post.created_at)}
@@ -1617,7 +1621,9 @@ function PostsTab({
                       {post.content.trim()}
                     </p>
                   ) : null}
-                  {urls.length > 0 && <PhotoGrid urls={urls} />}
+                  </div>
+                  <PostMedia urls={urls} />
+                  <div className="px-4 pb-3">
                   <PostActions
                     postType="team"
                     postId={post.id}
@@ -1629,12 +1635,14 @@ function PostsTab({
                     shareUrl={`/equipos/${slug}`}
                     shareTitle="Publicación del equipo en AirNation"
                   />
+                  </div>
                 </div>
               </li>
             )
           })}
         </ul>
       )}
+      </div>
     </div>
   )
 }

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { PostPhotoGallery } from '@/app/equipos/[slug]/components/PostPhotoGallery'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostMedia } from '@/components/posts/PhotoGrid'
+import { postCardBreakout, postCardColumn, postCardShell } from '@/components/posts/post-card'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { adminDeleteFieldPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
@@ -548,18 +549,20 @@ export function CampoPublicTabs({
                 No hay publicaciones aún
               </p>
             ) : (
+              <div className={postCardBreakout}>
+              <div className={postCardColumn}>
               <ul className="m-0 list-none p-0">
-                {publicaciones.map((p, idx) => {
+                {publicaciones.map((p) => {
                   const photos = p.fotos_urls.slice(0, 4)
-                  const isLast = idx === publicaciones.length - 1
                   const isFieldOwner =
                     currentUserId != null &&
                     currentUserId === field.created_by
                   return (
                     <li
                       key={p.id}
-                      className={`pb-6 ${isLast ? '' : 'mb-6 border-b border-[#EEEEEE]'}`}
+                      className={postCardShell}
                     >
+                      <div className="px-4 pt-3">
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[11px] text-[#999999]" style={lato}>
                           {formatPostTimestamp(p.created_at)}
@@ -606,7 +609,9 @@ export function CampoPublicTabs({
                           {p.content.trim()}
                         </p>
                       ) : null}
-                      {photos.length > 0 && <PhotoGrid urls={photos} />}
+                      </div>
+                      <PostMedia urls={photos} />
+                      <div className="px-4 pb-3">
                       <PostActions
                         postType="field"
                         postId={p.id}
@@ -618,10 +623,13 @@ export function CampoPublicTabs({
                         shareUrl={`/campos/${field.slug}`}
                         shareTitle={`${field.nombre} en AirNation`}
                       />
+                      </div>
                     </li>
                   )
                 })}
               </ul>
+              </div>
+              </div>
             )}
           </div>
         ) : null}

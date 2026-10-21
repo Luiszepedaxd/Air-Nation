@@ -13,6 +13,7 @@ import {
 } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import { PostMedia } from '@/components/posts/PhotoGrid'
+import { postCardShell as feedPostShell, postCardShellHi as feedPostShellHi } from '@/components/posts/post-card'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
 import {
@@ -652,12 +653,6 @@ function HighlightBadge() {
     </span>
   )
 }
-
-/** Sin caja: el medio sangra y cancela el padding de la página. Los posts se separan con una línea. */
-const feedPostShell =
-  'min-w-0 -mx-4 w-[calc(100%+2rem)] border-b border-[#EEEEEE] bg-[#FFFFFF] md:-mx-6 md:w-[calc(100%+3rem)]'
-const feedPostShellHi =
-  'min-w-0 -mx-4 w-[calc(100%+2rem)] border-b border-[#CC4B37] bg-[#FFF8F7] md:-mx-6 md:w-[calc(100%+3rem)]'
 
 function formatEventDate(iso: string) {
   try {

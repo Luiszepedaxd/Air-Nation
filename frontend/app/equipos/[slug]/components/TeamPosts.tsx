@@ -1,7 +1,9 @@
 'use client'
 
 import type { TeamPostRow } from '../types'
-import { PhotoGrid } from '@/components/posts/PhotoGrid'
+import { PostContent } from '@/components/feed/PostContent'
+import { PostMedia } from '@/components/posts/PhotoGrid'
+import { postCardBreakout, postCardColumn, postCardShell } from '@/components/posts/post-card'
 import { PostActions } from '@/components/posts/PostInteractions'
 import { adminDeleteTeamPost } from '@/app/admin/feed/actions'
 import { ReportablePostMenu } from '@/components/posts/ReportablePostMenu'
@@ -14,20 +16,6 @@ const jost = {
 } as const
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
-
-function stripHtml(html: string) {
-  return html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function excerpt(content: string | null, max: number) {
-  if (!content) return ''
-  const text = stripHtml(content)
-  if (text.length <= max) return text
-  return `${text.slice(0, max).trim()}…`
-}
 
 function formatDate(iso: string) {
   try {
@@ -81,7 +69,7 @@ export function TeamPosts({
     <section
       className={
         variant === 'section'
-          ? 'mx-auto w-full max-w-[960px] px-4 py-8'
+          ? 'mx-auto w-full max-w-[960px] px-4 py-8 md:px-6'
           : 'w-full'
       }
     >
@@ -93,10 +81,10 @@ export function TeamPosts({
           Publicaciones
         </h2>
       ) : null}
-      <div className="flex flex-col">
+      <div className={`flex flex-col ${postCardBreakout}`}>
+        <div className={postCardColumn}>
         {posts.map((post) => {
           const urls = postPhotoUrls(post)
-          const ex = excerpt(post.content, 120)
           const authorId = post.created_by ?? teamOwnerId
           const reportReporterId =
             currentUserId && authorId && currentUserId !== authorId
@@ -106,8 +94,9 @@ export function TeamPosts({
           return (
             <article
               key={post.id}
-              className="mx-auto mb-4 w-full max-w-[600px] border border-solid border-[#EEEEEE] bg-[#FFFFFF] p-4"
+              className={postCardShell}
             >
+              <div className="px-4 pt-3">
               <div className="mb-2 flex items-center justify-between">
                 <time
                   className="text-[12px] text-[#666666]"
@@ -139,18 +128,26 @@ export function TeamPosts({
                   reporterId={reportReporterId}
                   targetType="post"
                   targetId={post.id}
-                  targetLabel={ex ? ex.slice(0, 80) : 'Publicación del equipo'}
+                  targetLabel={post.content?.trim().slice(0, 80) || 'Publicación del equipo'}
                 />
               </div>
-              {ex ? (
-                <p
-                  className="mb-3 text-[14px] leading-relaxed text-[#111111]"
-                  style={lato}
-                >
-                  {ex}
-                </p>
+              {post.content?.trim() ? (
+                <PostContent content={post.content} className="mb-3" />
               ) : null}
-              {urls.length > 0 && <PhotoGrid urls={urls} />}
+              </div>
+              <PostMedia
+                urls={urls}
+                video={
+                  post.video_url
+                    ? {
+                        src: post.video_url,
+                        videoMp4Url: post.video_mp4_url,
+                        poster: post.thumbnail_url,
+                      }
+                    : null
+                }
+              />
+              <div className="px-4 pb-3">
               <PostActions
                 postType="team"
                 postId={post.id}
@@ -162,9 +159,11 @@ export function TeamPosts({
                 shareUrl={`/equipos/${teamSlug}`}
                 shareTitle="Publicación del equipo en AirNation"
               />
+              </div>
             </article>
           )
         })}
+        </div>
       </div>
     </section>
   )

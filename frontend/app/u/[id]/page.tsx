@@ -85,7 +85,7 @@ const fetchPublicProfile = cache(async (id: string) => {
     const { data: postsData } = await supabase
       .from('player_posts')
       .select(
-        'id, content, fotos_urls, video_url, video_duration_s, mentions, created_at'
+        'id, content, fotos_urls, video_url, video_mp4_url, thumbnail_url, video_duration_s, mentions, created_at'
       )
       .eq('user_id', id)
       .eq('published', true)

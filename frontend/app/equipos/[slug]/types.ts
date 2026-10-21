@@ -38,6 +38,9 @@ export type TeamPostRow = {
   fotos_urls: string[] | null
   created_at: string
   created_by?: string | null
+  video_url?: string | null
+  video_mp4_url?: string | null
+  thumbnail_url?: string | null
 }
 
 /** URLs de fotos desde la columna `fotos_urls` (TEXT[]) de `team_albums`. */
