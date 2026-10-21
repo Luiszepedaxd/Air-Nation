@@ -145,3 +145,177 @@ export type ArenaOwnerField = {
   reservas_hoy: number
   llegadas_hoy: number
 }
+
+export type ArenaBookingStatus =
+  | 'pendiente_pago'
+  | 'confirmada'
+  | 'completada'
+  | 'cancelada'
+  | 'no_show'
+  | 'expirada'
+
+export type ArenaPagoStatus =
+  | 'pendiente'
+  | 'pagado'
+  | 'fallido'
+  | 'reembolsado'
+  | 'reembolso_parcial'
+
+export type ArenaBookingItem = {
+  nombre: string
+  tipo: string
+  unidad: string
+  cantidad: number
+  precio_unit_centavos: number
+  subtotal_centavos: number
+}
+
+/** Renglón de la agenda del dueño. */
+export type ArenaAgendaBooking = {
+  id: string
+  codigo: string
+  fecha: string
+  num_jugadores: number
+  jugadores_llegaron: number | null
+  status: ArenaBookingStatus
+  pago_status: ArenaPagoStatus
+  total_centavos: number
+  comision_centavos: number
+  monto_campo_centavos: number
+  reembolso_centavos: number
+  contacto_nombre: string
+  contacto_email: string
+  contacto_telefono: string | null
+  notas_jugador: string | null
+  notas_internas: string | null
+  origen: string
+  checkin_at: string | null
+  cancelada_por: string | null
+  motivo_cancelacion: string | null
+  expires_at: string | null
+  created_at: string
+  qr_token: string | null
+  items: ArenaBookingItem[]
+}
+
+export type ArenaAgenda = {
+  reservas: ArenaAgendaBooking[]
+  desde: string
+  hasta: string
+  hoy: string
+  esperados: number
+  llegaron: number
+}
+
+/** Reserva como la ve el jugador (y la pantalla de confirmación). */
+export type ArenaReserva = {
+  codigo: string
+  fecha: string
+  num_jugadores: number
+  jugadores_llegaron: number | null
+  status: ArenaBookingStatus
+  pago_status: ArenaPagoStatus
+  origen: string
+  contacto_nombre: string
+  contacto_email: string
+  contacto_telefono: string | null
+  notas_jugador: string | null
+  subtotal_centavos: number
+  total_centavos: number
+  reembolso_centavos: number
+  expires_at: string | null
+  checkin_at: string | null
+  cancelada_at: string | null
+  cancelada_por: string | null
+  motivo_cancelacion: string | null
+  created_at: string
+  items: ArenaBookingItem[]
+  campo: {
+    id: string
+    nombre: string
+    slug: string
+    ciudad: string | null
+    direccion: string | null
+    maps_url: string | null
+    foto_portada_url: string | null
+    telefono: string | null
+  } | null
+  politica_cancelacion: string | null
+  cancelacion_horas_limite: number
+  limite_cancelacion: string
+  cancelable: boolean
+  pago_pendiente: { id: string; provider: string; checkout_url: string | null } | null
+  qr_token?: string
+  qr_url?: string
+}
+
+export type ArenaPayout = {
+  id: string
+  periodo_desde: string
+  periodo_hasta: string
+  reservas_count: number
+  bruto_centavos: number
+  comision_centavos: number
+  reembolsos_centavos: number
+  neto_centavos: number
+  status: 'pendiente' | 'transferido'
+  referencia: string | null
+  transferido_at: string | null
+  created_at: string
+}
+
+export type ArenaSaldos = {
+  saldos: {
+    vendido_centavos: number
+    comision_centavos: number
+    reembolsado_centavos: number
+    por_liquidar_centavos: number
+    liquidado_centavos: number
+    reservas_por_liquidar: number
+  }
+  liquidaciones: ArenaPayout[]
+  hoy: string
+}
+
+export type ArenaCheckinPreview = {
+  reserva: {
+    codigo: string
+    fecha: string
+    num_jugadores: number
+    jugadores_llegaron: number | null
+    status: ArenaBookingStatus
+    pago_status: ArenaPagoStatus
+    total_centavos: number
+    contacto_nombre: string
+    contacto_telefono: string | null
+    notas_jugador: string | null
+    checkin_at: string | null
+    items: { nombre: string; tipo: string; unidad: string; cantidad: number; subtotal_centavos: number }[]
+    campo: { id: string; nombre: string; slug: string } | null
+  }
+  hoy: string
+}
+
+export type ArenaFichaPublica = {
+  field: {
+    id: string
+    nombre: string
+    slug: string
+    ciudad: string | null
+    direccion: string | null
+    maps_url: string | null
+    foto_portada_url: string | null
+    horarios_json: unknown
+  }
+  arena: {
+    activo: boolean
+    politica_cancelacion: string | null
+    cancelacion_horas_limite: number
+    anticipacion_min_horas: number
+    anticipacion_max_dias: number
+    reservas_habilitadas: boolean
+  }
+  items: ArenaItem[]
+}
+
+export type ArenaOpenDay = { fecha: string; apertura: string; cierre: string }

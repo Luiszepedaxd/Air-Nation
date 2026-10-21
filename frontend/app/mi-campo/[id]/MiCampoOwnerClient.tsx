@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { ScrollableTabsNav } from '@/components/ScrollableTabsNav'
 import type { FieldReviewPublic } from '@/app/campos/types'
 import { supabase } from '@/lib/supabase'
+import { ArenaTabLink } from './components/ArenaTabLink'
 import { EventosTab, type MiCampoEventRow } from './components/EventosTab'
 
 const jost = {
@@ -358,6 +359,7 @@ export function MiCampoOwnerClient({
               </span>
             ) : null}
           </button>
+          <ArenaTabLink fieldId={field.id} />
         </ScrollableTabsNav>
       </div>
 

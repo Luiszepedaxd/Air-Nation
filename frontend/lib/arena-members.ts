@@ -44,3 +44,16 @@ export async function isArenaFieldMember(
   }
   return Boolean(data)
 }
+
+/** ¿Puede operar el campo? Creador legacy, miembro activo o admin de app. */
+export async function puedeOperarCampo(
+  fieldId: string,
+  userId: string | null | undefined,
+  createdBy: string | null | undefined,
+  appRole?: string | null
+): Promise<boolean> {
+  if (!userId || !fieldId) return false
+  if (createdBy && createdBy === userId) return true
+  if (appRole === 'admin') return true
+  return isArenaFieldMember(fieldId, userId)
+}
