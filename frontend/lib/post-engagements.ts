@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase'
+import { sendPushNotif } from '@/lib/sendPushNotif'
+import { notifyNotifUpdated } from '@/lib/user-notifications'
 
 export type PostEngagementType =
   | 'player'
@@ -281,4 +283,76 @@ export function fetchPostEngagements(
       void flushPending()
     })
   })
+}
+
+/**
+ * Like/unlike de un post: reacción + notificación + push al autor.
+ * Compartido por la card del feed (`PostActions`) y el modo Reels.
+ * El contador lo maneja quien llama (optimista).
+ */
+export async function togglePostLike(args: {
+  postType: PostEngagementType
+  postId: string
+  postOwnerId: string | null
+  currentUserId: string
+  currentUserAlias: string | null
+  postHref: string
+  /** Estado ANTES del toque: true = ya tenía like y se quita. */
+  liked: boolean
+}): Promise<void> {
+  const { postType, postId, postOwnerId, currentUserId, currentUserAlias, postHref, liked } = args
+  if (liked) {
+    await supabase.from('post_reactions').delete()
+      .eq('post_type', postType)
+      .eq('post_id', postId)
+      .eq('user_id', currentUserId)
+    return
+  }
+  const { error } = await supabase.from('post_reactions').insert({
+    user_id: currentUserId,
+    post_type: postType,
+    post_id: postId,
+    reaction: 'fire',
+  })
+  if (error || !postOwnerId || postOwnerId === currentUserId) return
+  await supabase.from('user_notifications').insert({
+    recipient_id: postOwnerId,
+    actor_id: currentUserId,
+    type: 'like_post',
+    post_type: postType,
+    post_id: postId,
+    href: postHref,
+  })
+  notifyNotifUpdated()
+  void sendPushNotif(
+    postOwnerId,
+    'Le gustó tu publicación',
+    `${currentUserAlias ?? 'Alguien'} reaccionó a tu post`,
+    postHref
+  )
+}
+
+/** Share nativo con fallback a copiar al portapapeles. */
+export async function sharePost(
+  shareUrl: string,
+  shareTitle: string
+): Promise<'shared' | 'copied' | 'failed'> {
+  const fullUrl =
+    shareUrl.startsWith('http://') || shareUrl.startsWith('https://')
+      ? shareUrl
+      : `https://airnation.online${shareUrl}`
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: shareTitle, url: fullUrl })
+      return 'shared'
+    } catch {
+      return 'failed' // cancelado
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(fullUrl)
+    return 'copied'
+  } catch {
+    return 'failed'
+  }
 }

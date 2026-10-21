@@ -8,6 +8,8 @@ import { notifyNotifUpdated } from '@/lib/user-notifications'
 import {
   engagementKey,
   fetchPostEngagements,
+  sharePost,
+  togglePostLike,
   type PostEngagementType,
 } from '@/lib/post-engagements'
 
@@ -48,13 +50,22 @@ type ReplyTarget = {
   replyToUserAlias: string
 }
 
-export function HeartIcon({ filled, size = 18 }: { filled: boolean; size?: number }) {
+export function HeartIcon({
+  filled,
+  size = 18,
+  emptyColor = '#999999',
+}: {
+  filled: boolean
+  size?: number
+  /** Contorno sin like; blanco sobre el video del modo Reels. */
+  emptyColor?: string
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M12 21C12 21 3 15.5 3 9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6.5-9 12-9 12Z"
         fill={filled ? '#CC4B37' : 'none'}
-        stroke={filled ? '#CC4B37' : '#999999'}
+        stroke={filled ? '#CC4B37' : emptyColor}
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -364,55 +375,23 @@ export function PostActions({
 
   const handleLike = async () => {
     if (!currentUserId) return
-    if (liked) {
-      setLiked(false)
-      setLikeCount(c => Math.max(0, c - 1))
-      await supabase.from('post_reactions').delete()
-        .eq('post_type', postType)
-        .eq('post_id', postId)
-        .eq('user_id', currentUserId)
-    } else {
-      setLiked(true)
-      setLikeCount(c => c + 1)
-      const { error } = await supabase.from('post_reactions').insert({
-        user_id: currentUserId,
-        post_type: postType,
-        post_id: postId,
-        reaction: 'fire',
-      })
-      if (!error && postOwnerId && postOwnerId !== currentUserId) {
-        await supabase.from('user_notifications').insert({
-          recipient_id: postOwnerId,
-          actor_id: currentUserId,
-          type: 'like_post',
-          post_type: postType,
-          post_id: postId,
-          href: postHref,
-        })
-        notifyNotifUpdated()
-        void sendPushNotif(
-          postOwnerId,
-          'Le gustó tu publicación',
-          `${currentUserAlias ?? 'Alguien'} reaccionó a tu post`,
-          postHref
-        )
-      }
-    }
+    setLiked(!liked)
+    setLikeCount(c => (liked ? Math.max(0, c - 1) : c + 1))
+    await togglePostLike({
+      postType,
+      postId,
+      postOwnerId,
+      currentUserId,
+      currentUserAlias,
+      postHref,
+      liked,
+    })
   }
 
   const handleShare = async () => {
-    const fullUrl =
-      shareUrl.startsWith('http://') || shareUrl.startsWith('https://')
-        ? shareUrl
-        : `https://airnation.online${shareUrl}`
-    if (navigator.share) {
-      try { await navigator.share({ title: shareTitle, url: fullUrl }) } catch { /* cancelado */ }
-    } else {
-      try {
-        await navigator.clipboard.writeText(fullUrl)
-        setCopying(true)
-        setTimeout(() => setCopying(false), 2000)
-      } catch { /* ignore */ }
+    if ((await sharePost(shareUrl, shareTitle)) === 'copied') {
+      setCopying(true)
+      setTimeout(() => setCopying(false), 2000)
     }
   }
 

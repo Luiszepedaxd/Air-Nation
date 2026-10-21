@@ -4,6 +4,7 @@ import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { TruConversion } from "@/components/TruConversion";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import PwaRegister from "@/components/PwaRegister";
+import { ReelsHost } from "@/components/feed/Reels";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -130,6 +131,7 @@ export default function RootLayout({
         <CapacitorBridge />
         <PwaRegister />
         <PwaInstallPrompt />
+        <ReelsHost />
       </body>
     </html>
   );

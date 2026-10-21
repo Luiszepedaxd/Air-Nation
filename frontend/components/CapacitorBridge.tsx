@@ -16,6 +16,7 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { isNativeApp } from '@/lib/platform'
+import { getReelsOpen } from '@/lib/reels'
 
 const ROOT_ROUTES = new Set(['/', '/welcome', '/dashboard', '/login', '/register'])
 
@@ -76,6 +77,12 @@ export default function CapacitorBridge() {
 
         // Configurar back button Android
         backHandler = await App.addListener('backButton', ({ canGoBack }) => {
+          // El modo Reels es una capa encima de la ruta: atrás solo la cierra
+          // (consume la entrada de historial que empujó al abrirse).
+          if (getReelsOpen()) {
+            window.history.back()
+            return
+          }
           const currentPath = window.location.pathname
           if (ROOT_ROUTES.has(currentPath) || !canGoBack) {
             App.exitApp()

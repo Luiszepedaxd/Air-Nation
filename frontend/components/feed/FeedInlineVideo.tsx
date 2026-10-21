@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type MouseEvent,
 } from 'react'
 import {
@@ -13,6 +14,7 @@ import {
   subscribeFeedAudioMuted,
 } from '@/lib/feed-audio-preference'
 import { FEED_MIN_ASPECT, feedVideoBoxAspect } from '@/lib/media-url'
+import { getReelsOpen, openReels, subscribeReels } from '@/lib/reels'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -122,21 +124,12 @@ function supportsNativeHls(video: HTMLVideoElement): boolean {
   return Boolean(video.canPlayType('application/vnd.apple.mpegurl'))
 }
 
-function fullscreenElement(): Element | null {
-  return (
-    document.fullscreenElement ??
-    (document as Document & { webkitFullscreenElement?: Element | null }).webkitFullscreenElement ??
-    null
-  )
-}
-
 /**
  * Video del feed a ancho completo, sin franjas.
  * La caja usa la proporción real, acotada como las fotos (4:5 … 1.91:1).
  * object-cover llena el marco: un 16:9 se ve a 16:9 y un vertical más alto
  * que 4:5 se recorta un poco arriba y abajo, solo en el feed.
- * Al abrir el video (player nativo en iOS, o el contenedor a pantalla completa)
- * se ve el cuadro entero.
+ * Tocar el video abre el modo Reels (pantalla completa) en ese video.
  * HLS (Cloudflare Stream) vía nativo en Safari/iOS o hls.js en el resto;
  * MP4 progresivo para los videos legacy de R2.
  * No descarga nada hasta estar cerca del viewport; tope de concurrencia;
@@ -147,12 +140,18 @@ export function FeedInlineVideo({
   videoMp4Url,
   poster,
   fill = false,
+  reels = false,
+  holdPaused = false,
 }: {
   src: string
   videoMp4Url?: string | null
   poster?: string | null
-  /** El padre ya tiene altura (slide del carrusel). */
+  /** El padre ya tiene altura (slide del carrusel / del modo Reels). */
   fill?: boolean
+  /** Dentro del modo Reels: tocar pausa/reanuda en lugar de abrirlo. */
+  reels?: boolean
+  /** Pausa forzada desde fuera (modal "¿sigues ahí?" del modo Reels). */
+  holdPaused?: boolean
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -167,12 +166,18 @@ export function FeedInlineVideo({
 
   const hls = isHlsUrl(src)
   const mediaUrl = hls ? src : videoMp4Url ?? src
+  const reelsOpen = useSyncExternalStore(subscribeReels, getReelsOpen, () => null)
+  /** No debe sonar: pausa por inactividad, o feed detrás del modo Reels. */
+  const blocked = holdPaused || (!reels && reelsOpen !== null)
+  const blockedRef = useRef(blocked)
+  blockedRef.current = blocked
   const [videoError, setVideoError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [isMuted, setIsMuted] = useState(() => getFeedAudioMuted())
   const [aspect, setAspect] = useState<number | null>(null)
   const [armed, setArmed] = useState(false)
-  const [full, setFull] = useState(false)
+  /** Posición del pointerdown: un swipe del carrusel no debe abrir Reels. */
+  const tapStart = useRef<{ x: number; y: number } | null>(null)
   const [posterUrl, setPosterUrl] = useState<string | null>(
     () => poster || posterCache.get(mediaUrl) || null
   )
@@ -212,16 +217,6 @@ export function FeedInlineVideo({
     // applyBox cierra sobre fill y los refs; posterUrl es la señal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posterUrl, fill])
-
-  useEffect(() => {
-    const sync = () => setFull(fullscreenElement() === wrapRef.current)
-    document.addEventListener('fullscreenchange', sync)
-    document.addEventListener('webkitfullscreenchange', sync)
-    return () => {
-      document.removeEventListener('fullscreenchange', sync)
-      document.removeEventListener('webkitfullscreenchange', sync)
-    }
-  }, [])
 
   // HLS a veces dispara loadedmetadata en 0×0; resize llega cuando hay cuadro.
   useEffect(() => {
@@ -290,6 +285,7 @@ export function FeedInlineVideo({
    * preference unmuted so after the first unmute gesture subsequent plays honor it.
    */
   const playWithAudioPreference = async (el: HTMLVideoElement) => {
+    if (blockedRef.current) return
     const preferMuted = getFeedAudioMuted()
     el.muted = preferMuted
     setIsMuted(preferMuted)
@@ -372,8 +368,6 @@ export function FeedInlineVideo({
     const wrap = wrapRef.current
     if (!wrap) return
 
-    const wrapIsOpen = () => fullscreenElement() === wrap
-
     const nearObs = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -384,12 +378,12 @@ export function FeedInlineVideo({
               unloadTimer.current = null
             }
             void armAndMaybePlay()
-          } else if (!wrapIsOpen()) {
+          } else {
             const el = videoRef.current
             el?.pause()
             if (unloadTimer.current) clearTimeout(unloadTimer.current)
             unloadTimer.current = setTimeout(() => {
-              if (!nearRef.current && fullscreenElement() !== wrap) detachSrc()
+              if (!nearRef.current) detachSrc()
             }, 800)
           }
         }
@@ -409,7 +403,7 @@ export function FeedInlineVideo({
             } else if (nearRef.current) {
               void armAndMaybePlay()
             }
-          } else if (!wrapIsOpen()) {
+          } else {
             el.pause()
           }
         }
@@ -436,43 +430,6 @@ export function FeedInlineVideo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryCount])
 
-  const openFull = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation()
-    const el = videoRef.current
-    const wrap = wrapRef.current
-    if (!el || !wrap) return
-    if (!loadedRef.current) {
-      nearRef.current = true
-      if (hls && supportsNativeHls(el)) {
-        el.src = mediaUrl
-        loadedRef.current = mediaUrl
-        setArmed(true)
-      } else {
-        void armAndMaybePlay()
-      }
-    }
-    const native = el as HTMLVideoElement & { webkitEnterFullscreen?: () => void }
-    const ios =
-      /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    // iOS: el player nativo ignora el object-cover del feed y muestra el cuadro entero.
-    if (ios && typeof native.webkitEnterFullscreen === 'function') {
-      try {
-        native.webkitEnterFullscreen()
-        return
-      } catch {
-        /* sigue el fullscreen del contenedor */
-      }
-    }
-    wrap.requestFullscreen?.().catch(() => {})
-  }
-
-  const closeFull = (e: MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation()
-    const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => void }).webkitExitFullscreen
-    exit?.call(document)
-  }
-
   const togglePlayPause = () => {
     const el = videoRef.current
     if (!el) return
@@ -483,6 +440,35 @@ export function FeedInlineVideo({
     }
     if (el.paused) void playWithAudioPreference(el)
     else el.pause()
+  }
+
+  // Pausa/reanuda desde fuera: inactividad en Reels, o Reels abierto encima.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    if (blocked) {
+      el.pause()
+      // Reels necesita los cupos de descarga: el feed suelta el src detrás.
+      if (!reels) detachSrc()
+      return
+    }
+    if (visibleRef.current && loadedRef.current) void playWithAudioPreference(el)
+    else if (nearRef.current) void armAndMaybePlay()
+    // playWithAudioPreference lee el estado por refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocked])
+
+  /** Feed: tocar abre Reels en este video. Reels: tocar pausa/reanuda. */
+  const handleTap = (e: MouseEvent<HTMLVideoElement>) => {
+    if (reels) {
+      togglePlayPause()
+      return
+    }
+    const start = tapStart.current
+    tapStart.current = null
+    // Swipe del carrusel: no es un tap.
+    if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return
+    openReels(src)
   }
 
   const toggleMute = (e: MouseEvent<HTMLButtonElement>) => {
@@ -500,12 +486,10 @@ export function FeedInlineVideo({
 
   // ponytail: 4:5 hasta que el poster o videoWidth digan la proporción real.
   const boxAspect = aspect ?? FEED_MIN_ASPECT
-  const frameClass = full
-    ? 'relative flex h-full w-full items-center justify-center bg-black'
-    : fill
-      ? 'relative block h-full w-full overflow-hidden bg-black'
-      : 'relative block w-full overflow-hidden bg-black'
-  const frameStyle = fill || full ? undefined : { aspectRatio: boxAspect }
+  const frameClass = fill
+    ? 'relative block h-full w-full overflow-hidden bg-black'
+    : 'relative block w-full overflow-hidden bg-black'
+  const frameStyle = fill ? undefined : { aspectRatio: boxAspect }
 
   if (videoError) {
     return (
@@ -521,31 +505,21 @@ export function FeedInlineVideo({
   }
 
   return (
-    <>
-      {full && !fill ? (
-        <div key="feed-video-spacer" className="w-full bg-black" style={{ aspectRatio: boxAspect }} aria-hidden />
-      ) : null}
-      <div
-        key="feed-video-player"
-        ref={wrapRef}
-        className={frameClass}
-        style={frameStyle}
-      >
+    <div ref={wrapRef} className={frameClass} style={frameStyle}>
       <video
         ref={videoRef}
         width="100%"
         height="100%"
-        className={
-          full
-            ? 'h-full w-full max-h-[100dvh] max-w-[100vw] cursor-pointer object-contain'
-            : 'absolute inset-0 h-full w-full cursor-pointer object-cover'
-        }
+        className="absolute inset-0 h-full w-full cursor-pointer object-cover"
         muted={isMuted}
         playsInline
         loop
         preload="none"
         poster={posterUrl ?? undefined}
-        onClick={togglePlayPause}
+        onPointerDown={(e) => {
+          tapStart.current = { x: e.clientX, y: e.clientY }
+        }}
+        onClick={handleTap}
         onLoadedMetadata={(e) => {
           const v = e.currentTarget
           applyBox(v.videoWidth, v.videoHeight, 0, 0, true)
@@ -569,35 +543,12 @@ export function FeedInlineVideo({
           setVideoError(true)
         }}
       />
-      {full ? (
-        <button
-          type="button"
-          onClick={closeFull}
-          className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-          aria-label="Cerrar video"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={openFull}
-          className="absolute bottom-2 left-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-          aria-label="Ver video completo"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M9 4H4v5M15 4h5v5M20 15v5h-5M4 15v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
       <button
         type="button"
         onClick={toggleMute}
         className={`absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white ${
-          full
-            ? 'bottom-[max(0.5rem,env(safe-area-inset-bottom))] right-[max(0.5rem,env(safe-area-inset-right))]'
+          reels
+            ? 'top-[max(0.5rem,env(safe-area-inset-top))] right-[max(0.5rem,env(safe-area-inset-right))]'
             : 'bottom-2 right-2'
         }`}
         aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
@@ -634,7 +585,6 @@ export function FeedInlineVideo({
           </svg>
         )}
       </button>
-      </div>
-    </>
+    </div>
   )
 }

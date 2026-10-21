@@ -1,0 +1,505 @@
+'use client'
+
+import Link from 'next/link'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
+import { FeedInlineVideo } from '@/components/feed/FeedInlineVideo'
+import { CommentsSection, HeartIcon } from '@/components/posts/PostInteractions'
+import { feedAvatarUrl } from '@/lib/media-url'
+import { sharePost, togglePostLike } from '@/lib/post-engagements'
+import {
+  closeReels,
+  fetchReelBySrc,
+  getReelsOpen,
+  getSeenReels,
+  loadReelsPage,
+  markReelSeen,
+  subscribeReels,
+  type Reel,
+  type ReelsCursor,
+} from '@/lib/reels'
+import { supabase } from '@/lib/supabase'
+
+const jost = {
+  fontFamily: "'Jost', sans-serif",
+  fontWeight: 800,
+  textTransform: 'uppercase' as const,
+} as const
+const lato = { fontFamily: "'Lato', sans-serif" } as const
+
+/** Minutos en el MISMO video antes de pausar (costo de Cloudflare Stream). */
+const IDLE_PAUSE_MS = 5 * 60 * 1000
+/** Descripción visible antes de "ver más" (≈2 líneas). */
+const DESC_PREVIEW_CHARS = 80
+/** Videos restantes a partir de los cuales se pide la siguiente página. */
+const PREFETCH_AT = 3
+
+/**
+ * Modo Reels: pantalla completa vertical con scroll-snap (un video por
+ * pantalla). Solo el visible monta <video>; el resto muestra su poster.
+ * Montado una vez en el layout raíz; se abre con `openReels(videoUrl)`.
+ */
+export function ReelsHost() {
+  const open = useSyncExternalStore(subscribeReels, getReelsOpen, () => null)
+  if (!open) return null
+  return <ReelsViewer seedSrc={open.src} />
+}
+
+type Me = { id: string; alias: string | null; avatar: string | null }
+
+function ReelsViewer({ seedSrc }: { seedSrc: string }) {
+  const [items, setItems] = useState<Reel[]>([])
+  const [index, setIndex] = useState(0)
+  const [ready, setReady] = useState(false)
+  const [idle, setIdle] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const [commentsFor, setCommentsFor] = useState<Reel | null>(null)
+  const [me, setMe] = useState<Me | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const itemsRef = useRef<Reel[]>([])
+  itemsRef.current = items
+  const meRef = useRef<Me | null>(null)
+  meRef.current = me
+  const cursorRef = useRef<ReelsCursor | null>(null)
+  const doneRef = useRef(false)
+  const loadingRef = useRef(false)
+  const pushedRef = useRef(false)
+
+  /** Cierra respetando el historial: el botón atrás de Android sale de Reels. */
+  const dismiss = useCallback(() => {
+    if (pushedRef.current) {
+      pushedRef.current = false
+      window.history.back()
+      return
+    }
+    closeReels()
+  }, [])
+
+  // Bloquea el scroll de atrás; Esc y botón atrás cierran.
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss()
+    }
+    const onPop = () => {
+      pushedRef.current = false
+      closeReels()
+    }
+    window.history.pushState({ reels: true }, '', window.location.href)
+    pushedRef.current = true
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('popstate', onPop)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('popstate', onPop)
+    }
+  }, [dismiss])
+
+  // Primera carga: el video tocado va primero, después la página puntuada.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser()
+      const uid = auth.user?.id ?? null
+      if (uid) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('alias, avatar_url')
+          .eq('id', uid)
+          .maybeSingle()
+        if (!cancelled) {
+          setMe({
+            id: uid,
+            alias: (profile?.alias as string | null) ?? null,
+            avatar: (profile?.avatar_url as string | null) ?? null,
+          })
+        }
+      }
+      const [seed, page] = await Promise.all([
+        fetchReelBySrc(seedSrc, uid),
+        loadReelsPage(null, uid, getSeenReels()),
+      ])
+      if (cancelled) return
+      cursorRef.current = page.cursor
+      doneRef.current = page.done
+      const list = seed
+        ? [seed, ...page.reels.filter((r) => r.key !== seed.key)]
+        : page.reels
+      setItems(list)
+      setReady(true)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [seedSrc])
+
+  const loadMore = useCallback(async () => {
+    if (loadingRef.current || doneRef.current) return
+    loadingRef.current = true
+    try {
+      // Una página puede venir entera repetida: avanza el cursor y reintenta.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const cursor = cursorRef.current
+        if (!cursor || doneRef.current) break
+        const seen = new Set(getSeenReels())
+        for (const r of itemsRef.current) seen.add(r.key)
+        const page = await loadReelsPage(cursor, meRef.current?.id ?? null, seen)
+        cursorRef.current = page.cursor
+        doneRef.current = page.done
+        if (page.reels.length > 0) {
+          setItems((prev) => [...prev, ...page.reels])
+          break
+        }
+      }
+    } finally {
+      loadingRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    if (items.length - index <= PREFETCH_AT) void loadMore()
+  }, [ready, index, items.length, loadMore])
+
+  const current = items[index] ?? null
+  const currentKey = current?.key
+
+  // Cambiar de video: cuenta como visto y reinicia inactividad y "ver más".
+  useEffect(() => {
+    if (!currentKey) return
+    markReelSeen(currentKey)
+    setExpanded(false)
+    setIdle(false)
+  }, [currentKey])
+
+  // Inactividad: 5 min en el mismo video (el loop cuenta) → pausa + modal.
+  useEffect(() => {
+    if (!currentKey || idle) return
+    const timer = setTimeout(() => setIdle(true), IDLE_PAUSE_MS)
+    return () => clearTimeout(timer)
+  }, [currentKey, idle])
+
+  const onScroll = () => {
+    const el = scrollerRef.current
+    if (!el) return
+    const height = el.clientHeight || 1
+    const next = Math.max(
+      0,
+      Math.min(items.length - 1, Math.round(el.scrollTop / height))
+    )
+    if (next !== index) setIndex(next)
+  }
+
+  const toggleLike = async (reel: Reel) => {
+    const user = me
+    if (!user) return
+    const liked = reel.likedByMe
+    setItems((prev) =>
+      prev.map((r) =>
+        r.key === reel.key
+          ? {
+              ...r,
+              likedByMe: !liked,
+              likeCount: Math.max(0, r.likeCount + (liked ? -1 : 1)),
+            }
+          : r
+      )
+    )
+    await togglePostLike({
+      postType: reel.postType,
+      postId: reel.postId,
+      postOwnerId: reel.postOwnerId,
+      currentUserId: user.id,
+      currentUserAlias: user.alias,
+      postHref: reel.postHref,
+      liked,
+    })
+  }
+
+  const share = async (reel: Reel) => {
+    if ((await sharePost(reel.shareUrl, `${reel.authorName} en AirNation`)) === 'copied') {
+      setToast('¡Enlace copiado!')
+      setTimeout(() => setToast(null), 2000)
+    }
+  }
+
+  const bumpCommentCount = (key: string, delta: number) =>
+    setItems((prev) =>
+      prev.map((r) =>
+        r.key === key ? { ...r, commentCount: Math.max(0, r.commentCount + delta) } : r
+      )
+    )
+
+  return (
+    <div className="fixed inset-0 z-[300] bg-black">
+      <div
+        ref={scrollerRef}
+        onScroll={onScroll}
+        className="h-full w-full snap-y snap-mandatory overflow-y-scroll overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {items.map((reel, i) => (
+          <section
+            key={reel.key}
+            className="relative h-full w-full snap-start snap-always overflow-hidden bg-black"
+          >
+            {/* ponytail: solo el visible carga video; precargar el siguiente
+                sería montar también i === index ± 1 (más datos de Stream). */}
+            {i === index ? (
+              <FeedInlineVideo
+                src={reel.src}
+                videoMp4Url={reel.videoMp4Url}
+                poster={reel.poster}
+                fill
+                reels
+                holdPaused={idle}
+              />
+            ) : reel.poster ? (
+              <img
+                src={reel.poster}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover opacity-70"
+              />
+            ) : null}
+
+            {/* Acciones: like, comentarios, compartir */}
+            <div className="absolute bottom-[calc(env(safe-area-inset-bottom)_+_7rem)] right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+              <button
+                type="button"
+                onClick={() => void toggleLike(reel)}
+                disabled={!me}
+                className="flex flex-col items-center gap-1 disabled:opacity-40"
+                aria-label={reel.likedByMe ? 'Quitar me gusta' : 'Me gusta'}
+              >
+                <HeartIcon filled={reel.likedByMe} size={30} emptyColor="#FFFFFF" />
+                <span style={lato} className="text-[11px] font-semibold text-white">
+                  {reel.likeCount}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCommentsFor(reel)}
+                className="flex flex-col items-center gap-1"
+                aria-label="Comentarios"
+              >
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span style={lato} className="text-[11px] font-semibold text-white">
+                  {reel.commentCount}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void share(reel)}
+                className="flex flex-col items-center gap-1"
+                aria-label="Compartir"
+              >
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M12 3v12M8 7l4-4 4 4"
+                    stroke="#FFFFFF"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Autor + descripción */}
+            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-[calc(env(safe-area-inset-bottom)_+_1rem)] pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10">
+              <Link
+                href={reel.authorHref}
+                onClick={() => closeReels()}
+                className="flex w-fit items-center gap-2"
+              >
+                <span className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/40 bg-black/40">
+                  {reel.authorAvatar ? (
+                    <img
+                      src={feedAvatarUrl(reel.authorAvatar, 72)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      style={jost}
+                      className="flex h-full w-full items-center justify-center text-[12px] text-white"
+                    >
+                      {reel.authorName[0]?.toUpperCase() ?? 'A'}
+                    </span>
+                  )}
+                </span>
+                <span style={jost} className="text-[13px] text-white">
+                  {reel.authorName}
+                </span>
+              </Link>
+
+              {reel.content?.trim() ? (
+                <div className="mt-2 max-h-[40dvh] overflow-y-auto">
+                  <p
+                    style={lato}
+                    className={`whitespace-pre-wrap break-words text-[13px] text-white/95 ${
+                      expanded && i === index ? '' : 'line-clamp-2'
+                    }`}
+                  >
+                    {expanded && i === index
+                      ? reel.content
+                      : reel.content.length > DESC_PREVIEW_CHARS
+                        ? `${reel.content.slice(0, DESC_PREVIEW_CHARS)}…`
+                        : reel.content}
+                  </p>
+                  {reel.content.length > DESC_PREVIEW_CHARS ? (
+                    <button
+                      type="button"
+                      onClick={() => setExpanded((v) => !v)}
+                      style={lato}
+                      className="mt-1 text-[12px] font-semibold text-white/70"
+                    >
+                      {expanded && i === index ? 'ver menos' : 'ver más'}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {/* Cerrar */}
+      <button
+        type="button"
+        onClick={dismiss}
+        className="absolute left-[max(0.5rem,env(safe-area-inset-left))] top-[max(0.5rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white"
+        aria-label="Cerrar reels"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+          <path
+            d="M15 18l-6-6 6-6"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      <p
+        style={lato}
+        className="pointer-events-none absolute left-1/2 top-[max(0.6rem,env(safe-area-inset-top))] z-30 max-w-[58%] -translate-x-1/2 rounded-full bg-black/45 px-3 py-1 text-center text-[10px] leading-tight text-white/85"
+      >
+        Beta: esta sección está en pruebas y puede tener errores
+      </p>
+
+      {!ready ? (
+        <p
+          style={lato}
+          className="absolute inset-0 z-10 flex items-center justify-center text-[13px] text-white/70"
+        >
+          Cargando videos…
+        </p>
+      ) : items.length === 0 ? (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 px-8">
+          <p style={lato} className="text-center text-[13px] text-white/80">
+            No hay videos para mostrar por ahora.
+          </p>
+          <button
+            type="button"
+            onClick={dismiss}
+            style={jost}
+            className="bg-[#CC4B37] px-4 py-2 text-[10px] font-extrabold uppercase text-white"
+          >
+            Volver
+          </button>
+        </div>
+      ) : null}
+
+      {toast ? (
+        <p
+          style={lato}
+          className="absolute bottom-[calc(env(safe-area-inset-bottom)_+_5rem)] left-1/2 z-30 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] font-semibold text-[#111111]"
+        >
+          {toast}
+        </p>
+      ) : null}
+
+      {idle ? (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 px-6">
+          <div className="w-full max-w-[280px] rounded-[4px] bg-white p-5 text-center">
+            <p style={jost} className="text-[13px] text-[#111111]">
+              ¿Sigues ahí?
+            </p>
+            <p style={lato} className="mt-2 text-[13px] text-[#444444]">
+              Pausamos el video para no gastar tus datos.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIdle(false)}
+              style={jost}
+              className="mt-4 w-full bg-[#CC4B37] px-4 py-2 text-[10px] font-extrabold uppercase text-white"
+            >
+              Seguir viendo
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {commentsFor ? (
+        <div className="absolute inset-0 z-40 flex flex-col justify-end">
+          <button
+            type="button"
+            aria-label="Cerrar comentarios"
+            onClick={() => setCommentsFor(null)}
+            className="absolute inset-0 bg-black/50"
+          />
+          <div className="relative max-h-[72%] overflow-y-auto bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+            <div className="flex items-center justify-between">
+              <p style={jost} className="text-[12px] text-[#111111]">
+                Comentarios
+              </p>
+              <button
+                type="button"
+                onClick={() => setCommentsFor(null)}
+                className="p-1 text-[#666666]"
+                aria-label="Cerrar comentarios"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <CommentsSection
+              postType={commentsFor.postType}
+              postId={commentsFor.postId}
+              postOwnerId={commentsFor.postOwnerId}
+              currentUserId={me?.id ?? null}
+              currentUserAlias={me?.alias ?? null}
+              currentUserAvatar={me?.avatar ?? null}
+              postHref={commentsFor.postHref}
+              onCommentCountChange={(delta) => bumpCommentCount(commentsFor.key, delta)}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
