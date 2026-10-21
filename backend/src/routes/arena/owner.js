@@ -9,7 +9,12 @@ const { arenaPublicUrl } = require("../../lib/arena/config");
 const { inspectImageUpload } = require("../../lib/imageUpload");
 const { uploadToCloudflare } = require("../../services/cloudflare");
 const { sendArenaError } = require("../../lib/arena/errors");
-const { crearReserva, leerReserva, serializarReserva } = require("../../lib/arena/bookings");
+const {
+  crearReserva,
+  leerReserva,
+  sanearItems,
+  serializarReserva,
+} = require("../../lib/arena/bookings");
 const { reembolsar } = require("../../lib/arena/refunds");
 const notify = require("../../lib/arena/notify");
 
@@ -307,12 +312,20 @@ router.delete("/fields/:fieldId/items/:id", requireFieldMember, async (req, res)
   if (usadoError) return err500(res, "delete item usado", usadoError);
 
   if (usado && usado.length > 0) {
-    const { error } = await supabase.from("arena_items").update({ activo: false }).eq("id", id);
+    const { error } = await supabase
+      .from("arena_items")
+      .update({ activo: false })
+      .eq("id", id)
+      .eq("field_id", req.fieldId);
     if (error) return err500(res, "delete item desactivar", error);
     return res.json({ desactivado: true });
   }
 
-  const { error } = await supabase.from("arena_items").delete().eq("id", id);
+  const { error } = await supabase
+    .from("arena_items")
+    .delete()
+    .eq("id", id)
+    .eq("field_id", req.fieldId);
   if (error) return err500(res, "delete item", error);
   return res.json({ eliminado: true });
 });
@@ -480,10 +493,7 @@ router.post("/fields/:fieldId/bookings", requireFieldMember, async (req, res) =>
     return res.status(400).json({ error: "Elige un paquete o un derecho de campo.", code: "falta_item_base" });
   }
 
-  const items = b.items.map((i) => ({
-    item_id: String(i?.item_id || ""),
-    ...(i?.cantidad === undefined || i?.cantidad === null ? {} : { cantidad: Number(i.cantidad) }),
-  }));
+  const items = sanearItems(b.items);
 
   try {
     const { booking, pago } = await crearReserva({
@@ -552,6 +562,7 @@ router.patch("/fields/:fieldId/bookings/:id/status", requireFieldMember, async (
       .from("arena_bookings")
       .update({ status: "no_show" })
       .eq("id", id)
+      .eq("field_id", req.fieldId)
       .eq("status", "confirmada")
       .select("*")
       .maybeSingle();
@@ -573,6 +584,7 @@ router.patch("/fields/:fieldId/bookings/:id/status", requireFieldMember, async (
       expires_at: null,
     })
     .eq("id", id)
+    .eq("field_id", req.fieldId)
     .in("status", ["confirmada", "pendiente_pago"])
     .select("*")
     .maybeSingle();

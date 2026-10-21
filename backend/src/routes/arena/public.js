@@ -13,6 +13,7 @@ const {
   abrirCheckout,
   crearReserva,
   leerReserva,
+  sanearItems,
   serializarReserva,
   unaFila,
   CAMPO_PUBLICO,
@@ -143,11 +144,7 @@ router.post("/bookings", ipRateLimit(10), optionalAuth, async (req, res) => {
     return res.status(400).json({ error: "Tienes que aceptar la política de cancelación." });
   }
 
-  // Solo item_id y cantidad: cualquier precio que mande el cliente se ignora.
-  const items = b.items.map((i) => ({
-    item_id: String(i?.item_id || ""),
-    ...(i?.cantidad === undefined || i?.cantidad === null ? {} : { cantidad: Number(i.cantidad) }),
-  }));
+  const items = sanearItems(b.items);
 
   try {
     const { booking, pago } = await crearReserva({

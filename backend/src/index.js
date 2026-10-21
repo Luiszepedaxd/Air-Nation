@@ -1,4 +1,10 @@
 require("dotenv").config();
+
+// Antes de cargar cualquier otra cosa: el proveedor de pago de prueba de ARENA
+// no debe correr en producción, y este chequeo tiene que ganarle a cualquier
+// otro require que pueda fallar primero.
+require("./lib/arena/config").assertArenaConfig();
+
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -22,10 +28,7 @@ const searchRouter = require('./routes/search')
 const tournamentsRouter = require("./routes/tournaments");
 const joulieRouter = require("./routes/joulie");
 const arenaRouter = require("./routes/arena");
-const { assertArenaConfig } = require("./lib/arena/config");
 const { iniciarJobIndexNow } = require("./jobs/indexnow");
-
-assertArenaConfig();
 
 const app = express();
 const PORT = process.env.PORT || 4000;

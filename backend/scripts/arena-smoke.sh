@@ -220,6 +220,32 @@ curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
   -X POST "$API/arena/payments/webhook/mock" -H 'Content-Type: application/json' \
   -d '{"provider_ref":"mock_x","status":"pagado"}'
 
+# ─── Reservas de admin y liquidaciones ───────────────────────────────────────
+
+paso "GET /arena/admin/bookings?field_id=\$FIELD"
+llamar GET "$ADMIN" "/arena/admin/bookings?field_id=$FIELD"
+
+paso "GET /arena/admin/payouts/pendientes"
+llamar GET "$ADMIN" "/arena/admin/payouts/pendientes"
+
+paso "POST /arena/admin/fields/\$FIELD/payouts (409 sin_reservas_por_liquidar si no hay nada vencido)"
+llamar POST "$ADMIN" "/arena/admin/fields/$FIELD/payouts" '{}'
+PAYOUT_ID="$(sed -n 's/.*"payout":{"id":"\([0-9a-f-]\{36\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+
+if [ -n "${PAYOUT_ID:-}" ]; then
+  paso "PATCH /arena/admin/payouts/\$PAYOUT_ID (folio + email al dueño)"
+  llamar PATCH "$ADMIN" "/arena/admin/payouts/$PAYOUT_ID" '{"referencia":"SPEI-SMOKE-0001"}'
+
+  paso "Repetir la transferencia (espera 409)"
+  llamar PATCH "$ADMIN" "/arena/admin/payouts/$PAYOUT_ID" '{"referencia":"SPEI-SMOKE-0001"}'
+fi
+
+paso "PATCH payout sin folio (espera 400)"
+llamar PATCH "$ADMIN" "/arena/admin/payouts/00000000-0000-0000-0000-000000000000" '{}'
+
+paso "GET /arena/owner/fields/\$FIELD/saldos"
+llamar GET "$OWNER" "/arena/owner/fields/$FIELD/saldos"
+
 paso "PATCH /arena/admin/fields/\$FIELD/pause"
 llamar PATCH "$ADMIN" "/arena/admin/fields/$FIELD/pause"
 

@@ -9,6 +9,20 @@ const { currentProvider } = require("./payments");
 const { arenaPublicUrl } = require("./config");
 const { checkinUrl } = require("./qr");
 
+/**
+ * Lo único que viaja del cliente a `arena_create_booking`: qué concepto y
+ * cuántos. Cualquier `precio_centavos` o `subtotal` que mande el cliente se
+ * descarta aquí; los montos salen siempre de la BD.
+ */
+function sanearItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((i) => {
+    const item_id = String(i?.item_id ?? "");
+    const cantidad = Number(i?.cantidad);
+    return Number.isInteger(cantidad) && cantidad >= 1 ? { item_id, cantidad } : { item_id };
+  });
+}
+
 /** Devuelve la primera fila de una función que RETURNS TABLE. */
 function unaFila(data) {
   return Array.isArray(data) ? data[0] || null : data || null;
@@ -177,6 +191,7 @@ async function crearReserva(params) {
 }
 
 module.exports = {
+  sanearItems,
   unaFila,
   abrirCheckout,
   crearReserva,

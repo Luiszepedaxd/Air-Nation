@@ -319,3 +319,49 @@ export type ArenaFichaPublica = {
 }
 
 export type ArenaOpenDay = { fecha: string; apertura: string; cierre: string }
+
+export type ArenaAdminBooking = {
+  id: string
+  codigo: string
+  field_id: string
+  fecha: string
+  num_jugadores: number
+  status: ArenaBookingStatus
+  pago_status: ArenaPagoStatus
+  total_centavos: number
+  comision_centavos: number
+  monto_campo_centavos: number
+  reembolso_centavos: number
+  payout_id: string | null
+  origen: string
+  contacto_nombre: string
+  contacto_email: string
+  created_at: string
+  campo: { id: string; nombre: string; slug: string } | null
+  pago: {
+    provider: string
+    provider_ref: string
+    status: string
+    monto_centavos: number
+    created_at: string
+  } | null
+}
+
+export type ArenaPayoutPendiente = {
+  field_id: string
+  reservas: number
+  bruto_centavos: number
+  comision_centavos: number
+  reembolsos_centavos: number
+  neto_centavos: number
+  desde: string
+  hasta: string
+  campo: { id: string; nombre: string; slug: string } | null
+  banco: { banco: string | null; clabe: string | null; titular_cuenta: string | null } | null
+}
+
+export type ArenaPayoutAdmin = ArenaPayout & {
+  field_id: string
+  campo: { id: string; nombre: string; slug: string } | null
+  banco: { banco: string | null; clabe: string | null; titular_cuenta: string | null } | null
+}

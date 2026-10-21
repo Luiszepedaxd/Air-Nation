@@ -3,7 +3,8 @@ const supabase = require("../../lib/supabase");
 const { requireAdmin } = require("../../middleware/requireAdmin");
 const { UUID } = require("../../middleware/requireFieldMember");
 const { dayKey } = require("../../services/joulie/time");
-const { avisoCuentaLigada } = require("../../lib/arena/notify");
+const { avisoCuentaLigada, avisoLiquidacion } = require("../../lib/arena/notify");
+const { sendArenaError } = require("../../lib/arena/errors");
 
 const router = express.Router();
 
@@ -238,6 +239,215 @@ router.delete("/fields/:fieldId/members/:userId", requireAdmin, async (req, res)
   }
   if (!data) return res.status(404).json({ error: "Ese usuario no administra este campo." });
   return res.json({ member: data });
+});
+
+// ─── GET /arena/admin/bookings?field_id&status&desde&hasta ────────────────────
+// Todas las reservas con su último pago.
+router.get("/bookings", requireAdmin, async (req, res) => {
+  const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+
+  let q = supabase
+    .from("arena_bookings")
+    .select(
+      "id, codigo, field_id, fecha, num_jugadores, status, pago_status, total_centavos, comision_centavos, monto_campo_centavos, reembolso_centavos, payout_id, origen, contacto_nombre, contacto_email, created_at"
+    )
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  const fieldId = String(req.query.field_id || "").trim();
+  if (fieldId) {
+    if (!UUID.test(fieldId)) return res.status(400).json({ error: "Campo inválido" });
+    q = q.eq("field_id", fieldId);
+  }
+  const status = String(req.query.status || "").trim();
+  if (status) q = q.in("status", status.split(",").map((x) => x.trim()).filter(Boolean));
+  if (FECHA.test(String(req.query.desde || ""))) q = q.gte("fecha", String(req.query.desde));
+  if (FECHA.test(String(req.query.hasta || ""))) q = q.lte("fecha", String(req.query.hasta));
+
+  const { data: bookings, error } = await q;
+  if (error) {
+    console.error("[arena:admin] bookings:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+
+  const ids = (bookings || []).map((b) => b.id);
+  const fieldIds = Array.from(new Set((bookings || []).map((b) => b.field_id)));
+  const [pagosRes, camposRes] = await Promise.all([
+    ids.length
+      ? supabase
+          .from("arena_payments")
+          .select("booking_id, provider, provider_ref, status, monto_centavos, created_at")
+          .in("booking_id", ids)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    fieldIds.length
+      ? supabase.from("fields").select("id, nombre, slug").in("id", fieldIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const ultimoPago = new Map();
+  for (const p of pagosRes.data || []) {
+    if (!ultimoPago.has(p.booking_id)) ultimoPago.set(p.booking_id, p);
+  }
+  const campos = new Map((camposRes.data || []).map((f) => [f.id, f]));
+
+  return res.json({
+    reservas: (bookings || []).map((b) => ({
+      ...b,
+      campo: campos.get(b.field_id) || null,
+      pago: ultimoPago.get(b.id) || null,
+    })),
+    hoy: dayKey(Date.now()),
+  });
+});
+
+// ─── GET /arena/admin/payouts/pendientes ──────────────────────────────────────
+// Saldo por liquidar por campo. Mismo criterio que arena_create_payout:
+// reservas pagadas, con fecha ya pasada y sin liquidación previa.
+router.get("/payouts/pendientes", requireAdmin, async (req, res) => {
+  const hoy = dayKey(Date.now());
+
+  const [bookingsRes, payoutsRes] = await Promise.all([
+    supabase
+      .from("arena_bookings")
+      .select("field_id, fecha, total_centavos, comision_centavos, monto_campo_centavos, reembolso_centavos")
+      .is("payout_id", null)
+      .lt("fecha", hoy)
+      .in("pago_status", ["pagado", "reembolso_parcial"])
+      .in("status", ["confirmada", "completada", "no_show"]),
+    supabase
+      .from("arena_payouts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(200),
+  ]);
+  if (bookingsRes.error) {
+    console.error("[arena:admin] payouts pendientes:", bookingsRes.error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (payoutsRes.error) {
+    console.error("[arena:admin] payouts:", payoutsRes.error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+
+  const porCampo = new Map();
+  for (const b of bookingsRes.data || []) {
+    const acc = porCampo.get(b.field_id) || {
+      field_id: b.field_id,
+      reservas: 0,
+      bruto_centavos: 0,
+      comision_centavos: 0,
+      reembolsos_centavos: 0,
+      neto_centavos: 0,
+      desde: b.fecha,
+      hasta: b.fecha,
+    };
+    acc.reservas += 1;
+    acc.bruto_centavos += b.total_centavos;
+    acc.comision_centavos += b.comision_centavos;
+    acc.reembolsos_centavos += b.reembolso_centavos;
+    acc.neto_centavos += Math.max(b.monto_campo_centavos - b.reembolso_centavos, 0);
+    if (b.fecha < acc.desde) acc.desde = b.fecha;
+    if (b.fecha > acc.hasta) acc.hasta = b.fecha;
+    porCampo.set(b.field_id, acc);
+  }
+
+  const fieldIds = Array.from(
+    new Set([...porCampo.keys(), ...(payoutsRes.data || []).map((p) => p.field_id)])
+  );
+  const [camposRes, settingsRes] = await Promise.all([
+    fieldIds.length
+      ? supabase.from("fields").select("id, nombre, slug").in("id", fieldIds)
+      : Promise.resolve({ data: [] }),
+    fieldIds.length
+      ? supabase
+          .from("arena_field_settings")
+          .select("field_id, banco, clabe, titular_cuenta")
+          .in("field_id", fieldIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const campos = new Map((camposRes.data || []).map((f) => [f.id, f]));
+  const bancos = new Map((settingsRes.data || []).map((s) => [s.field_id, s]));
+
+  return res.json({
+    pendientes: Array.from(porCampo.values())
+      .map((p) => ({
+        ...p,
+        campo: campos.get(p.field_id) || null,
+        banco: bancos.get(p.field_id) || null,
+      }))
+      .sort((a, b) => b.neto_centavos - a.neto_centavos),
+    liquidaciones: (payoutsRes.data || []).map((p) => ({
+      ...p,
+      campo: campos.get(p.field_id) || null,
+      banco: bancos.get(p.field_id) || null,
+    })),
+    hoy,
+  });
+});
+
+// ─── POST /arena/admin/fields/:fieldId/payouts ────────────────────────────────
+router.post("/fields/:fieldId/payouts", requireAdmin, async (req, res) => {
+  const fieldId = fieldIdOr400(req, res);
+  if (!fieldId) return;
+
+  const hasta = String(req.body?.hasta || "").trim();
+  if (hasta && !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) {
+    return res.status(400).json({ error: "La fecha debe venir como YYYY-MM-DD." });
+  }
+
+  // arena_create_payout no tiene DEFAULT en p_hasta: se mandan los tres
+  // parámetros y la función aplica LEAST(COALESCE(p_hasta, ayer), ayer).
+  const { data, error } = await supabase.rpc("arena_create_payout", {
+    p_field_id: fieldId,
+    p_hasta: hasta || null,
+    p_created_by: req.adminUser.id,
+  });
+  if (error) return sendArenaError(res, error, "arena_create_payout");
+
+  const payoutId = Array.isArray(data) ? data[0] : data;
+  const { data: payout } = await supabase
+    .from("arena_payouts")
+    .select("*")
+    .eq("id", payoutId)
+    .maybeSingle();
+
+  return res.status(201).json({ payout });
+});
+
+// ─── PATCH /arena/admin/payouts/:id ───────────────────────────────────────────
+// Marca la liquidación como transferida con su folio y avisa al dueño.
+router.patch("/payouts/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!UUID.test(id)) return res.status(400).json({ error: "Liquidación inválida" });
+
+  const referencia = String(req.body?.referencia || "").trim();
+  if (!referencia) return res.status(400).json({ error: "Escribe el folio de la transferencia." });
+
+  const { data: payout, error } = await supabase
+    .from("arena_payouts")
+    .update({
+      status: "transferido",
+      referencia: referencia.slice(0, 120),
+      transferido_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("status", "pendiente")
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] patch payout:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!payout) {
+    return res.status(409).json({ error: "Esa liquidación ya estaba transferida." });
+  }
+
+  avisoLiquidacion({ payout, fieldId: payout.field_id }).catch((e) =>
+    console.error("[arena:admin] aviso liquidación:", e.message)
+  );
+
+  return res.json({ payout });
 });
 
 module.exports = router;
