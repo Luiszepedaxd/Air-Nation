@@ -38,6 +38,7 @@ import {
 import { CredencialClient } from '@/components/credential/CredencialClient'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
 import { PartidasTab } from './PartidasTab'
+import { ReservasTab } from './ReservasTab'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -49,6 +50,7 @@ type TabId =
   | 'perfil'
   | 'notificaciones'
   | 'credencial'
+  | 'reservas'
   | 'administrar'
   | 'partidas'
   | 'configuracion'
@@ -906,6 +908,7 @@ export function PerfilTabsClient({
                 badge: pendingCount + unreadNotifCount,
               },
               { id: 'credencial' as TabId, label: 'CREDENCIAL' },
+              { id: 'reservas' as TabId, label: 'RESERVAS' },
               { id: 'administrar' as TabId, label: 'ADMINISTRAR' },
               { id: 'partidas' as TabId, label: 'PARTIDAS' },
               { id: 'configuracion' as TabId, label: 'CONFIGURACIÓN' },
@@ -1002,6 +1005,18 @@ export function PerfilTabsClient({
               Tu identificación digital AirNation
             </p>
             <CredencialClient data={credencialData} />
+          </div>
+        )}
+
+        {activeTab === 'reservas' && (
+          <div className="px-4 pt-4">
+            <h1
+              style={jost}
+              className="mb-4 text-[22px] font-extrabold uppercase text-[#111111]"
+            >
+              MIS RESERVAS
+            </h1>
+            <ReservasTab />
           </div>
         )}
 

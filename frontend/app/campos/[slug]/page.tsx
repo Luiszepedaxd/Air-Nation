@@ -6,6 +6,8 @@ import { createPublicSupabaseClient } from '@/app/u/supabase-public'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader'
 import type { CampoDetailRow, FieldReviewPublic } from '../types'
+import { aceptaReservas, fetchArenaFicha } from '@/lib/arena-public'
+import { ArenaPaquetes } from './components/ArenaPaquetes'
 import { CampoHero } from './components/CampoHero'
 import type { CampoEventoListItem } from './components/CampoPublicTabs'
 import { CampoPublicTabs } from './components/CampoPublicTabs'
@@ -215,10 +217,12 @@ export default async function CampoPublicPage({
   const field = await getCampoBySlug(params.slug)
   if (!field) notFound()
 
-  const [initialReviews, eventos] = await Promise.all([
+  const [initialReviews, eventos, arenaFicha] = await Promise.all([
     fetchReviews(field.id),
     fetchEventosCampo(field.id),
+    fetchArenaFicha(params.slug),
   ])
+  const arenaAbierto = aceptaReservas(arenaFicha)
 
   const supabaseAuth = createDashboardSupabaseServerClient()
   const {
@@ -286,7 +290,13 @@ export default async function CampoPublicPage({
           }),
         }}
       />
-      <CampoHero field={field} />
+      <CampoHero
+        field={field}
+        reservarHref={arenaAbierto ? `/campos/${params.slug}/reservar` : null}
+      />
+      {arenaAbierto && arenaFicha ? (
+        <ArenaPaquetes slug={params.slug} ficha={arenaFicha} />
+      ) : null}
       <CampoPublicTabs
         field={field}
         fieldSlug={params.slug}

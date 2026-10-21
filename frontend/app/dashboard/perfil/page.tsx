@@ -460,6 +460,7 @@ export default async function PerfilPage({
           | 'perfil'
           | 'notificaciones'
           | 'credencial'
+          | 'reservas'
           | 'administrar'
           | 'partidas'
           | 'configuracion') || undefined

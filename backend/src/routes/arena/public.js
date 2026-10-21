@@ -7,7 +7,7 @@ const { UUID } = require("../../middleware/requireFieldMember");
 const { arenaProvider } = require("../../lib/arena/config");
 const { sendArenaError } = require("../../lib/arena/errors");
 const { ipRateLimit } = require("../../lib/arena/rateLimit");
-const { qrPng } = require("../../lib/arena/qr");
+const { checkinUrl, qrPng } = require("../../lib/arena/qr");
 const { reembolsar } = require("../../lib/arena/refunds");
 const {
   abrirCheckout,
@@ -320,8 +320,9 @@ router.get("/me/bookings", requireAuth, async (req, res) => {
     reembolso_centavos: b.reembolso_centavos,
     access_token: b.access_token,
     campo: campos.get(b.field_id) || null,
+    // El QR tiene que codificar la URL pública, no la del navegador.
     ...(QR_VISIBLE.includes(b.status) && b.pago_status !== "pendiente"
-      ? { qr_token: b.qr_token }
+      ? { qr_token: b.qr_token, qr_url: checkinUrl(b.qr_token) }
       : {}),
   }));
 

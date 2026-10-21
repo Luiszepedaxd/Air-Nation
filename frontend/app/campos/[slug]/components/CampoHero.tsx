@@ -17,7 +17,14 @@ function normalizeTipo(raw: string | null | undefined): 'publico' | 'privado' {
   return 'publico'
 }
 
-export function CampoHero({ field }: { field: CampoDetailRow }) {
+export function CampoHero({
+  field,
+  reservarHref,
+}: {
+  field: CampoDetailRow
+  /** Solo llega con valor si ARENA está activo y hay proveedor de pago. */
+  reservarHref?: string | null
+}) {
   const tipo = normalizeTipo(field.tipo)
   const logo = field.logo_url?.trim()
   const crearEventoHref = `/eventos/nuevo?${new URLSearchParams({
@@ -82,7 +89,32 @@ export function CampoHero({ field }: { field: CampoDetailRow }) {
             {field.ciudad}
           </p>
         ) : null}
-        <div className="mt-4 flex w-full max-w-full flex-row flex-nowrap items-stretch gap-2 sm:gap-3">
+        <div className="mt-4 flex w-full max-w-full flex-row flex-wrap items-stretch gap-2 sm:gap-3">
+          {reservarHref ? (
+            <Link
+              href={reservarHref}
+              style={{ ...jostBtn, borderRadius: 0 }}
+              className="inline-flex min-h-[44px] w-full min-w-0 items-center justify-center gap-2 bg-[#111111] px-3 py-2.5 text-[11px] tracking-[0.12em] text-white transition-colors hover:bg-[#CC4B37] sm:w-auto sm:px-5"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+                className="shrink-0"
+              >
+                <rect x="3" y="5" width="18" height="16" stroke="currentColor" strokeWidth="1.8" />
+                <path
+                  d="M3 10h18M8 3v4M16 3v4"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="truncate">RESERVAR</span>
+            </Link>
+          ) : null}
           <Link
             href={crearEventoHref}
             style={{ ...jostBtn, borderRadius: 0 }}
