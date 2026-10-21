@@ -41,6 +41,26 @@ function runFfmpeg(inputPath, outputPath, outputOptions, inputOptions) {
 }
 
 /**
+ * true / false si ffprobe pudo leer el archivo; null si no hay probe
+ * (no bloquear el upload por un ffprobe caído).
+ * Un -c copy puede salir en 0 habiendo tirado el video.
+ */
+function outputHasVideo(filePath) {
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(filePath, (err, data) => {
+      if (err || !data || !Array.isArray(data.streams)) return resolve(null);
+      resolve(
+        data.streams.some(
+          (s) =>
+            s.codec_type === "video" &&
+            !(s.disposition && s.disposition.attached_pic)
+        )
+      );
+    });
+  });
+}
+
+/**
  * Cut a clip with ffmpeg. Prefer stream-copy (seconds); fall back to H.264/AAC.
  * @returns {Promise<{ buffer: Buffer, mimetype: string, filename: string }>}
  */
@@ -84,7 +104,8 @@ async function trimVideoBuffer(buffer, originalname, startSec, durationSec) {
         [`-ss`, String(start)]
       );
       const st = await fs.promises.stat(copyPath);
-      if (st.size >= 512) {
+      const copyHasVideo = await outputHasVideo(copyPath);
+      if (st.size >= 512 && copyHasVideo !== false) {
         const out = await fs.promises.readFile(copyPath);
         return {
           buffer: out,
@@ -124,8 +145,9 @@ async function trimVideoBuffer(buffer, originalname, startSec, durationSec) {
       [`-ss`, String(start)]
     );
     const st2 = await fs.promises.stat(encPath);
-    if (st2.size < 512) {
-      throw new Error("El clip recortado quedó vacío");
+    const encHasVideo = await outputHasVideo(encPath);
+    if (st2.size < 512 || encHasVideo === false) {
+      throw new Error("El archivo no tiene pista de video");
     }
     const out2 = await fs.promises.readFile(encPath);
     return {

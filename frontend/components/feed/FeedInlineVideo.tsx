@@ -206,6 +206,9 @@ export function FeedInlineVideo({
   const [isMuted, setIsMuted] = useState(() => getFeedAudioMuted())
   const [aspect, setAspect] = useState<number | null>(null)
   const [armed, setArmed] = useState(false)
+  /** Pista de audio sin cuadro decodificable: el poster tapa el negro. */
+  const [noPicture, setNoPicture] = useState(false)
+  const noPictureRef = useRef(false)
   /** Posición del pointerdown: un swipe del carrusel no debe abrir Reels. */
   const tapStart = useRef<{ x: number; y: number } | null>(null)
   const [posterUrl, setPosterUrl] = useState<string | null>(
@@ -218,6 +221,8 @@ export function FeedInlineVideo({
     mediaSeen.current = mediaUrl
     videoSized.current = false
     setAspect(null)
+    noPictureRef.current = false
+    setNoPicture(false)
   }
 
   const applyBox = (videoW: number, videoH: number, posterW = 0, posterH = 0, fromVideo = false) => {
@@ -259,17 +264,49 @@ export function FeedInlineVideo({
   }, [posterUrl, fill, reels])
 
   // HLS a veces dispara loadedmetadata en 0×0; resize llega cuando hay cuadro.
+  // Si después de reproducir sigue en 0×0, no hay pista de video (solo audio).
   useEffect(() => {
     const el = videoRef.current
     if (!el) return
-    const sync = () => applyBox(el.videoWidth, el.videoHeight, 0, 0, true)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const clearTimer = () => {
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+    }
+    const hasPicture = () => el.videoWidth > 0 && el.videoHeight > 0
+    const markMissing = (missing: boolean) => {
+      if (noPictureRef.current === missing) return
+      noPictureRef.current = missing
+      setNoPicture(missing)
+    }
+    const sync = () => {
+      applyBox(el.videoWidth, el.videoHeight, 0, 0, true)
+      if (hasPicture()) {
+        clearTimer()
+        markMissing(false)
+      }
+    }
+    // Solo tras `playing`: loadedmetadata en HLS llega en 0×0 antes del cuadro.
+    const onPlaying = () => {
+      sync()
+      if (hasPicture()) return
+      clearTimer()
+      timer = setTimeout(() => markMissing(!hasPicture()), 800)
+    }
     el.addEventListener('resize', sync)
     el.addEventListener('loadedmetadata', sync)
     el.addEventListener('loadeddata', sync)
+    el.addEventListener('timeupdate', sync)
+    el.addEventListener('playing', onPlaying)
     return () => {
+      clearTimer()
       el.removeEventListener('resize', sync)
       el.removeEventListener('loadedmetadata', sync)
       el.removeEventListener('loadeddata', sync)
+      el.removeEventListener('timeupdate', sync)
+      el.removeEventListener('playing', onPlaying)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaUrl, fill])
@@ -722,6 +759,15 @@ export function FeedInlineVideo({
           setVideoError(true)
         }}
       />
+      {noPicture && posterUrl ? (
+        <img
+          src={posterUrl}
+          alt=""
+          className={`pointer-events-none absolute inset-0 z-10 h-full w-full ${
+            reels && aspect != null && aspect > 1 ? 'object-contain' : 'object-cover'
+          }`}
+        />
+      ) : null}
       <button
         type="button"
         onClick={toggleMute}
