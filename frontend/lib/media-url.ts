@@ -48,6 +48,18 @@ export function clampFeedAspect(width: number, height: number): number {
   return Math.min(FEED_MAX_ASPECT, Math.max(FEED_MIN_ASPECT, ratio))
 }
 
+/** Caja del video en el feed. El cuadro del video gana; si todavía es 0×0, el poster. */
+export function feedVideoBoxAspect(
+  videoW: number,
+  videoH: number,
+  posterW = 0,
+  posterH = 0,
+): number | null {
+  if (videoW > 0 && videoH > 0) return clampFeedAspect(videoW, videoH)
+  if (posterW > 0 && posterH > 0) return clampFeedAspect(posterW, posterH)
+  return null
+}
+
 const FEED_WIDTHS = [400, 828, 1200] as const
 
 export function feedPhotoSrcSet(url: string): {

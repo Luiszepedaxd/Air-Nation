@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent,
@@ -11,7 +12,7 @@ import {
   setFeedAudioMuted,
   subscribeFeedAudioMuted,
 } from '@/lib/feed-audio-preference'
-import { clampFeedAspect } from '@/lib/media-url'
+import { FEED_MIN_ASPECT, feedVideoBoxAspect } from '@/lib/media-url'
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
@@ -121,10 +122,21 @@ function supportsNativeHls(video: HTMLVideoElement): boolean {
   return Boolean(video.canPlayType('application/vnd.apple.mpegurl'))
 }
 
+function fullscreenElement(): Element | null {
+  return (
+    document.fullscreenElement ??
+    (document as Document & { webkitFullscreenElement?: Element | null }).webkitFullscreenElement ??
+    null
+  )
+}
+
 /**
- * Video del feed a ancho completo, sin recorte.
- * La caja usa la proporción real, acotada como las fotos (4:5 … 1.91:1):
- * si el video es más extremo, se ve entero con bandas, no se corta.
+ * Video del feed a ancho completo, sin franjas.
+ * La caja usa la proporción real, acotada como las fotos (4:5 … 1.91:1).
+ * object-cover llena el marco: un 16:9 se ve a 16:9 y un vertical más alto
+ * que 4:5 se recorta un poco arriba y abajo, solo en el feed.
+ * Al abrir el video (player nativo en iOS, o el contenedor a pantalla completa)
+ * se ve el cuadro entero.
  * HLS (Cloudflare Stream) vía nativo en Safari/iOS o hls.js en el resto;
  * MP4 progresivo para los videos legacy de R2.
  * No descarga nada hasta estar cerca del viewport; tope de concurrencia;
@@ -158,11 +170,74 @@ export function FeedInlineVideo({
   const [videoError, setVideoError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const [isMuted, setIsMuted] = useState(() => getFeedAudioMuted())
-  const [aspect, setAspect] = useState(1)
+  const [aspect, setAspect] = useState<number | null>(null)
   const [armed, setArmed] = useState(false)
+  const [full, setFull] = useState(false)
   const [posterUrl, setPosterUrl] = useState<string | null>(
     () => poster || posterCache.get(mediaUrl) || null
   )
+  /** true cuando ya medimos el video; el poster no vuelve a pisar la caja. */
+  const videoSized = useRef(false)
+  const mediaSeen = useRef(mediaUrl)
+  if (mediaSeen.current !== mediaUrl) {
+    mediaSeen.current = mediaUrl
+    videoSized.current = false
+    setAspect(null)
+  }
+
+  const applyBox = (videoW: number, videoH: number, posterW = 0, posterH = 0, fromVideo = false) => {
+    if (fill) return
+    if (!fromVideo && videoSized.current) return
+    const next = feedVideoBoxAspect(videoW, videoH, posterW, posterH)
+    if (next == null) return
+    if (fromVideo) videoSized.current = true
+    setAspect((prev) => (prev === next ? prev : next))
+  }
+
+  // El poster es un frame: fija la caja antes del primer paint si ya está en caché.
+  useLayoutEffect(() => {
+    if (fill || !posterUrl || videoSized.current) return
+    let cancelled = false
+    const img = new Image()
+    const apply = () => {
+      if (cancelled) return
+      applyBox(0, 0, img.naturalWidth, img.naturalHeight)
+    }
+    img.onload = apply
+    img.src = posterUrl
+    if (img.complete) apply()
+    return () => {
+      cancelled = true
+    }
+    // applyBox cierra sobre fill y los refs; posterUrl es la señal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posterUrl, fill])
+
+  useEffect(() => {
+    const sync = () => setFull(fullscreenElement() === wrapRef.current)
+    document.addEventListener('fullscreenchange', sync)
+    document.addEventListener('webkitfullscreenchange', sync)
+    return () => {
+      document.removeEventListener('fullscreenchange', sync)
+      document.removeEventListener('webkitfullscreenchange', sync)
+    }
+  }, [])
+
+  // HLS a veces dispara loadedmetadata en 0×0; resize llega cuando hay cuadro.
+  useEffect(() => {
+    const el = videoRef.current
+    if (!el) return
+    const sync = () => applyBox(el.videoWidth, el.videoHeight, 0, 0, true)
+    el.addEventListener('resize', sync)
+    el.addEventListener('loadedmetadata', sync)
+    el.addEventListener('loadeddata', sync)
+    return () => {
+      el.removeEventListener('resize', sync)
+      el.removeEventListener('loadedmetadata', sync)
+      el.removeEventListener('loadeddata', sync)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaUrl, fill])
 
   useEffect(() => {
     if (poster) setPosterUrl(poster)
@@ -263,6 +338,18 @@ export function FeedInlineVideo({
           instance.on(Hls.Events.ERROR, (_evt, data) => {
             if (data.fatal) setVideoError(true)
           })
+          instance.on(Hls.Events.MANIFEST_PARSED, (_evt, data) => {
+            let w = 0
+            let h = 0
+            for (const level of data.levels ?? []) {
+              const area = (level.width || 0) * (level.height || 0)
+              if (area > w * h) {
+                w = level.width || 0
+                h = level.height || 0
+              }
+            }
+            applyBox(w, h, 0, 0, true)
+          })
           instance.loadSource(mediaUrl)
           instance.attachMedia(el)
           hlsRef.current = instance
@@ -285,6 +372,8 @@ export function FeedInlineVideo({
     const wrap = wrapRef.current
     if (!wrap) return
 
+    const wrapIsOpen = () => fullscreenElement() === wrap
+
     const nearObs = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -295,12 +384,12 @@ export function FeedInlineVideo({
               unloadTimer.current = null
             }
             void armAndMaybePlay()
-          } else {
+          } else if (!wrapIsOpen()) {
             const el = videoRef.current
             el?.pause()
             if (unloadTimer.current) clearTimeout(unloadTimer.current)
             unloadTimer.current = setTimeout(() => {
-              if (!nearRef.current) detachSrc()
+              if (!nearRef.current && fullscreenElement() !== wrap) detachSrc()
             }, 800)
           }
         }
@@ -320,7 +409,7 @@ export function FeedInlineVideo({
             } else if (nearRef.current) {
               void armAndMaybePlay()
             }
-          } else {
+          } else if (!wrapIsOpen()) {
             el.pause()
           }
         }
@@ -347,6 +436,43 @@ export function FeedInlineVideo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retryCount])
 
+  const openFull = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    const el = videoRef.current
+    const wrap = wrapRef.current
+    if (!el || !wrap) return
+    if (!loadedRef.current) {
+      nearRef.current = true
+      if (hls && supportsNativeHls(el)) {
+        el.src = mediaUrl
+        loadedRef.current = mediaUrl
+        setArmed(true)
+      } else {
+        void armAndMaybePlay()
+      }
+    }
+    const native = el as HTMLVideoElement & { webkitEnterFullscreen?: () => void }
+    const ios =
+      /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    // iOS: el player nativo ignora el object-cover del feed y muestra el cuadro entero.
+    if (ios && typeof native.webkitEnterFullscreen === 'function') {
+      try {
+        native.webkitEnterFullscreen()
+        return
+      } catch {
+        /* sigue el fullscreen del contenedor */
+      }
+    }
+    wrap.requestFullscreen?.().catch(() => {})
+  }
+
+  const closeFull = (e: MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
+    const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => void }).webkitExitFullscreen
+    exit?.call(document)
+  }
+
   const togglePlayPause = () => {
     const el = videoRef.current
     if (!el) return
@@ -372,10 +498,14 @@ export function FeedInlineVideo({
     }
   }
 
-  const frameClass = fill
-    ? 'relative block h-full w-full overflow-hidden bg-black'
-    : 'relative block w-full overflow-hidden bg-black'
-  const frameStyle = fill ? undefined : { aspectRatio: aspect }
+  // ponytail: 4:5 hasta que el poster o videoWidth digan la proporción real.
+  const boxAspect = aspect ?? FEED_MIN_ASPECT
+  const frameClass = full
+    ? 'relative flex h-full w-full items-center justify-center bg-black'
+    : fill
+      ? 'relative block h-full w-full overflow-hidden bg-black'
+      : 'relative block w-full overflow-hidden bg-black'
+  const frameStyle = fill || full ? undefined : { aspectRatio: boxAspect }
 
   if (videoError) {
     return (
@@ -391,16 +521,25 @@ export function FeedInlineVideo({
   }
 
   return (
-    <div
-      ref={wrapRef}
-      className={frameClass}
-      style={frameStyle}
-    >
+    <>
+      {full && !fill ? (
+        <div key="feed-video-spacer" className="w-full bg-black" style={{ aspectRatio: boxAspect }} aria-hidden />
+      ) : null}
+      <div
+        key="feed-video-player"
+        ref={wrapRef}
+        className={frameClass}
+        style={frameStyle}
+      >
       <video
         ref={videoRef}
         width="100%"
         height="100%"
-        className="absolute inset-0 h-full w-full cursor-pointer object-contain"
+        className={
+          full
+            ? 'h-full w-full max-h-[100dvh] max-w-[100vw] cursor-pointer object-contain'
+            : 'absolute inset-0 h-full w-full cursor-pointer object-cover'
+        }
         muted={isMuted}
         playsInline
         loop
@@ -409,15 +548,14 @@ export function FeedInlineVideo({
         onClick={togglePlayPause}
         onLoadedMetadata={(e) => {
           const v = e.currentTarget
-          if (v.videoWidth && v.videoHeight) {
-            setAspect(clampFeedAspect(v.videoWidth, v.videoHeight))
-          }
+          applyBox(v.videoWidth, v.videoHeight, 0, 0, true)
           if (!posterUrl) {
             const p = capturePoster(v, mediaUrl)
             if (p) setPosterUrl(p)
           }
         }}
         onLoadedData={(e) => {
+          applyBox(e.currentTarget.videoWidth, e.currentTarget.videoHeight, 0, 0, true)
           if (!posterUrl) {
             const p = capturePoster(e.currentTarget, mediaUrl)
             if (p) setPosterUrl(p)
@@ -431,10 +569,37 @@ export function FeedInlineVideo({
           setVideoError(true)
         }}
       />
+      {full ? (
+        <button
+          type="button"
+          onClick={closeFull}
+          className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+          aria-label="Cerrar video"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={openFull}
+          className="absolute bottom-2 left-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+          aria-label="Ver video completo"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M9 4H4v5M15 4h5v5M20 15v5h-5M4 15v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
       <button
         type="button"
         onClick={toggleMute}
-        className="absolute bottom-2 right-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+        className={`absolute z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white ${
+          full
+            ? 'bottom-[max(0.5rem,env(safe-area-inset-bottom))] right-[max(0.5rem,env(safe-area-inset-right))]'
+            : 'bottom-2 right-2'
+        }`}
         aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
       >
         {isMuted ? (
@@ -469,6 +634,7 @@ export function FeedInlineVideo({
           </svg>
         )}
       </button>
-    </div>
+      </div>
+    </>
   )
 }
