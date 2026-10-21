@@ -103,6 +103,12 @@ PORT=4000
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
 ALLOWED_ORIGINS=http://localhost:3000,https://airnation.online
+
+# ARENA (reservas de campos). Vacío = ARENA no acepta reservas.
+# `mock` es el proveedor de pago de prueba: con NODE_ENV=production el backend
+# no arranca a propósito.
+ARENA_PAYMENT_PROVIDER=mock
+ARENA_PUBLIC_URL=https://www.airnation.online
 ```
 
 ### Frontend (.env.local)

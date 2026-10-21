@@ -21,7 +21,11 @@ const credencialesRouter = require("./routes/credenciales");
 const searchRouter = require('./routes/search')
 const tournamentsRouter = require("./routes/tournaments");
 const joulieRouter = require("./routes/joulie");
+const arenaRouter = require("./routes/arena");
+const { assertArenaConfig } = require("./lib/arena/config");
 const { iniciarJobIndexNow } = require("./jobs/indexnow");
+
+assertArenaConfig();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -78,6 +82,7 @@ app.use("/api/v1/credencial", credencialesRouter);
 app.use('/api/v1/search', searchRouter)
 app.use("/api/v1/tournaments", tournamentsRouter);
 app.use("/api/v1/joulie", joulieRouter);
+app.use("/api/v1/arena", arenaRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {
