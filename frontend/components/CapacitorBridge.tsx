@@ -53,13 +53,17 @@ export default function CapacitorBridge() {
         const { App } = await import('@capacitor/app')
         const { StatusBar, Style } = await import('@capacitor/status-bar')
 
-        // Configurar status bar
-        try {
-          await StatusBar.setStyle({ style: Style.Dark })
-          await StatusBar.setBackgroundColor({ color: '#FFFFFF' })
-          await StatusBar.setOverlaysWebView({ overlay: false })
-        } catch {
-          /* algunos devices no soportan, ignorar */
+        // Status bar. Si Reels ya está abierto, no volver a dejar la franja blanca.
+        // Cada llamada aparte: setBackgroundColor falla en iOS y no debe abortar el resto.
+        const step = (task: Promise<void>) => task.catch(() => undefined)
+        if (getReelsOpen()) {
+          await step(StatusBar.setOverlaysWebView({ overlay: true }))
+          await step(StatusBar.setStyle({ style: Style.Dark }))
+          await step(StatusBar.setBackgroundColor({ color: '#000000' }))
+        } else {
+          await step(StatusBar.setStyle({ style: Style.Dark }))
+          await step(StatusBar.setBackgroundColor({ color: '#FFFFFF' }))
+          await step(StatusBar.setOverlaysWebView({ overlay: false }))
         }
 
         // viewportFit=cover solo en iOS para manejar el notch correctamente.

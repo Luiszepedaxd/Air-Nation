@@ -2,6 +2,7 @@
 
 // Redeploy: Vercel rechazó 330169b porque su autor de git no está en el equipo.
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   useCallback,
   useEffect,
@@ -193,7 +194,7 @@ function ReelScrubber({
       onPointerCancel={endDrag}
       onKeyDown={onKeyDown}
       onClick={(event) => event.stopPropagation()}
-      className="absolute inset-x-0 bottom-0 z-30 flex touch-none items-end"
+      className="absolute inset-x-0 z-30 flex touch-none items-end bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] lg:bottom-[env(safe-area-inset-bottom)]"
       style={{ height: 28 }}
     >
       <div
@@ -243,6 +244,7 @@ function ReelMedia({
 }
 
 function ReelsViewer({ seedSrc }: { seedSrc: string }) {
+  const pathname = usePathname()
   const [items, setItems] = useState<Reel[]>([])
   const [index, setIndex] = useState(0)
   const [ready, setReady] = useState(false)
@@ -261,6 +263,14 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   const doneRef = useRef(false)
   const loadingRef = useRef(false)
   const pushedRef = useRef(false)
+  const pathRef = useRef(pathname)
+
+  // La navbar sigue usable: cambiar de tab cierra Reels y deja ver la ruta.
+  useEffect(() => {
+    if (pathRef.current === pathname) return
+    pathRef.current = pathname
+    closeReels()
+  }, [pathname])
 
   /** Cierra respetando el historial: el botón atrás de Android sale de Reels. */
   const dismiss = useCallback(() => {
@@ -270,6 +280,43 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
       return
     }
     closeReels()
+  }, [])
+
+  // La status bar nativa queda fuera del webview (franja blanca). Al abrir,
+  // el video llega hasta arriba y el reloj pasa a blanco sobre negro.
+  useEffect(() => {
+    const html = document.documentElement
+    const prevHtml = html.style.backgroundColor
+    const prevBody = document.body.style.backgroundColor
+    html.style.backgroundColor = '#000000'
+    document.body.style.backgroundColor = '#000000'
+    let seq = 0
+    const paintStatusBar = async (open: boolean, token: number) => {
+      const { isNativeApp } = await import('@/lib/platform')
+      if (!isNativeApp() || token !== seq) return
+      const { StatusBar, Style } = await import('@capacitor/status-bar')
+      if (token !== seq) return
+      // setBackgroundColor falla en iOS; no puede impedir el overlay.
+      const step = async (task: Promise<void>) => {
+        if (token !== seq) return
+        await task.catch(() => undefined)
+      }
+      if (open) {
+        await step(StatusBar.setOverlaysWebView({ overlay: true }))
+        await step(StatusBar.setStyle({ style: Style.Dark }))
+        await step(StatusBar.setBackgroundColor({ color: '#000000' }))
+        return
+      }
+      await step(StatusBar.setStyle({ style: Style.Dark }))
+      await step(StatusBar.setBackgroundColor({ color: '#FFFFFF' }))
+      await step(StatusBar.setOverlaysWebView({ overlay: false }))
+    }
+    void paintStatusBar(true, ++seq)
+    return () => {
+      html.style.backgroundColor = prevHtml
+      document.body.style.backgroundColor = prevBody
+      void paintStatusBar(false, ++seq)
+    }
   }, [])
 
   // Bloquea el scroll de atrás; Esc y botón atrás cierran.
@@ -464,7 +511,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             />
 
             {/* Acciones: like, comentarios, compartir */}
-            <div className="absolute bottom-[calc(env(safe-area-inset-bottom)_+_7rem)] right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)]">
+            <div className="absolute bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px)+2.75rem)] right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex flex-col items-center gap-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] lg:bottom-[calc(env(safe-area-inset-bottom)+5rem)]">
               <button
                 type="button"
                 onClick={() => void toggleLike(reel)}
@@ -515,7 +562,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             </div>
 
             {/* Autor + descripción */}
-            <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-[calc(env(safe-area-inset-bottom)_+_1rem)] pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10">
+            <div className="absolute inset-x-0 bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px))] z-20 bg-gradient-to-t from-black/85 via-black/45 to-transparent pb-10 pl-[max(1rem,env(safe-area-inset-left))] pr-16 pt-10 lg:bottom-[env(safe-area-inset-bottom)]">
               <Link
                 href={reel.authorHref}
                 onClick={() => closeReels()}
@@ -624,7 +671,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
       {toast ? (
         <p
           style={lato}
-          className="absolute bottom-[calc(env(safe-area-inset-bottom)_+_5rem)] left-1/2 z-30 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] font-semibold text-[#111111]"
+          className="absolute bottom-[calc(4rem+max(env(safe-area-inset-bottom),12px)+3rem)] left-1/2 z-30 -translate-x-1/2 rounded-full bg-white/90 px-3 py-1 text-[12px] font-semibold text-[#111111] lg:bottom-[calc(env(safe-area-inset-bottom)+5rem)]"
         >
           {toast}
         </p>
@@ -659,7 +706,7 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
             onClick={() => setCommentsFor(null)}
             className="absolute inset-0 bg-black/50"
           />
-          <div className="relative max-h-[72%] overflow-y-auto bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+          <div className="relative mb-[calc(4rem+max(env(safe-area-inset-bottom),12px))] max-h-[72%] overflow-y-auto bg-white px-4 pb-4 pt-3 lg:mb-0 lg:pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between">
               <p style={jost} className="text-[12px] text-[#111111]">
                 Comentarios

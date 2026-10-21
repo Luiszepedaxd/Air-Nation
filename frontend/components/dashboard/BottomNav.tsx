@@ -1,7 +1,7 @@
 "use client"
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import {
   fetchPendingJoinRequestCount,
   PENDING_JOIN_UPDATED_EVENT,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/user-notifications'
 import { supabase } from '@/lib/supabase'
 import { SearchBar } from '@/components/search/SearchBar'
+import { getReelsOpen, subscribeReels } from '@/lib/reels'
 
 const NAV_ITEMS = [
   {
@@ -313,6 +314,8 @@ export default function BottomNav() {
   }
 
   const adminNavActive = pathname === '/admin'
+  const reelsOpen = useSyncExternalStore(subscribeReels, getReelsOpen, () => null)
+  const glass = reelsOpen !== null
 
   return (
     <>
@@ -388,8 +391,23 @@ export default function BottomNav() {
       </nav>
 
       {/* Bottom Nav — mobile (5 ítems: HOME, OPERADOR, MENSAJES, CAMPOS, ARSENAL) */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-[#EEEEEE] lg:hidden"
-           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+      <nav
+        className={`fixed bottom-0 inset-x-0 lg:hidden ${
+          glass
+            ? 'z-[320] border-t border-white/25 [&_svg_path]:stroke-white [&_svg_circle]:stroke-white [&_.is-active_svg_path]:stroke-an-accent [&_.is-active_svg_circle]:stroke-an-accent'
+            : 'z-50 border-t border-[#EEEEEE] bg-white'
+        }`}
+        style={
+          glass
+            ? {
+                paddingBottom: 'max(env(safe-area-inset-bottom), 12px)',
+                backgroundColor: 'rgba(0,0,0,0.45)',
+                WebkitBackdropFilter: 'blur(22px) saturate(1.6)',
+                backdropFilter: 'blur(22px) saturate(1.6)',
+              }
+            : { paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }
+        }
+      >
         <div className="grid h-16 w-full grid-cols-5 items-center">
           {NAV_ITEMS_MOBILE.map((item) => {
             const active = isNavItemActive(pathname, item.href)
@@ -398,7 +416,7 @@ export default function BottomNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex min-w-0 flex-col items-center justify-center gap-0.5"
+                className={`flex min-w-0 flex-col items-center justify-center gap-0.5 ${active ? 'is-active' : ''}`}
               >
                 {isPerfil ? (
                   <ProfileIconWithBadge
@@ -423,7 +441,13 @@ export default function BottomNav() {
                 )}
                 <span
                   className={`text-[8px] font-bold uppercase tracking-wider leading-none ${
-                    active ? 'text-[#CC4B37]' : 'text-[#767676]'
+                    glass
+                      ? active
+                        ? 'text-an-accent'
+                        : 'text-white'
+                      : active
+                        ? 'text-[#CC4B37]'
+                        : 'text-[#767676]'
                   }`}
                 >
                   {item.label}

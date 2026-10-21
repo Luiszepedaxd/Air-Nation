@@ -221,6 +221,16 @@ export function FeedInlineVideo({
   }
 
   const applyBox = (videoW: number, videoH: number, posterW = 0, posterH = 0, fromVideo = false) => {
+    if (reels) {
+      const w = fromVideo ? videoW : posterW
+      const h = fromVideo ? videoH : posterH
+      if (w > 0 && h > 0) {
+        if (fromVideo) videoSized.current = true
+        const next = w / h
+        setAspect((prev) => (prev === next ? prev : next))
+      }
+      return
+    }
     if (fill) return
     if (!fromVideo && videoSized.current) return
     const next = feedVideoBoxAspect(videoW, videoH, posterW, posterH)
@@ -231,7 +241,7 @@ export function FeedInlineVideo({
 
   // El poster es un frame: fija la caja antes del primer paint si ya está en caché.
   useLayoutEffect(() => {
-    if (fill || !posterUrl || videoSized.current) return
+    if ((fill && !reels) || !posterUrl || videoSized.current) return
     let cancelled = false
     const img = new Image()
     const apply = () => {
@@ -246,7 +256,7 @@ export function FeedInlineVideo({
     }
     // applyBox cierra sobre fill y los refs; posterUrl es la señal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posterUrl, fill])
+  }, [posterUrl, fill, reels])
 
   // HLS a veces dispara loadedmetadata en 0×0; resize llega cuando hay cuadro.
   useEffect(() => {
@@ -673,7 +683,9 @@ export function FeedInlineVideo({
         ref={setVideoNode}
         width="100%"
         height="100%"
-        className="absolute inset-0 h-full w-full cursor-pointer object-cover"
+        className={`absolute inset-0 h-full w-full cursor-pointer ${
+          reels && aspect != null && aspect > 1 ? 'object-contain' : 'object-cover'
+        }`}
         muted={isMuted}
         playsInline
         loop
