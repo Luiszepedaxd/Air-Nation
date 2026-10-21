@@ -9,6 +9,8 @@ const FIELD_DAYS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado
 // Índice 0 = domingo, igual que EXTRACT(DOW) en Postgres.
 const DOW_KEYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 
+const { mexicoParts } = require("../../services/joulie/time");
+
 const HHMM = /^(\d{1,2}):(\d{2})$/;
 
 /** "9:30" → 570 minutos. null si no es una hora válida. */
@@ -86,4 +88,48 @@ function parseHorarioJson(raw) {
   return { json };
 }
 
-module.exports = { FIELD_DAYS, DOW_KEYS, minutesOfClock, dayKeyOfDate, dayHours, parseHorarioJson };
+/**
+ * Instante UTC de una hora de pared en Ciudad de México.
+ * ponytail: una sola pasada basta porque CDMX no cambia de horario desde 2022;
+ * si vuelve el horario de verano hay que iterar el ajuste.
+ */
+function mexicoInstant(fecha, hhmm) {
+  const [y, m, d] = String(fecha).split("-").map(Number);
+  const [hh, mm] = String(hhmm).split(":").map(Number);
+  if (!y || !m || !d || !Number.isFinite(hh) || !Number.isFinite(mm)) return NaN;
+  const pared = Date.UTC(y, m - 1, d, hh, mm);
+  const visto = mexicoParts(pared);
+  const [vy, vm, vd] = visto.date.split("-").map(Number);
+  const leido = Date.UTC(vy, vm - 1, vd, visto.hour, Number(visto.minute));
+  return pared + (pared - leido);
+}
+
+/**
+ * Hasta cuándo se puede cancelar con reembolso del 100%:
+ * (fecha reservada + hora de apertura de ese día) − `cancelacion_horas_limite`.
+ * Si ese día ya no tiene horario publicado se usa 00:00 del día reservado.
+ * @returns {Date}
+ */
+function limiteCancelacion({ fecha, horariosJson, cancelacionHorasLimite }) {
+  const dia = dayHours(horariosJson, fecha);
+  const apertura = dia ? dia.apertura : "00:00";
+  const horas = Number(cancelacionHorasLimite);
+  return new Date(mexicoInstant(fecha, apertura) - (Number.isFinite(horas) ? horas : 0) * 3600000);
+}
+
+/** true si todavía estamos en plazo para cancelar con reembolso. */
+function enPlazoDeCancelacion(reserva, ahora = Date.now()) {
+  return ahora <= limiteCancelacion(reserva).getTime();
+}
+
+module.exports = {
+  FIELD_DAYS,
+  DOW_KEYS,
+  minutesOfClock,
+  dayKeyOfDate,
+  dayHours,
+  parseHorarioJson,
+  mexicoInstant,
+  limiteCancelacion,
+  enPlazoDeCancelacion,
+};

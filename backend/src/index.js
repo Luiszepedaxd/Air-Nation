@@ -53,6 +53,16 @@ app.post(
   }
 );
 
+// El webhook de ARENA también verifica firma sobre el body crudo.
+app.post(
+  "/api/v1/arena/payments/webhook/:provider",
+  express.raw({ type: "*/*" }),
+  (req, res, next) => {
+    req.url = `/payments/webhook/${req.params.provider}`;
+    arenaRouter.handle(req, res, next);
+  }
+);
+
 // Por defecto 100mb (Railway: puedes fijar BODY_PARSER_LIMIT=100mb en variables)
 const bodyParserLimit = process.env.BODY_PARSER_LIMIT || "100mb";
 app.use(express.json({ limit: bodyParserLimit }));

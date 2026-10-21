@@ -29,7 +29,7 @@
     "indexnow:ranking": "node scripts/indexnow.js --ranking",
     "migrate:stream": "node scripts/migrate-player-posts-to-stream.js",
     "migrate:stream:dry": "node scripts/migrate-player-posts-to-stream.js --dry-run",
-    "test": "node --test src/lib/*.test.js src/lib/arena/*.test.js src/services/*.test.js"
+    "test": "node --test src/lib/*.test.js src/lib/arena/*.test.js src/lib/arena/payments/*.test.js src/services/*.test.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1035.0",
@@ -44,6 +44,7 @@
     "form-data": "^4.0.0",
     "helmet": "^7.1.0",
     "multer": "^1.4.5-lts.1",
+    "qrcode": "^1.5.4",
     "resend": "^6.10.0",
     "stripe": "^22.1.0",
     "web-push": "^3.6.7",

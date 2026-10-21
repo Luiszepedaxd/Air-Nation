@@ -111,6 +111,115 @@ fi
 paso "GET settings sin token (espera 401)"
 curl -sS -o /dev/null -w 'HTTP %{http_code}\n' "$API/arena/owner/fields/$FIELD/settings"
 
+# ─── Reservas, pago mock, QR y check-in ──────────────────────────────────────
+# Necesita que el campo tenga ARENA activo, un item base y el día abierto.
+# ARENA_ITEM_ID y ARENA_FECHA se pueden fijar a mano.
+
+paso "GET /arena/fields/\$SLUG (ficha pública)"
+if [ -n "${ARENA_FIELD_SLUG:-}" ]; then
+  curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/fields/$ARENA_FIELD_SLUG"
+  head -c 600 /tmp/arena-smoke.out; echo
+else
+  echo "(sin ARENA_FIELD_SLUG, omitido)"
+fi
+
+HASTA="$(date -u -d '+30 days' +%Y-%m-%d 2>/dev/null || date -u -v+30d +%Y-%m-%d)"
+paso "GET /arena/fields/\$FIELD/open-days"
+curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+  "$API/arena/fields/$FIELD/open-days?desde=$(date -u +%Y-%m-%d)&hasta=$HASTA"
+head -c 600 /tmp/arena-smoke.out; echo
+FECHA="${ARENA_FECHA:-$(sed -n 's/.*"fecha":"\([0-9-]\{10\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)}"
+echo "primer día abierto: ${FECHA:-ninguno}"
+
+paso "GET /arena/owner/fields/\$FIELD/items (para tomar el item base)"
+llamar GET "$OWNER" "/arena/owner/fields/$FIELD/items" > /dev/null
+BASE_ID="${ARENA_ITEM_ID:-$(sed -n 's/.*"id":"\([0-9a-f-]\{36\}\)"[^}]*"es_base":true.*/\1/p' /tmp/arena-smoke.out | head -1)}"
+echo "item base: ${BASE_ID:-ninguno}"
+
+if [ -n "${FECHA:-}" ] && [ -n "${BASE_ID:-}" ]; then
+  paso "POST /arena/bookings (invitado)"
+  curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/bookings" -H 'Content-Type: application/json' \
+    -d "{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"items\":[{\"item_id\":\"$BASE_ID\"}],\"contacto_nombre\":\"Smoke Test\",\"contacto_email\":\"${ARENA_TEST_EMAIL:-smoke@example.com}\",\"acepta_politica\":true}"
+  head -c 600 /tmp/arena-smoke.out; echo
+  CODIGO="$(sed -n 's/.*"codigo":"\(AR-[0-9A-Z]\{6\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+  TOKEN="$(sed -n 's/.*"access_token":"\([0-9a-f]\{64\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+  PAGO_ID="$(sed -n 's/.*"pago":{"id":"\([0-9a-f-]\{36\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+  echo "reserva $CODIGO · pago $PAGO_ID"
+
+  paso "POST /arena/bookings con precio alterado (el cliente no manda montos; espera 201 con el total de la BD)"
+  curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/bookings" -H 'Content-Type: application/json' \
+    -d "{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"total_centavos\":1,\"items\":[{\"item_id\":\"$BASE_ID\",\"precio_centavos\":1}],\"contacto_nombre\":\"Smoke\",\"contacto_email\":\"${ARENA_TEST_EMAIL:-smoke@example.com}\",\"acepta_politica\":true}"
+  head -c 300 /tmp/arena-smoke.out; echo
+
+  paso "POST /arena/bookings sin aceptar la política (espera 400)"
+  curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/bookings" -H 'Content-Type: application/json' \
+    -d "{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"items\":[{\"item_id\":\"$BASE_ID\"}],\"contacto_nombre\":\"X\",\"contacto_email\":\"x@example.com\"}"
+
+  if [ -n "${CODIGO:-}" ] && [ -n "${TOKEN:-}" ]; then
+    paso "GET /arena/bookings/\$CODIGO con token"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/bookings/$CODIGO?t=$TOKEN"
+    head -c 500 /tmp/arena-smoke.out; echo
+
+    paso "GET /arena/bookings/\$CODIGO con token ajeno (espera 404)"
+    curl -sS -o /dev/null -w 'HTTP %{http_code}\n' "$API/arena/bookings/$CODIGO?t=$(printf '0%.0s' $(seq 64))"
+
+    paso "GET qr.png antes de pagar (espera 404)"
+    curl -sS -o /dev/null -w 'HTTP %{http_code}\n' "$API/arena/bookings/$CODIGO/qr.png?t=$TOKEN"
+  fi
+
+  if [ -n "${PAGO_ID:-}" ]; then
+    paso "POST /arena/payments/mock/\$PAGO_ID/complete?result=ok"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+      -X POST "$API/arena/payments/mock/$PAGO_ID/complete?result=ok"
+    head -c 300 /tmp/arena-smoke.out; echo
+
+    paso "Repetir el mismo pago (idempotencia: espera ya_procesado)"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+      -X POST "$API/arena/payments/mock/$PAGO_ID/complete?result=ok"
+    head -c 300 /tmp/arena-smoke.out; echo
+
+    paso "GET qr.png ya pagada (espera 200 image/png)"
+    curl -sS -o /tmp/arena-qr.png -w 'HTTP %{http_code} · %{content_type} · %{size_download} bytes\n' \
+      "$API/arena/bookings/$CODIGO/qr.png?t=$TOKEN"
+  fi
+
+  paso "GET /arena/owner/fields/\$FIELD/bookings (agenda del día reservado)"
+  llamar GET "$OWNER" "/arena/owner/fields/$FIELD/bookings?desde=$FECHA&hasta=$FECHA"
+
+  paso "POST /arena/owner/fields/\$FIELD/bookings (reserva manual, link de 2 h)"
+  llamar POST "$OWNER" "/arena/owner/fields/$FIELD/bookings" \
+    "{\"fecha\":\"$FECHA\",\"num_jugadores\":2,\"items\":[{\"item_id\":\"$BASE_ID\"}],\"contacto_nombre\":\"WhatsApp Test\",\"contacto_email\":\"${ARENA_TEST_EMAIL:-smoke@example.com}\"}"
+
+  if [ -n "${CODIGO:-}" ] && [ -n "${TOKEN:-}" ]; then
+    paso "POST /arena/bookings/\$CODIGO/cancel (reembolso si está en plazo)"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+      -X POST "$API/arena/bookings/$CODIGO/cancel" -H 'Content-Type: application/json' \
+      -d "{\"t\":\"$TOKEN\",\"motivo\":\"smoke test\"}"
+    head -c 400 /tmp/arena-smoke.out; echo
+
+    paso "Cancelar dos veces (espera 409 transicion_invalida)"
+    curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+      -X POST "$API/arena/bookings/$CODIGO/cancel" -H 'Content-Type: application/json' \
+      -d "{\"t\":\"$TOKEN\"}"
+  fi
+else
+  echo "(sin día abierto o sin item base: se omiten las pruebas de reserva)"
+fi
+
+paso "GET /arena/me/bookings"
+llamar GET "$OWNER" "/arena/me/bookings"
+
+paso "GET /arena/checkin con QR inventado (espera 404)"
+llamar GET "$OWNER" "/arena/checkin/$(printf 'a%.0s' $(seq 64))"
+
+paso "POST webhook mock sin firma (espera 400)"
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+  -X POST "$API/arena/payments/webhook/mock" -H 'Content-Type: application/json' \
+  -d '{"provider_ref":"mock_x","status":"pagado"}'
+
 paso "PATCH /arena/admin/fields/\$FIELD/pause"
 llamar PATCH "$ADMIN" "/arena/admin/fields/$FIELD/pause"
 

@@ -6,6 +6,7 @@
 const supabase = require("../supabase");
 const { sendPushToUser } = require("../push");
 const { arenaPublicUrl } = require("./config");
+const { qrPng } = require("./qr");
 
 function escapeHtml(str) {
   if (typeof str !== "string") return "";
@@ -128,11 +129,303 @@ async function avisoCuentaLigada({ email, userId, fieldId, fieldNombre }) {
   ]);
 }
 
+// ─── Formatos ────────────────────────────────────────────────────────────────
+
+/** Centavos → "$1,250 MXN". El dinero nunca viaja en pesos. */
+function pesos(centavos) {
+  const n = Number(centavos) || 0;
+  return `${new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: n % 100 === 0 ? 0 : 2,
+  }).format(n / 100)} MXN`;
+}
+
+// Una fecha de calendario se formatea en UTC para que no se corra un día.
+function fechaFmt(fecha, opciones) {
+  const [y, m, d] = String(fecha).split("-").map(Number);
+  if (!y || !m || !d) return String(fecha);
+  return new Intl.DateTimeFormat("es-MX", { timeZone: "UTC", ...opciones }).format(
+    new Date(Date.UTC(y, m - 1, d))
+  );
+}
+
+const fechaCorta = (fecha) => fechaFmt(fecha, { weekday: "short", day: "numeric", month: "short" });
+const fechaLarga = (fecha) =>
+  fechaFmt(fecha, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+function horaMexico(iso) {
+  if (!iso) return "";
+  return new Intl.DateTimeFormat("es-MX", {
+    timeZone: "America/Mexico_City",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(iso));
+}
+
+/** Tabla de renglones con el total: el recibo del jugador. */
+function recibo({ items, booking }) {
+  const filas = (items || [])
+    .map(
+      (i) => `<tr>
+        <td style="padding:6px 0;color:#444444;">${escapeHtml(i.nombre)} × ${i.cantidad}</td>
+        <td style="padding:6px 0;text-align:right;color:#111111;">${pesos(i.subtotal_centavos)}</td>
+      </tr>`
+    )
+    .join("");
+  return `<table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+      ${filas}
+      <tr><td colspan="2" style="border-top:1px solid #EEEEEE;"></td></tr>
+      <tr>
+        <td style="padding:8px 0;font-weight:bold;color:#111111;">Total pagado</td>
+        <td style="padding:8px 0;text-align:right;font-weight:bold;color:#CC4B37;">${pesos(booking.total_centavos)}</td>
+      </tr>
+    </table>`;
+}
+
+function linkReserva(booking) {
+  return `${arenaPublicUrl()}/reservas/${booking.codigo}?t=${booking.access_token}`;
+}
+
+function datosReserva(detalle) {
+  const { booking, field } = detalle;
+  return `<table style="font-size:14px;color:#444444;">
+      <tr><td style="padding:3px 12px 3px 0;">Código</td><td style="font-weight:bold;color:#111111;">${escapeHtml(booking.codigo)}</td></tr>
+      <tr><td style="padding:3px 12px 3px 0;">Campo</td><td>${escapeHtml(field?.nombre || "")}</td></tr>
+      <tr><td style="padding:3px 12px 3px 0;">Día</td><td>${escapeHtml(fechaLarga(booking.fecha))}</td></tr>
+      <tr><td style="padding:3px 12px 3px 0;">Jugadores</td><td>${booking.num_jugadores}</td></tr>
+    </table>`;
+}
+
+// ─── Eventos (sección 8 del doc) ─────────────────────────────────────────────
+
+/** Pago aprobado: email con QR al jugador, push y email al campo. */
+async function avisoPagoAprobado(detalle) {
+  const { booking, field } = detalle;
+  let adjuntos;
+  let qrHtml = `<p style="font-size:13px;color:#999999;">Abre tu reserva para ver el QR.</p>`;
+  try {
+    const png = await qrPng(booking.qr_token, 600);
+    adjuntos = [{ filename: `${booking.codigo}.png`, content: png.toString("base64"), content_id: "qr-arena" }];
+    // PNG adjunto por CID: Gmail y Outlook no cargan data URLs.
+    qrHtml = `<img src="cid:qr-arena" alt="Código QR de tu reserva" width="240" height="240" style="display:block;margin:8px 0 4px;" />`;
+  } catch (err) {
+    console.error("[arena:mail] qr:", err.message);
+  }
+
+  await Promise.allSettled([
+    enviarEmail({
+      to: booking.contacto_email,
+      subject: `Reserva confirmada ${booking.codigo} — ${field?.nombre || "ARENA"}`,
+      html: plantilla({
+        titulo: "Tu reserva está confirmada",
+        cuerpo: `<p>Listo, ${escapeHtml(booking.contacto_nombre)}. Muestra este QR en la entrada del campo.</p>
+          ${qrHtml}
+          <p style="font-size:12px;color:#999999;">Si no se ve la imagen, abre tu reserva con el botón de abajo.</p>
+          ${datosReserva(detalle)}
+          ${recibo(detalle)}
+          ${detalle.settings?.politica_cancelacion ? `<p style="font-size:13px;color:#666666;">${escapeHtml(detalle.settings.politica_cancelacion)}</p>` : ""}`,
+        ctaHref: linkReserva(booking),
+        ctaLabel: "VER MI RESERVA",
+      }),
+      attachments: adjuntos,
+    }),
+    avisarAlCampo(detalle, {
+      subject: `Nueva reserva pagada — ${fechaCorta(booking.fecha)}`,
+      titulo: "Nueva reserva pagada",
+      cuerpo: `<p><strong>${booking.num_jugadores}</strong> ${booking.num_jugadores === 1 ? "jugador" : "jugadores"} el ${escapeHtml(fechaLarga(booking.fecha))}.</p>
+        ${datosReserva(detalle)}
+        <p style="font-size:13px;color:#666666;">Contacto: ${escapeHtml(booking.contacto_nombre)} · ${escapeHtml(booking.contacto_email)}${booking.contacto_telefono ? ` · ${escapeHtml(booking.contacto_telefono)}` : ""}</p>`,
+      push: {
+        title: "Nueva reserva pagada",
+        body: `${booking.num_jugadores} ${booking.num_jugadores === 1 ? "jugador" : "jugadores"}, ${fechaCorta(booking.fecha)}`,
+      },
+    }),
+  ]);
+}
+
+/** Email con el link de pago de una reserva manual (vence en 2 h). */
+async function avisoLinkPago(detalle, checkoutUrl) {
+  const { booking, field } = detalle;
+  await enviarEmail({
+    to: booking.contacto_email,
+    subject: `Tu link de pago — ${field?.nombre || "ARENA"}`,
+    html: plantilla({
+      titulo: "Termina tu reserva",
+      cuerpo: `<p>${escapeHtml(field?.nombre || "El campo")} te apartó este lugar. Paga en línea para confirmarlo.</p>
+        ${datosReserva(detalle)}
+        ${recibo(detalle)}
+        <p style="font-size:13px;color:#CC4B37;">El link vence el ${escapeHtml(horaMexico(booking.expires_at))} (hora del centro de México).</p>`,
+      ctaHref: checkoutUrl || linkReserva(booking),
+      ctaLabel: "PAGAR AHORA",
+    }),
+  });
+}
+
+/** Pago rechazado o reserva vencida: link para intentar de nuevo. */
+async function avisoPagoFallido(detalle) {
+  const { booking, field } = detalle;
+  await enviarEmail({
+    to: booking.contacto_email,
+    subject: `No pudimos cobrar tu reserva ${booking.codigo}`,
+    html: plantilla({
+      titulo: "El pago no se completó",
+      cuerpo: `<p>No pudimos cobrar tu reserva en ${escapeHtml(field?.nombre || "el campo")}. Puedes intentar de nuevo desde tu reserva.</p>
+        ${datosReserva(detalle)}`,
+      ctaHref: linkReserva(booking),
+      ctaLabel: "INTENTAR DE NUEVO",
+    }),
+  });
+}
+
+/** Cancelada por el campo: email con motivo y monto, más push si tiene cuenta. */
+async function avisoCanceladaPorCampo(detalle) {
+  const { booking, field } = detalle;
+  await Promise.allSettled([
+    enviarEmail({
+      to: booking.contacto_email,
+      subject: `${field?.nombre || "El campo"} canceló tu reserva ${booking.codigo}`,
+      html: plantilla({
+        titulo: "El campo canceló tu reserva",
+        cuerpo: `<p>${escapeHtml(field?.nombre || "El campo")} canceló tu reserva del ${escapeHtml(fechaLarga(booking.fecha))}.</p>
+          ${booking.motivo_cancelacion ? `<p>Motivo: ${escapeHtml(booking.motivo_cancelacion)}</p>` : ""}
+          <p>Te reembolsamos <strong>${pesos(booking.reembolso_centavos)}</strong>. El reembolso tarda unos días en reflejarse según tu banco.</p>
+          ${datosReserva(detalle)}`,
+        ctaHref: linkReserva(booking),
+        ctaLabel: "VER DETALLE",
+      }),
+    }),
+    booking.user_id
+      ? sendPushToUser(booking.user_id, {
+          title: "Tu reserva fue cancelada",
+          body: `${field?.nombre || "El campo"} canceló el ${fechaCorta(booking.fecha)}. Te reembolsamos ${pesos(booking.reembolso_centavos)}.`,
+          url: `/reservas/${booking.codigo}?t=${booking.access_token}`,
+        })
+      : Promise.resolve(),
+  ]);
+}
+
+/** Cancelada por el jugador: email al jugador, push y email al campo. */
+async function avisoCanceladaPorJugador(detalle) {
+  const { booking, field } = detalle;
+  await Promise.allSettled([
+    enviarEmail({
+      to: booking.contacto_email,
+      subject: `Cancelamos tu reserva ${booking.codigo}`,
+      html: plantilla({
+        titulo: "Reserva cancelada",
+        cuerpo: `<p>Cancelamos tu reserva del ${escapeHtml(fechaLarga(booking.fecha))} en ${escapeHtml(field?.nombre || "el campo")}.</p>
+          <p>Monto reembolsado: <strong>${pesos(booking.reembolso_centavos)}</strong>.</p>
+          ${datosReserva(detalle)}`,
+      }),
+    }),
+    avisarAlCampo(detalle, {
+      subject: `Reserva cancelada — ${fechaCorta(booking.fecha)}`,
+      titulo: "Un jugador canceló",
+      cuerpo: `<p>${escapeHtml(booking.contacto_nombre)} canceló su reserva de ${booking.num_jugadores} ${booking.num_jugadores === 1 ? "jugador" : "jugadores"} del ${escapeHtml(fechaLarga(booking.fecha))}.</p>
+        ${datosReserva(detalle)}`,
+      push: {
+        title: "Reserva cancelada",
+        body: `${booking.contacto_nombre} canceló el ${fechaCorta(booking.fecha)}.`,
+      },
+    }),
+  ]);
+}
+
+/** Check-in registrado: push al jugador si tiene cuenta. */
+async function avisoCheckin(detalle) {
+  const { booking, field } = detalle;
+  if (!booking.user_id) return;
+  await sendPushToUser(booking.user_id, {
+    title: "Llegada registrada",
+    body: `${field?.nombre || "El campo"} registró tu entrada. Buen juego.`,
+    url: `/reservas/${booking.codigo}?t=${booking.access_token}`,
+  });
+}
+
+/** Liquidación transferida: email a los dueños del campo. */
+async function avisoLiquidacion({ payout, fieldId }) {
+  const { emails, campo } = await destinatariosCampo(fieldId);
+  if (emails.length === 0) return;
+  await enviarEmail({
+    to: emails,
+    subject: `Liquidación transferida — ${campo?.nombre || "tu campo"}`,
+    html: plantilla({
+      titulo: "Te transferimos tu liquidación",
+      cuerpo: `<table style="font-size:14px;color:#444444;">
+          <tr><td style="padding:3px 12px 3px 0;">Periodo</td><td>${escapeHtml(fechaLarga(payout.periodo_desde))} — ${escapeHtml(fechaLarga(payout.periodo_hasta))}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;">Reservas</td><td>${payout.reservas_count}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;">Vendido</td><td>${pesos(payout.bruto_centavos)}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;">Comisión AirNation</td><td>−${pesos(payout.comision_centavos)}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;">Reembolsos</td><td>−${pesos(payout.reembolsos_centavos)}</td></tr>
+          <tr><td style="padding:3px 12px 3px 0;font-weight:bold;color:#111111;">Transferido</td><td style="font-weight:bold;color:#CC4B37;">${pesos(payout.neto_centavos)}</td></tr>
+          ${payout.referencia ? `<tr><td style="padding:3px 12px 3px 0;">Folio</td><td>${escapeHtml(payout.referencia)}</td></tr>` : ""}
+        </table>`,
+      ctaHref: `${arenaPublicUrl()}/mi-campo/${fieldId}/arena?tab=saldos`,
+      ctaLabel: "VER MIS SALDOS",
+    }),
+  });
+}
+
+/**
+ * Una reserva ya liquidada no se reembolsa sola: queda marcada y avisamos.
+ * El contracargo se descuenta de la siguiente liquidación.
+ */
+async function avisoReembolsoManual({ booking, motivo }) {
+  const to = process.env.ARENA_ADMIN_EMAIL || process.env.RESEND_FROM_EMAIL;
+  console.warn("[arena] reembolso manual pendiente:", booking.codigo, motivo);
+  if (!to) return;
+  await enviarEmail({
+    to,
+    subject: `Reembolso manual pendiente — ${booking.codigo}`,
+    html: plantilla({
+      titulo: "Reembolso manual pendiente",
+      cuerpo: `<p>La reserva <strong>${escapeHtml(booking.codigo)}</strong> ya estaba liquidada al campo, así que el reembolso de ${pesos(booking.total_centavos)} no se disparó solo.</p>
+        <p>Motivo: ${escapeHtml(motivo || "cancelación")}. Hay que descontarlo de la siguiente liquidación.</p>`,
+    }),
+  });
+}
+
+/** Email a los correos del campo + push a sus cuentas. */
+async function avisarAlCampo(detalle, { subject, titulo, cuerpo, push }) {
+  const { emails, userIds } = await destinatariosCampo(detalle.booking.field_id);
+  const href = `${arenaPublicUrl()}/mi-campo/${detalle.booking.field_id}/arena`;
+  await Promise.allSettled([
+    emails.length
+      ? enviarEmail({
+          to: emails,
+          subject,
+          html: plantilla({ titulo, cuerpo, ctaHref: href, ctaLabel: "ABRIR MI AGENDA" }),
+        })
+      : Promise.resolve(),
+    ...(push
+      ? userIds.map((id) =>
+          sendPushToUser(id, { ...push, url: `/mi-campo/${detalle.booking.field_id}/arena` })
+        )
+      : []),
+  ]);
+}
+
 module.exports = {
   escapeHtml,
   plantilla,
   enviarEmail,
   destinatariosCampo,
   pushACampo,
+  pesos,
+  fechaCorta,
+  fechaLarga,
+  horaMexico,
   avisoCuentaLigada,
+  avisoPagoAprobado,
+  avisoLinkPago,
+  avisoPagoFallido,
+  avisoCanceladaPorCampo,
+  avisoCanceladaPorJugador,
+  avisoCheckin,
+  avisoLiquidacion,
+  avisoReembolsoManual,
 };
