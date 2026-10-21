@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import type { FieldReviewPublic } from '@/app/campos/types'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import { isArenaFieldMember } from '@/lib/arena-members'
 import type { MiCampoEventRow } from './components/EventosTab'
 import { MiCampoOwnerClient, type FieldRequestOwnerRow } from './MiCampoOwnerClient'
 
@@ -75,8 +76,12 @@ export default async function MiCampoPage({
     redirect('/dashboard/perfil')
   }
 
+  // El dueño puede ser `created_by` o un miembro activo de ARENA: los campos
+  // con reservas los sube el admin, no el campo.
   const ownerId = field.created_by as string | null | undefined
-  if (!ownerId || ownerId !== user.id) {
+  const esDueno =
+    (ownerId && ownerId === user.id) || (await isArenaFieldMember(id, user.id))
+  if (!esDueno) {
     redirect('/dashboard/perfil')
   }
 

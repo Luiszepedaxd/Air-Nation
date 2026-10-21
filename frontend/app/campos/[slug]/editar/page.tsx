@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import { isArenaFieldMember } from '@/lib/arena-members'
 import { EditCampoClient } from './EditCampoClient'
 
 export const revalidate = 0
@@ -42,8 +43,11 @@ export default async function EditarCampoPage({
 
   const isAdmin = profile?.app_role === 'admin'
   const isOwner = field.created_by === user.id
+  // Un miembro activo de ARENA también administra la ficha del campo.
+  const isMember =
+    isAdmin || isOwner ? false : await isArenaFieldMember(field.id as string, user.id)
 
-  if (!isAdmin && !isOwner) {
+  if (!isAdmin && !isOwner && !isMember) {
     redirect(`/campos/${encodeURIComponent(slug)}`)
   }
 

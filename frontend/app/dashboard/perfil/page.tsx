@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import type { ApprovedFieldNotice } from '@/lib/approved-field-notices'
 import type { PendingFieldOwnerRequest } from '@/lib/pending-field-owner-requests'
 import { fetchPendingJoinRequestsForModerator } from '@/lib/pending-join-requests'
+import { arenaMemberFieldIds } from '@/lib/arena-members'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
 import { type MisEventoRsvpItem } from './MisEventosRsvpSection'
 import type { PlayerPostRow, PublicReplicaRow } from '@/app/u/[id]/types'
@@ -164,7 +165,21 @@ export default async function PerfilPage({
 
   const pendingJoinRows = pendingJoinRowsResult.data
 
-  const misCampos = (misCamposResult.data ?? []).map((r) => ({
+  // Mis campos: los que registré y los que administro por ARENA (esos los
+  // sube el admin, así que `created_by` no soy yo).
+  const camposRows = [...(misCamposResult.data ?? [])]
+  const memberFieldIds = (await arenaMemberFieldIds(authUser.id)).filter(
+    (id) => !camposRows.some((r) => r.id === id)
+  )
+  if (memberFieldIds.length > 0) {
+    const { data: arenaFields } = await supabase
+      .from('fields')
+      .select('id, nombre, slug, ciudad, tipo, foto_portada_url, status, destacado')
+      .in('id', memberFieldIds)
+    camposRows.push(...(arenaFields ?? []))
+  }
+
+  const misCampos = camposRows.map((r) => ({
     id: r.id as string,
     nombre: r.nombre as string,
     slug: r.slug as string,
