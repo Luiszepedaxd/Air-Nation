@@ -46,6 +46,8 @@ const lato = { fontFamily: "'Lato', sans-serif" } as const
 const IDLE_PAUSE_MS = 5 * 60 * 1000
 /** Descripción visible antes de "ver más" (≈2 líneas). */
 const DESC_PREVIEW_CHARS = 80
+/** Título y texto del share: el preview lo resuelve la ruta pública del reel. */
+const SHARE_TEXT = 'Mira este reel en AirNation'
 /** Videos restantes a partir de los cuales se pide la siguiente página. */
 const PREFETCH_AT = 3
 /** Siguientes que calientan manifiesto + primer segmento, sin reproducirse. */
@@ -509,12 +511,8 @@ function ReelsViewer({ seedSrc }: { seedSrc: string }) {
   }
 
   const share = async (reel: Reel) => {
-    const caption = reel.content?.trim().replace(/\s+/g, ' ').slice(0, 120)
-    const result = await sharePost(
-      reel.shareUrl,
-      `${reel.authorName} en AirNation`,
-      caption ? `${reel.authorName}: ${caption}` : `Video de ${reel.authorName} en AirNation`
-    )
+    // Sin caption: el preview del link ya lo arma /reel/[type]/[id].
+    const result = await sharePost(reel.shareUrl, SHARE_TEXT, SHARE_TEXT)
     if (result === 'shared' || result === 'cancelled') return
     setToast(result === 'copied' ? 'Link copiado' : 'No se pudo compartir')
     setTimeout(() => setToast(null), 2000)

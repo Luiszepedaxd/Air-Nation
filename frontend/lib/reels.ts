@@ -12,6 +12,7 @@ import {
 } from '@/lib/post-engagements'
 import { getBlockedUserIds } from '@/lib/user-blocks'
 import { orderReels, type ReelRankInput } from '@/lib/reels-order'
+import { streamThumbnail } from '@/lib/stream-thumbnail'
 
 export type Reel = ReelRankInput & {
   postType: Extract<PostEngagementType, 'player' | 'team'>
@@ -101,20 +102,6 @@ function str(value: unknown): string | null {
   return value == null ? null : String(value)
 }
 
-/** Primer frame de Cloudflare Stream, mismo origen que el manifiesto. */
-function streamPoster(src: string): string | null {
-  try {
-    const url = new URL(src)
-    const host = url.hostname.toLowerCase()
-    if (!host.includes('cloudflarestream.com') && !host.includes('videodelivery.net')) return null
-    const uid = url.pathname.split('/').filter(Boolean)[0]
-    if (!uid || uid === 'manifest') return null
-    return `${url.origin}/${uid}/thumbnails/thumbnail.jpg?time=0s&height=640`
-  } catch {
-    return null
-  }
-}
-
 /**
  * El trimmer wasm subió estos R2 `clip.mp4` sin pista de video
  * (duration 0, sin thumbnail). El feed y el perfil los dejan; Reels no.
@@ -147,8 +134,8 @@ function mapPlayerRow(row: Record<string, unknown>): Reel | null {
     content: str(row.content),
     src,
     videoMp4Url: mp4,
-    poster: str(row.thumbnail_url) || streamPoster(src),
-    shareUrl: `/u/${userId}#post-${id}`,
+    poster: str(row.thumbnail_url) || streamThumbnail(src, 640),
+    shareUrl: `/reel/player/${id}`,
     postHref: `/dashboard?highlight_id=${id}&highlight_type=player`,
     createdAt: String(row.created_at ?? ''),
     likeCount: 0,
@@ -176,8 +163,8 @@ function mapTeamRow(row: Record<string, unknown>): Reel | null {
     content: str(row.content),
     src,
     videoMp4Url: mp4,
-    poster: streamPoster(src),
-    shareUrl: `/equipos/${slug}`,
+    poster: streamThumbnail(src, 640),
+    shareUrl: `/reel/team/${id}`,
     postHref: `/dashboard?highlight_id=${id}&highlight_type=team`,
     createdAt: String(row.created_at ?? ''),
     likeCount: 0,
@@ -263,11 +250,16 @@ export async function fetchReelBySrc(
   src: string,
   currentUserId: string | null
 ): Promise<Reel | null> {
-  const [playerRes, teamRes] = await Promise.all([
+  // Posts viejos no tienen video_url: su src ES el mp4. Sin esta segunda
+  // consulta el link del reel abre la lista genérica en lugar de ese video.
+  const [playerRes, playerMp4Res, teamRes] = await Promise.all([
     supabase.from('player_posts').select(PLAYER_COLS).eq('video_url', src).limit(1),
+    supabase.from('player_posts').select(PLAYER_COLS).eq('video_mp4_url', src).limit(1),
     supabase.from('team_posts').select(TEAM_COLS).eq('video_url', src).limit(1),
   ])
-  const playerRow = (playerRes.data ?? [])[0] as Record<string, unknown> | undefined
+  const playerRow = ((playerRes.data ?? [])[0] ?? (playerMp4Res.data ?? [])[0]) as
+    | Record<string, unknown>
+    | undefined
   const teamRow = (teamRes.data ?? [])[0] as Record<string, unknown> | undefined
   const reel = playerRow
     ? mapPlayerRow(playerRow)
