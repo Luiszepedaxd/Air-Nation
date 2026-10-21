@@ -87,6 +87,27 @@ router.get("/fields", requireAdmin, async (req, res) => {
   return res.json({ fields, hoy });
 });
 
+// ─── GET /arena/admin/fields/:fieldId ─────────────────────────────────────────
+// Encabezado del campo para /admin/arena/[fieldId] (el resto lo piden las
+// pestañas vía /arena/owner/*). Evita que el frontend use la llave de servicio.
+router.get("/fields/:fieldId", requireAdmin, async (req, res) => {
+  const fieldId = fieldIdOr400(req, res);
+  if (!fieldId) return;
+
+  const { data: field, error } = await supabase
+    .from("fields")
+    .select("id, nombre, slug, ciudad, status, horarios_json")
+    .eq("id", fieldId)
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] field:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!field) return res.status(404).json({ error: "Campo no encontrado" });
+
+  return res.json({ field });
+});
+
 // ─── PUT /arena/admin/fields/:fieldId/activate ────────────────────────────────
 // Crea o actualiza los settings: plan, comisión y activo.
 router.put("/fields/:fieldId/activate", requireAdmin, async (req, res) => {
