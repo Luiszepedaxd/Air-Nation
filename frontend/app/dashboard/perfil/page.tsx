@@ -168,7 +168,7 @@ export default async function PerfilPage({
   // Mis campos: los que registré y los que administro por ARENA (esos los
   // sube el admin, así que `created_by` no soy yo).
   const camposRows = [...(misCamposResult.data ?? [])]
-  const memberFieldIds = (await arenaMemberFieldIds(authUser.id)).filter(
+  const memberFieldIds = (await arenaMemberFieldIds()).filter(
     (id) => !camposRows.some((r) => r.id === id)
   )
   if (memberFieldIds.length > 0) {

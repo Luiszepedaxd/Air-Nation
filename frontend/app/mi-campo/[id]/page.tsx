@@ -80,7 +80,7 @@ export default async function MiCampoPage({
   // con reservas los sube el admin, no el campo.
   const ownerId = field.created_by as string | null | undefined
   const esDueno =
-    (ownerId && ownerId === user.id) || (await isArenaFieldMember(id, user.id))
+    (ownerId && ownerId === user.id) || (await isArenaFieldMember(id))
   if (!esDueno) {
     redirect('/dashboard/perfil')
   }

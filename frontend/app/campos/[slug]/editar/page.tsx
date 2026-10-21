@@ -45,7 +45,7 @@ export default async function EditarCampoPage({
   const isOwner = field.created_by === user.id
   // Un miembro activo de ARENA también administra la ficha del campo.
   const isMember =
-    isAdmin || isOwner ? false : await isArenaFieldMember(field.id as string, user.id)
+    isAdmin || isOwner ? false : await isArenaFieldMember(field.id as string)
 
   if (!isAdmin && !isOwner && !isMember) {
     redirect(`/campos/${encodeURIComponent(slug)}`)
