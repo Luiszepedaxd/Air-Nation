@@ -1,5 +1,6 @@
 'use client'
 
+// Redeploy: Vercel rechazó 330169b porque su autor de git no está en el equipo.
 import Link from 'next/link'
 import {
   useCallback,
