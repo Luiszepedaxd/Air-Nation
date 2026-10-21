@@ -1,10 +1,10 @@
-/** Tope del feed y del resto de POST /upload/video. */
-const VIDEO_MAX_DURATION_SEC = 60;
+/** Tope del feed y del resto de POST /upload/video: 3 minutos. */
+const VIDEO_MAX_DURATION_SEC = 180;
 
-/** Tope solo para cápsulas de /virus3, y solo si el caller es admin. */
-const CAPSULAS_VIDEO_MAX_DURATION_SEC = 180;
+/** Las cápsulas de /virus3 usan el mismo tope; sigue exigiendo admin. */
+const CAPSULAS_VIDEO_MAX_DURATION_SEC = VIDEO_MAX_DURATION_SEC;
 
-/** Campo multipart `context`. Cualquier otro valor se queda en 60 s. */
+/** Campo multipart `context`. Solo cambia quién puede subir, no el tope. */
 const CAPSULAS_VIDEO_CONTEXT = "virus3_capsulas";
 
 /**

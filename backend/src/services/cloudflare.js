@@ -65,8 +65,9 @@ function streamToken() {
   return process.env.CF_STREAM_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN || null;
 }
 
-const STREAM_MAX_DURATION_SEC = 60;
-const STREAM_READY_TIMEOUT_MS = 120000;
+const STREAM_MAX_DURATION_SEC = 180;
+// Un clip de 3 min tarda más en codificar; si no termina devolvemos el HLS igual.
+const STREAM_READY_TIMEOUT_MS = 300000;
 const STREAM_POLL_INTERVAL_MS = 2000;
 
 function sleep(ms) {

@@ -9,21 +9,20 @@ const {
 } = require("./videoDurationLimit");
 
 describe("resolveVideoDurationLimit", () => {
-  it("deja el feed y cualquier otro contexto en 60 s, aunque el usuario sea admin", () => {
-    assert.equal(VIDEO_MAX_DURATION_SEC, 60);
-    assert.deepEqual(resolveVideoDurationLimit(undefined, false), { maxSec: 60 });
-    assert.deepEqual(resolveVideoDurationLimit("", true), { maxSec: 60 });
-    assert.deepEqual(resolveVideoDurationLimit("admin", true), { maxSec: 60 });
-    assert.deepEqual(resolveVideoDurationLimit("true", true), { maxSec: 60 });
+  it("el feed y cualquier otro contexto llegan a 180 s (3 minutos)", () => {
+    assert.equal(VIDEO_MAX_DURATION_SEC, 180);
+    assert.deepEqual(resolveVideoDurationLimit(undefined, false), { maxSec: 180 });
+    assert.deepEqual(resolveVideoDurationLimit("", true), { maxSec: 180 });
+    assert.deepEqual(resolveVideoDurationLimit("admin", true), { maxSec: 180 });
+    assert.deepEqual(resolveVideoDurationLimit("true", true), { maxSec: 180 });
   });
 
-  it("un usuario normal no puede pedir el tope de cápsulas", () => {
+  it("subir cápsulas sigue siendo solo de admin", () => {
     const r = resolveVideoDurationLimit(CAPSULAS_VIDEO_CONTEXT, false);
     assert.equal(r.forbidden, true);
-    assert.equal(r.maxSec, 60);
   });
 
-  it("solo un admin con el contexto de cápsulas llega a 180 s", () => {
+  it("un admin con el contexto de cápsulas usa el mismo tope", () => {
     assert.equal(CAPSULAS_VIDEO_MAX_DURATION_SEC, 180);
     assert.deepEqual(resolveVideoDurationLimit(CAPSULAS_VIDEO_CONTEXT, true), {
       maxSec: 180,

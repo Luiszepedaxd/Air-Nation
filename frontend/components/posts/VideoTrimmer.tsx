@@ -29,7 +29,7 @@ const jostTitle = {
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
 const ACCEPT = 'video/mp4,video/quicktime,video/webm'
-const MAX_SEL_SEC = 60
+const MAX_SEL_SEC = 180
 const MIN_GAP_SEC = 0.1
 
 type Props = {
@@ -250,7 +250,7 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
       return
     }
     // Keep export under the product max so keyframe/stream-copy drift
-    // does not probe >60s and get rejected on upload.
+    // does not probe >180s and get rejected on upload.
     const exportLen = Math.min(clipLen, Math.max(MIN_GAP_SEC, MAX_SEL_SEC - 0.05))
     const clipDuration = Math.round(exportLen * 1000) / 1000
 
@@ -310,7 +310,7 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
       </div>
 
       <p className="text-sm" style={{ color: MUTED }}>
-        Elige hasta 1 minuto. El recorte se aplica al publicar (segundos en el
+        Elige hasta 3 minutos. El recorte se aplica al publicar (segundos en el
         servidor), no hace falta esperar la duración del clip.
       </p>
 
@@ -423,7 +423,7 @@ export function VideoTrimmer({ onVideoReady, onCancel, onEncodingChange }: Props
                 className="text-center text-sm font-bold"
                 style={{ color: ACCENT, ...lato }}
               >
-                El clip no puede superar 1 minuto. Acorta el tramo
+                El clip no puede superar 3 minutos. Acorta el tramo
                 moviendo inicio o fin.
               </p>
             )}

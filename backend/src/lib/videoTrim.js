@@ -120,7 +120,7 @@ async function trimVideoBuffer(buffer, originalname, startSec, durationSec) {
       );
     }
 
-    // Accurate re-encode fallback (still seconds for ≤60s clips).
+    // Accurate re-encode fallback (tens of seconds for a ≤180s clip).
     await runFfmpeg(
       inputPath,
       encPath,
@@ -160,34 +160,7 @@ async function trimVideoBuffer(buffer, originalname, startSec, durationSec) {
   }
 }
 
-/**
- * True when the client asked for a window that is not the whole file.
- */
-function shouldTrimClip(startSec, durationSec, probedDurationSec) {
-  const start = Number(startSec);
-  const dur = Number(durationSec);
-  if (!Number.isFinite(start) || !Number.isFinite(dur) || dur <= 0) {
-    return false;
-  }
-  if (start > 0.08) return true;
-  if (
-    Number.isFinite(probedDurationSec) &&
-    probedDurationSec > 0 &&
-    dur < probedDurationSec - 0.25
-  ) {
-    return true;
-  }
-  // Client reported a clip window without a reliable probe — still trim if start/dur given.
-  if (start >= 0 && dur > 0 && dur <= 60.05) {
-    // Only force trim when start > 0 or explicit clip shorter than a "full short" file.
-    // probed null + start≈0 + dur≤60: may be full file already ≤60s — skip.
-    return start > 0.08;
-  }
-  return false;
-}
-
 module.exports = {
   ensureFfmpegPaths,
   trimVideoBuffer,
-  shouldTrimClip,
 };

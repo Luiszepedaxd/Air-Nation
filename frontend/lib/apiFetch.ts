@@ -96,10 +96,8 @@ export async function uploadVideo(
     formData.append('trim_duration_s', String(trim.durationSec))
   }
 
-  // Una cápsula de 3 min más la espera de Stream pasa de los 3 minutos del feed.
-  const capsulaLarga = opts?.context === 'virus3_capsulas'
-  const timeoutMs =
-    opts?.timeoutMs ?? (trim || capsulaLarga ? 300_000 : 180_000)
+  // 3 min de video + trim en servidor + espera de codificación de Stream.
+  const timeoutMs = opts?.timeoutMs ?? 600_000
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   let res: Response

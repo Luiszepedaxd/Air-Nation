@@ -91,7 +91,7 @@ const upload = multer({
  * Hard-timeout so a missing/broken ffprobe never hangs POST /upload/video.
  * @returns {Promise<number|null>}
  */
-const FFPROBE_TIMEOUT_MS = 15000;
+const FFPROBE_TIMEOUT_MS = 30000;
 
 function probeDurationSeconds(buffer, originalname) {
   const ext = path.extname(originalname || "") || ".mp4";
