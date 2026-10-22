@@ -8,8 +8,10 @@ export const metadata = { robots: { index: false, follow: false } }
 
 export default async function MiCampoArenaPage({
   params,
+  searchParams,
 }: {
   params: { id: string }
+  searchParams: { tab?: string }
 }) {
   const id = params.id?.trim()
   if (!id) redirect('/dashboard/perfil')
@@ -37,6 +39,10 @@ export default async function MiCampoArenaPage({
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
       <MiCampoArenaClient
+        // `key` para que el nav del portal (?tab=…) remonte y abra esa pestaña:
+        // una navegación suave no reinicia el useState del cliente.
+        key={searchParams.tab ?? 'agenda'}
+        initialTab={searchParams.tab}
         fieldId={field.id as string}
         nombre={String(field.nombre ?? '')}
         slug={String(field.slug ?? '')}

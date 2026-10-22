@@ -1,4 +1,5 @@
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
+import type { ArenaOwnerField } from '@/lib/arena-api'
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -18,11 +19,18 @@ const API_URL = (
  * Si el backend no responde devuelve vacío: sin permiso, que es el lado
  * seguro de fallar.
  */
-export async function arenaMemberFieldIds(): Promise<string[]> {
-  const {
-    data: { session },
-  } = await createDashboardSupabaseServerClient().auth.getSession()
-  const token = session?.access_token
+export async function arenaOwnerFields(
+  accessToken?: string
+): Promise<ArenaOwnerField[]> {
+  // En `/auth/callback` la sesión recién creada todavía no vive en la cookie
+  // de la request, así que el token se pasa a mano.
+  let token = accessToken
+  if (!token) {
+    const {
+      data: { session },
+    } = await createDashboardSupabaseServerClient().auth.getSession()
+    token = session?.access_token
+  }
   if (!token) return []
 
   try {
@@ -34,12 +42,18 @@ export async function arenaMemberFieldIds(): Promise<string[]> {
       console.error('[arena] owner/fields:', res.status)
       return []
     }
-    const { fields } = (await res.json()) as { fields?: { id: string }[] }
-    return (fields ?? []).map((f) => String(f.id))
+    const { fields } = (await res.json()) as { fields?: ArenaOwnerField[] }
+    return fields ?? []
   } catch (e) {
     console.error('[arena] owner/fields:', (e as Error).message)
     return []
   }
+}
+
+export async function arenaMemberFieldIds(
+  accessToken?: string
+): Promise<string[]> {
+  return (await arenaOwnerFields(accessToken)).map((f) => String(f.id))
 }
 
 export async function isArenaFieldMember(fieldId: string): Promise<boolean> {

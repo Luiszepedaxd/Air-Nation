@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { arenaMemberFieldIds } from '@/lib/arena-members'
 
 function isSafeInternalPath(path: string | null): path is string {
   return (
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest) {
     destination = '/register?error=auth'
   } else {
     const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
 
     if (user) {
       const { data: profile, error: profileError } = await supabase
@@ -65,11 +67,14 @@ export async function GET(request: NextRequest) {
         .eq('id', user.id)
         .single()
 
+      // Los dueños de campo entran a su portal, no al feed.
       destination = !profile?.alias
         ? '/onboarding'
         : isSafeInternalPath(next)
           ? next
-          : '/dashboard'
+          : (await arenaMemberFieldIds(session?.access_token)).length > 0
+            ? '/mi-campo'
+            : '/dashboard'
     } else {
       destination = isSafeInternalPath(next) ? next : '/dashboard'
     }

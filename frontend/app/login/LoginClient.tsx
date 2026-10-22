@@ -1,8 +1,22 @@
 "use client";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { arenaGet } from "@/lib/arena-api";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+
+/**
+ * Un dueño de campo no entra al feed: su portal es /mi-campo. Si el backend
+ * no contesta cae al dashboard, que es el destino de siempre.
+ */
+async function destinoTrasLogin(): Promise<string> {
+  try {
+    const { fields } = await arenaGet<{ fields: { id: string }[] }>('/owner/fields')
+    return fields?.length ? '/mi-campo' : '/dashboard'
+  } catch {
+    return '/dashboard'
+  }
+}
 
 function GoogleIcon() {
   return (
@@ -74,7 +88,11 @@ export default function LoginClient({
           if (user) {
             const { data: profile } = await supabase
               .from('users').select('alias').eq('id', user.id).single()
-            const dest = !profile?.alias ? '/onboarding' : (isSafeRedirect ? redirect! : '/dashboard')
+            const dest = !profile?.alias
+              ? '/onboarding'
+              : isSafeRedirect
+                ? redirect!
+                : await destinoTrasLogin()
             window.location.href = dest
           } else {
             window.location.href = '/dashboard'
@@ -148,7 +166,7 @@ export default function LoginClient({
     if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
       router.push(redirect);
     } else {
-      router.push("/dashboard");
+      router.push(await destinoTrasLogin());
     }
   };
 

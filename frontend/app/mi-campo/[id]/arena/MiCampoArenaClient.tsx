@@ -35,13 +35,17 @@ export function MiCampoArenaClient({
   nombre,
   slug,
   horariosJson,
+  initialTab,
 }: {
   fieldId: string
   nombre: string
   slug: string
   horariosJson: unknown
+  initialTab?: string
 }) {
-  const [tab, setTab] = useState<Tab>('agenda')
+  const [tab, setTab] = useState<Tab>(
+    TABS.some((t) => t.id === initialTab) ? (initialTab as Tab) : 'agenda'
+  )
   const [manual, setManual] = useState(false)
   const [recarga, setRecarga] = useState(0)
 
