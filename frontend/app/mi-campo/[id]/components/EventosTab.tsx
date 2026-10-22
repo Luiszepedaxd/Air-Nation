@@ -55,7 +55,7 @@ export function EventosTab({
     <div className="pb-10">
       {canCreateEvento ? (
         <Link
-          href={`/admin/eventos/nuevo?field_id=${encodeURIComponent(fieldId)}`}
+          href={`/eventos/nuevo?field_id=${encodeURIComponent(fieldId)}`}
           style={jost}
           className="mb-6 flex h-12 w-full items-center justify-center bg-[#CC4B37] text-[11px] font-extrabold uppercase tracking-wide text-[#FFFFFF]"
         >
