@@ -167,7 +167,7 @@ function horaMexico(iso) {
 }
 
 /** Tabla de renglones con el total: el recibo del jugador. */
-function recibo({ items, booking }) {
+function recibo({ items, booking }, etiqueta = "Total pagado") {
   const filas = (items || [])
     .map(
       (i) => `<tr>
@@ -180,7 +180,7 @@ function recibo({ items, booking }) {
       ${filas}
       <tr><td colspan="2" style="border-top:1px solid #EEEEEE;"></td></tr>
       <tr>
-        <td style="padding:8px 0;font-weight:bold;color:#111111;">Total pagado</td>
+        <td style="padding:8px 0;font-weight:bold;color:#111111;">${escapeHtml(etiqueta)}</td>
         <td style="padding:8px 0;text-align:right;font-weight:bold;color:#CC4B37;">${pesos(booking.total_centavos)}</td>
       </tr>
     </table>`;
@@ -202,48 +202,89 @@ function datosReserva(detalle) {
 
 // ─── Eventos (sección 8 del doc) ─────────────────────────────────────────────
 
-/** Pago aprobado: email con QR al jugador, push y email al campo. */
-async function avisoPagoAprobado(detalle) {
-  const { booking, field } = detalle;
-  let adjuntos;
-  let qrHtml = `<p style="font-size:13px;color:#999999;">Abre tu reserva para ver el QR.</p>`;
-  try {
-    const png = await qrPng(booking.qr_token, 600);
-    adjuntos = [{ filename: `${booking.codigo}.png`, content: png.toString("base64"), content_id: "qr-arena" }];
-    // PNG adjunto por CID: Gmail y Outlook no cargan data URLs.
-    qrHtml = `<img src="cid:qr-arena" alt="Código QR de tu reserva" width="240" height="240" style="display:block;margin:8px 0 4px;" />`;
-  } catch (err) {
-    console.error("[arena:mail] qr:", err.message);
+/**
+ * Pago aprobado. Un pago puede cubrir varias reservas (carrito): el jugador
+ * recibe **un** email con un QR por reserva (PNG adjunto por CID, porque Gmail
+ * y Outlook no cargan data URLs) y cada campo recibe solo el aviso de su
+ * reserva, nunca el carrito completo.
+ * @param {object[]|object} detalles reservas ya leídas con `leerReserva`
+ * @param {{ id: string, access_token?: string|null, monto_centavos?: number }|null} pago
+ */
+async function avisoPagoAprobado(detalles, pago = null) {
+  const lista = (Array.isArray(detalles) ? detalles : [detalles]).filter(Boolean);
+  if (lista.length === 0) return;
+  const varias = lista.length > 1;
+
+  const adjuntos = [];
+  const bloques = [];
+  for (const d of lista) {
+    const cid = `qr-${d.booking.codigo}`;
+    let qrHtml = `<p style="font-size:13px;color:#999999;">Abre tu reserva para ver el QR.</p>`;
+    try {
+      const png = await qrPng(d.booking.qr_token, 600);
+      adjuntos.push({
+        filename: `${d.booking.codigo}.png`,
+        content: png.toString("base64"),
+        content_id: cid,
+      });
+      qrHtml = `<img src="cid:${cid}" alt="Código QR de la reserva ${escapeHtml(d.booking.codigo)}" width="200" height="200" style="display:block;margin:8px 0 4px;" />`;
+    } catch (err) {
+      console.error("[arena:mail] qr:", err.message);
+    }
+    bloques.push(
+      `<div style="${varias ? "border-top:1px solid #EEEEEE;margin-top:20px;padding-top:16px;" : ""}">
+        ${qrHtml}
+        ${datosReserva(d)}
+        ${recibo(d, varias ? "Total de esta reserva" : "Total pagado")}
+      </div>`
+    );
   }
+
+  const total = pago?.monto_centavos ?? lista.reduce((s, d) => s + d.booking.total_centavos, 0);
+  const href =
+    pago?.access_token
+      ? `${arenaPublicUrl()}/arena/confirmacion?p=${pago.id}&t=${pago.access_token}`
+      : linkReserva(lista[0].booking);
+  const politicas = Array.from(
+    new Set(lista.map((d) => d.settings?.politica_cancelacion).filter(Boolean))
+  );
 
   await Promise.allSettled([
     enviarEmail({
-      to: booking.contacto_email,
-      subject: `Reserva confirmada ${booking.codigo} — ${field?.nombre || "ARENA"}`,
+      to: lista[0].booking.contacto_email,
+      subject: varias
+        ? `${lista.length} reservas confirmadas — AirNation ARENA`
+        : `Reserva confirmada ${lista[0].booking.codigo} — ${lista[0].field?.nombre || "ARENA"}`,
       html: plantilla({
-        titulo: "Tu reserva está confirmada",
-        cuerpo: `<p>Listo, ${escapeHtml(booking.contacto_nombre)}. Muestra este QR en la entrada del campo.</p>
-          ${qrHtml}
-          <p style="font-size:12px;color:#999999;">Si no se ve la imagen, abre tu reserva con el botón de abajo.</p>
-          ${datosReserva(detalle)}
-          ${recibo(detalle)}
-          ${detalle.settings?.politica_cancelacion ? `<p style="font-size:13px;color:#666666;">${escapeHtml(detalle.settings.politica_cancelacion)}</p>` : ""}`,
-        ctaHref: linkReserva(booking),
-        ctaLabel: "VER MI RESERVA",
+        titulo: varias ? "Tus reservas están confirmadas" : "Tu reserva está confirmada",
+        cuerpo: `<p>Listo, ${escapeHtml(lista[0].booking.contacto_nombre)}. ${
+          varias
+            ? `Muestra el QR de cada reserva en la entrada del campo. Pagaste ${pesos(total)}.`
+            : "Muestra este QR en la entrada del campo."
+        }</p>
+          ${bloques.join("")}
+          ${varias ? `<p style="font-size:15px;color:#111111;font-weight:bold;margin:16px 0 0;">Total pagado: ${pesos(total)}</p>` : ""}
+          <p style="font-size:12px;color:#999999;">Si no se ven las imágenes, abre tus reservas con el botón de abajo.</p>
+          ${politicas.map((t) => `<p style="font-size:13px;color:#666666;">${escapeHtml(t)}</p>`).join("")}`,
+        ctaHref: href,
+        ctaLabel: varias ? "VER MIS RESERVAS" : "VER MI RESERVA",
       }),
       attachments: adjuntos,
     }),
-    avisarAlCampo(detalle, {
-      subject: `Nueva reserva pagada — ${fechaCorta(booking.fecha)}`,
-      titulo: "Nueva reserva pagada",
-      cuerpo: `<p><strong>${booking.num_jugadores}</strong> ${booking.num_jugadores === 1 ? "jugador" : "jugadores"} el ${escapeHtml(fechaLarga(booking.fecha))}.</p>
-        ${datosReserva(detalle)}
-        <p style="font-size:13px;color:#666666;">Contacto: ${escapeHtml(booking.contacto_nombre)} · ${escapeHtml(booking.contacto_email)}${booking.contacto_telefono ? ` · ${escapeHtml(booking.contacto_telefono)}` : ""}</p>`,
-      push: {
-        title: "Nueva reserva pagada",
-        body: `${booking.num_jugadores} ${booking.num_jugadores === 1 ? "jugador" : "jugadores"}, ${fechaCorta(booking.fecha)}`,
-      },
-    }),
+    ...lista.map((d) =>
+      avisarAlCampo(d, {
+        subject: `Nueva reserva pagada — ${fechaCorta(d.booking.fecha)}`,
+        titulo: "Nueva reserva pagada",
+        cuerpo: `<p><strong>${d.booking.num_jugadores}</strong> ${d.booking.num_jugadores === 1 ? "jugador" : "jugadores"} el ${escapeHtml(fechaLarga(d.booking.fecha))}.</p>
+        ${datosReserva(d)}
+        ${recibo(d, "Total de esta reserva")}
+        <p style="font-size:13px;color:#666666;">Contacto: ${escapeHtml(d.booking.contacto_nombre)} · ${escapeHtml(d.booking.contacto_email)}${d.booking.contacto_telefono ? ` · ${escapeHtml(d.booking.contacto_telefono)}` : ""}</p>`,
+        push: {
+          title: "Nueva reserva pagada",
+          body: `${d.booking.num_jugadores} ${d.booking.num_jugadores === 1 ? "jugador" : "jugadores"}, ${fechaCorta(d.booking.fecha)}`,
+        },
+      })
+    ),
   ]);
 }
 

@@ -1,0 +1,1480 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARENA · Reserva tu campo — AirNation</title>
+<!--
+  MAQUETA DE REFERENCIA — ARENA MARKETPLACE (AirNation)
+  Datos de ejemplo. No es código de producción: es la guía visual y de comportamiento.
+
+  Vistas (router por hash, en producción son rutas de Next.js):
+    #/                 → /arena                    Landing del marketplace: buscador, filtros, cards
+    #/campo/<slug>     → /arena/[slug]             Detalle del campo con reserva en la misma página
+    #/checkout         → /arena/checkout           Datos de contacto + pago del carrito
+    #/confirmacion     → /arena/confirmacion       Reservas confirmadas con su QR
+
+  Componentes marcados con  COMPONENTE: <Nombre>  en este archivo.
+  Carrito: vive en el cliente (localStorage) hasta pagar; al pagar el backend crea
+  todas las reservas juntas (arena_create_checkout) y un solo pago.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700;800;900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #111111;
+  --paper: #FFFFFF;
+  --field: #F4F4F4;
+  --rule: #EEEEEE;
+  --rule-strong: #CCCCCC;
+  --muted: #666666;
+  --soft: #999999;
+  --red: #CC4B37;
+  --red-dark: #A93A28;
+  --red-tint: #FBEDEA;
+  --ok: #2F7D4F;
+  --ok-tint: #EAF5EE;
+  --jost: 'Jost', system-ui, sans-serif;
+  --lato: 'Lato', system-ui, sans-serif;
+  --radius: 2px;
+  --max: 1200px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--lato);
+  font-size: 15px;
+  line-height: 1.5;
+  min-width: 320px;
+}
+img { max-width: 100%; display: block; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 16px; }
+@media (min-width: 768px) { .wrap { padding: 0 24px; } }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Títulos de marca: Jost en mayúsculas, solo para encabezados y precios */
+.h-brand { font-family: var(--jost); font-weight: 800; text-transform: uppercase; letter-spacing: .01em; line-height: 1.1; margin: 0; }
+.price { font-family: var(--jost); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Botones */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 18px; border: 1px solid transparent; border-radius: var(--radius);
+  font-family: var(--jost); font-weight: 700; font-size: 14px; letter-spacing: .04em; text-transform: uppercase;
+  text-decoration: none; background: none;
+}
+.btn-primary { background: var(--red); color: #fff; }
+.btn-primary:hover { background: var(--red-dark); }
+.btn-dark { background: var(--ink); color: #fff; }
+.btn-dark:hover { background: #2a2a2a; }
+.btn-line { border-color: var(--ink); color: var(--ink); background: var(--paper); }
+.btn-line:hover { background: var(--field); }
+.btn-ghost { color: var(--muted); padding: 0 8px; min-height: 36px; text-transform: none; letter-spacing: 0; font-family: var(--lato); font-weight: 700; }
+.btn-ghost:hover { color: var(--ink); }
+.btn-block { width: 100%; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+/* ===== COMPONENTE: ArenaHeader ===== */
+.site-header { position: sticky; top: 0; z-index: 40; background: var(--paper); border-bottom: 1px solid var(--rule); }
+.site-header .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
+.logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.logo-mark { width: 24px; height: 24px; background: var(--red); display: grid; place-items: center; }
+.logo-word { font-family: var(--jost); font-weight: 900; letter-spacing: .18em; font-size: 15px; }
+.logo-word span { color: var(--red); }
+.arena-tag { font-family: var(--jost); font-weight: 800; font-size: 12px; letter-spacing: .14em; padding: 3px 7px; border: 1px solid var(--ink); }
+.main-nav { display: none; gap: 4px; margin-left: 12px; }
+.main-nav a { font-family: var(--jost); font-weight: 600; font-size: 13px; text-decoration: none; padding: 8px 10px; color: var(--muted); }
+.main-nav a:hover { color: var(--ink); }
+.main-nav a[aria-current="page"] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--red); }
+.header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.cart-btn { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--rule); background: var(--paper); border-radius: var(--radius); font-family: var(--jost); font-weight: 700; font-size: 13px; }
+.cart-btn:hover { border-color: var(--rule-strong); }
+.cart-count { min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--red); color: #fff; font-size: 11px; display: inline-grid; place-items: center; }
+.cart-count[data-n="0"] { background: var(--field); color: var(--muted); }
+.cart-btn.bump .cart-count { animation: bump .45s ease; }
+@keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.account-link { display: none; font-family: var(--jost); font-weight: 700; font-size: 13px; text-decoration: none; padding: 9px 12px; border: 1px solid var(--rule); }
+@media (min-width: 900px) { .main-nav { display: flex; } .account-link { display: inline-block; } }
+
+/* ===== COMPONENTE: ArenaHero (buscador + franja de fechas) ===== */
+.hero { position: relative; background: var(--ink); color: #fff; overflow: hidden; }
+.hero-topo { position: absolute; inset: 0; opacity: .16; pointer-events: none; }
+.hero .wrap { position: relative; padding-top: 40px; padding-bottom: 28px; }
+.hero h1 { font-size: clamp(30px, 6vw, 52px); max-width: 14ch; }
+.hero-sub { margin: 12px 0 0; color: #BDBDBD; font-size: 16px; max-width: 52ch; }
+.search {
+  margin-top: 24px; display: grid; gap: 1px; background: #2a2a2a; border: 1px solid #2a2a2a;
+  grid-template-columns: 1fr;
+}
+.search-field { background: var(--paper); color: var(--ink); padding: 8px 14px; display: flex; flex-direction: column; justify-content: center; min-height: 60px; }
+.search-field label { font-size: 12px; color: var(--muted); font-weight: 700; }
+.search-field select { border: 0; padding: 2px 0; background: transparent; font-weight: 700; font-size: 15px; width: 100%; outline-offset: 4px; }
+.search-btn { min-height: 56px; }
+@media (min-width: 768px) {
+  .search { grid-template-columns: 1.3fr 1fr 1fr auto; }
+  .search-btn { min-height: 60px; padding: 0 28px; }
+}
+.date-strip-label { margin: 22px 0 10px; font-size: 14px; color: #BDBDBD; }
+.date-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: #444 transparent; }
+.date-tile {
+  flex: 0 0 auto; width: 60px; min-height: 64px; padding: 6px 0; border: 1px solid #3a3a3a; background: transparent; color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: var(--radius);
+}
+.date-tile .dow { font-size: 12px; color: #BDBDBD; text-transform: capitalize; }
+.date-tile .num { font-family: var(--jost); font-weight: 800; font-size: 22px; line-height: 1.1; }
+.date-tile .mon { font-size: 11px; color: #8a8a8a; }
+.date-tile.weekend { border-color: #575757; }
+.date-tile:hover { border-color: #fff; }
+.date-tile[aria-pressed="true"] { background: var(--red); border-color: var(--red); }
+.date-tile[aria-pressed="true"] .dow, .date-tile[aria-pressed="true"] .mon { color: #fff; }
+.date-tile.any { width: auto; padding: 0 14px; font-family: var(--jost); font-weight: 700; font-size: 14px; }
+
+/* ===== Layout de resultados ===== */
+.market { padding: 28px 0 56px; scroll-margin-top: 60px; }
+#book { scroll-margin-top: 72px; }
+.market-grid { display: grid; gap: 28px; grid-template-columns: 1fr; }
+@media (min-width: 1000px) { .market-grid { grid-template-columns: 260px 1fr; } }
+
+/* ===== COMPONENTE: ArenaFiltros ===== */
+.filters { align-self: start; }
+.filters-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.filters-head h2 { font-size: 18px; }
+.fgroup { border-top: 1px solid var(--rule); padding: 16px 0; }
+.fgroup > p { margin: 0 0 10px; font-weight: 700; font-size: 14px; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 15px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--red); margin: 0; }
+.check .count { margin-left: auto; color: var(--soft); font-size: 13px; }
+.range-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-top: 6px; }
+input[type="range"] { width: 100%; accent-color: var(--red); }
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 40px; font-size: 15px; cursor: pointer; }
+.switch { position: relative; width: 40px; height: 22px; flex: 0 0 auto; }
+.switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; background: var(--rule-strong); border-radius: 11px; transition: background .15s; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch input:checked + span { background: var(--red); }
+.switch input:checked + span::after { transform: translateX(18px); }
+.switch input:focus-visible + span { outline: 2px solid var(--red); outline-offset: 2px; }
+.filters-apply { display: none; }
+.filters-open-btn { display: inline-flex; }
+@media (max-width: 999px) {
+  .filters {
+    position: fixed; inset: auto 0 0 0; z-index: 60; background: var(--paper); max-height: 86vh; overflow-y: auto;
+    padding: 16px 16px 0; border-top: 1px solid var(--rule); transform: translateY(100%); transition: transform .25s ease; visibility: hidden;
+  }
+  .filters.open { transform: translateY(0); visibility: visible; }
+  .filters-apply { display: block; position: sticky; bottom: 0; background: var(--paper); padding: 12px 0 16px; border-top: 1px solid var(--rule); }
+}
+@media (min-width: 1000px) { .filters-open-btn { display: none; } .filters .filters-close { display: none; } }
+.filters-head > div { display: flex; align-items: center; gap: 4px; }
+.scrim { position: fixed; inset: 0; background: rgba(17,17,17,.5); z-index: 55; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.scrim.show { opacity: 1; pointer-events: auto; }
+
+.results-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.results-bar h2 { font-size: 20px; margin-right: auto; }
+.results-bar h2 small { display: block; font-family: var(--lato); font-weight: 400; text-transform: none; font-size: 14px; color: var(--muted); margin-top: 4px; letter-spacing: 0; }
+.sort { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.sort select, .select { height: 40px; padding: 0 10px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); font-weight: 700; color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--rule); background: var(--field); font-size: 13px; font-weight: 700; border-radius: var(--radius); }
+.chip button { border: 0; background: none; padding: 0; display: grid; place-items: center; color: var(--muted); }
+.chip button:hover { color: var(--ink); }
+
+/* ===== COMPONENTE: CampoCardArena ===== */
+.cards { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1280px) { .cards { grid-template-columns: repeat(3, 1fr); } }
+.card { border: 1px solid var(--rule); background: var(--paper); display: flex; flex-direction: column; text-decoration: none; }
+.card:hover { border-color: var(--rule-strong); }
+.card-media { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
+.card-disc { position: absolute; top: 10px; left: 10px; display: flex; gap: 4px; flex-wrap: wrap; }
+.disc { font-family: var(--jost); font-weight: 700; font-size: 12px; padding: 3px 8px; background: rgba(17,17,17,.82); color: #fff; text-transform: capitalize; }
+.card-feat { position: absolute; top: 10px; right: 10px; font-size: 12px; font-weight: 700; padding: 3px 8px; background: var(--red); color: #fff; }
+.card-body { padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.card h3 { font-size: 18px; }
+.rating { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.rating small { color: var(--muted); font-weight: 400; }
+.loc { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; }
+.meta-line { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12px; padding: 2px 8px; border: 1px solid var(--rule); color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.day {
+  border: 1px solid var(--rule); padding: 4px 0; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.2;
+}
+.day b { display: block; font-family: var(--jost); font-size: 15px; color: var(--ink); }
+.day.on { border-color: var(--red); background: var(--red); color: #fff; }
+.day.on b { color: #fff; }
+.day.empty { border-style: dashed; }
+.days-caption { font-size: 12px; color: var(--soft); margin-top: -4px; }
+.card-foot { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.from { font-size: 12px; color: var(--muted); }
+.from .price { display: block; font-size: 22px; color: var(--ink); line-height: 1.1; }
+.from .unit { font-size: 13px; color: var(--muted); }
+.card .btn { min-height: 40px; padding: 0 14px; font-size: 13px; }
+
+/* Fotos de ejemplo: arte por tipo de terreno (en producción, foto_portada_url) */
+.ph { position: absolute; inset: 0; display: grid; place-items: end start; padding: 10px; }
+.ph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ph-label { position: relative; font-size: 11px; color: rgba(255,255,255,.7); }
+.t-bosque { background: linear-gradient(160deg, #2c3a26 0%, #1b2418 60%, #121a10 100%); }
+.t-cqb { background: linear-gradient(160deg, #4a4d51 0%, #2c2e31 60%, #1c1d1f 100%); }
+.t-urbano { background: linear-gradient(160deg, #3b414a 0%, #23272d 60%, #16181c 100%); }
+.t-mixto { background: linear-gradient(160deg, #4b4433 0%, #2d281d 60%, #1c1912 100%); }
+.t-desierto { background: linear-gradient(160deg, #7a5c40 0%, #4a3826 60%, #2c2117 100%); }
+
+.empty-state { border: 1px dashed var(--rule-strong); padding: 40px 20px; text-align: center; }
+.empty-state h3 { font-size: 20px; }
+.empty-state p { color: var(--muted); margin: 8px auto 18px; max-width: 42ch; }
+
+/* ===== COMPONENTE: ComoFunciona ===== */
+.how { background: var(--field); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 40px 0; }
+.how h2 { font-size: 24px; margin-bottom: 20px; }
+.how-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: 1fr; counter-reset: s; }
+@media (min-width: 768px) { .how-steps { grid-template-columns: repeat(3, 1fr); } }
+.how-steps li { background: var(--paper); border: 1px solid var(--rule); padding: 18px; counter-increment: s; position: relative; }
+.how-steps li::before { content: counter(s); font-family: var(--jost); font-weight: 900; font-size: 34px; color: var(--red); line-height: 1; display: block; margin-bottom: 10px; }
+.how-steps h3 { font-family: var(--jost); font-weight: 700; font-size: 17px; margin: 0 0 6px; }
+.how-steps p { margin: 0; color: var(--muted); font-size: 15px; }
+
+.site-footer { padding: 28px 0 90px; color: var(--muted); font-size: 13px; }
+.site-footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; }
+@media (min-width: 1000px) { .site-footer { padding-bottom: 28px; } }
+
+/* ===== Detalle del campo ===== */
+.crumbs { padding: 16px 0 12px; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.crumbs a { text-decoration: none; color: var(--muted); }
+.crumbs a:hover { color: var(--ink); text-decoration: underline; }
+
+/* COMPONENTE: GaleriaCampo */
+.gallery { display: grid; gap: 4px; grid-template-columns: 1fr; }
+.gallery .g { position: relative; overflow: hidden; }
+.gallery .g-main { aspect-ratio: 16 / 9; }
+.gallery .g-small { display: none; }
+@media (min-width: 768px) {
+  .gallery { grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 180px 180px; }
+  .gallery .g-main { grid-row: 1 / 3; aspect-ratio: auto; }
+  .gallery .g-small { display: block; }
+}
+.gallery-count { position: absolute; right: 10px; bottom: 10px; z-index: 2; font-size: 13px; font-weight: 700; background: var(--paper); color: var(--ink); border: 0; padding: 6px 10px; }
+
+.detail-grid { display: grid; gap: 32px; grid-template-columns: 1fr; padding: 24px 0 64px; }
+@media (min-width: 1000px) { .detail-grid { grid-template-columns: 1fr 380px; align-items: start; } }
+.detail-head h1 { font-size: clamp(28px, 4.4vw, 40px); }
+.detail-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; color: var(--muted); font-size: 15px; }
+.detail-meta .rating { font-size: 15px; color: var(--ink); }
+.detail-tags { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.detail-tags .tag { font-size: 13px; padding: 4px 10px; color: var(--ink); }
+.detail-tags .tag.red { border-color: var(--red); color: var(--red); }
+.lead { font-size: 17px; margin: 18px 0 0; max-width: 64ch; }
+.dsection { border-top: 1px solid var(--rule); margin-top: 28px; padding-top: 24px; }
+.dsection > h2 { font-size: 20px; margin-bottom: 14px; }
+
+/* COMPONENTE: PaqueteCard */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin-bottom: 16px; }
+.tab { border: 0; background: none; padding: 10px 14px; font-family: var(--jost); font-weight: 700; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; text-transform: capitalize; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--red); }
+.pkgs { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .pkgs { grid-template-columns: repeat(2, 1fr); } }
+.pkg { border: 1px solid var(--rule); padding: 16px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); text-align: left; }
+.pkg.selected { border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
+.pkg-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.pkg h3 { font-family: var(--jost); font-weight: 800; font-size: 17px; margin: 0; text-transform: uppercase; }
+.pkg .price { font-size: 20px; white-space: nowrap; }
+.pkg .price small { font-family: var(--lato); font-weight: 400; font-size: 12px; color: var(--muted); }
+.pkg-dur { font-size: 13px; color: var(--muted); }
+.pkg ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; }
+.pkg li { display: flex; gap: 8px; align-items: flex-start; }
+.pkg li svg { flex: 0 0 auto; margin-top: 3px; color: var(--red); }
+.pkg .btn { align-self: flex-start; margin-top: 4px; min-height: 36px; font-size: 12px; }
+.extras-list { display: grid; gap: 0; border: 1px solid var(--rule); }
+.extra-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--rule); }
+.extra-row:first-child { border-top: 0; }
+.extra-row .x-name { font-weight: 700; }
+.extra-row .x-sub { font-size: 13px; color: var(--muted); }
+.extra-row .price { margin-left: auto; font-size: 16px; white-space: nowrap; }
+.hours { width: 100%; border-collapse: collapse; font-size: 15px; max-width: 420px; }
+.hours td { padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.hours td:last-child { text-align: right; font-weight: 700; }
+.hours tr.closed td:last-child { color: var(--soft); font-weight: 400; }
+.hours tr.today td { color: var(--red); }
+.map-ph { position: relative; aspect-ratio: 16 / 7; background: #E9EAE5; border: 1px solid var(--rule); overflow: hidden; }
+.map-ph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); color: var(--red); }
+.addr { margin-top: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 15px; }
+.policy { display: grid; gap: 10px; }
+.policy-row { display: flex; gap: 12px; align-items: flex-start; }
+.policy-row svg { flex: 0 0 auto; margin-top: 2px; }
+.policy-row p { margin: 0; }
+.policy-row small { display: block; color: var(--muted); font-size: 14px; }
+.reviews { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .reviews { grid-template-columns: repeat(2, 1fr); } }
+.review { border: 1px solid var(--rule); padding: 14px; }
+.review-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.avatar { width: 32px; height: 32px; background: var(--ink); color: #fff; display: grid; place-items: center; font-family: var(--jost); font-weight: 800; }
+.review p { margin: 0; font-size: 15px; }
+.review small { color: var(--muted); }
+
+/* ===== COMPONENTE: PanelReserva ===== */
+.book { border: 1px solid var(--ink); background: var(--paper); }
+@media (min-width: 1000px) { .book { position: sticky; top: 76px; } }
+.book-head { padding: 16px; background: var(--ink); color: #fff; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.book-head .price { font-size: 24px; }
+.book-head small { color: #BDBDBD; font-size: 13px; }
+.book-body { padding: 16px; display: grid; gap: 18px; }
+.bstep > p { margin: 0 0 8px; font-weight: 700; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+.bstep > p span { font-weight: 400; color: var(--muted); }
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.cal-head b { font-family: var(--jost); font-weight: 700; }
+.icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--rule); background: var(--paper); border-radius: var(--radius); }
+.icon-btn:hover:not([disabled]) { border-color: var(--ink); }
+.icon-btn[disabled] { opacity: .35; cursor: not-allowed; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal .dow { font-size: 11px; color: var(--soft); text-align: center; padding: 2px 0; }
+.cal button {
+  aspect-ratio: 1; border: 1px solid transparent; background: none; font-size: 14px; font-weight: 700; color: var(--soft);
+  border-radius: var(--radius); padding: 0; display: grid; place-items: center; cursor: default;
+}
+.cal button.open { border-color: var(--rule); color: var(--ink); cursor: pointer; }
+.cal button.open:hover { border-color: var(--ink); }
+.cal button.blocked { text-decoration: line-through; }
+.cal button[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+.cal-legend { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--rule); }
+.stepper button { width: 40px; height: 40px; border: 0; background: var(--paper); display: grid; place-items: center; }
+.stepper button:hover:not([disabled]) { background: var(--field); }
+.stepper button[disabled] { opacity: .3; cursor: not-allowed; }
+.stepper output { min-width: 40px; text-align: center; font-family: var(--jost); font-weight: 800; font-size: 17px; }
+.stepper.sm button { width: 32px; height: 32px; }
+.stepper.sm output { min-width: 30px; font-size: 15px; }
+.players-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.players-row small { color: var(--muted); font-size: 13px; }
+.radio-list { display: grid; gap: 6px; }
+.radio-card { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--rule); padding: 10px 12px; cursor: pointer; }
+.radio-card input { margin: 3px 0 0; accent-color: var(--red); width: 16px; height: 16px; }
+.radio-card.on { border-color: var(--red); }
+.radio-card .rc-name { font-weight: 700; display: block; }
+.radio-card .rc-sub { font-size: 13px; color: var(--muted); }
+.radio-card .price { margin-left: auto; white-space: nowrap; }
+.mini-extras { display: grid; gap: 8px; }
+.mini-extra { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.mini-extra .mx-name { flex: 1; }
+.mini-extra .mx-name small { display: block; color: var(--muted); font-size: 12px; }
+.summary { border-top: 1px solid var(--rule); padding-top: 12px; display: grid; gap: 6px; font-size: 14px; }
+.sum-row { display: flex; justify-content: space-between; gap: 12px; }
+.sum-row span:first-child { color: var(--muted); }
+.sum-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--rule); }
+.sum-total b { font-family: var(--jost); font-weight: 700; }
+.sum-total .price { font-size: 26px; }
+.book-actions { display: grid; gap: 8px; }
+.fine { font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: flex-start; margin: 0; }
+.fine svg { flex: 0 0 auto; margin-top: 2px; }
+.form-error { margin: 0; font-size: 14px; color: var(--red); font-weight: 700; }
+.notice { font-size: 14px; padding: 10px 12px; background: var(--ok-tint); color: var(--ok); font-weight: 700; display: flex; gap: 8px; align-items: center; }
+
+/* Barra fija en móvil */
+.mobile-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--paper); border-top: 1px solid var(--rule); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mobile-bar .from .price { font-size: 20px; }
+@media (min-width: 1000px) { .mobile-bar { display: none; } }
+
+/* ===== COMPONENTE: CarritoDrawer ===== */
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 70; width: min(440px, 100%); background: var(--paper); display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s ease; visibility: hidden; border-left: 1px solid var(--rule); }
+.drawer.open { transform: translateX(0); visibility: visible; }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--rule); }
+.drawer-head h2 { font-size: 20px; }
+.drawer-body { flex: 1; overflow-y: auto; padding: 16px; display: grid; gap: 12px; align-content: start; }
+.drawer-foot { border-top: 1px solid var(--rule); padding: 16px; display: grid; gap: 10px; }
+.citem { border: 1px solid var(--rule); }
+.citem-head { display: flex; gap: 12px; padding: 12px; }
+.citem-thumb { position: relative; width: 64px; height: 64px; flex: 0 0 auto; overflow: hidden; }
+.citem h3 { font-family: var(--jost); font-weight: 800; font-size: 15px; text-transform: uppercase; margin: 0; }
+.citem-date { font-size: 14px; margin-top: 2px; }
+.citem-date small { color: var(--muted); }
+.citem-lines { padding: 0 12px 10px; font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
+.citem-lines div { display: flex; justify-content: space-between; gap: 10px; }
+.citem-foot { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--rule); padding: 6px 6px 6px 12px; }
+.citem-foot .price { font-size: 17px; }
+.cart-empty { text-align: center; padding: 40px 12px; color: var(--muted); }
+.cart-empty h3 { color: var(--ink); font-size: 18px; margin-bottom: 6px; }
+
+/* ===== COMPONENTE: Checkout ===== */
+.page-title { padding: 24px 0 8px; }
+.page-title h1 { font-size: clamp(26px, 4vw, 36px); }
+.page-title p { margin: 8px 0 0; color: var(--muted); }
+.checkout-grid { display: grid; gap: 28px; grid-template-columns: 1fr; padding: 16px 0 64px; }
+@media (min-width: 1000px) { .checkout-grid { grid-template-columns: 1fr 400px; align-items: start; } }
+.panel { border: 1px solid var(--rule); padding: 18px; }
+.panel + .panel { margin-top: 16px; }
+.panel h2 { font-size: 18px; margin-bottom: 4px; }
+.panel > p.sub { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+.form-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .form-grid { grid-template-columns: 1fr 1fr; } .form-grid .full { grid-column: 1 / -1; } }
+.field label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.field input { width: 100%; height: 44px; padding: 0 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius); background: var(--paper); }
+.field input:focus { border-color: var(--ink); outline: none; }
+.field input[aria-invalid="true"] { border-color: var(--red); }
+.field .err { font-size: 13px; color: var(--red); margin-top: 4px; }
+.login-hint { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; background: var(--field); padding: 10px 12px; font-size: 14px; margin-bottom: 14px; }
+.login-hint a { font-weight: 700; }
+.consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.consent input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--red); flex: 0 0 auto; }
+.pay-box { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--rule); padding: 14px; background: var(--field); }
+.pay-box p { margin: 0; font-size: 14px; }
+.pay-box b { display: block; font-size: 15px; margin-bottom: 2px; }
+.order-sum .osum-item { border-bottom: 1px solid var(--rule); padding: 12px 0; }
+.order-sum .osum-item:first-of-type { padding-top: 0; }
+.osum-title { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; }
+.osum-sub { font-size: 13px; color: var(--muted); }
+.processing { position: fixed; inset: 0; z-index: 90; background: rgba(255,255,255,.92); display: none; place-items: center; text-align: center; }
+.processing.show { display: grid; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--rule); border-top-color: var(--red); border-radius: 50%; margin: 0 auto 12px; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== COMPONENTE: Confirmacion + TicketQR ===== */
+.confirm-head { padding: 32px 0 8px; display: flex; gap: 14px; align-items: flex-start; }
+.confirm-check { width: 44px; height: 44px; background: var(--ok); color: #fff; display: grid; place-items: center; flex: 0 0 auto; }
+.confirm-head h1 { font-size: clamp(26px, 4vw, 36px); }
+.confirm-head p { margin: 6px 0 0; color: var(--muted); }
+.tickets { display: grid; gap: 16px; grid-template-columns: 1fr; padding: 20px 0 24px; }
+@media (min-width: 768px) { .tickets { grid-template-columns: repeat(2, 1fr); } }
+.ticket { border: 1px solid var(--ink); display: grid; grid-template-columns: 1fr; }
+@media (min-width: 480px) { .ticket { grid-template-columns: 170px 1fr; } }
+.ticket-qr { background: var(--paper); padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-bottom: 1px dashed var(--rule-strong); }
+@media (min-width: 480px) { .ticket-qr { border-bottom: 0; border-right: 1px dashed var(--rule-strong); } }
+.ticket-qr svg { width: 138px; height: 138px; }
+.ticket-code { font-family: var(--jost); font-weight: 800; letter-spacing: .08em; font-size: 16px; }
+.ticket-info { padding: 16px; display: grid; gap: 6px; align-content: start; }
+.ticket-info h3 { font-family: var(--jost); font-weight: 800; text-transform: uppercase; font-size: 18px; margin: 0; }
+.ticket-info .when { font-weight: 700; }
+.ticket-info .lines { font-size: 14px; color: var(--muted); }
+.ticket-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.ticket-actions .btn { min-height: 36px; font-size: 12px; padding: 0 12px; }
+.confirm-note { border-left: 3px solid var(--red); padding: 4px 0 4px 14px; margin: 0 0 32px; max-width: 64ch; }
+
+.toast { position: fixed; left: 50%; bottom: 84px; transform: translate(-50%, 20px); z-index: 95; background: var(--ink); color: #fff; padding: 12px 16px; font-size: 14px; font-weight: 700; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (min-width: 1000px) { .toast { bottom: 24px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== COMPONENTE: ArenaHeader ===== -->
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="#/" aria-label="AirNation ARENA, inicio del marketplace">
+      <span class="logo-mark"><svg width="11" height="11" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1L13 4.5V9.5L7 13L1 9.5V4.5L7 1Z" fill="#fff"/></svg></span>
+      <span class="logo-word">AIR<span>NATION</span></span>
+    </a>
+    <span class="arena-tag">ARENA</span>
+    <nav class="main-nav" aria-label="Principal">
+      <a href="#">Eventos</a>
+      <a href="#">Directorio de campos</a>
+      <a href="#/" aria-current="page">Reservar campo</a>
+      <a href="#">Store</a>
+    </nav>
+    <div class="header-actions">
+      <a class="account-link" href="#">Mi cuenta</a>
+      <button class="cart-btn" type="button" data-action="open-cart" aria-label="Abrir carrito">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4h2l2.2 10.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.1L20.5 8H6.2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="9.5" cy="19.5" r="1.5" fill="currentColor"/><circle cx="17" cy="19.5" r="1.5" fill="currentColor"/></svg>
+        <span>Carrito</span>
+        <span class="cart-count" id="cart-count" data-n="0">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="app" tabindex="-1"></main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>© 2026 AirNation · Reservas de campos de airsoft, gotcha y gelsoft en México</span>
+    <span>Maqueta de diseño con datos de ejemplo</span>
+  </div>
+</footer>
+
+<!-- ===== COMPONENTE: CarritoDrawer ===== -->
+<div class="scrim" id="scrim" data-action="close-overlays"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+  <div class="drawer-head">
+    <h2 class="h-brand" id="drawer-title">Tu carrito</h2>
+    <button class="icon-btn" type="button" data-action="close-overlays" aria-label="Cerrar carrito">
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-foot" id="drawer-foot"></div>
+</aside>
+
+<div class="processing" id="processing" role="status" aria-live="polite">
+  <div><div class="spinner"></div><b>Procesando tu pago</b><p style="margin:4px 0 0;color:#666">No cierres esta ventana.</p></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =====================================================================
+   DATOS DE EJEMPLO
+   En producción vienen de GET /api/v1/arena/marketplace (listado) y
+   GET /api/v1/arena/fields/:slug (detalle). Precios en pesos aquí por
+   legibilidad; la API trabaja en centavos.
+   ===================================================================== */
+const FIELDS = [
+  {
+    slug: 'bunker-47', nombre: 'Bunker 47', ciudad: 'Zapopan', estado: 'Jalisco',
+    rating: 4.8, resenas: 126, destacado: true, disciplinas: ['airsoft', 'gotcha'], terrenos: ['bosque'], edad: 12,
+    direccion: 'Camino a Tesistán km 4, Zapopan, Jal.', politicaHoras: 24, fotos: 9,
+    descripcion: 'Seis hectáreas de encino con trincheras, una aldea de madera y un bunker central de dos niveles. El staff da briefing de seguridad antes de cada partida.',
+    horario: { sabado: ['09:00', '18:00'], domingo: ['09:00', '18:00'] }, cerrados: [],
+    items: [
+      { id: 'b1', tipo: 'paquete', nombre: 'Gotcha básico', precio: 180, unidad: 'por_persona', disciplina: 'gotcha', duracion: 120, incluye: ['Marcadora y máscara', '100 bolas', 'Chaleco'] },
+      { id: 'b2', tipo: 'paquete', nombre: 'Gotcha estándar', precio: 280, unidad: 'por_persona', disciplina: 'gotcha', duracion: 180, incluye: ['Equipo completo', '200 bolas', 'Bebida incluida'] },
+      { id: 'b3', tipo: 'paquete', nombre: 'Airsoft operador', precio: 340, unidad: 'por_persona', disciplina: 'airsoft', duracion: 180, incluye: ['Derecho de campo', 'Réplica AEG', '1,000 BBs'] },
+      { id: 'b4', tipo: 'derecho_campo', nombre: 'Derecho de campo', precio: 150, unidad: 'por_persona', disciplina: 'airsoft', duracion: 480, incluye: ['Para jugadores con equipo propio', 'Acceso todo el día'] },
+      { id: 'b5', tipo: 'renta', nombre: 'Réplica AEG', precio: 250, unidad: 'por_unidad', max: 20, sub: 'Incluye batería y cargador' },
+      { id: 'b6', tipo: 'renta', nombre: 'Bolsa de 2,000 BBs', precio: 120, unidad: 'por_unidad', max: 10, sub: 'Biodegradables 0.25 g' },
+      { id: 'b7', tipo: 'extra', nombre: 'Bebida y snack', precio: 45, unidad: 'por_persona', sub: 'Por jugador' },
+      { id: 'b8', tipo: 'extra', nombre: 'Foto grupal digital', precio: 300, unidad: 'por_reserva', sub: 'Una por reserva' }
+    ],
+    reviews: [
+      { alias: 'TacticalGDL', rating: 5, fecha: 'sep 2026', texto: 'El bunker de dos niveles vale la vuelta. Reservé el viernes y el sábado ya estábamos jugando.' },
+      { alias: 'PelotonNorte', rating: 4, fecha: 'ago 2026', texto: 'Muy buen staff. Llevamos al equipo de la oficina y nadie se quedó sin réplica.' }
+    ]
+  },
+  {
+    slug: 'zona-cero-cqb', nombre: 'Zona Cero CQB', ciudad: 'Guadalajara', estado: 'Jalisco',
+    rating: 4.6, resenas: 88, destacado: false, disciplinas: ['airsoft', 'gelsoft'], terrenos: ['cqb'], edad: 10,
+    direccion: 'Av. Inglaterra 3120, Guadalajara, Jal.', politicaHoras: 24, fotos: 6,
+    descripcion: 'Bodega de 1,200 m² con pasillos, oficinas y un segundo piso. Ideal para partidas rápidas en grupo y para jugar de noche.',
+    horario: { viernes: ['17:00', '22:00'], sabado: ['10:00', '20:00'], domingo: ['10:00', '18:00'] }, cerrados: [],
+    items: [
+      { id: 'z1', tipo: 'derecho_campo', nombre: 'Derecho de campo', precio: 160, unidad: 'por_persona', disciplina: 'airsoft', duracion: 240, incluye: ['Con equipo propio', 'Protección ocular obligatoria'] },
+      { id: 'z2', tipo: 'paquete', nombre: 'CQB con renta', precio: 320, unidad: 'por_persona', disciplina: 'airsoft', duracion: 180, incluye: ['Réplica y máscara', '800 BBs'] },
+      { id: 'z3', tipo: 'paquete', nombre: 'Gelsoft familiar', precio: 190, unidad: 'por_persona', disciplina: 'gelsoft', duracion: 90, incluye: ['Blaster de gel', 'Goggles', 'Recarga ilimitada'] },
+      { id: 'z4', tipo: 'renta', nombre: 'Réplica AEG', precio: 220, unidad: 'por_unidad', max: 15, sub: 'Incluye batería' },
+      { id: 'z5', tipo: 'extra', nombre: 'Partida nocturna', precio: 60, unidad: 'por_persona', sub: 'Viernes y sábado' }
+    ],
+    reviews: [ { alias: 'Kilo7', rating: 5, fecha: 'oct 2026', texto: 'Los viernes en la noche son lo mejor. Pasillos cerrados y mucha acción.' } ]
+  },
+  {
+    slug: 'el-encinar', nombre: 'El Encinar', ciudad: 'Tlajomulco', estado: 'Jalisco',
+    rating: 4.4, resenas: 54, destacado: false, disciplinas: ['gotcha'], terrenos: ['bosque'], edad: 10,
+    direccion: 'Carretera a Cajititlán km 9, Tlajomulco, Jal.', politicaHoras: 48, fotos: 5,
+    descripcion: 'Campo de gotcha entre encinos, con zona de fuertes y un circuito de bunkers inflables. Pensado para cumpleaños y grupos grandes.',
+    horario: { sabado: ['08:00', '17:00'], domingo: ['08:00', '17:00'] }, cerrados: [],
+    items: [
+      { id: 'e1', tipo: 'paquete', nombre: 'Gotcha 100', precio: 200, unidad: 'por_persona', disciplina: 'gotcha', duracion: 120, incluye: ['Equipo completo', '100 bolas'] },
+      { id: 'e2', tipo: 'paquete', nombre: 'Gotcha cumpleaños', precio: 2800, unidad: 'por_reserva', disciplina: 'gotcha', duracion: 180, minJ: 8, maxJ: 15, incluye: ['Hasta 15 jugadores', '150 bolas por jugador', 'Área de pastel'] },
+      { id: 'e3', tipo: 'renta', nombre: 'Recarga de 100 bolas', precio: 90, unidad: 'por_unidad', max: 30, sub: 'Por bolsa' }
+    ],
+    reviews: [ { alias: 'MamaDeLeo', rating: 4, fecha: 'jul 2026', texto: 'Hicimos el cumpleaños aquí. Todo listo a la hora y los niños felices.' } ]
+  },
+  {
+    slug: 'fuerte-norte', nombre: 'Fuerte Norte', ciudad: 'Monterrey', estado: 'Nuevo León',
+    rating: 4.7, resenas: 61, destacado: false, disciplinas: ['airsoft'], terrenos: ['mixto'], edad: 14,
+    direccion: 'Carretera Nacional km 268, Monterrey, N.L.', politicaHoras: 24, fotos: 7,
+    descripcion: 'Terreno de cerro con zona boscosa abajo y un pueblo de contenedores arriba. Partidas tipo milsim los domingos.',
+    horario: { sabado: ['08:00', '15:00'], domingo: ['08:00', '15:00'] }, cerrados: [],
+    items: [
+      { id: 'f1', tipo: 'derecho_campo', nombre: 'Derecho de campo', precio: 200, unidad: 'por_persona', disciplina: 'airsoft', duracion: 420, incluye: ['Con equipo propio', 'Cronógrafo a la entrada'] },
+      { id: 'f2', tipo: 'paquete', nombre: 'Recluta', precio: 420, unidad: 'por_persona', disciplina: 'airsoft', duracion: 240, incluye: ['Réplica AEG', 'Máscara full face', '1,500 BBs'] },
+      { id: 'f3', tipo: 'renta', nombre: 'Radio de 2 vías', precio: 80, unidad: 'por_unidad', max: 20, sub: 'Canal del campo' }
+    ],
+    reviews: [ { alias: 'RegioOps', rating: 5, fecha: 'sep 2026', texto: 'El pueblo de contenedores está muy bien armado. Organizan bien los equipos.' } ]
+  },
+  {
+    slug: 'distrito-9', nombre: 'Distrito 9', ciudad: 'Ciudad de México', estado: 'CDMX',
+    rating: 4.5, resenas: 140, destacado: true, disciplinas: ['airsoft', 'gelsoft'], terrenos: ['urbano'], edad: 12,
+    direccion: 'Calz. de Tlalpan 4210, Coyoacán, CDMX', politicaHoras: 24, fotos: 8,
+    descripcion: 'Escenario urbano techado: calles, autos y fachadas. Abre entre semana por la tarde, así que se puede jugar saliendo del trabajo.',
+    horario: { martes: ['16:00', '22:00'], miercoles: ['16:00', '22:00'], jueves: ['16:00', '22:00'], viernes: ['14:00', '23:00'], sabado: ['10:00', '22:00'], domingo: ['10:00', '20:00'] }, cerrados: [3],
+    items: [
+      { id: 'd1', tipo: 'derecho_campo', nombre: 'Derecho de campo', precio: 180, unidad: 'por_persona', disciplina: 'airsoft', duracion: 180, incluye: ['Con equipo propio'] },
+      { id: 'd2', tipo: 'paquete', nombre: 'Urbano completo', precio: 360, unidad: 'por_persona', disciplina: 'airsoft', duracion: 150, incluye: ['Réplica y máscara', '1,000 BBs', 'Chaleco'] },
+      { id: 'd3', tipo: 'paquete', nombre: 'Gelsoft express', precio: 170, unidad: 'por_persona', disciplina: 'gelsoft', duracion: 60, incluye: ['Blaster de gel', 'Goggles'] },
+      { id: 'd4', tipo: 'renta', nombre: 'Réplica AEG', precio: 240, unidad: 'por_unidad', max: 20, sub: 'Incluye batería' },
+      { id: 'd5', tipo: 'extra', nombre: 'Bebida', precio: 35, unidad: 'por_persona', sub: 'Por jugador' }
+    ],
+    reviews: [ { alias: 'ChilangoSix', rating: 5, fecha: 'oct 2026', texto: 'Jugar un miércoles en la noche cambió mi semana. Muy buen ambiente.' } ]
+  },
+  {
+    slug: 'la-cantera', nombre: 'La Cantera', ciudad: 'Puebla', estado: 'Puebla',
+    rating: 4.3, resenas: 29, destacado: false, disciplinas: ['airsoft', 'gotcha'], terrenos: ['desierto'], edad: 12,
+    direccion: 'Antigua cantera de San Bernabé, Puebla, Pue.', politicaHoras: 24, fotos: 4,
+    descripcion: 'Una cantera abandonada con desniveles, rocas y estructuras de piedra. Abre solo los domingos.',
+    horario: { domingo: ['09:00', '16:00'] }, cerrados: [],
+    items: [
+      { id: 'c1', tipo: 'paquete', nombre: 'Gotcha cantera', precio: 230, unidad: 'por_persona', disciplina: 'gotcha', duracion: 150, incluye: ['Equipo completo', '150 bolas'] },
+      { id: 'c2', tipo: 'derecho_campo', nombre: 'Derecho de campo', precio: 170, unidad: 'por_persona', disciplina: 'airsoft', duracion: 420, incluye: ['Con equipo propio'] }
+    ],
+    reviews: []
+  },
+  {
+    slug: 'sierra-tactica', nombre: 'Sierra Táctica', ciudad: 'Tlaquepaque', estado: 'Jalisco',
+    rating: 4.9, resenas: 37, destacado: false, disciplinas: ['airsoft'], terrenos: ['bosque'], edad: 16,
+    direccion: 'Rancho Los Pinos, Tlaquepaque, Jal.', politicaHoras: 72, fotos: 6,
+    descripcion: 'Campo para grupos privados: se renta completo para tu equipo. Bosque de pino con dos bases y río seco.',
+    horario: { sabado: ['08:00', '18:00'] }, cerrados: [],
+    items: [
+      { id: 's1', tipo: 'paquete', nombre: 'Campo privado', precio: 6000, unidad: 'por_reserva', disciplina: 'airsoft', duracion: 480, minJ: 10, maxJ: 40, incluye: ['Todo el campo para tu grupo', 'Árbitro del campo', 'Estacionamiento'] },
+      { id: 's2', tipo: 'extra', nombre: 'Comida para el grupo', precio: 120, unidad: 'por_persona', sub: 'Tacos al mediodía' }
+    ],
+    reviews: [ { alias: 'Lobos.MX', rating: 5, fecha: 'ago 2026', texto: 'Tener el campo para nosotros solos no tiene precio. El árbitro ayudó mucho.' } ]
+  },
+  {
+    slug: 'gel-arena-satelite', nombre: 'Gel Arena Satélite', ciudad: 'Naucalpan', estado: 'Estado de México',
+    rating: 4.6, resenas: 73, destacado: false, disciplinas: ['gelsoft'], terrenos: ['cqb'], edad: 6,
+    direccion: 'Blvd. Manuel Ávila Camacho 2610, Naucalpan, Edomex', politicaHoras: 24, fotos: 5,
+    descripcion: 'Arena techada de gelsoft para familias: obstáculos acolchonados, luces y marcador de puntos. Sin dolor y sin manchas.',
+    horario: { viernes: ['15:00', '21:00'], sabado: ['11:00', '20:00'], domingo: ['11:00', '19:00'] }, cerrados: [],
+    items: [
+      { id: 'g1', tipo: 'paquete', nombre: 'Partida de 1 hora', precio: 160, unidad: 'por_persona', disciplina: 'gelsoft', duracion: 60, incluye: ['Blaster y goggles', 'Recarga ilimitada'] },
+      { id: 'g2', tipo: 'paquete', nombre: 'Fiesta gel', precio: 3200, unidad: 'por_reserva', disciplina: 'gelsoft', duracion: 120, minJ: 6, maxJ: 20, incluye: ['Hasta 20 niños', 'Salón 1 hora', 'Anfitrión'] },
+      { id: 'g3', tipo: 'extra', nombre: 'Playera del evento', precio: 150, unidad: 'por_persona', sub: 'Por jugador' }
+    ],
+    reviews: [ { alias: 'PapaDeSofi', rating: 5, fecha: 'oct 2026', texto: 'Los niños jugaron dos horas sin parar. Muy limpio todo.' } ]
+  }
+];
+
+const DAY_KEYS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+const DAY_LABEL = { lunes: 'Lunes', martes: 'Martes', miercoles: 'Miércoles', jueves: 'Jueves', viernes: 'Viernes', sabado: 'Sábado', domingo: 'Domingo' };
+const ESTADOS = [...new Set(FIELDS.map(f => f.estado))].sort();
+const ANTICIPACION_MIN_H = 12;
+const MAX_CART = 10;
+
+/* ===== Utilidades ===== */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = (n) => '$' + Math.round(n).toLocaleString('es-MX');
+const pad = (n) => String(n).padStart(2, '0');
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromIso = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const today = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+const fmtDow = (d) => d.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '');
+const fmtMon = (d) => d.toLocaleDateString('es-MX', { month: 'short' }).replace('.', '');
+const fmtLong = (d) => d.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+const TERR_LABEL = { bosque: 'Bosque', cqb: 'CQB / interior', urbano: 'Urbano', mixto: 'Mixto', desierto: 'Cantera' };
+const fmtHour = (h) => { const [hh, mm] = h.split(':').map(Number); const ap = hh >= 12 ? 'pm' : 'am'; const h12 = ((hh + 11) % 12) + 1; return mm ? `${h12}:${pad(mm)} ${ap}` : `${h12} ${ap}`; };
+const unitLabel = (u) => ({ por_persona: 'por persona', por_reserva: 'por grupo', por_unidad: 'c/u' }[u]);
+const durLabel = (m) => m >= 60 ? `${m % 60 ? (m / 60).toFixed(1).replace('.0', '') : m / 60} h` : `${m} min`;
+const bySlug = (slug) => FIELDS.find(f => f.slug === slug);
+
+// Días cerrados de ejemplo: índice de "próximo día abierto" que se marca cerrado (evento privado)
+FIELDS.forEach(f => {
+  const idx = f.cerrados; f.cerrados = [];
+  if (idx.length) { const all = openDaysRaw(f, 30); idx.forEach(i => all[i] && f.cerrados.push(iso(all[i]))); }
+});
+
+function openDaysRaw(f, horizon) {
+  const out = []; const t = today();
+  for (let i = 0; i <= horizon; i++) { const d = addDays(t, i); if (f.horario[DAY_KEYS[d.getDay()]]) out.push(d); }
+  return out;
+}
+// Misma regla que arena_open_days: abre según horario, no está cerrado y respeta anticipación mínima
+function isOpen(f, d) {
+  const h = f.horario[DAY_KEYS[d.getDay()]];
+  if (!h || f.cerrados.includes(iso(d))) return false;
+  const [hh, mm] = h[0].split(':').map(Number);
+  const apertura = new Date(d); apertura.setHours(hh, mm, 0, 0);
+  if (apertura.getTime() < Date.now() + ANTICIPACION_MIN_H * 3600e3) return false;
+  return addDays(today(), 60) >= d;
+}
+function nextOpenDays(f, n = 6, horizon = 21) {
+  const out = [];
+  for (let i = 0; i <= horizon && out.length < n; i++) { const d = addDays(today(), i); if (isOpen(f, d)) out.push(d); }
+  return out;
+}
+function baseItems(f, { jugadores, disciplinas } = {}) {
+  return f.items.filter(i => (i.tipo === 'paquete' || i.tipo === 'derecho_campo')
+    && (!jugadores || ((!i.minJ || jugadores >= i.minJ) && (!i.maxJ || jugadores <= i.maxJ)))
+    && (!disciplinas || !disciplinas.length || !i.disciplina || disciplinas.includes(i.disciplina)));
+}
+// Misma regla que arena_marketplace: prefiere el precio por persona más bajo
+function desde(f, opts) {
+  const b = baseItems(f, opts).sort((a, z) => (a.unidad === 'por_persona' ? 0 : 1) - (z.unidad === 'por_persona' ? 0 : 1) || a.precio - z.precio);
+  return b[0] || null;
+}
+
+/* ===== Íconos ===== */
+const I = {
+  pin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s7-4.35 7-10a7 7 0 10-14 0c0 5.65 7 10 7 10Z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="11" r="2.5" stroke="currentColor" stroke-width="1.8"/></svg>',
+  star: '<svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l2.35 4.76 5.26.77-3.8 3.7.9 5.24L10 14.9l-4.71 2.48.9-5.24-3.8-3.7 5.26-.77L10 2.5z" fill="#CC4B37"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.4"/></svg>',
+  minus: '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="2.4"/></svg>',
+  plus: '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4"/></svg>',
+  x: '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6"/></svg>',
+  prev: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.2"/></svg>',
+  next: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.2"/></svg>',
+  filter: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2"/></svg>',
+  shield: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 8.2-7 9.5-4-1.3-7-5.1-7-9.5V6l7-3z" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 12l2.5 2.5 4.5-5" stroke="currentColor" stroke-width="1.8"/></svg>',
+  clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8"/></svg>',
+  qr: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" stroke="currentColor" stroke-width="1.6"/></svg>',
+  user: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" stroke="currentColor" stroke-width="1.8"/></svg>',
+  lock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" stroke="currentColor" stroke-width="1.8"/></svg>'
+};
+
+// Curvas de nivel para el hero y las fotos de ejemplo (en producción: foto real del campo)
+function topo(seed = 1, stroke = '#ffffff', w = 400, h = 300, lines = 9) {
+  let s = seed * 9301 + 49297; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  let paths = '';
+  const cx = w * (0.3 + rnd() * 0.4), cy = h * (0.35 + rnd() * 0.3);
+  for (let k = 1; k <= lines; k++) {
+    const r = k * (Math.max(w, h) / (lines * 1.3)); let d = '';
+    for (let a = 0; a <= 24; a++) {
+      const t = (a / 24) * Math.PI * 2; const wob = 1 + 0.16 * Math.sin(t * 3 + k + seed) + 0.08 * Math.cos(t * 5 - k);
+      const x = cx + Math.cos(t) * r * wob * 1.25, y = cy + Math.sin(t) * r * wob * 0.85;
+      d += (a ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    paths += `<path d="${d}Z" fill="none" stroke="${stroke}" stroke-opacity="${(0.55 - k * 0.035).toFixed(2)}" stroke-width="1"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${paths}</svg>`;
+}
+function photo(f, label = 'Foto del campo', idx = 0) {
+  const t = f.terrenos[0] || 'mixto'; const seed = [...f.slug].reduce((a, c) => a + c.charCodeAt(0), 0) + idx * 7;
+  return `<div class="ph t-${t}">${topo(seed, '#ffffff', 400, 300, 8)}<span class="ph-label">${esc(label)}</span></div>`;
+}
+
+/* ===== Estado ===== */
+const CART_KEY = 'arena_cart_demo_v1';
+const state = {
+  filters: { estado: '', fecha: '', jugadores: 0, disciplinas: [], terrenos: [], precioMax: 500, conRenta: false, rating45: false, orden: 'recomendados' },
+  cart: loadCart(),
+  detail: null,
+  editIndex: null,
+  lastOrder: null
+};
+function loadCart() { try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch { return []; } }
+function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(state.cart)); } catch {} updateCartCount(); }
+function updateCartCount(bump) {
+  const n = state.cart.length; const el = $('#cart-count'); el.textContent = n; el.dataset.n = n;
+  if (bump) { const b = $('.cart-btn'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600); }
+
+/* Cálculo de una reserva (mismo criterio que arena_create_booking; el servidor recalcula siempre) */
+function priceLines(f, sel) {
+  const lines = []; const j = sel.jugadores;
+  const base = f.items.find(i => i.id === sel.paqueteId);
+  if (base) { const q = base.unidad === 'por_persona' ? j : 1; lines.push({ id: base.id, nombre: base.nombre, cantidad: q, precio: base.precio, subtotal: base.precio * q, unidad: base.unidad }); }
+  f.items.filter(i => i.tipo === 'renta' || i.tipo === 'extra').forEach(i => {
+    const q = sel.extras[i.id] || 0; if (!q) return;
+    lines.push({ id: i.id, nombre: i.nombre, cantidad: q, precio: i.precio, subtotal: i.precio * q, unidad: i.unidad });
+  });
+  return { lines, total: lines.reduce((a, l) => a + l.subtotal, 0) };
+}
+
+/* =====================================================================
+   VISTA: LANDING DEL MARKETPLACE (/arena)
+   ===================================================================== */
+function filteredFields() {
+  const F = state.filters;
+  let list = FIELDS.filter(f => {
+    if (F.estado && f.estado !== F.estado) return false;
+    if (F.disciplinas.length && !F.disciplinas.some(d => f.disciplinas.includes(d))) return false;
+    if (F.terrenos.length && !F.terrenos.some(t => f.terrenos.includes(t))) return false;
+    if (F.conRenta && !f.items.some(i => i.tipo === 'renta')) return false;
+    if (F.rating45 && f.rating < 4.5) return false;
+    const d = desde(f, { jugadores: F.jugadores, disciplinas: F.disciplinas });
+    if (!d) return false;
+    if (F.precioMax < 500 && d.unidad === 'por_persona' && d.precio > F.precioMax) return false;
+    if (F.fecha && !isOpen(f, fromIso(F.fecha))) return false;
+    return true;
+  });
+  const price = f => { const d = desde(f, { jugadores: F.jugadores, disciplinas: F.disciplinas }); return d.unidad === 'por_persona' ? d.precio : d.precio / Math.max(F.jugadores || 10, 1); };
+  if (F.orden === 'precio_asc') list.sort((a, b) => price(a) - price(b));
+  else if (F.orden === 'precio_desc') list.sort((a, b) => price(b) - price(a));
+  else if (F.orden === 'rating') list.sort((a, b) => b.rating - a.rating);
+  else list.sort((a, b) => (b.destacado - a.destacado) || (b.rating - a.rating));
+  return list;
+}
+
+function renderLanding() {
+  const F = state.filters; const t = today();
+  const tiles = Array.from({ length: 14 }, (_, i) => addDays(t, i)).map((d, i) => {
+    const v = iso(d); const wk = d.getDay() === 0 || d.getDay() === 6;
+    const dow = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : fmtDow(d);
+    return `<button type="button" class="date-tile${wk ? ' weekend' : ''}" data-action="set-date" data-date="${v}" aria-pressed="${F.fecha === v}"><span class="dow">${dow}</span><span class="num">${d.getDate()}</span><span class="mon">${fmtMon(d)}</span></button>`;
+  }).join('');
+  return `
+  <!-- ===== COMPONENTE: ArenaHero ===== -->
+  <section class="hero">
+    <div class="hero-topo">${topo(7, '#ffffff', 1200, 420, 14)}</div>
+    <div class="wrap">
+      <h1 class="h-brand">Reserva tu próximo partido</h1>
+      <p class="hero-sub">Campos de airsoft, gotcha y gelsoft con reserva en línea. Eliges día, pagas y te llega tu QR de entrada.</p>
+      <form class="search" data-form="search" role="search" aria-label="Buscar campos">
+        <div class="search-field">
+          <label for="s-estado">Dónde</label>
+          <select id="s-estado" data-filter="estado">
+            <option value="">Todo México</option>
+            ${ESTADOS.map(e => `<option value="${esc(e)}" ${F.estado === e ? 'selected' : ''}>${esc(e)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="search-field">
+          <label for="s-jug">Jugadores</label>
+          <select id="s-jug" data-filter="jugadores">
+            <option value="0">Cualquier grupo</option>
+            ${[1, 2, 4, 6, 8, 10, 12, 15, 20, 30].map(n => `<option value="${n}" ${F.jugadores === n ? 'selected' : ''}>${n} ${n === 1 ? 'jugador' : 'jugadores'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="search-field">
+          <label for="s-disc">Disciplina</label>
+          <select id="s-disc" data-filter="disciplina-single">
+            <option value="">Todas</option>
+            ${['airsoft', 'gotcha', 'gelsoft'].map(d => `<option value="${d}" ${F.disciplinas.length === 1 && F.disciplinas[0] === d ? 'selected' : ''}>${d[0].toUpperCase() + d.slice(1)}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn btn-primary search-btn" type="submit">Buscar campos</button>
+      </form>
+      <p class="date-strip-label" id="date-strip-label">¿Qué día quieres jugar?</p>
+      <div class="date-strip" role="group" aria-labelledby="date-strip-label">
+        <button type="button" class="date-tile any" data-action="set-date" data-date="" aria-pressed="${!F.fecha}">Cualquier día</button>
+        ${tiles}
+      </div>
+    </div>
+  </section>
+
+  <section class="market" id="resultados">
+    <div class="wrap market-grid">
+      ${renderFilters()}
+      <div>
+        <div class="results-bar">
+          <h2 class="h-brand" id="results-title"></h2>
+          <button class="btn btn-line filters-open-btn" type="button" data-action="open-filters" id="filters-open-btn">${I.filter}<span>Filtros</span></button>
+          <label class="sort"><span>Ordenar</span>
+            <select data-filter="orden" aria-label="Ordenar resultados">
+              <option value="recomendados" ${F.orden === 'recomendados' ? 'selected' : ''}>Recomendados</option>
+              <option value="precio_asc" ${F.orden === 'precio_asc' ? 'selected' : ''}>Precio más bajo</option>
+              <option value="precio_desc" ${F.orden === 'precio_desc' ? 'selected' : ''}>Precio más alto</option>
+              <option value="rating" ${F.orden === 'rating' ? 'selected' : ''}>Mejor calificados</option>
+            </select>
+          </label>
+        </div>
+        <div class="chips" id="chips"></div>
+        <div class="cards" id="cards"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COMPONENTE: ComoFunciona ===== -->
+  <section class="how">
+    <div class="wrap">
+      <h2 class="h-brand">Cómo funciona</h2>
+      <ol class="how-steps">
+        <li><h3>Elige campo y día</h3><p>Ves los días en que abre cada campo y lo que cuesta antes de entrar.</p></li>
+        <li><h3>Paga en línea</h3><p>Puedes juntar varios campos o días en un solo carrito y pagar una vez. La reserva se confirma al instante.</p></li>
+        <li><h3>Muestra tu QR</h3><p>Te llega por correo. El campo lo escanea en la entrada y listo.</p></li>
+      </ol>
+    </div>
+  </section>`;
+}
+
+function renderFilters() {
+  const F = state.filters;
+  const countBy = (pred) => FIELDS.filter(pred).length;
+  const disc = ['airsoft', 'gotcha', 'gelsoft'];
+  const terr = [['bosque', 'Bosque'], ['cqb', 'CQB / interior'], ['urbano', 'Urbano'], ['mixto', 'Mixto'], ['desierto', 'Cantera / desierto']];
+  return `
+  <!-- ===== COMPONENTE: ArenaFiltros ===== -->
+  <aside class="filters" id="filters" aria-label="Filtros">
+    <div class="filters-head">
+      <h2 class="h-brand">Filtros</h2>
+      <div>
+        <button class="btn btn-ghost" type="button" data-action="clear-filters">Quitar todos</button>
+        <button class="icon-btn filters-close" type="button" data-action="close-overlays" aria-label="Cerrar filtros">${I.x}</button>
+      </div>
+    </div>
+    <div class="fgroup">
+      <p>Disciplina</p>
+      ${disc.map(d => `<label class="check"><input type="checkbox" data-filter="disciplinas" value="${d}" ${F.disciplinas.includes(d) ? 'checked' : ''}><span style="text-transform:capitalize">${d}</span><span class="count">${countBy(f => f.disciplinas.includes(d))}</span></label>`).join('')}
+    </div>
+    <div class="fgroup">
+      <p>Terreno</p>
+      ${terr.map(([v, l]) => `<label class="check"><input type="checkbox" data-filter="terrenos" value="${v}" ${F.terrenos.includes(v) ? 'checked' : ''}><span>${l}</span><span class="count">${countBy(f => f.terrenos.includes(v))}</span></label>`).join('')}
+    </div>
+    <div class="fgroup">
+      <p><label for="f-precio">Precio por persona</label></p>
+      <input id="f-precio" type="range" min="150" max="500" step="10" value="${F.precioMax}" data-filter="precioMax" aria-describedby="f-precio-val">
+      <div class="range-row"><span>$150</span><b id="f-precio-val">${F.precioMax >= 500 ? 'Sin límite' : 'Hasta ' + money(F.precioMax)}</b></div>
+    </div>
+    <div class="fgroup">
+      <label class="toggle-row"><span>Rentan equipo</span><span class="switch"><input type="checkbox" data-filter="conRenta" ${F.conRenta ? 'checked' : ''}><span></span></span></label>
+      <label class="toggle-row"><span>Calificación 4.5 o más</span><span class="switch"><input type="checkbox" data-filter="rating45" ${F.rating45 ? 'checked' : ''}><span></span></span></label>
+    </div>
+    <div class="filters-apply"><button class="btn btn-dark btn-block" type="button" data-action="close-overlays" id="filters-apply-btn">Ver campos</button></div>
+  </aside>`;
+}
+
+function renderResults() {
+  const F = state.filters; const list = filteredFields();
+  const title = $('#results-title');
+  if (!title) return;
+  const where = F.estado ? `en ${F.estado}` : 'en México';
+  const when = F.fecha ? ` · abren el ${fmtLong(fromIso(F.fecha))}` : '';
+  title.innerHTML = `${list.length} ${list.length === 1 ? 'campo' : 'campos'} ${esc(where)}<small>Con reserva y pago en línea${esc(when)}</small>`;
+
+  const chips = [];
+  if (F.fecha) chips.push(['fecha', '', cap(fmtLong(fromIso(F.fecha)))]);
+  if (F.estado) chips.push(['estado', '', F.estado]);
+  if (F.jugadores) chips.push(['jugadores', '', `${F.jugadores} jugadores`]);
+  F.disciplinas.forEach(d => chips.push(['disciplinas', d, d[0].toUpperCase() + d.slice(1)]));
+  F.terrenos.forEach(t => chips.push(['terrenos', t, TERR_LABEL[t]]));
+  if (F.precioMax < 500) chips.push(['precioMax', '', `Hasta ${money(F.precioMax)}`]);
+  if (F.conRenta) chips.push(['conRenta', '', 'Rentan equipo']);
+  if (F.rating45) chips.push(['rating45', '', '4.5 o más']);
+  $('#chips').innerHTML = chips.map(([k, v, l]) => `<span class="chip">${esc(l)}<button type="button" data-action="remove-chip" data-key="${k}" data-value="${esc(v)}" aria-label="Quitar filtro ${esc(l)}">${I.x}</button></span>`).join('');
+
+  const n = chips.filter(c => !['fecha', 'estado', 'jugadores'].includes(c[0])).length;
+  const ob = $('#filters-open-btn span'); if (ob) ob.textContent = n ? `Filtros (${n})` : 'Filtros';
+  const ab = $('#filters-apply-btn'); if (ab) ab.textContent = `Ver ${list.length} ${list.length === 1 ? 'campo' : 'campos'}`;
+
+  $('#cards').innerHTML = list.length ? list.map(renderCard).join('') : `
+    <div class="empty-state" style="grid-column:1/-1">
+      <h3 class="h-brand">Ningún campo coincide</h3>
+      <p>${F.fecha ? 'Ningún campo con estos filtros abre ese día. Prueba otra fecha o quita algún filtro.' : 'Quita algún filtro para ver más campos.'}</p>
+      <button class="btn btn-line" type="button" data-action="clear-filters">Quitar filtros</button>
+    </div>`;
+}
+
+/* ===== COMPONENTE: CampoCardArena ===== */
+function renderCard(f) {
+  const F = state.filters;
+  const d = desde(f, { jugadores: F.jugadores, disciplinas: F.disciplinas });
+  const days = nextOpenDays(f, 6);
+  const dayTiles = Array.from({ length: 6 }, (_, i) => {
+    const x = days[i];
+    if (!x) return `<span class="day empty" aria-hidden="true">&nbsp;<b>&nbsp;</b></span>`;
+    return `<span class="day${F.fecha === iso(x) ? ' on' : ''}">${fmtDow(x)}<b>${x.getDate()}</b></span>`;
+  }).join('');
+  const terr = f.terrenos.map(t => `<span class="tag">${esc(TERR_LABEL[t])}</span>`).join('');
+  return `
+  <a class="card" href="#/campo/${f.slug}${F.fecha ? '?fecha=' + F.fecha : ''}" aria-label="${esc(f.nombre)}, ${esc(f.ciudad)}. Ver y reservar">
+    <div class="card-media">
+      ${photo(f)}
+      <div class="card-disc">${f.disciplinas.map(x => `<span class="disc">${x}</span>`).join('')}</div>
+      ${f.destacado ? '<span class="card-feat">Destacado</span>' : ''}
+    </div>
+    <div class="card-body">
+      <div class="card-title-row">
+        <h3 class="h-brand">${esc(f.nombre)}</h3>
+        <span class="rating">${I.star}${f.rating.toFixed(1)} <small>(${f.resenas})</small></span>
+      </div>
+      <div class="loc">${I.pin}${esc(f.ciudad)}, ${esc(f.estado)}</div>
+      <div class="meta-line">${terr}<span class="tag">Desde ${f.edad} años</span></div>
+      <div class="days" aria-label="Próximos días con reserva">${dayTiles}</div>
+      <div class="days-caption">${days.length ? 'Próximos días con reserva' : 'Sin días disponibles en las próximas 3 semanas'}</div>
+      <div class="card-foot">
+        <div class="from">Desde<span class="price">${money(d.precio)}</span><span class="unit">${unitLabel(d.unidad)}</span></div>
+        <span class="btn btn-primary">Reservar</span>
+      </div>
+    </div>
+  </a>`;
+}
+
+/* =====================================================================
+   VISTA: DETALLE DEL CAMPO (/arena/[slug]) con reserva en la misma página
+   ===================================================================== */
+function initDetail(slug, query) {
+  const f = bySlug(slug); if (!f) return null;
+  const editing = state.editIndex != null ? state.cart[state.editIndex] : null;
+  const open = nextOpenDays(f, 1, 60);
+  const qFecha = query.get('fecha');
+  const fecha = editing ? editing.fecha : (qFecha && isOpen(f, fromIso(qFecha)) ? qFecha : '');
+  const disc = state.filters.disciplinas.find(x => f.disciplinas.includes(x)) || f.disciplinas[0];
+  const ref = fecha ? fromIso(fecha) : (open[0] || today());
+  return {
+    slug, fecha, disciplina: editing ? (f.items.find(i => i.id === editing.paqueteId)?.disciplina || disc) : disc,
+    jugadores: editing ? editing.jugadores : (state.filters.jugadores || 4),
+    paqueteId: editing ? editing.paqueteId : null,
+    extras: editing ? { ...editing.extras } : {},
+    mes: new Date(ref.getFullYear(), ref.getMonth(), 1),
+    error: ''
+  };
+}
+
+function renderDetail() {
+  const s = state.detail; const f = bySlug(s.slug);
+  const d0 = desde(f);
+  const discs = f.disciplinas.filter(d => f.items.some(i => (i.tipo === 'paquete' || i.tipo === 'derecho_campo') && i.disciplina === d));
+  const pkgs = f.items.filter(i => (i.tipo === 'paquete' || i.tipo === 'derecho_campo') && (discs.length < 2 || i.disciplina === s.disciplina));
+  const extras = f.items.filter(i => i.tipo === 'renta' || i.tipo === 'extra');
+  const todayKey = DAY_KEYS[new Date().getDay()];
+  const order = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+  return `
+  <div class="wrap">
+    <nav class="crumbs" aria-label="Ruta"><a href="#/">Reservar campo</a><span aria-hidden="true">/</span><a href="#/" data-action="go-estado" data-estado="${esc(f.estado)}">${esc(f.estado)}</a><span aria-hidden="true">/</span><span aria-current="page">${esc(f.nombre)}</span></nav>
+
+    <!-- ===== COMPONENTE: GaleriaCampo ===== -->
+    <div class="gallery">
+      <div class="g g-main">${photo(f, 'Foto principal', 0)}</div>
+      <div class="g g-small">${photo(f, 'Zona de juego', 1)}</div>
+      <div class="g g-small">${photo(f, 'Bunkers', 2)}</div>
+      <div class="g g-small">${photo(f, 'Área de descanso', 3)}</div>
+      <div class="g g-small">${photo(f, 'Entrada', 4)}<button class="gallery-count" type="button">Ver ${f.fotos} fotos</button></div>
+    </div>
+
+    <div class="detail-grid">
+      <div>
+        <div class="detail-head">
+          <h1 class="h-brand">${esc(f.nombre)}</h1>
+          <div class="detail-meta">
+            <span class="rating">${I.star}${f.rating.toFixed(1)} <small>(${f.resenas} reseñas)</small></span>
+            <span class="loc">${I.pin}${esc(f.ciudad)}, ${esc(f.estado)}</span>
+          </div>
+          <div class="detail-tags">
+            ${f.disciplinas.map(x => `<span class="tag red">${cap(x)}</span>`).join('')}
+            ${f.terrenos.map(t => `<span class="tag">${TERR_LABEL[t]}</span>`).join('')}
+            <span class="tag">Desde ${f.edad} años</span>
+            <span class="tag">Confirmación inmediata</span>
+          </div>
+          <p class="lead">${esc(f.descripcion)}</p>
+        </div>
+
+        <section class="dsection" id="paquetes" aria-labelledby="h-paq">
+          <h2 class="h-brand" id="h-paq">Paquetes</h2>
+          ${discs.length > 1 ? `<div class="tabs" role="tablist">${discs.map(d => `<button class="tab" role="tab" type="button" data-action="set-disc" data-disc="${d}" aria-selected="${s.disciplina === d}">${d}</button>`).join('')}</div>` : ''}
+          <div class="pkgs">
+            ${pkgs.map(p => `
+            <!-- COMPONENTE: PaqueteCard -->
+            <article class="pkg${s.paqueteId === p.id ? ' selected' : ''}">
+              <div class="pkg-top"><h3>${esc(p.nombre)}</h3><span class="price">${money(p.precio)} <small>${unitLabel(p.unidad)}</small></span></div>
+              <span class="pkg-dur">${durLabel(p.duracion)} de juego${p.minJ ? ` · grupos de ${p.minJ} a ${p.maxJ}` : ''}</span>
+              <ul>${p.incluye.map(x => `<li>${I.check}<span>${esc(x)}</span></li>`).join('')}</ul>
+              <button class="btn ${s.paqueteId === p.id ? 'btn-dark' : 'btn-line'}" type="button" data-action="pick-pkg" data-id="${p.id}">${s.paqueteId === p.id ? 'Elegido' : 'Elegir este paquete'}</button>
+            </article>`).join('')}
+          </div>
+        </section>
+
+        ${extras.length ? `
+        <section class="dsection" aria-labelledby="h-ext">
+          <h2 class="h-brand" id="h-ext">Rentas y extras</h2>
+          <div class="extras-list">
+            ${extras.map(x => `<div class="extra-row"><div><div class="x-name">${esc(x.nombre)}</div><div class="x-sub">${esc(x.sub || '')}</div></div><span class="price">${money(x.precio)} <small style="font-family:var(--lato);font-weight:400;font-size:12px;color:#666">${unitLabel(x.unidad)}</small></span></div>`).join('')}
+          </div>
+          <p class="fine" style="margin-top:10px">Los agregas en el panel de reserva.</p>
+        </section>` : ''}
+
+        <section class="dsection" aria-labelledby="h-hor">
+          <h2 class="h-brand" id="h-hor">Horario</h2>
+          <table class="hours">
+            ${order.map(k => { const h = f.horario[k]; return `<tr class="${h ? '' : 'closed'} ${k === todayKey ? 'today' : ''}"><td>${DAY_LABEL[k]}${k === todayKey ? ' (hoy)' : ''}</td><td>${h ? `${fmtHour(h[0])} a ${fmtHour(h[1])}` : 'Cerrado'}</td></tr>`; }).join('')}
+          </table>
+        </section>
+
+        <section class="dsection" aria-labelledby="h-ubi">
+          <h2 class="h-brand" id="h-ubi">Cómo llegar</h2>
+          <div class="map-ph">${topo(3, '#9aa39a', 800, 350, 10)}<svg class="map-pin" width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" style="position:absolute;inset:auto;left:50%;top:50%;width:34px;height:34px"><path d="M12 22s7-5.3 7-11.5a7 7 0 10-14 0C5 16.7 12 22 12 22Z" fill="#CC4B37"/><circle cx="12" cy="10.5" r="2.6" fill="#fff"/></svg></div>
+          <div class="addr"><span>${esc(f.direccion)}</span><a href="#" style="font-weight:700">Abrir en Google Maps</a></div>
+        </section>
+
+        <section class="dsection" aria-labelledby="h-pol">
+          <h2 class="h-brand" id="h-pol">Cancelación y reembolso</h2>
+          <div class="policy">
+            <div class="policy-row">${I.shield}<p>Cancela hasta ${f.politicaHoras} horas antes de la apertura y te devolvemos el 100%.<small>Después de ese plazo la reserva ya no se reembolsa.</small></p></div>
+            <div class="policy-row">${I.clock}<p>Si el campo cancela, te devolvemos el 100% siempre.<small>Te avisamos por correo y por la app.</small></p></div>
+            <div class="policy-row">${I.qr}<p>Tu reserva trae un QR de entrada.<small>Una persona del grupo lo muestra y el campo registra cuántos llegaron.</small></p></div>
+          </div>
+        </section>
+
+        <section class="dsection" aria-labelledby="h-res">
+          <h2 class="h-brand" id="h-res">Reseñas</h2>
+          ${f.reviews.length ? `<div class="reviews">${f.reviews.map(r => `<article class="review"><div class="review-head"><span class="avatar">${esc(r.alias[0])}</span><div><b>${esc(r.alias)}</b><br><small>${'★'.repeat(r.rating)} · ${esc(r.fecha)}</small></div></div><p>${esc(r.texto)}</p></article>`).join('')}</div>` : '<p style="color:#666;margin:0">Todavía no hay reseñas. Las publican los jugadores después de jugar.</p>'}
+        </section>
+      </div>
+
+      ${renderBookingPanel(f, pkgs, extras, d0)}
+    </div>
+  </div>
+
+  <div class="mobile-bar" id="mobile-bar">
+    <div class="from">${s.paqueteId ? 'Total' : 'Desde'}<span class="price" id="mb-total">${s.paqueteId ? money(priceLines(f, s).total) : money(d0.precio)}</span><span class="unit">${s.paqueteId ? `${s.jugadores} jugadores` : unitLabel(d0.unidad)}</span></div>
+    <button class="btn btn-primary" type="button" data-action="scroll-book">${s.paqueteId && s.fecha ? 'Revisar y reservar' : 'Elegir día y paquete'}</button>
+  </div>`;
+}
+
+/* ===== COMPONENTE: PanelReserva ===== */
+function renderBookingPanel(f, pkgs, extras, d0) {
+  const s = state.detail; const { lines, total } = priceLines(f, s);
+  const editing = state.editIndex != null;
+  return `
+  <aside class="book" id="book" aria-labelledby="book-title">
+    <div class="book-head">
+      <div><h2 class="h-brand" id="book-title" style="font-size:18px">${editing ? 'Editar reserva' : 'Reservar'}</h2><small>Confirmación inmediata al pagar</small></div>
+      <div style="text-align:right"><small>Desde</small><div class="price">${money(d0.precio)}</div><small>${unitLabel(d0.unidad)}</small></div>
+    </div>
+    <div class="book-body">
+      <div class="bstep">
+        <p>Día <span>${s.fecha ? cap(fmtLong(fromIso(s.fecha))) : 'Elige un día marcado'}</span></p>
+        ${renderCalendar(f)}
+      </div>
+      <div class="bstep">
+        <div class="players-row">
+          <div><b style="font-size:14px">Jugadores</b><br><small>Cuántos van a jugar</small></div>
+          <div class="stepper" role="group" aria-label="Jugadores">
+            <button type="button" data-action="players" data-d="-1" aria-label="Quitar jugador" ${s.jugadores <= 1 ? 'disabled' : ''}>${I.minus}</button>
+            <output aria-live="polite">${s.jugadores}</output>
+            <button type="button" data-action="players" data-d="1" aria-label="Agregar jugador" ${s.jugadores >= 60 ? 'disabled' : ''}>${I.plus}</button>
+          </div>
+        </div>
+      </div>
+      <div class="bstep">
+        <p>Paquete</p>
+        <div class="radio-list" role="radiogroup" aria-label="Paquete">
+          ${pkgs.map(p => { const fits = (!p.minJ || s.jugadores >= p.minJ) && (!p.maxJ || s.jugadores <= p.maxJ);
+            return `<label class="radio-card${s.paqueteId === p.id ? ' on' : ''}" style="${fits ? '' : 'opacity:.45'}"><input type="radio" name="pkg" value="${p.id}" data-action="pick-pkg" data-id="${p.id}" ${s.paqueteId === p.id ? 'checked' : ''} ${fits ? '' : 'disabled'}><span><span class="rc-name">${esc(p.nombre)}</span><span class="rc-sub">${durLabel(p.duracion)}${p.minJ ? ` · ${p.minJ} a ${p.maxJ} jugadores` : ''}</span></span><span class="price">${money(p.precio)}<br><small style="font-family:var(--lato);font-weight:400;font-size:11px;color:#666">${unitLabel(p.unidad)}</small></span></label>`; }).join('')}
+        </div>
+      </div>
+      ${extras.length ? `
+      <div class="bstep">
+        <p>Rentas y extras <span>Opcional</span></p>
+        <div class="mini-extras">
+          ${extras.map(x => { const q = s.extras[x.id] || 0; const max = x.unidad === 'por_persona' ? s.jugadores : x.unidad === 'por_reserva' ? 1 : (x.max || 20);
+            return `<div class="mini-extra"><span class="mx-name">${esc(x.nombre)}<small>${money(x.precio)} ${unitLabel(x.unidad)}</small></span>
+              <div class="stepper sm" role="group" aria-label="${esc(x.nombre)}">
+                <button type="button" data-action="extra" data-id="${x.id}" data-d="-1" aria-label="Quitar ${esc(x.nombre)}" ${q <= 0 ? 'disabled' : ''}>${I.minus}</button>
+                <output>${q}</output>
+                <button type="button" data-action="extra" data-id="${x.id}" data-d="1" data-max="${max}" aria-label="Agregar ${esc(x.nombre)}" ${q >= max ? 'disabled' : ''}>${I.plus}</button>
+              </div></div>`; }).join('')}
+        </div>
+      </div>` : ''}
+      ${lines.length ? `
+      <div class="summary" aria-live="polite">
+        ${lines.map(l => `<div class="sum-row"><span>${esc(l.nombre)} × ${l.cantidad}</span><span>${money(l.subtotal)}</span></div>`).join('')}
+        <div class="sum-total"><b>Total</b><span class="price">${money(total)}</span></div>
+      </div>` : ''}
+      ${s.error ? `<p class="form-error" role="alert">${esc(s.error)}</p>` : ''}
+      <div class="book-actions">
+        ${editing
+          ? `<button class="btn btn-primary btn-block" type="button" data-action="save-edit">Guardar cambios</button>
+             <button class="btn btn-ghost" type="button" data-action="cancel-edit">Descartar cambios</button>`
+          : `<button class="btn btn-primary btn-block" type="button" data-action="book-now">Reservar y pagar</button>
+             <button class="btn btn-line btn-block" type="button" data-action="add-cart">Agregar al carrito</button>`}
+      </div>
+      <p class="fine">${I.shield}<span>Pagas en línea con AirNation. Cancela gratis hasta ${f.politicaHoras} h antes de la apertura.</span></p>
+    </div>
+  </aside>`;
+}
+
+function renderCalendar(f) {
+  const s = state.detail; const m = s.mes; const first = new Date(m.getFullYear(), m.getMonth(), 1);
+  const startOffset = (first.getDay() + 6) % 7; // lunes primero
+  const daysIn = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
+  const t = today(); const canPrev = first > new Date(t.getFullYear(), t.getMonth(), 1);
+  const canNext = first < new Date(t.getFullYear(), t.getMonth() + 2, 1);
+  let cells = ['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(x => `<span class="dow" aria-hidden="true">${x}</span>`).join('');
+  for (let i = 0; i < startOffset; i++) cells += '<span></span>';
+  for (let day = 1; day <= daysIn; day++) {
+    const d = new Date(m.getFullYear(), m.getMonth(), day); const v = iso(d);
+    const open = isOpen(f, d); const blocked = f.cerrados.includes(v);
+    const label = `${fmtLong(d)}${open ? '' : blocked ? ', cerrado por evento privado' : ', sin reserva'}`;
+    cells += `<button type="button" class="${open ? 'open' : ''}${blocked ? ' blocked' : ''}" ${open ? `data-action="pick-date" data-date="${v}"` : 'disabled'} aria-pressed="${s.fecha === v}" aria-label="${label}">${day}</button>`;
+  }
+  const hasBlocked = f.cerrados.some(c => fromIso(c).getMonth() === m.getMonth());
+  return `
+  <div class="cal-head">
+    <button class="icon-btn" type="button" data-action="month" data-d="-1" aria-label="Mes anterior" ${canPrev ? '' : 'disabled'}>${I.prev}</button>
+    <b>${cap(m.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }))}</b>
+    <button class="icon-btn" type="button" data-action="month" data-d="1" aria-label="Mes siguiente" ${canNext ? '' : 'disabled'}>${I.next}</button>
+  </div>
+  <div class="cal">${cells}</div>
+  <div class="cal-legend">Solo se pueden elegir los días en que abre el campo.${hasBlocked ? ' Los tachados están cerrados por evento privado.' : ''}</div>`;
+}
+
+function validateDetail() {
+  const s = state.detail;
+  if (!s.fecha) return 'Elige un día para reservar.';
+  if (!s.paqueteId) return 'Elige un paquete o el derecho de campo.';
+  return '';
+}
+function detailToCartItem() {
+  const s = state.detail; const f = bySlug(s.slug); const { lines, total } = priceLines(f, s);
+  return { slug: s.slug, fecha: s.fecha, jugadores: s.jugadores, paqueteId: s.paqueteId, extras: { ...s.extras }, lines, total };
+}
+
+/* =====================================================================
+   CARRITO (drawer). Una reserva por campo y día; máximo 10.
+   ===================================================================== */
+function renderCart() {
+  const body = $('#drawer-body'); const foot = $('#drawer-foot');
+  const note = state.cartNote ? `<p class="notice">${I.check}<span>${esc(state.cartNote)}</span></p>` : ''; state.cartNote = '';
+  if (!state.cart.length) {
+    body.innerHTML = `<div class="cart-empty"><h3 class="h-brand">Tu carrito está vacío</h3><p>Elige un campo y un día para empezar.</p><a class="btn btn-line" href="#/" data-action="close-overlays">Ver campos</a></div>`;
+    foot.innerHTML = ''; return;
+  }
+  body.innerHTML = note + state.cart.map((c, i) => {
+    const f = bySlug(c.slug);
+    const h = f.horario[DAY_KEYS[fromIso(c.fecha).getDay()]];
+    return `
+    <article class="citem">
+      <div class="citem-head">
+        <div class="citem-thumb">${photo(f, '')}</div>
+        <div>
+          <h3>${esc(f.nombre)}</h3>
+          <div class="citem-date">${cap(fmtLong(fromIso(c.fecha)))} <small>· abre ${fmtHour(h[0])}</small></div>
+          <div style="font-size:13px;color:#666">${c.jugadores} ${c.jugadores === 1 ? 'jugador' : 'jugadores'} · ${esc(f.ciudad)}</div>
+        </div>
+      </div>
+      <div class="citem-lines">${c.lines.map(l => `<div><span>${esc(l.nombre)} × ${l.cantidad}</span><span>${money(l.subtotal)}</span></div>`).join('')}</div>
+      <div class="citem-foot">
+        <span class="price">${money(c.total)}</span>
+        <span>
+          <button class="btn btn-ghost" type="button" data-action="edit-item" data-i="${i}">Editar</button>
+          <button class="btn btn-ghost" type="button" data-action="remove-item" data-i="${i}">Quitar</button>
+        </span>
+      </div>
+    </article>`;
+  }).join('');
+  const total = state.cart.reduce((a, c) => a + c.total, 0);
+  foot.innerHTML = `
+    <div class="sum-total" style="margin:0;padding:0;border:0"><b>Total (${state.cart.length} ${state.cart.length === 1 ? 'reserva' : 'reservas'})</b><span class="price">${money(total)}</span></div>
+    <a class="btn btn-primary btn-block" href="#/checkout" data-action="close-overlays">Continuar al pago</a>
+    <p class="fine" style="justify-content:center">Un solo pago para todas tus reservas.</p>`;
+}
+function openOverlay(id) { $('#' + id).classList.add('open'); $('#scrim').classList.add('show'); document.body.style.overflow = 'hidden'; if (id === 'drawer') { renderCart(); $('#drawer .icon-btn').focus(); } }
+function closeOverlays() { document.querySelectorAll('.drawer.open, .filters.open').forEach(e => e.classList.remove('open')); $('#scrim').classList.remove('show'); document.body.style.overflow = ''; }
+
+function upsertCart(item) {
+  const i = state.cart.findIndex(c => c.slug === item.slug && c.fecha === item.fecha);
+  if (i >= 0) { state.cart[i] = item; saveCart(); return 'replaced'; }
+  if (state.cart.length >= MAX_CART) return 'full';
+  state.cart.push(item); saveCart(); return 'added';
+}
+
+/* =====================================================================
+   VISTA: CHECKOUT (/arena/checkout)
+   ===================================================================== */
+function renderCheckout() {
+  if (!state.cart.length) return `<div class="wrap"><div class="page-title"><h1 class="h-brand">No hay nada que pagar</h1><p>Tu carrito está vacío.</p></div><a class="btn btn-line" href="#/">Ver campos</a></div>`;
+  const total = state.cart.reduce((a, c) => a + c.total, 0);
+  const minPol = Math.min(...state.cart.map(c => bySlug(c.slug).politicaHoras));
+  return `
+  <div class="wrap">
+    <div class="page-title"><h1 class="h-brand">Datos y pago</h1><p>${state.cart.length} ${state.cart.length === 1 ? 'reserva' : 'reservas'} en un solo pago.</p></div>
+    <div class="checkout-grid">
+      <form data-form="checkout" novalidate>
+        <section class="panel">
+          <h2 class="h-brand">Tus datos</h2>
+          <p class="sub">Aquí te mandamos los QR de entrada y el recibo.</p>
+          <div class="login-hint"><span>¿Tienes cuenta de AirNation? Tus reservas quedan en tu perfil.</span><a href="#">Iniciar sesión</a></div>
+          <div class="form-grid">
+            <div class="field full"><label for="c-nombre">Nombre de quien reserva</label><input id="c-nombre" name="nombre" autocomplete="name" required></div>
+            <div class="field"><label for="c-email">Correo</label><input id="c-email" name="email" type="email" autocomplete="email" required></div>
+            <div class="field"><label for="c-tel">Celular</label><input id="c-tel" name="telefono" type="tel" autocomplete="tel" inputmode="tel" placeholder="10 dígitos"></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2 class="h-brand">Pago</h2>
+          <p class="sub">Tienes 15 minutos para completar el pago una vez que continúes.</p>
+          <div class="pay-box">${I.lock}<p><b>Pago seguro</b>Te llevamos a la página del procesador para pagar con tarjeta de crédito o débito. AirNation no guarda los datos de tu tarjeta.</p></div>
+          <label class="consent" style="margin-top:14px"><input type="checkbox" name="acepto" required><span>Acepto la política de cancelación de cada campo (reembolso del 100% si cancelo con al menos ${minPol} h de anticipación a la apertura), los <a href="#">Términos</a> y el <a href="#">Aviso de Privacidad</a>.</span></label>
+          <p class="form-error" id="co-error" role="alert" style="margin-top:12px"></p>
+          <button class="btn btn-primary btn-block" type="submit" style="margin-top:12px">Pagar ${money(total)}</button>
+        </section>
+      </form>
+      <aside class="panel order-sum" aria-labelledby="osum-title">
+        <h2 class="h-brand" id="osum-title" style="margin-bottom:14px">Resumen</h2>
+        ${state.cart.map((c, i) => { const f = bySlug(c.slug); return `<div class="osum-item"><div class="osum-title"><span>${esc(f.nombre)}</span><span>${money(c.total)}</span></div><div class="osum-sub">${cap(fmtLong(fromIso(c.fecha)))} · ${c.jugadores} jugadores</div><div style="font-size:13px;color:#666">${c.lines.map(l => `${esc(l.nombre)} × ${l.cantidad}`).join(', ')}</div><button class="btn btn-ghost" style="padding:0;min-height:28px;font-size:13px" type="button" data-action="edit-item" data-i="${i}">Editar</button></div>`; }).join('')}
+        <div class="sum-total"><b>Total</b><span class="price">${money(total)}</span></div>
+        <p class="fine" style="margin-top:8px">El precio incluye todos los cargos. Sin comisiones extra.</p>
+      </aside>
+    </div>
+  </div>`;
+}
+
+/* =====================================================================
+   VISTA: CONFIRMACIÓN (/arena/confirmacion) — un QR por reserva
+   ===================================================================== */
+function fakeQR(text, size = 25) {
+  let h = 2166136261; for (const ch of text) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return ((h >>> 0) % 1000) / 1000; };
+  const finder = (x, y) => { for (const [fx, fy] of [[0, 0], [size - 7, 0], [0, size - 7]]) { const dx = x - fx, dy = y - fy; if (dx >= 0 && dx < 7 && dy >= 0 && dy < 7) return (dx === 0 || dx === 6 || dy === 0 || dy === 6 || (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4)) ? 1 : 0; } return -1; };
+  let r = '';
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const fv = finder(x, y); const on = fv === -1 ? rnd() > 0.52 : fv === 1;
+    if (on) r += `<rect x="${x + 2}" y="${y + 2}" width="1" height="1"/>`;
+  }
+  return `<svg viewBox="0 0 ${size + 4} ${size + 4}" shape-rendering="crispEdges" role="img" aria-label="Código QR de la reserva ${esc(text)}"><rect width="100%" height="100%" fill="#fff"/><g fill="#111">${r}</g></svg>`;
+}
+function code() { const a = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; let s = 'AR-'; for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
+
+function renderConfirm() {
+  const o = state.lastOrder;
+  if (!o) return `<div class="wrap"><div class="page-title"><h1 class="h-brand">No hay reservas recientes</h1></div><a class="btn btn-line" href="#/">Ver campos</a></div>`;
+  return `
+  <div class="wrap">
+    <div class="confirm-head">
+      <span class="confirm-check"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" stroke-width="2.8"/></svg></span>
+      <div><h1 class="h-brand">Tus reservas están confirmadas</h1><p>Enviamos ${o.items.length === 1 ? 'el QR' : `los ${o.items.length} QR`} y el recibo a <b style="color:#111">${esc(o.email)}</b>. Pagaste ${money(o.total)}.</p></div>
+    </div>
+    <div class="tickets">
+      ${o.items.map(c => { const f = bySlug(c.slug); const h = f.horario[DAY_KEYS[fromIso(c.fecha).getDay()]]; return `
+      <!-- COMPONENTE: TicketQR -->
+      <article class="ticket">
+        <div class="ticket-qr">${fakeQR(c.codigo)}<span class="ticket-code">${c.codigo}</span></div>
+        <div class="ticket-info">
+          <h3>${esc(f.nombre)}</h3>
+          <div class="when">${cap(fmtLong(fromIso(c.fecha)))}</div>
+          <div class="lines">Abre ${fmtHour(h[0])} · ${c.jugadores} jugadores</div>
+          <div class="lines">${c.lines.map(l => `${esc(l.nombre)} × ${l.cantidad}`).join(', ')}</div>
+          <div class="lines">${esc(f.direccion)}</div>
+          <div class="ticket-actions">
+            <button class="btn btn-dark" type="button">Descargar QR</button>
+            <a class="btn btn-line" href="#">Cómo llegar</a>
+            <button class="btn btn-ghost" type="button">Cancelar reserva</button>
+          </div>
+        </div>
+      </article>`; }).join('')}
+    </div>
+    <p class="confirm-note">Una persona del grupo muestra el QR en la entrada, desde el celular o impreso. El campo lo escanea una sola vez y registra cuántos llegaron. Puedes cancelar con reembolso completo hasta el plazo de cada campo.</p>
+    <a class="btn btn-line" href="#/" style="margin-bottom:48px">Seguir explorando campos</a>
+  </div>`;
+}
+
+/* =====================================================================
+   ROUTER
+   ===================================================================== */
+function route() {
+  const raw = location.hash.replace(/^#/, '') || '/';
+  const [path, qs] = raw.split('?'); const query = new URLSearchParams(qs || '');
+  const app = $('#app'); closeOverlays(); $('#toast').classList.remove('show');
+  const nav = document.querySelector('.main-nav a[aria-current]');
+  if (path.startsWith('/campo/')) {
+    const slug = path.split('/')[2];
+    state.detail = initDetail(slug, query);
+    if (!state.detail) { location.hash = '#/'; return; }
+    app.innerHTML = renderDetail(); document.title = `Reservar en ${bySlug(slug).nombre} — ARENA`;
+  } else if (path === '/checkout') {
+    state.editIndex = null; app.innerHTML = renderCheckout(); document.title = 'Datos y pago — ARENA';
+  } else if (path === '/confirmacion') {
+    app.innerHTML = renderConfirm(); document.title = 'Reservas confirmadas — ARENA';
+  } else {
+    state.editIndex = null; app.innerHTML = renderLanding(); renderResults(); document.title = 'ARENA · Reserva tu campo — AirNation';
+  }
+  window.scrollTo(0, 0);
+}
+function rerenderDetail() {
+  const y = window.scrollY; $('#app').innerHTML = renderDetail(); window.scrollTo(0, y);
+}
+
+/* =====================================================================
+   EVENTOS (delegados)
+   ===================================================================== */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]'); if (!el) return;
+  const a = el.dataset.action; const F = state.filters; const s = state.detail;
+  switch (a) {
+    case 'open-cart': openOverlay('drawer'); break;
+    case 'open-filters': openOverlay('filters'); break;
+    case 'close-overlays': closeOverlays(); break;
+    case 'set-date':
+      F.fecha = el.dataset.date;
+      document.querySelectorAll('.date-tile').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.date === F.fecha)));
+      renderResults(); break;
+    case 'remove-chip': {
+      const k = el.dataset.key, v = el.dataset.value;
+      if (k === 'disciplinas' || k === 'terrenos') F[k] = F[k].filter(x => x !== v);
+      else if (k === 'precioMax') F.precioMax = 500; else if (k === 'jugadores') F.jugadores = 0; else F[k] = (k === 'conRenta' || k === 'rating45') ? false : '';
+      route(); document.getElementById('resultados').scrollIntoView(); break;
+    }
+    case 'clear-filters':
+      Object.assign(F, { estado: '', fecha: '', jugadores: 0, disciplinas: [], terrenos: [], precioMax: 500, conRenta: false, rating45: false });
+      route(); document.getElementById('resultados').scrollIntoView(); break;
+    case 'go-estado': e.preventDefault(); F.estado = el.dataset.estado; location.hash = '#/'; break;
+    case 'set-disc': s.disciplina = el.dataset.disc; s.paqueteId = null; rerenderDetail(); break;
+    case 'pick-pkg': s.paqueteId = el.dataset.id; s.error = ''; rerenderDetail(); break;
+    case 'pick-date': s.fecha = el.dataset.date; s.error = ''; rerenderDetail(); break;
+    case 'month': s.mes = new Date(s.mes.getFullYear(), s.mes.getMonth() + Number(el.dataset.d), 1); rerenderDetail(); break;
+    case 'players': {
+      const f = bySlug(s.slug); s.jugadores = Math.min(60, Math.max(1, s.jugadores + Number(el.dataset.d)));
+      const p = f.items.find(i => i.id === s.paqueteId);
+      if (p && ((p.minJ && s.jugadores < p.minJ) || (p.maxJ && s.jugadores > p.maxJ))) s.paqueteId = null;
+      f.items.forEach(i => { if (i.unidad === 'por_persona' && s.extras[i.id] > s.jugadores) s.extras[i.id] = s.jugadores; });
+      rerenderDetail(); break;
+    }
+    case 'extra': {
+      const id = el.dataset.id; const q = (s.extras[id] || 0) + Number(el.dataset.d);
+      s.extras[id] = Math.max(0, Math.min(Number(el.dataset.max || 99), q)); rerenderDetail(); break;
+    }
+    case 'scroll-book': $('#book').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); break;
+    case 'add-cart':
+    case 'book-now': {
+      s.error = validateDetail(); if (s.error) { rerenderDetail(); $('.form-error')?.scrollIntoView({ block: 'center' }); break; }
+      const r = upsertCart(detailToCartItem());
+      if (r === 'full') { s.error = `Tu carrito ya tiene ${MAX_CART} reservas. Paga o quita alguna para agregar otra.`; rerenderDetail(); break; }
+      updateCartCount(true);
+      if (a === 'book-now') { location.hash = '#/checkout'; break; }
+      state.cartNote = r === 'replaced' ? `Actualizamos tu reserva en ${bySlug(s.slug).nombre} para ese día.` : `Agregamos ${bySlug(s.slug).nombre} a tu carrito.`;
+      openOverlay('drawer'); break;
+    }
+    case 'save-edit': {
+      s.error = validateDetail(); if (s.error) { rerenderDetail(); break; }
+      const item = detailToCartItem(); const dup = state.cart.findIndex((c, i) => i !== state.editIndex && c.slug === item.slug && c.fecha === item.fecha);
+      if (dup >= 0) state.cart.splice(dup, 1);
+      state.cart[state.editIndex > dup && dup >= 0 ? state.editIndex - 1 : state.editIndex] = item;
+      state.editIndex = null; saveCart(); toast('Cambios guardados.'); location.hash = '#/checkout'; break;
+    }
+    case 'cancel-edit': state.editIndex = null; history.back(); break;
+    case 'edit-item': {
+      const i = Number(el.dataset.i); state.editIndex = i; state.detail = null; closeOverlays();
+      const target = `#/campo/${state.cart[i].slug}`;
+      if (location.hash === target) route(); else location.hash = target; break;
+    }
+    case 'remove-item': state.cart.splice(Number(el.dataset.i), 1); saveCart(); renderCart(); if (location.hash === '#/checkout') route(); break;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  const el = e.target; const k = el.dataset.filter; if (!k) return; const F = state.filters;
+  if (k === 'estado') F.estado = el.value;
+  else if (k === 'jugadores') F.jugadores = Number(el.value);
+  else if (k === 'disciplina-single') F.disciplinas = el.value ? [el.value] : [];
+  else if (k === 'orden') F.orden = el.value;
+  else if (k === 'disciplinas' || k === 'terrenos') F[k] = el.checked ? [...new Set([...F[k], el.value])] : F[k].filter(x => x !== el.value);
+  else if (k === 'conRenta' || k === 'rating45') F[k] = el.checked;
+  if (k === 'disciplinas') { const sd = $('#s-disc'); if (sd) sd.value = F.disciplinas.length === 1 ? F.disciplinas[0] : ''; }
+  if (k === 'disciplina-single') document.querySelectorAll('[data-filter="disciplinas"]').forEach(c => c.checked = F.disciplinas.includes(c.value));
+  renderResults();
+});
+document.addEventListener('input', (e) => {
+  if (e.target.dataset.filter !== 'precioMax') return;
+  state.filters.precioMax = Number(e.target.value);
+  $('#f-precio-val').textContent = state.filters.precioMax >= 500 ? 'Sin límite' : 'Hasta ' + money(state.filters.precioMax);
+  renderResults();
+});
+document.addEventListener('submit', (e) => {
+  const form = e.target; e.preventDefault();
+  if (form.dataset.form === 'search') { document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (form.dataset.form === 'checkout') {
+    const err = $('#co-error'); err.textContent = '';
+    const nombre = form.nombre.value.trim(), email = form.email.value.trim();
+    form.querySelectorAll('input').forEach(i => i.removeAttribute('aria-invalid'));
+    if (!nombre) { form.nombre.setAttribute('aria-invalid', 'true'); err.textContent = 'Escribe el nombre de quien reserva.'; form.nombre.focus(); return; }
+    if (!/^\S+@\S+\.\S+$/.test(email)) { form.email.setAttribute('aria-invalid', 'true'); err.textContent = 'Revisa el correo: ahí te llegan los QR.'; form.email.focus(); return; }
+    if (!form.acepto.checked) { err.textContent = 'Para pagar necesitas aceptar la política de cancelación y los términos.'; return; }
+    // Producción: POST /api/v1/arena/checkout → redirige al checkout del proveedor → webhook confirma → /arena/confirmacion
+    $('#processing').classList.add('show');
+    setTimeout(() => {
+      state.lastOrder = { email, total: state.cart.reduce((a, c) => a + c.total, 0), items: state.cart.map(c => ({ ...c, codigo: code() })) };
+      state.cart = []; saveCart(); $('#processing').classList.remove('show'); location.hash = '#/confirmacion';
+    }, 1300);
+  }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeOverlays(); });
+window.addEventListener('hashchange', route);
+
+updateCartCount();
+route();
+</script>
+</body>
+</html>

@@ -59,18 +59,25 @@ llamar GET "$OWNER" "/arena/owner/fields"
 paso "GET /arena/owner/fields/\$FIELD/settings"
 llamar GET "$OWNER" "/arena/owner/fields/$FIELD/settings"
 
-paso "PATCH /arena/owner/fields/\$FIELD/settings"
+paso "PATCH /arena/owner/fields/\$FIELD/settings (incluye disciplinas, terrenos y edad mínima)"
 llamar PATCH "$OWNER" "/arena/owner/fields/$FIELD/settings" \
-  '{"cancelacion_horas_limite":24,"anticipacion_min_horas":12,"politica_cancelacion":"Cancela hasta 24 h antes de la apertura y te devolvemos el 100%."}'
+  '{"cancelacion_horas_limite":24,"anticipacion_min_horas":12,"politica_cancelacion":"Cancela hasta 24 h antes de la apertura y te devolvemos el 100%.","disciplinas":["airsoft","gotcha"],"terrenos":["bosque"],"edad_minima":12}'
+
+paso "PATCH settings con disciplina inventada (espera 400)"
+llamar PATCH "$OWNER" "/arena/owner/fields/$FIELD/settings" '{"disciplinas":["paintball"]}'
 
 paso "PATCH /arena/owner/fields/\$FIELD/settings con CLABE inválida (espera 400)"
 llamar PATCH "$OWNER" "/arena/owner/fields/$FIELD/settings" '{"clabe":"123"}'
 
-paso "POST /arena/owner/fields/\$FIELD/items (paquete por persona)"
+paso "POST /arena/owner/fields/\$FIELD/items (paquete por persona, con disciplina y duración)"
 llamar POST "$OWNER" "/arena/owner/fields/$FIELD/items" \
-  '{"tipo":"paquete","nombre":"Paquete smoke test","precio_centavos":35000,"unidad":"por_persona","incluye":["Entrada","500 BBs"],"orden":1}'
+  '{"tipo":"paquete","nombre":"Paquete smoke test","precio_centavos":35000,"unidad":"por_persona","incluye":["Entrada","500 BBs"],"orden":1,"disciplina":"airsoft","duracion_min":180}'
 ITEM_ID="$(sed -n 's/.*"id":"\([0-9a-f-]\{36\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
 echo "item creado: ${ITEM_ID:-ninguno}"
+
+paso "POST item con duración fuera de rango (espera 400)"
+llamar POST "$OWNER" "/arena/owner/fields/$FIELD/items" \
+  '{"tipo":"paquete","nombre":"X","precio_centavos":100,"duracion_min":5}'
 
 paso "POST item con tipo inválido (espera 400)"
 llamar POST "$OWNER" "/arena/owner/fields/$FIELD/items" \
@@ -116,6 +123,23 @@ curl -sS -o /dev/null -w 'HTTP %{http_code}\n' "$API/arena/owner/fields/$FIELD/s
 # Necesita que el campo tenga ARENA activo, un item base y el día abierto.
 # ARENA_ITEM_ID y ARENA_FECHA se pueden fijar a mano.
 
+# ─── Marketplace y carrito ───────────────────────────────────────────────────
+paso "GET /arena/marketplace (sin filtros)"
+curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/marketplace"
+head -c 700 /tmp/arena-smoke.out; echo
+
+paso "GET /arena/marketplace con filtros válidos"
+curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+  "$API/arena/marketplace?disciplina=airsoft&terreno=bosque&jugadores=6&precio_max=50000&con_renta=true&rating_min=4&orden=precio_asc"
+head -c 400 /tmp/arena-smoke.out; echo
+
+paso "GET /arena/marketplace con disciplina inventada (espera 400)"
+curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/marketplace?disciplina=paintball"
+head -c 200 /tmp/arena-smoke.out; echo
+
+paso "GET /arena/marketplace con fecha mal formada (espera 400)"
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' "$API/arena/marketplace?fecha=24-10-2026"
+
 paso "GET /arena/fields/\$SLUG (ficha pública)"
 if [ -n "${ARENA_FIELD_SLUG:-}" ]; then
   curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/fields/$ARENA_FIELD_SLUG"
@@ -126,8 +150,9 @@ fi
 
 HASTA="$(date -u -d '+30 days' +%Y-%m-%d 2>/dev/null || date -u -v+30d +%Y-%m-%d)"
 paso "GET /arena/fields/\$FIELD/open-days"
-curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+curl -sS -o /tmp/arena-open-days.out -w 'HTTP %{http_code}\n' \
   "$API/arena/fields/$FIELD/open-days?desde=$(date -u +%Y-%m-%d)&hasta=$HASTA"
+cp /tmp/arena-open-days.out /tmp/arena-smoke.out
 head -c 600 /tmp/arena-smoke.out; echo
 FECHA="${ARENA_FECHA:-$(sed -n 's/.*"fecha":"\([0-9-]\{10\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)}"
 echo "primer día abierto: ${FECHA:-ninguno}"
@@ -185,6 +210,71 @@ if [ -n "${FECHA:-}" ] && [ -n "${BASE_ID:-}" ]; then
     paso "GET qr.png ya pagada (espera 200 image/png)"
     curl -sS -o /tmp/arena-qr.png -w 'HTTP %{http_code} · %{content_type} · %{size_download} bytes\n' \
       "$API/arena/bookings/$CODIGO/qr.png?t=$TOKEN"
+  fi
+
+  # ── Carrito: 2 reservas del mismo campo en días distintos, un solo pago ──
+  # Segundo día abierto (el JSON viene en una sola línea: grep -o, no sed).
+  FECHA2="$(grep -o '"fecha":"[0-9-]\{10\}"' /tmp/arena-open-days.out 2>/dev/null | grep -o '[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}' | grep -v "^$FECHA$" | head -1)"
+  paso "POST /arena/checkout (carrito con ${FECHA2:+2 reservas}${FECHA2:-1 reserva})"
+  if [ -n "${FECHA2:-}" ]; then
+    RESERVAS="[{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"items\":[{\"item_id\":\"$BASE_ID\"}]},{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA2\",\"num_jugadores\":6,\"items\":[{\"item_id\":\"$BASE_ID\"}]}]"
+  else
+    RESERVAS="[{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"items\":[{\"item_id\":\"$BASE_ID\"}]}]"
+  fi
+  curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/checkout" -H 'Content-Type: application/json' \
+    -d "{\"reservas\":$RESERVAS,\"contacto\":{\"nombre\":\"Carrito Test\",\"email\":\"${ARENA_TEST_EMAIL:-smoke@example.com}\"},\"acepta_politica\":true}"
+  head -c 700 /tmp/arena-smoke.out; echo
+  PAY_ID="$(sed -n 's/.*"payment_id":"\([0-9a-f-]\{36\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+  PAY_TOKEN="$(sed -n 's/.*"access_token":"\([0-9a-f]\{64\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+  echo "pago del carrito: ${PAY_ID:-ninguno}"
+
+  paso "POST /arena/checkout con el mismo campo y día dos veces (espera 409 carrito_duplicado)"
+  curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/checkout" -H 'Content-Type: application/json' \
+    -d "{\"reservas\":[{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"items\":[{\"item_id\":\"$BASE_ID\"}]},{\"field_id\":\"$FIELD\",\"fecha\":\"$FECHA\",\"num_jugadores\":4,\"items\":[{\"item_id\":\"$BASE_ID\"}]}],\"contacto\":{\"nombre\":\"X\",\"email\":\"x@example.com\"},\"acepta_politica\":true}"
+  head -c 300 /tmp/arena-smoke.out; echo
+
+  paso "POST /arena/checkout sin aceptar la política (espera 400)"
+  curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+    -X POST "$API/arena/checkout" -H 'Content-Type: application/json' \
+    -d "{\"reservas\":$RESERVAS,\"contacto\":{\"nombre\":\"X\",\"email\":\"x@example.com\"}}"
+
+  if [ -n "${PAY_ID:-}" ] && [ -n "${PAY_TOKEN:-}" ]; then
+    paso "GET /arena/checkout/\$PAY_ID con token (pendiente de pago)"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/checkout/$PAY_ID?t=$PAY_TOKEN"
+    head -c 700 /tmp/arena-smoke.out; echo
+
+    paso "GET /arena/checkout/\$PAY_ID con token ajeno (espera 404)"
+    curl -sS -o /dev/null -w 'HTTP %{http_code}\n' "$API/arena/checkout/$PAY_ID?t=$(printf '0%.0s' $(seq 64))"
+
+    paso "POST /arena/payments/mock/\$PAY_ID/complete?result=ok (confirma TODAS las reservas del pago)"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+      -X POST "$API/arena/payments/mock/$PAY_ID/complete?result=ok"
+    head -c 400 /tmp/arena-smoke.out; echo
+
+    paso "Repetir el pago del carrito (idempotencia: espera ya_procesado, sin email doble)"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+      -X POST "$API/arena/payments/mock/$PAY_ID/complete?result=ok"
+    head -c 300 /tmp/arena-smoke.out; echo
+
+    paso "GET /arena/checkout/\$PAY_ID ya pagado (un QR por reserva)"
+    curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/checkout/$PAY_ID?t=$PAY_TOKEN"
+    head -c 900 /tmp/arena-smoke.out; echo
+
+    CODIGO_CARRITO="$(sed -n 's/.*"codigo":"\(AR-[0-9A-Z]\{6\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+    TOKEN_CARRITO="$(sed -n 's/.*"access_token":"\([0-9a-f]\{64\}\)".*/\1/p' /tmp/arena-smoke.out | head -1)"
+    if [ -n "${CODIGO_CARRITO:-}" ] && [ -n "${TOKEN_CARRITO:-}" ]; then
+      paso "POST /arena/bookings/\$CODIGO_CARRITO/cancel (reembolso PARCIAL: solo esa reserva)"
+      curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' \
+        -X POST "$API/arena/bookings/$CODIGO_CARRITO/cancel" -H 'Content-Type: application/json' \
+        -d "{\"t\":\"$TOKEN_CARRITO\",\"motivo\":\"smoke test\"}"
+      head -c 500 /tmp/arena-smoke.out; echo
+
+      paso "GET /arena/checkout/\$PAY_ID (las demás reservas siguen confirmadas)"
+      curl -sS -o /tmp/arena-smoke.out -w 'HTTP %{http_code}\n' "$API/arena/checkout/$PAY_ID?t=$PAY_TOKEN"
+      head -c 900 /tmp/arena-smoke.out; echo
+    fi
   fi
 
   paso "GET /arena/owner/fields/\$FIELD/bookings (agenda del día reservado)"

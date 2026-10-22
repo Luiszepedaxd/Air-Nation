@@ -19,6 +19,16 @@ describe("proveedor mock", () => {
     );
   });
 
+  it("createCheckout de un carrito manda al pago simulado del pago", async () => {
+    const r = await mock.createCheckout({
+      payment: { id: "11111111-2222-3333-4444-555555555555", access_token: "tokpago" },
+    });
+    assert.equal(
+      r.checkout_url,
+      "https://www.airnation.online/arena/pago-simulado?p=11111111-2222-3333-4444-555555555555&t=tokpago"
+    );
+  });
+
   it("dos checkouts nunca comparten provider_ref", async () => {
     const a = await mock.createCheckout({ booking: { codigo: "A", access_token: "t" } });
     const b = await mock.createCheckout({ booking: { codigo: "A", access_token: "t" } });

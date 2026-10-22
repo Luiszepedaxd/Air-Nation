@@ -3,6 +3,7 @@
  * días, confirmación y check-in. Aquí solo va lo que no tiene función propia
  * (leer una reserva completa y el plazo de cancelación).
  */
+const crypto = require("node:crypto");
 const supabase = require("../supabase");
 const { limiteCancelacion } = require("./horario");
 const { currentProvider } = require("./payments");
@@ -28,7 +29,8 @@ function unaFila(data) {
   return Array.isArray(data) ? data[0] || null : data || null;
 }
 
-const CAMPO_PUBLICO = "id, nombre, slug, ciudad, direccion, maps_url, foto_portada_url, horarios_json";
+const CAMPO_PUBLICO =
+  "id, nombre, slug, ciudad, estado, direccion, maps_url, foto_portada_url, galeria_urls, logo_url, descripcion, promedio_rating, horarios_json";
 
 /**
  * Reserva completa con sus renglones, el campo, la configuración y el último
@@ -190,11 +192,73 @@ async function crearReserva(params) {
   return { booking, pago, checkout };
 }
 
+/**
+ * Carrito completo: `arena_create_checkout` crea todas las reservas en una sola
+ * transacción y aquí se abre **un** pago por la suma de sus totales.
+ *
+ * El `provider_ref` es NOT NULL, así que el id del pago se genera aquí para
+ * poder pedirle el checkout al proveedor antes de insertarlo: así se escribe
+ * una sola vez.
+ */
+async function crearCheckoutCarrito({ reservas, contacto, userId = null, origen = "web" }) {
+  const provider = currentProvider();
+  if (!provider) throw new Error("arena_inactivo");
+
+  const { data, error } = await supabase.rpc("arena_create_checkout", {
+    p_reservas: reservas,
+    p_contacto_nombre: contacto.nombre,
+    p_contacto_email: contacto.email,
+    p_contacto_telefono: contacto.telefono,
+    p_user_id: userId,
+    p_origen: origen,
+  });
+  if (error) throw error;
+
+  const creadas = Array.isArray(data) ? data : [];
+  if (creadas.length === 0) throw new Error("carrito_vacio");
+
+  const total = creadas.reduce((s, r) => s + r.total_centavos, 0);
+  const paymentId = crypto.randomUUID();
+  const accessToken = crypto.randomBytes(32).toString("hex");
+
+  const checkout = await provider.createCheckout({
+    payment: { id: paymentId, access_token: accessToken, monto_centavos: total, moneda: "MXN" },
+    returnUrl: `${arenaPublicUrl()}/arena/confirmacion?p=${paymentId}&t=${accessToken}`,
+  });
+
+  const { data: pago, error: pagoError } = await supabase
+    .from("arena_payments")
+    .insert({
+      id: paymentId,
+      booking_id: null,
+      provider: provider.NAME,
+      provider_ref: checkout.provider_ref,
+      monto_centavos: total,
+      moneda: "MXN",
+      status: "creado",
+      checkout_url: checkout.checkout_url || null,
+      access_token: accessToken,
+    })
+    .select("id, provider, provider_ref, status, checkout_url, monto_centavos, access_token")
+    .maybeSingle();
+  // Sin pago las reservas quedan pendientes y `arena_expire_pending` las limpia.
+  if (pagoError) throw pagoError;
+
+  const { error: ligaError } = await supabase
+    .from("arena_bookings")
+    .update({ payment_id: paymentId })
+    .in("id", creadas.map((r) => r.booking_id));
+  if (ligaError) throw ligaError;
+
+  return { reservas: creadas, pago, checkout, total_centavos: total };
+}
+
 module.exports = {
   sanearItems,
   unaFila,
   abrirCheckout,
   crearReserva,
+  crearCheckoutCarrito,
   leerReserva,
   serializarReserva,
   CAMPO_PUBLICO,

@@ -10,10 +10,25 @@ const notify = require("../../lib/arena/notify");
 
 const router = express.Router();
 
+/** Ids de las reservas que cubre un pago: las del carrito y la suelta. */
+async function reservasDelPago(pago) {
+  const { data, error } = await supabase
+    .from("arena_bookings")
+    .select("id")
+    .eq("payment_id", pago.id);
+  if (error) throw error;
+  const ids = new Set((data || []).map((b) => b.id));
+  if (pago.booking_id) ids.add(pago.booking_id);
+  return Array.from(ids);
+}
+
 /**
  * Único camino por el que una reserva pasa a confirmada. Idempotente: el
  * `UPDATE` condicional sobre `arena_payments` es el candado, así que un webhook
  * repetido no vuelve a confirmar ni a mandar correos.
+ *
+ * Un pago puede cubrir varias reservas (carrito): `arena_mark_payment_paid`
+ * las confirma todas y el jugador recibe un solo email con todos los QR.
  */
 async function aplicarPago(pago, status, raw) {
   if (status === "pagado") {
@@ -27,29 +42,42 @@ async function aplicarPago(pago, status, raw) {
     if (error) throw error;
     if (!tomado) return { resultado: "ya_procesado" };
 
-    const { data: resultado, error: rpcError } = await supabase.rpc("arena_mark_paid", {
-      p_booking_id: pago.booking_id,
+    const { data: filas, error: rpcError } = await supabase.rpc("arena_mark_payment_paid", {
+      p_payment_id: pago.id,
     });
     if (rpcError) throw rpcError;
+    const resultados = Array.isArray(filas) ? filas : [];
 
-    const detalle = await leerReserva({ bookingId: pago.booking_id });
-    if (!detalle) return { resultado };
-
-    if (resultado === "confirmada") {
-      notify.avisoPagoAprobado(detalle).catch((e) => console.error("[arena] aviso pago:", e.message));
-    } else if (resultado === "cancelada_reembolsar") {
-      // Pago tardío de una reserva ya cancelada: se devuelve solo.
-      const r = await reembolsar(detalle.booking, { motivo: "pago tardío de reserva cancelada" });
-      if (r.reembolsado) {
-        const fresco = await leerReserva({ bookingId: pago.booking_id });
-        if (fresco) {
-          notify
-            .avisoCanceladaPorCampo(fresco)
-            .catch((e) => console.error("[arena] aviso reembolso:", e.message));
+    const confirmadas = [];
+    for (const fila of resultados) {
+      const detalle = await leerReserva({ bookingId: fila.booking_id });
+      if (!detalle) continue;
+      if (fila.resultado === "confirmada") {
+        confirmadas.push(detalle);
+      } else if (fila.resultado === "cancelada_reembolsar") {
+        // Pago tardío de una reserva ya cancelada: se devuelve solo su monto.
+        const r = await reembolsar(detalle.booking, { motivo: "pago tardío de reserva cancelada" });
+        if (r.reembolsado) {
+          const fresco = await leerReserva({ bookingId: fila.booking_id });
+          if (fresco) {
+            notify
+              .avisoCanceladaPorCampo(fresco)
+              .catch((e) => console.error("[arena] aviso reembolso:", e.message));
+          }
         }
       }
     }
-    return { resultado };
+
+    if (confirmadas.length > 0) {
+      notify
+        .avisoPagoAprobado(confirmadas, pago)
+        .catch((e) => console.error("[arena] aviso pago:", e.message));
+    }
+
+    return {
+      resultado: resultados.length === 1 ? resultados[0].resultado : "procesado",
+      reservas: resultados,
+    };
   }
 
   if (status === "fallido") {
@@ -63,9 +91,15 @@ async function aplicarPago(pago, status, raw) {
       .maybeSingle();
     if (!tomado) return { resultado: "ya_procesado" };
 
-    const detalle = await leerReserva({ bookingId: pago.booking_id });
-    if (detalle && detalle.booking.pago_status === "pendiente") {
-      notify.avisoPagoFallido(detalle).catch((e) => console.error("[arena] aviso fallido:", e.message));
+    // Solo la reserva suelta recibe el email de reintento: en un carrito el
+    // jugador está en el checkout y ve el error ahí, y las reservas vencen en
+    // 15 min. ponytail: si hace falta avisar del carrito, va aquí.
+    const ids = await reservasDelPago(pago);
+    if (ids.length === 1) {
+      const detalle = await leerReserva({ bookingId: ids[0] });
+      if (detalle && detalle.booking.pago_status === "pendiente") {
+        notify.avisoPagoFallido(detalle).catch((e) => console.error("[arena] aviso fallido:", e.message));
+      }
     }
     return { resultado: "fallido" };
   }
@@ -80,20 +114,17 @@ async function aplicarPago(pago, status, raw) {
       .maybeSingle();
     if (!tomado) return { resultado: "ya_procesado" };
 
-    const { data: booking } = await supabase
+    // El proveedor reembolsó el pago completo: todas sus reservas quedan al 100%.
+    const ids = await reservasDelPago(pago);
+    const { data: reservas } = await supabase
       .from("arena_bookings")
       .select("id, total_centavos, reembolso_centavos")
-      .eq("id", pago.booking_id)
-      .maybeSingle();
-    if (booking) {
-      const total = Math.max(booking.reembolso_centavos, pago.monto_centavos);
+      .in("id", ids);
+    for (const b of reservas || []) {
       await supabase
         .from("arena_bookings")
-        .update({
-          reembolso_centavos: total,
-          pago_status: total >= booking.total_centavos ? "reembolsado" : "reembolso_parcial",
-        })
-        .eq("id", booking.id);
+        .update({ reembolso_centavos: b.total_centavos, pago_status: "reembolsado" })
+        .eq("id", b.id);
     }
     return { resultado: "reembolsado" };
   }
@@ -120,7 +151,7 @@ router.post("/webhook/:provider", async (req, res) => {
 
   const { data: pago, error } = await supabase
     .from("arena_payments")
-    .select("id, booking_id, status, monto_centavos, provider")
+    .select("id, booking_id, status, monto_centavos, provider, access_token")
     .eq("provider", provider.NAME)
     .eq("provider_ref", evento.provider_ref)
     .maybeSingle();
@@ -161,7 +192,7 @@ router.post("/mock/:paymentId/complete", async (req, res) => {
 
   const { data: pago, error } = await supabase
     .from("arena_payments")
-    .select("id, booking_id, status, monto_centavos, provider")
+    .select("id, booking_id, status, monto_centavos, provider, access_token")
     .eq("id", id)
     .eq("provider", "mock")
     .maybeSingle();

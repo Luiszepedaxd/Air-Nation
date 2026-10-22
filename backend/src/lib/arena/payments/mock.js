@@ -8,10 +8,17 @@ const { arenaPublicUrl } = require("../config");
 
 const NAME = "mock";
 
-async function createCheckout({ booking }) {
+/**
+ * Una reserva suelta se paga desde su propia pantalla; un carrito (varias
+ * reservas, un solo pago) desde la pantalla del pago.
+ */
+async function createCheckout({ booking, payment }) {
+  const url = booking?.codigo
+    ? `${arenaPublicUrl()}/reservas/${booking.codigo}/pago-simulado?t=${booking.access_token}`
+    : `${arenaPublicUrl()}/arena/pago-simulado?p=${payment.id}&t=${payment.access_token}`;
   return {
     provider_ref: `mock_${crypto.randomBytes(16).toString("hex")}`,
-    checkout_url: `${arenaPublicUrl()}/reservas/${booking.codigo}/pago-simulado?t=${booking.access_token}`,
+    checkout_url: url,
   };
 }
 

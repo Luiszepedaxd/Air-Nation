@@ -7,6 +7,7 @@ const { parseHorarioJson } = require("../../lib/arena/horario");
 const { arenaPublicUrl } = require("../../lib/arena/config");
 const { subirFoto } = require("../../lib/arena/uploadFoto");
 const { sendArenaError } = require("../../lib/arena/errors");
+const { DISCIPLINAS, TERRENOS } = require("../../lib/arena/marketplace");
 const {
   crearReserva,
   leerReserva,
@@ -95,6 +96,7 @@ router.get("/fields/:fieldId/settings", requireFieldMember, async (req, res) => 
 });
 
 const ENTEROS_SETTINGS = {
+  edad_minima: [0, 99, "La edad mínima debe estar entre 0 y 99 años."],
   anticipacion_min_horas: [0, 720, "La anticipación mínima debe estar entre 0 y 720 horas."],
   anticipacion_max_dias: [1, 365, "La anticipación máxima debe estar entre 1 y 365 días."],
   cancelacion_horas_limite: [0, 720, "El plazo de cancelación debe estar entre 0 y 720 horas."],
@@ -114,6 +116,11 @@ router.patch("/fields/:fieldId/settings", requireFieldMember, async (req, res) =
 
   for (const [key, [min, max, mensaje]] of Object.entries(ENTEROS_SETTINGS)) {
     if (body[key] === undefined) continue;
+    // Solo edad_minima acepta "sin límite".
+    if (key === "edad_minima" && (body[key] === null || body[key] === "")) {
+      row[key] = null;
+      continue;
+    }
     const n = Number(body[key]);
     if (!Number.isInteger(n) || n < min || n > max) return res.status(400).json({ error: mensaje });
     row[key] = n;
@@ -130,6 +137,18 @@ router.patch("/fields/:fieldId/settings", requireFieldMember, async (req, res) =
 
   if (body.email_avisos !== undefined && row.email_avisos && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email_avisos)) {
     return res.status(400).json({ error: "El email de avisos no es válido." });
+  }
+
+  // Atributos del marketplace: listas cerradas, igual que el CHECK del SQL.
+  for (const [key, permitidos] of [["disciplinas", DISCIPLINAS], ["terrenos", TERRENOS]]) {
+    if (body[key] === undefined) continue;
+    if (!Array.isArray(body[key])) return res.status(400).json({ error: `${key} debe ser una lista.` });
+    const limpio = Array.from(new Set(body[key].map((x) => String(x ?? "").trim())));
+    const malo = limpio.find((x) => !permitidos.includes(x));
+    if (malo) {
+      return res.status(400).json({ error: `${key}: "${malo}" no es válido. Usa ${permitidos.join(", ")}.` });
+    }
+    row[key] = limpio;
   }
 
   if (body.clabe !== undefined) {
@@ -220,6 +239,24 @@ function parseItem(body, { partial }) {
     row.max_jugadores < row.min_jugadores
   ) {
     return { error: "El máximo de jugadores no puede ser menor que el mínimo." };
+  }
+  if (tiene("disciplina")) {
+    const d = body.disciplina === null || body.disciplina === "" ? null : String(body.disciplina).trim();
+    if (d !== null && !DISCIPLINAS.includes(d)) {
+      return { error: `La disciplina debe ser ${DISCIPLINAS.join(", ")} (o vacío para todas).` };
+    }
+    row.disciplina = d;
+  }
+  if (tiene("duracion_min")) {
+    if (body.duracion_min === null || body.duracion_min === "") {
+      row.duracion_min = null;
+    } else {
+      const n = Number(body.duracion_min);
+      if (!Number.isInteger(n) || n < 15 || n > 1440) {
+        return { error: "La duración debe ser un entero de 15 a 1440 minutos." };
+      }
+      row.duracion_min = n;
+    }
   }
   if (tiene("fotos_urls")) {
     if (!Array.isArray(body.fotos_urls)) return { error: "Las fotos deben ser una lista de URLs." };

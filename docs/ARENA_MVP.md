@@ -38,7 +38,7 @@ El MVP de ARENA hace una sola cosa: que un campo reciba y gestione reservas en l
 
 ### 3.1 Admin AirNation — `/admin/arena`
 
-1. Crea el campo como hoy, manual, en `/admin/campos/nuevo` (incluye su horario semanal). Queda aprobado y operable de inmediato. Si marca **«Campo de prueba (oculto del directorio)»** el campo no sale en ningún listado público (ver `supabase/sql/campos_prueba.sql`), pero sí se abre por su enlace `/campos/[slug]` —con `noindex`—, acepta reservas y se liga a dueños igual que cualquier otro. La bandera se puede prender y apagar desde `/admin/campos`.
+1. Crea el campo como hoy, manual, en `/admin/campos/nuevo` (incluye su horario semanal).
 2. En `/admin/arena` elige el campo y lo activa: plan (free/premium/pro) y % de comisión.
 3. Liga el campo a una cuenta de AirNation: busca al usuario por alias, nombre o email (reusa `GET /api/v1/users/search`) y lo asigna como `owner`. Un campo puede tener más de un miembro.
 4. Puede cargar catálogo, fotos y días cerrados en nombre del campo.
@@ -194,7 +194,6 @@ Todo el dinero pasa por AirNation. Como el proveedor aún no se decide, se const
 
 - `ARENA_PAYMENT_PROVIDER` = `mock` en dev y staging. Vacío = ARENA no acepta reservas (botón RESERVAR oculto, `POST /bookings` → `arena_inactivo`).
 - `mock` con `NODE_ENV=production` → el backend no arranca.
-- `ARENA_MOCK_WEBHOOK_SECRET` firma `x-arena-mock-signature` (HMAC-SHA256 del cuerpo crudo). Vacío = `POST /arena/payments/webhook/mock` → 503.
 
 **Flujo:** reserva `pendiente_pago` → checkout → webhook marca `arena_payments` y llama `arena_mark_paid` → `confirmada` → email con QR al jugador y push al dueño. El webhook nunca baja un estado ya pagado. Un pago tardío se confirma igual; si la reserva estaba cancelada, se reembolsa.
 
@@ -261,3 +260,14 @@ Todo sale de `backend/src/lib/arena/notify.js` con Resend (estilo de `routes/adm
 - **Fiscal:** al intermediar cobros pueden aplicar retenciones de plataforma digital; definir con contador si AN factura solo su comisión o el total.
 - **Contracargos:** liquidar solo reservas con fecha pasada; el addendum permite descontar contracargos de la siguiente liquidación.
 - **Liquidación manual:** preferir proveedor con split automático.
+
+## 11. Marketplace y carrito (22 oct 2026)
+
+Cambio de la experiencia pública. La guía visual es `docs/arena_marketplace.html`; las instrucciones de implementación están en `GROKBOT_PROMPT_MARKETPLACE.md`. El esquema aditivo es `supabase/sql/arena_marketplace.sql`.
+
+- **`/arena` es el marketplace:** solo campos con ARENA activo, con buscador (dónde, jugadores, disciplina), franja de fechas, filtros (disciplina, terreno, precio por persona, rentan equipo, calificación) y orden. Cada card muestra el precio "desde" y los próximos días con reserva. `/campos` sigue siendo el directorio y no cambia.
+- **`/arena/[slug]` es el detalle con la reserva en la misma página:** calendario con solo los días abiertos, jugadores, paquete (por disciplina), rentas y extras, resumen. `/campos/[slug]/reservar` redirige aquí.
+- **Carrito en el cliente,** máximo 10 reservas, una por campo y día. Al pagar, `POST /arena/checkout` crea todas las reservas en una sola transacción (`arena_create_checkout`) y **un solo pago** (`arena_payments.booking_id = null`, `arena_bookings.payment_id`).
+- **Webhook:** `arena_mark_payment_paid` confirma todas las reservas del pago. Cancelar una reembolsa solo su monto.
+- **Un email al jugador con todos los QR;** cada dueño recibe solo el aviso de su reserva.
+- **Atributos nuevos del campo:** `disciplinas`, `terrenos`, `edad_minima`. En paquetes: `disciplina`, `duracion_min`.

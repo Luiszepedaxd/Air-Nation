@@ -27,17 +27,34 @@ const ERRORES = {
   qr_no_confirmada: [409, "Esta reserva no está confirmada."],
   sin_permiso: [403, "No tienes permiso sobre este campo."],
   sin_reservas_por_liquidar: [409, "Este campo no tiene reservas por liquidar."],
+  carrito_vacio: [400, "Tu carrito está vacío."],
+  carrito_demasiado_grande: [400, "El carrito admite hasta 10 reservas."],
+  carrito_duplicado: [409, "Ya tienes una reserva de ese campo para ese día."],
+  pago_no_encontrado: [404, "No encontramos ese pago."],
 };
 
-/** @returns {{ status: number, body: { error: string, code?: string, detalle?: string } }} */
+/** `DETAIL = 'reserva_index=2'` → 2. null si el error no es de una reserva. */
+function reservaIndex(error) {
+  const m = /reserva_index=(\d+)/.exec(String(error?.details || ""));
+  return m ? Number(m[1]) : null;
+}
+
+/** @returns {{ status: number, body: { error: string, code?: string, detalle?: string, reserva_index?: number } }} */
 function arenaError(error) {
   const code = String(error?.message || "").trim();
   const hit = ERRORES[code];
   if (!hit) return { status: 500, body: { error: "Error interno del servidor" } };
   const detalle = typeof error?.details === "string" ? error.details.trim() : "";
+  const idx = reservaIndex(error);
   return {
     status: hit[0],
-    body: { error: hit[1], code, ...(detalle ? { detalle } : {}) },
+    body: {
+      error: hit[1],
+      code,
+      ...(detalle ? { detalle } : {}),
+      // El front resalta cuál reserva del carrito falló.
+      ...(idx === null ? {} : { reserva_index: idx }),
+    },
   };
 }
 
@@ -48,4 +65,4 @@ function sendArenaError(res, error, contexto) {
   return res.status(mapped.status).json(mapped.body);
 }
 
-module.exports = { ERRORES, arenaError, sendArenaError };
+module.exports = { ERRORES, arenaError, reservaIndex, sendArenaError };

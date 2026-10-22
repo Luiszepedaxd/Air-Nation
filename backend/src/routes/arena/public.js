@@ -12,6 +12,7 @@ const { reembolsar } = require("../../lib/arena/refunds");
 const {
   abrirCheckout,
   crearReserva,
+  crearCheckoutCarrito,
   leerReserva,
   sanearItems,
   serializarReserva,
@@ -19,19 +20,14 @@ const {
   CAMPO_PUBLICO,
 } = require("../../lib/arena/bookings");
 const notify = require("../../lib/arena/notify");
-const { precioDesde, filtrarCampos } = require("../../lib/arena/landing");
+const { parseMarketplaceQuery, parseCarrito } = require("../../lib/arena/marketplace");
+const { dayHours } = require("../../lib/arena/horario");
 const { dayKey } = require("../../services/joulie/time");
 
 const router = express.Router();
 
 const CODIGO = /^AR-[0-9A-Z]{6}$/;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Los campos de prueba solo se muestran a los admins de la app. */
-async function esAdminDeApp(userId) {
-  const { data } = await supabase.from("users").select("app_role").eq("id", userId).maybeSingle();
-  return data?.app_role === "admin";
-}
 
 function comparaToken(a, b) {
   const x = Buffer.from(String(a || ""));
@@ -81,106 +77,51 @@ router.get("/landing-media", async (_req, res) => {
   return res.json({ media: data || [] });
 });
 
-// ─── GET /arena/fields ───────────────────────────────────────────────────────
-// Catálogo de la landing /arena: campos aprobados con ARENA activo, su precio
-// "desde" y los filtros disponibles. Nunca devuelve CLABE, banco ni contactos
-// del campo. Los campos de prueba solo los ve un admin con sesión.
-router.get("/fields", optionalAuth, async (req, res) => {
-  const esAdmin = Boolean(req.userId) && (await esAdminDeApp(req.userId));
+// ─── GET /arena/marketplace ──────────────────────────────────────────────────
+// Listado del marketplace: `arena_marketplace` hace el filtrado, el precio
+// "desde" y los próximos días abiertos. Público y cacheable 60 s, así que
+// nunca muestra campos de prueba (esos se revisan desde /admin/arena).
+router.get("/marketplace", async (req, res) => {
+  const parsed = parseMarketplaceQuery(req.query);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
 
-  // `select("*")` porque las columnas de landing son opcionales (se agregan con
-  // supabase/sql/arena_landing.sql). Lo público se arma a mano más abajo.
-  const { data: settings, error: settingsError } = await supabase
-    .from("arena_field_settings")
-    .select("*")
-    .eq("activo", true);
-  if (settingsError) {
-    console.error("[arena:public] landing settings:", settingsError.message);
-    return res.status(500).json({ error: "Error interno del servidor" });
-  }
-
-  const ids = (settings || []).map((s) => s.field_id);
-  if (ids.length === 0) {
-    return res.json({ fields: [], total: 0, filtros: { estados: [], ciudades: [] } });
-  }
-
-  let camposQuery = supabase
-    .from("fields")
-    .select(
-      "id, nombre, slug, ciudad, estado, tipo, foto_portada_url, logo_url, promedio_rating, horarios_json, es_prueba"
-    )
-    .in("id", ids)
-    .eq("status", "aprobado");
-  if (!esAdmin) camposQuery = camposQuery.eq("es_prueba", false);
-
-  const [camposRes, itemsRes] = await Promise.all([
-    camposQuery,
-    supabase
-      .from("arena_items")
-      .select("field_id, tipo, es_base, precio_centavos, min_jugadores, max_jugadores")
-      .in("field_id", ids)
-      .eq("activo", true),
+  const [rpc, settingsRes, camposRes] = await Promise.all([
+    supabase.rpc("arena_marketplace", parsed.params),
+    supabase.from("arena_field_settings").select("field_id").eq("activo", true),
+    supabase.from("fields").select("id, estado, es_prueba").eq("status", "aprobado"),
   ]);
-  if (camposRes.error || itemsRes.error) {
-    console.error("[arena:public] landing:", (camposRes.error || itemsRes.error).message);
+  if (rpc.error) return sendArenaError(res, rpc.error, "arena_marketplace");
+  if (settingsRes.error || camposRes.error) {
+    console.error("[arena:public] marketplace:", (settingsRes.error || camposRes.error).message);
     return res.status(500).json({ error: "Error interno del servidor" });
   }
 
-  const porCampo = new Map((settings || []).map((s) => [s.field_id, s]));
-  const itemsPorCampo = new Map();
-  for (const i of itemsRes.data || []) {
-    const lista = itemsPorCampo.get(i.field_id) || [];
-    lista.push(i);
-    itemsPorCampo.set(i.field_id, lista);
-  }
+  const conArena = new Set((settingsRes.data || []).map((s) => s.field_id));
+  const dePrueba = new Set((camposRes.data || []).filter((f) => f.es_prueba === true).map((f) => f.id));
+  const campos = (rpc.data || []).filter((c) => !dePrueba.has(c.field_id));
 
-  const tarjetas = (camposRes.data || []).map((f) => {
-    const s = porCampo.get(f.id) || {};
-    const items = itemsPorCampo.get(f.id) || [];
-    const fotos = Array.isArray(s.fotos_landing) ? s.fotos_landing : [];
-    return {
-      id: f.id,
-      nombre: f.nombre,
-      slug: f.slug,
-      ciudad: f.ciudad,
-      estado: f.estado,
-      tipo: f.tipo,
-      foto_portada_url: fotos[0] || f.foto_portada_url,
-      logo_url: f.logo_url,
-      promedio_rating: f.promedio_rating,
-      destacado: s.destacado === true,
-      orden_landing: Number(s.orden_landing ?? 0),
-      resumen: s.resumen_landing ?? null,
-      precio_desde_centavos: precioDesde(items),
-      es_prueba: f.es_prueba === true,
-      // Solo para filtrar: no salen en la respuesta.
-      horarios_json: f.horarios_json,
-      items,
-    };
-  });
+  // El buscador necesita todos los estados con ARENA, no solo los del filtro.
+  const estados = Array.from(
+    new Set(
+      (camposRes.data || [])
+        .filter((f) => conArena.has(f.id) && !dePrueba.has(f.id) && f.estado)
+        .map((f) => f.estado)
+    )
+  ).sort((a, b) => a.localeCompare(b, "es"));
 
-  const filtradas = filtrarCampos(tarjetas, req.query);
-  const limit = Math.min(Math.max(Number(req.query.limit) || 24, 1), 60);
-  const offset = Math.max(Number(req.query.offset) || 0, 0);
-
+  res.setHeader("Cache-Control", "public, max-age=60");
   return res.json({
-    fields: filtradas
-      .slice(offset, offset + limit)
-      .map(({ items, horarios_json, orden_landing, ...publico }) => publico),
-    total: filtradas.length,
-    filtros: {
-      estados: [...new Set(tarjetas.map((t) => t.estado).filter(Boolean))].sort((a, b) =>
-        a.localeCompare(b, "es")
-      ),
-      ciudades: [...new Set(tarjetas.map((t) => t.ciudad).filter(Boolean))].sort((a, b) =>
-        a.localeCompare(b, "es")
-      ),
-    },
+    campos,
+    total: campos.length,
+    filtros: { estados },
+    reservas_habilitadas: Boolean(arenaProvider()),
+    hoy: dayKey(Date.now()),
   });
 });
 
 // ─── GET /arena/fields/:slug ──────────────────────────────────────────────────
-// Config pública, catálogo activo y horario semanal. 404 si ARENA no está activo.
+// Ficha pública del detalle: config, catálogo activo, horario semanal, galería
+// y las últimas 6 reseñas. 404 si ARENA no está activo. Sin datos bancarios.
 router.get("/fields/:slug", async (req, res) => {
   const slug = String(req.params.slug || "").trim();
   if (!slug) return res.status(404).json({ error: "Campo no encontrado" });
@@ -197,16 +138,16 @@ router.get("/fields/:slug", async (req, res) => {
   }
   if (!field) return res.status(404).json({ error: "Campo no encontrado" });
 
-  const [settingsRes, landingRes, itemsRes] = await Promise.all([
+  const [settingsRes, landingRes, itemsRes, reviewsRes] = await Promise.all([
     supabase
       .from("arena_field_settings")
       .select(
-        "activo, politica_cancelacion, cancelacion_horas_limite, anticipacion_min_horas, anticipacion_max_dias"
+        "activo, politica_cancelacion, cancelacion_horas_limite, anticipacion_min_horas, anticipacion_max_dias, disciplinas, terrenos, edad_minima"
       )
       .eq("field_id", field.id)
       .maybeSingle(),
-    // ponytail: consulta aparte porque estas columnas son nuevas; se puede
-    // juntar con el select de arriba una vez corrido arena_landing.sql.
+    // ponytail: consulta aparte porque estas columnas son opcionales
+    // (supabase/sql/arena_landing.sql puede no estar corrido).
     supabase
       .from("arena_field_settings")
       .select("fotos_landing")
@@ -215,11 +156,17 @@ router.get("/fields/:slug", async (req, res) => {
     supabase
       .from("arena_items")
       .select(
-        "id, tipo, es_base, nombre, descripcion, incluye, precio_centavos, unidad, min_jugadores, max_jugadores, max_por_reserva, fotos_urls, orden"
+        "id, tipo, es_base, nombre, descripcion, incluye, precio_centavos, unidad, disciplina, duracion_min, min_jugadores, max_jugadores, max_por_reserva, fotos_urls, orden"
       )
       .eq("field_id", field.id)
       .eq("activo", true)
       .order("orden", { ascending: true }),
+    supabase
+      .from("field_reviews")
+      .select("rating, comentario, created_at, users(alias, nombre)")
+      .eq("field_id", field.id)
+      .order("created_at", { ascending: false })
+      .limit(6),
   ]);
 
   if (!settingsRes.data || !settingsRes.data.activo) {
@@ -227,9 +174,14 @@ router.get("/fields/:slug", async (req, res) => {
   }
 
   return res.json({
-    field,
+    field: {
+      ...field,
+      galeria_urls: Array.isArray(field.galeria_urls) ? field.galeria_urls : [],
+    },
     arena: {
       ...settingsRes.data,
+      disciplinas: settingsRes.data.disciplinas || [],
+      terrenos: settingsRes.data.terrenos || [],
       // Sin proveedor configurado ARENA no cobra: el botón RESERVAR se oculta.
       reservas_habilitadas: Boolean(arenaProvider()),
       fotos_landing: Array.isArray(landingRes.data?.fotos_landing)
@@ -237,6 +189,12 @@ router.get("/fields/:slug", async (req, res) => {
         : [],
     },
     items: itemsRes.data || [],
+    resenas: (reviewsRes.data || []).map((r) => ({
+      alias: r.users?.alias || r.users?.nombre || "Jugador",
+      rating: r.rating,
+      comentario: r.comentario,
+      fecha: r.created_at,
+    })),
   });
 });
 
@@ -305,6 +263,126 @@ router.post("/bookings", ipRateLimit(10), optionalAuth, async (req, res) => {
   } catch (err) {
     return sendArenaError(res, err, "arena_create_booking");
   }
+});
+
+// ─── POST /arena/checkout ─────────────────────────────────────────────────────
+// Carrito completo: todas las reservas en una transacción y UN solo pago por
+// el total. El front público siempre pasa por aquí; POST /bookings se queda
+// para la reserva manual del dueño.
+router.post("/checkout", ipRateLimit(10), optionalAuth, async (req, res) => {
+  const b = req.body || {};
+  if (b.acepta_politica !== true) {
+    return res.status(400).json({ error: "Tienes que aceptar la política de cancelación." });
+  }
+
+  const parsed = parseCarrito(b);
+  if (parsed.error) {
+    return res.status(parsed.code === "carrito_duplicado" ? 409 : 400).json({
+      error: parsed.error,
+      ...(parsed.code ? { code: parsed.code } : {}),
+      ...(parsed.reserva_index === undefined ? {} : { reserva_index: parsed.reserva_index }),
+    });
+  }
+
+  try {
+    const { reservas, pago, checkout, total_centavos } = await crearCheckoutCarrito({
+      reservas: parsed.reservas,
+      contacto: parsed.contacto,
+      userId: req.userId || null,
+      origen: b.origen === "app" ? "app" : "web",
+    });
+
+    return res.status(201).json({
+      payment_id: pago.id,
+      access_token: pago.access_token,
+      checkout_url: pago.checkout_url,
+      ...(checkout.client_secret ? { client_secret: checkout.client_secret } : {}),
+      total_centavos,
+      expires_at: reservas.map((r) => r.expires_at).filter(Boolean).sort()[0] || null,
+      reservas: reservas.map((r) => ({
+        codigo: r.codigo,
+        field_id: r.field_id,
+        fecha: r.fecha,
+        total_centavos: r.total_centavos,
+      })),
+    });
+  } catch (err) {
+    return sendArenaError(res, err, "arena_create_checkout");
+  }
+});
+
+// ─── GET /arena/checkout/:paymentId?t= ────────────────────────────────────────
+// Confirmación del carrito: estado del pago y una ficha por reserva con su QR.
+// Un token que no corresponde responde 404, igual que un pago inexistente.
+router.get("/checkout/:paymentId", async (req, res) => {
+  const noEncontrado = () =>
+    res.status(404).json({ error: "No encontramos ese pago.", code: "pago_no_encontrado" });
+
+  const id = String(req.params.paymentId || "").trim();
+  if (!UUID.test(id)) return noEncontrado();
+
+  const { data: pago, error } = await supabase
+    .from("arena_payments")
+    .select("id, status, monto_centavos, access_token, booking_id, checkout_url, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:public] checkout:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!pago || !comparaToken(req.query.t, pago.access_token)) return noEncontrado();
+
+  const { data: ligadas } = await supabase
+    .from("arena_bookings")
+    .select("id")
+    .eq("payment_id", pago.id)
+    .order("fecha", { ascending: true });
+  const ids = new Set((ligadas || []).map((b) => b.id));
+  if (pago.booking_id) ids.add(pago.booking_id);
+
+  const detalles = (await Promise.all(Array.from(ids).map((bookingId) => leerReserva({ bookingId }))))
+    .filter(Boolean)
+    .sort((a, b) => String(a.booking.fecha).localeCompare(String(b.booking.fecha)));
+
+  return res.json({
+    status: pago.status,
+    payment_id: pago.id,
+    total_centavos: pago.monto_centavos,
+    checkout_url: pago.checkout_url,
+    contacto_email: detalles[0]?.booking.contacto_email ?? null,
+    reservas: detalles.map((d) => {
+      const horas = dayHours(d.field?.horarios_json, d.booking.fecha);
+      const visible =
+        QR_VISIBLE.includes(d.booking.status) && d.booking.pago_status !== "pendiente";
+      return {
+        codigo: d.booking.codigo,
+        access_token: d.booking.access_token,
+        fecha: d.booking.fecha,
+        num_jugadores: d.booking.num_jugadores,
+        status: d.booking.status,
+        pago_status: d.booking.pago_status,
+        total_centavos: d.booking.total_centavos,
+        items: d.items.map((i) => ({
+          nombre: i.nombre,
+          cantidad: i.cantidad,
+          subtotal_centavos: i.subtotal_centavos,
+        })),
+        campo: d.field
+          ? {
+              id: d.field.id,
+              nombre: d.field.nombre,
+              slug: d.field.slug,
+              ciudad: d.field.ciudad,
+              direccion: d.field.direccion,
+              maps_url: d.field.maps_url,
+              apertura: horas?.apertura ?? null,
+              cierre: horas?.cierre ?? null,
+            }
+          : null,
+        ...(visible ? { qr_url: checkinUrl(d.booking.qr_token) } : {}),
+      };
+    }),
+  });
 });
 
 // ─── GET /arena/bookings/:codigo?t= ───────────────────────────────────────────
