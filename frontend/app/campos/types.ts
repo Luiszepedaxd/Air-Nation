@@ -32,6 +32,7 @@ export type CampoDetailRow = {
   maps_url: string | null
   team_id: string | null
   status: string
+  es_prueba: boolean
   galeria_urls: string[] | null
   teams: {
     nombre: string

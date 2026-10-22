@@ -27,7 +27,7 @@ router.get("/fields", requireAdmin, async (req, res) => {
   const [fieldsRes, settingsRes, membersRes, bookingsRes] = await Promise.all([
     supabase
       .from("fields")
-      .select("id, nombre, slug, ciudad, status")
+      .select("id, nombre, slug, ciudad, status, es_prueba")
       .order("nombre", { ascending: true }),
     supabase.from("arena_field_settings").select("*"),
     supabase.from("arena_field_members").select("field_id, user_id, rol, status, created_at"),

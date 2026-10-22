@@ -64,6 +64,7 @@ const getCampoBySlug = cache(async (slug: string): Promise<CampoDetailRow | null
       maps_url,
       team_id,
       status,
+      es_prueba,
       galeria_urls,
       teams ( nombre, slug, logo_url )
     `
@@ -186,6 +187,8 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // Campo de prueba: accesible por enlace, fuera del índice de Google.
+    ...(field.es_prueba ? { robots: { index: false, follow: false } } : {}),
     alternates: {
       canonical: `https://www.airnation.online/campos/${field.slug}`,
     },

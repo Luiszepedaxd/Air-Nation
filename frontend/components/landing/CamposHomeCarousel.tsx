@@ -15,6 +15,7 @@ async function fetchCamposHome(): Promise<CampoListRow[]> {
       'id, nombre, slug, ciudad, estado, tipo, foto_portada_url, logo_url, promedio_rating, destacado, orden_destacado'
     )
     .eq('status', 'aprobado')
+    .eq('es_prueba', false)
     .order('destacado', { ascending: false })
     .order('orden_destacado', { ascending: true, nullsFirst: false })
     .order('nombre', { ascending: true })

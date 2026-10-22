@@ -209,7 +209,7 @@ async function fetchTeamEventScope(teamId: string): Promise<{
 }> {
   const supabase = createPublicSupabaseClient()
   const [{ data: fieldRows }, { data: memberRows }] = await Promise.all([
-    supabase.from('fields').select('id').eq('team_id', teamId),
+    supabase.from('fields').select('id').eq('team_id', teamId).eq('es_prueba', false),
     supabase
       .from('team_members')
       .select('user_id')

@@ -7,6 +7,7 @@ import { createAdminClient } from '../supabase-server'
 import {
   deleteField,
   toggleDestacado,
+  toggleEsPrueba,
   updateFieldStatus,
   updateOrdenDestacado,
 } from './actions'
@@ -27,6 +28,7 @@ type FieldRow = {
   nombre: string
   ciudad: string | null
   status: FieldStatus
+  es_prueba: boolean
   destacado: boolean
   orden_destacado: number | null
   foto_portada_url: string | null
@@ -127,6 +129,18 @@ async function listToggleDestacado(formData: FormData) {
   )
 }
 
+async function listToggleEsPrueba(formData: FormData) {
+  'use server'
+  const id = String(formData.get('id') ?? '').trim()
+  const tab = String(formData.get('tab') ?? '')
+  const result = await toggleEsPrueba(id, formData.get('es_prueba') === 'true')
+  if ('error' in result && result.error) {
+    console.error(result.error)
+    return
+  }
+  redirect('/admin/campos' + (tab ? `?tab=${encodeURIComponent(tab)}` : ''))
+}
+
 async function listOrdenDestacado(formData: FormData) {
   'use server'
   const id = String(formData.get('id') ?? '').trim()
@@ -224,6 +238,7 @@ export default async function AdminCamposPage({
       nombre,
       ciudad,
       status,
+      es_prueba,
       destacado,
       orden_destacado,
       foto_portada_url,
@@ -481,6 +496,35 @@ export default async function AdminCamposPage({
                       </td>
                       <td data-label="Status" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         <StatusBadge status={f.status} />
+                        {f.es_prueba ? (
+                          <span
+                            className="mt-1 block w-fit text-[10px] text-[#FFFFFF]"
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: 2,
+                              backgroundColor: '#CC4B37',
+                              ...jostHeading,
+                            }}
+                          >
+                            PRUEBA
+                          </span>
+                        ) : null}
+                        <form action={listToggleEsPrueba} className="mt-1">
+                          <input type="hidden" name="id" value={f.id} />
+                          <input type="hidden" name="tab" value={tab} />
+                          <input
+                            type="hidden"
+                            name="es_prueba"
+                            value={(!f.es_prueba).toString()}
+                          />
+                          <button
+                            type="submit"
+                            className="text-[10px] uppercase text-[#111111] underline"
+                            style={jostHeading}
+                          >
+                            {f.es_prueba ? 'Publicar en directorio' : 'Marcar como prueba'}
+                          </button>
+                        </form>
                       </td>
                       <td data-label="Destacado" className="border border-solid border-[#EEEEEE] px-3 py-2 align-middle">
                         <div className="flex flex-wrap items-center gap-2">

@@ -42,6 +42,7 @@ async function fetchCamposGuadalajara(): Promise<{
       'id, nombre, slug, ciudad, estado, direccion, foto_portada_url, logo_url, promedio_rating, destacado, orden_destacado, tipo'
     )
     .eq('status', 'aprobado')
+    .eq('es_prueba', false)
     .eq('estado', 'Jalisco')
     .order('destacado', { ascending: false })
     .order('orden_destacado', { ascending: true, nullsFirst: false })

@@ -118,13 +118,22 @@ export function AdminArenaClient() {
         <h1 style={jost} className="text-2xl tracking-[0.12em] text-[#111111] md:text-3xl">
           ARENA
         </h1>
-        <Link
-          href="/admin/arena/reservas"
-          style={jost}
-          className="inline-flex min-h-[44px] items-center justify-center bg-[#111111] px-4 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
-        >
-          RESERVAS Y LIQUIDACIONES
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/campos/nuevo"
+            style={jost}
+            className="inline-flex min-h-[44px] items-center justify-center border border-solid border-[#111111] px-4 text-[10px] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
+          >
+            + NUEVO CAMPO
+          </Link>
+          <Link
+            href="/admin/arena/reservas"
+            style={jost}
+            className="inline-flex min-h-[44px] items-center justify-center bg-[#111111] px-4 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+          >
+            RESERVAS Y LIQUIDACIONES
+          </Link>
+        </div>
       </div>
 
       <p className="mb-4 text-[13px] text-[#666666]">
@@ -172,6 +181,11 @@ export function AdminArenaClient() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <EstadoBadge settings={f.arena} />
+                  {f.es_prueba ? (
+                    <span style={jost} className="bg-[#CC4B37] px-2 py-1 text-[9px] text-[#FFFFFF]">
+                      PRUEBA
+                    </span>
+                  ) : null}
                   {f.arena ? (
                     <span style={jost} className="text-[9px] tracking-[0.1em] text-[#666666]">
                       {f.arena.plan.toUpperCase()} · {Number(f.arena.comision_pct)}%

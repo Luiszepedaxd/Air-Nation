@@ -1198,6 +1198,21 @@ describe("JOULIE", { concurrency: 1 }, () => {
     assert.equal(omni.calls.some((call) => call.table === "virus3_blocks"), false);
   });
 
+  it("ningún campo de prueba entra a DATOS: toda consulta a fields filtra es_prueba", async () => {
+    const mensajes = ["¿qué campos hay?", "campos en Jalisco", "¿dónde puedo jugar?", "¿qué horario tiene Gotcha Omnilife?"];
+    for (const mensaje of mensajes) {
+      const { calls } = await datosFor(mensaje);
+      const fields = calls.filter((call) => call.table === "fields");
+      assert.ok(fields.length > 0, mensaje);
+      for (const call of fields) {
+        assert.ok(
+          call.filters.some((part) => part[0] === "eq" && part[1] === "es_prueba" && part[2] === false),
+          `${mensaje}: falta el filtro es_prueba`
+        );
+      }
+    }
+  });
+
   it("«¿Qué eventos hay?» sigue listando los próximos", async () => {
     const { datos, calls } = await datosFor("¿Qué eventos hay?");
     assert.match(datos, /Operación Virus 3/);

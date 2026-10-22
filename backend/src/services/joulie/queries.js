@@ -103,6 +103,7 @@ async function placeFilter(supabase, places) {
       .from(ENTITIES.campos.tabla)
       .select("id, ciudad")
       .eq("status", "aprobado")
+      .eq("es_prueba", false)
       .or(likeOr(["estado"], estados))
       .limit(12)
   );
@@ -117,7 +118,7 @@ async function placeFilter(supabase, places) {
 async function fieldCatalog(supabase, message) {
   const places = placeTokens(message);
   const listed = (filter) => {
-    let query = supabase.from(ENTITIES.campos.tabla).select(ENTITIES.campos.select).eq("status", "aprobado");
+    let query = supabase.from(ENTITIES.campos.tabla).select(ENTITIES.campos.select).eq("status", "aprobado").eq("es_prueba", false);
     if (filter) query = query.or(filter);
     else query = query.order("nombre");
     return safeQuery(query.limit(16));
@@ -174,6 +175,7 @@ async function loadPublicContext(supabase, message) {
             .from(ENTITIES.campos.tabla)
             .select(ENTITIES.campos.select)
             .eq("status", "aprobado")
+            .eq("es_prueba", false)
             .or(filter(["nombre", "slug", "ciudad", "estado"]))
             .limit(16)
         );
@@ -226,7 +228,7 @@ async function loadPublicContext(supabase, message) {
       if (wants("campos")) {
         pushJob(
           "campos",
-          supabase.from(ENTITIES.campos.tabla).select(ENTITIES.campos.select).eq("status", "aprobado").ilike("nombre", pattern).limit(4)
+          supabase.from(ENTITIES.campos.tabla).select(ENTITIES.campos.select).eq("status", "aprobado").eq("es_prueba", false).ilike("nombre", pattern).limit(4)
         );
       }
       if (wants("equipos")) {
@@ -345,6 +347,7 @@ async function loadPublicContext(supabase, message) {
         .from(ENTITIES.campos.tabla)
         .select("nombre, slug, ciudad, estado")
         .eq("status", "aprobado")
+        .eq("es_prueba", false)
         .order("nombre")
         .limit(4)
     );

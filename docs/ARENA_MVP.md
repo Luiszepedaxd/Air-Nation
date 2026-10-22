@@ -38,7 +38,7 @@ El MVP de ARENA hace una sola cosa: que un campo reciba y gestione reservas en l
 
 ### 3.1 Admin AirNation — `/admin/arena`
 
-1. Crea el campo como hoy, manual, en `/admin/campos/nuevo` (incluye su horario semanal).
+1. Crea el campo como hoy, manual, en `/admin/campos/nuevo` (incluye su horario semanal). Queda aprobado y operable de inmediato. Si marca **«Campo de prueba (oculto del directorio)»** el campo no sale en ningún listado público (ver `supabase/sql/campos_prueba.sql`), pero sí se abre por su enlace `/campos/[slug]` —con `noindex`—, acepta reservas y se liga a dueños igual que cualquier otro. La bandera se puede prender y apagar desde `/admin/campos`.
 2. En `/admin/arena` elige el campo y lo activa: plan (free/premium/pro) y % de comisión.
 3. Liga el campo a una cuenta de AirNation: busca al usuario por alias, nombre o email (reusa `GET /api/v1/users/search`) y lo asigna como `owner`. Un campo puede tener más de un miembro.
 4. Puede cargar catálogo, fotos y días cerrados en nombre del campo.

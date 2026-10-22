@@ -80,6 +80,7 @@ export default async function EventoNuevoPage({
     .from('fields')
     .select('id, nombre, ciudad, tipo')
     .eq('status', 'aprobado')
+    .eq('es_prueba', false)
     .or('tipo.eq.publico,tipo.is.null')
 
   const publicFields = mapFieldRows(pubRows ?? [])
@@ -90,6 +91,7 @@ export default async function EventoNuevoPage({
       .from('fields')
       .select('id, nombre, ciudad')
       .eq('status', 'aprobado')
+      .eq('es_prueba', false)
       .eq('tipo', 'privado')
       .in('team_id', modTeamIds)
     privateFields = mapFieldRows(privRows ?? [])

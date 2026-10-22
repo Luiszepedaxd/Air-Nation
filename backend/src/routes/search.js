@@ -59,6 +59,7 @@ router.get('/', async (req, res) => {
       supabase
         .from('fields')
         .select('id, nombre, slug, ciudad, estado, foto_portada_url')
+        .eq('es_prueba', false)
         .or(`nombre.ilike.${term},ciudad.ilike.${term}`)
         .limit(RESULTS_PER_CATEGORY),
 

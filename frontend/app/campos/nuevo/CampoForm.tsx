@@ -308,9 +308,31 @@ export function CampoForm({
         Nuevo campo
       </h1>
       <p className="mt-2 text-sm text-[#666666]" style={lato}>
-        Completa los datos para registrar tu campo. Un administrador lo
-        revisará antes de publicarlo.
+        {adminContext
+          ? 'Completa los datos del campo. Se crea aprobado y operable de inmediato.'
+          : 'Completa los datos para registrar tu campo. Un administrador lo revisará antes de publicarlo.'}
       </p>
+
+      {adminContext ? (
+        <label
+          className="mt-4 flex items-start gap-2 border border-[#EEEEEE] bg-[#F4F4F4] p-3 text-sm text-[#111111]"
+          style={lato}
+        >
+          <input
+            type="checkbox"
+            name="es_prueba"
+            value="1"
+            className="mt-[3px] h-4 w-4 shrink-0 accent-[#CC4B37]"
+          />
+          <span>
+            Campo de prueba (oculto del directorio)
+            <span className="mt-1 block text-[12px] text-[#666666]">
+              No aparece en listados, búsqueda, home ni sitemap. Se abre por su
+              enlace y sirve para probar ARENA.
+            </span>
+          </span>
+        </label>
+      ) : null}
 
       <FormSection title="INFORMACIÓN BÁSICA" first>
         <div>

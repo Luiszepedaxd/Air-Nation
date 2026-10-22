@@ -51,6 +51,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from('fields')
       .select('slug, created_at')
       .eq('status', 'aprobado')
+      .eq('es_prueba', false)
     if (error) {
       console.error('[sitemap] campos:', error.message)
     } else if (data) {

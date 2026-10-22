@@ -82,6 +82,31 @@ export async function toggleDestacado(
   return { success: true as const }
 }
 
+/** Campo de prueba: sigue aprobado y operable, pero fuera del directorio público. */
+export async function toggleEsPrueba(
+  id: string,
+  esPrueba: boolean
+): Promise<{ success: true } | { error: string }> {
+  const trimmedId = id?.trim() ?? ''
+  if (!trimmedId) {
+    return { error: 'ID no válido' }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('fields')
+    .update({ es_prueba: esPrueba })
+    .eq('id', trimmedId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin/campos')
+  revalidatePath('/campos')
+  return { success: true as const }
+}
+
 export async function updateOrdenDestacado(
   id: string,
   orden: number

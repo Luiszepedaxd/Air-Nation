@@ -129,6 +129,7 @@ export type ArenaAdminField = {
   slug: string
   ciudad: string | null
   status: string
+  es_prueba: boolean
   arena: ArenaSettings | null
   miembros: ArenaMember[]
   reservas_proximas: number

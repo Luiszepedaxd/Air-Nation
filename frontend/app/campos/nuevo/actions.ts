@@ -222,6 +222,7 @@ export async function createCampoAction(
         galeria_urls: galeria_urls.length > 0 ? galeria_urls : null,
         team_id,
         status: 'aprobado',
+        es_prueba: String(formData.get('es_prueba') ?? '') === '1',
         created_by: adminId,
       })
       .select('id')

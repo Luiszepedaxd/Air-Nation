@@ -74,6 +74,7 @@ export async function CamposSection() {
       'id, nombre, slug, ciudad, foto_portada_url, logo_url, destacado, orden_destacado'
     )
     .eq('status', 'aprobado')
+    .eq('es_prueba', false)
     .order('destacado', { ascending: false })
     .order('orden_destacado', { ascending: true, nullsFirst: false })
     .order('nombre', { ascending: true })
