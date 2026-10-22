@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { CampoListRow } from '../types'
+import { formatCentavos } from '@/components/arena/MoneyText'
 import { DestacadoBadge, isDestacadoTrue } from './DestacadoBadge'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
@@ -76,9 +77,12 @@ function initialNombre(nombre: string): string {
 export function CampoCard({
   field,
   variant = 'default',
+  precioDesdeCentavos = null,
 }: {
   field: CampoListRow
   variant?: 'default' | 'carousel'
+  /** Precio base más bajo del campo en ARENA; solo lo manda la landing. */
+  precioDesdeCentavos?: number | null
 }) {
   const tipo = normalizeTipo(field.tipo)
   const avg = ratingValue(field.promedio_rating)
@@ -160,6 +164,14 @@ export function CampoCard({
               <span className="invisible">—</span>
             ) : null}
           </p>
+          {precioDesdeCentavos != null ? (
+            <p className="text-[14px] font-extrabold uppercase text-[#CC4B37]" style={jost}>
+              DESDE {formatCentavos(precioDesdeCentavos, false)}
+              <span className="ml-1 text-[11px] text-[#666666]" style={lato}>
+                por persona
+              </span>
+            </p>
+          ) : null}
           <div className={`flex flex-wrap items-center gap-2 ${isCarousel ? 'mt-auto' : ''}`}>
             {hasReviews ? (
               <>

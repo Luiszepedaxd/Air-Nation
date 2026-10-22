@@ -19,12 +19,19 @@ const {
   CAMPO_PUBLICO,
 } = require("../../lib/arena/bookings");
 const notify = require("../../lib/arena/notify");
+const { precioDesde, filtrarCampos } = require("../../lib/arena/landing");
 const { dayKey } = require("../../services/joulie/time");
 
 const router = express.Router();
 
 const CODIGO = /^AR-[0-9A-Z]{6}$/;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Los campos de prueba solo se muestran a los admins de la app. */
+async function esAdminDeApp(userId) {
+  const { data } = await supabase.from("users").select("app_role").eq("id", userId).maybeSingle();
+  return data?.app_role === "admin";
+}
 
 function comparaToken(a, b) {
   const x = Buffer.from(String(a || ""));
@@ -57,6 +64,104 @@ async function reservaAutorizada(req, res) {
   }
   return detalle;
 }
+
+// ─── GET /arena/fields ───────────────────────────────────────────────────────
+// Catálogo de la landing /arena: campos aprobados con ARENA activo, su precio
+// "desde" y los filtros disponibles. Nunca devuelve CLABE, banco ni contactos
+// del campo. Los campos de prueba solo los ve un admin con sesión.
+router.get("/fields", optionalAuth, async (req, res) => {
+  const esAdmin = Boolean(req.userId) && (await esAdminDeApp(req.userId));
+
+  // `select("*")` porque las columnas de landing son opcionales (se agregan con
+  // supabase/sql/arena_landing.sql). Lo público se arma a mano más abajo.
+  const { data: settings, error: settingsError } = await supabase
+    .from("arena_field_settings")
+    .select("*")
+    .eq("activo", true);
+  if (settingsError) {
+    console.error("[arena:public] landing settings:", settingsError.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+
+  const ids = (settings || []).map((s) => s.field_id);
+  if (ids.length === 0) {
+    return res.json({ fields: [], total: 0, filtros: { estados: [], ciudades: [] } });
+  }
+
+  let camposQuery = supabase
+    .from("fields")
+    .select(
+      "id, nombre, slug, ciudad, estado, tipo, foto_portada_url, logo_url, promedio_rating, horarios_json, es_prueba"
+    )
+    .in("id", ids)
+    .eq("status", "aprobado");
+  if (!esAdmin) camposQuery = camposQuery.eq("es_prueba", false);
+
+  const [camposRes, itemsRes] = await Promise.all([
+    camposQuery,
+    supabase
+      .from("arena_items")
+      .select("field_id, tipo, es_base, precio_centavos, min_jugadores, max_jugadores")
+      .in("field_id", ids)
+      .eq("activo", true),
+  ]);
+  if (camposRes.error || itemsRes.error) {
+    console.error("[arena:public] landing:", (camposRes.error || itemsRes.error).message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+
+  const porCampo = new Map((settings || []).map((s) => [s.field_id, s]));
+  const itemsPorCampo = new Map();
+  for (const i of itemsRes.data || []) {
+    const lista = itemsPorCampo.get(i.field_id) || [];
+    lista.push(i);
+    itemsPorCampo.set(i.field_id, lista);
+  }
+
+  const tarjetas = (camposRes.data || []).map((f) => {
+    const s = porCampo.get(f.id) || {};
+    const items = itemsPorCampo.get(f.id) || [];
+    const fotos = Array.isArray(s.fotos_landing) ? s.fotos_landing : [];
+    return {
+      id: f.id,
+      nombre: f.nombre,
+      slug: f.slug,
+      ciudad: f.ciudad,
+      estado: f.estado,
+      tipo: f.tipo,
+      foto_portada_url: fotos[0] || f.foto_portada_url,
+      logo_url: f.logo_url,
+      promedio_rating: f.promedio_rating,
+      destacado: s.destacado === true,
+      orden_landing: Number(s.orden_landing ?? 0),
+      resumen: s.resumen_landing ?? null,
+      precio_desde_centavos: precioDesde(items),
+      es_prueba: f.es_prueba === true,
+      // Solo para filtrar: no salen en la respuesta.
+      horarios_json: f.horarios_json,
+      items,
+    };
+  });
+
+  const filtradas = filtrarCampos(tarjetas, req.query);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 24, 1), 60);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
+  return res.json({
+    fields: filtradas
+      .slice(offset, offset + limit)
+      .map(({ items, horarios_json, orden_landing, ...publico }) => publico),
+    total: filtradas.length,
+    filtros: {
+      estados: [...new Set(tarjetas.map((t) => t.estado).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "es")
+      ),
+      ciudades: [...new Set(tarjetas.map((t) => t.ciudad).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "es")
+      ),
+    },
+  });
+});
 
 // ─── GET /arena/fields/:slug ──────────────────────────────────────────────────
 // Config pública, catálogo activo y horario semanal. 404 si ARENA no está activo.
