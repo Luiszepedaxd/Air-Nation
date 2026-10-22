@@ -13,6 +13,8 @@ function isCapacitorRequest(req: NextRequest): boolean {
   return /AirNationApp|Capacitor/i.test(ua)
 }
 
+const CAMBIAR_PASSWORD = '/mi-campo/cambiar-password'
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -42,6 +44,16 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
   const isCapacitor = isCapacitorRequest(request)
+
+  // Cuenta de dueño creada por el super admin: no puede usar el sitio hasta
+  // cambiar el password temporal. La bandera vive en `app_metadata` (el
+  // usuario no la puede editar) y la baja el backend al cambiar el password.
+  if (
+    session?.user?.app_metadata?.must_change_password === true &&
+    pathname !== CAMBIAR_PASSWORD
+  ) {
+    return NextResponse.redirect(new URL(CAMBIAR_PASSWORD, request.url))
+  }
 
   // /welcome — pantalla bienvenida exclusiva de app nativa.
   // - Con sesión → /dashboard (no tiene sentido ver welcome si ya estás logueado).
@@ -132,6 +144,8 @@ export const config = {
     '/onboarding/:path*',
     '/admin',
     '/admin/:path*',
+    '/mi-campo',
+    '/mi-campo/:path*',
     '/campos/nuevo',
     '/eventos/nuevo',
     '/joulie',

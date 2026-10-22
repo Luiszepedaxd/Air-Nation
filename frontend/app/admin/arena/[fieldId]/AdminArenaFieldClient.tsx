@@ -132,6 +132,11 @@ function Duenos({ fieldId }: { fieldId: string }) {
   const [resultados, setResultados] = useState<UsuarioBuscado[]>([])
   const [buscando, setBuscando] = useState(false)
   const [error, setError] = useState('')
+  const [email, setEmail] = useState('')
+  const [creando, setCreando] = useState(false)
+  // El password viaja una sola vez en la respuesta del backend: se muestra
+  // aquí y no se vuelve a poder consultar.
+  const [secreto, setSecreto] = useState<{ password: string; nota: string } | null>(null)
 
   const cargar = useCallback(() => {
     arenaGet<{ members: ArenaMember[] }>(`/admin/fields/${fieldId}/members`)
@@ -179,11 +184,99 @@ function Duenos({ fieldId }: { fieldId: string }) {
     }
   }
 
+  const crearCuenta = async () => {
+    setError('')
+    setSecreto(null)
+    setCreando(true)
+    try {
+      const r = await arenaSend<{ password: string | null; creada: boolean }>(
+        'POST',
+        `/admin/fields/${fieldId}/owners`,
+        { email: email.trim() }
+      )
+      setEmail('')
+      cargar()
+      setSecreto(
+        r.password
+          ? {
+              password: r.password,
+              nota: 'Cuenta creada y ligada. Cópiala ahora: no se vuelve a mostrar. El dueño tiene que cambiarla al entrar.',
+            }
+          : {
+              password: '',
+              nota: 'Ese correo ya tenía cuenta: solo quedó ligada al campo, con su contraseña de siempre.',
+            }
+      )
+    } catch (err) {
+      setError(arenaErrorMessage(err))
+    } finally {
+      setCreando(false)
+    }
+  }
+
+  const nuevoPassword = async (userId: string) => {
+    setError('')
+    setSecreto(null)
+    try {
+      const r = await arenaSend<{ password: string }>(
+        'POST',
+        `/admin/fields/${fieldId}/owners/${userId}/reset-password`
+      )
+      setSecreto({
+        password: r.password,
+        nota: 'Contraseña nueva. Cópiala ahora: no se vuelve a mostrar.',
+      })
+    } catch (err) {
+      setError(arenaErrorMessage(err))
+    }
+  }
+
   return (
     <div className="flex max-w-[640px] flex-col gap-4" style={lato}>
       <p className="text-[13px] text-[#666666]">
         Al ligar una cuenta le llega un correo con el link a su panel ARENA.
       </p>
+
+      <div className="flex flex-col gap-2 border border-solid border-[#EEEEEE] p-4">
+        <p style={jost} className="text-[12px] text-[#111111]">
+          Crear cuenta de dueño
+        </p>
+        <p className="text-[12px] text-[#666666]">
+          Para dueños que todavía no tienen cuenta en AirNation. Nosotros
+          generamos la contraseña y se la pasas tú.
+        </p>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-[12px] text-[#666666]">
+            Correo del dueño
+            <input
+              className={inputClass}
+              type="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void crearCuenta()}
+            disabled={creando || email.trim().length < 5}
+            style={jost}
+            className="inline-flex min-h-[44px] items-center justify-center bg-[#CC4B37] px-5 text-[11px] tracking-[0.12em] text-[#FFFFFF] disabled:opacity-50"
+          >
+            {creando ? 'CREANDO…' : 'CREAR Y LIGAR'}
+          </button>
+        </div>
+        {secreto ? (
+          <div className="border border-solid border-[#CC4B37] bg-[#F4F4F4] p-3">
+            <p className="text-[12px] text-[#111111]">{secreto.nota}</p>
+            {secreto.password ? (
+              <p className="mt-2 select-all break-all text-[18px] font-bold text-[#111111]">
+                {secreto.password}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-[12px] text-[#666666]">
@@ -250,14 +343,24 @@ function Duenos({ fieldId }: { fieldId: string }) {
                   </span>
                 </span>
                 {m.status === 'activo' ? (
-                  <button
-                    type="button"
-                    onClick={() => void desligar(m.user_id)}
-                    style={jost}
-                    className="min-h-[36px] shrink-0 border border-solid border-[#CC4B37] px-3 text-[10px] text-[#CC4B37]"
-                  >
-                    DESLIGAR
-                  </button>
+                  <span className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void nuevoPassword(m.user_id)}
+                      style={jost}
+                      className="min-h-[36px] border border-solid border-[#EEEEEE] px-3 text-[10px] text-[#666666]"
+                    >
+                      NUEVA CONTRASEÑA
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void desligar(m.user_id)}
+                      style={jost}
+                      className="min-h-[36px] border border-solid border-[#CC4B37] px-3 text-[10px] text-[#CC4B37]"
+                    >
+                      DESLIGAR
+                    </button>
+                  </span>
                 ) : null}
               </li>
             ))}

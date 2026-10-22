@@ -5,10 +5,24 @@ const { UUID } = require("../../middleware/requireFieldMember");
 const { dayKey } = require("../../services/joulie/time");
 const { avisoCuentaLigada, avisoLiquidacion } = require("../../lib/arena/notify");
 const { sendArenaError } = require("../../lib/arena/errors");
+const { generarPasswordTemporal } = require("../../lib/arena/ownerAccounts");
 
 const router = express.Router();
 
 const PLANES = ["free", "premium", "pro"];
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Liga (o reactiva) una cuenta como dueña del campo. */
+function ligarDueno(fieldId, userId, adminId) {
+  return supabase
+    .from("arena_field_members")
+    .upsert(
+      { field_id: fieldId, user_id: userId, rol: "owner", status: "activo", invited_by: adminId },
+      { onConflict: "field_id,user_id" }
+    )
+    .select("id, user_id, rol, status, created_at")
+    .maybeSingle();
+}
 
 function fieldIdOr400(req, res) {
   const id = String(req.params.fieldId || "").trim();
@@ -217,14 +231,7 @@ router.post("/fields/:fieldId/members", requireAdmin, async (req, res) => {
   if (!fieldRes.data) return res.status(404).json({ error: "Campo no encontrado" });
   if (!userRes.data) return res.status(404).json({ error: "Usuario no encontrado" });
 
-  const { data, error } = await supabase
-    .from("arena_field_members")
-    .upsert(
-      { field_id: fieldId, user_id: userId, rol: "owner", status: "activo", invited_by: req.adminUser.id },
-      { onConflict: "field_id,user_id" }
-    )
-    .select("id, user_id, rol, status, created_at")
-    .maybeSingle();
+  const { data, error } = await ligarDueno(fieldId, userId, req.adminUser.id);
   if (error) {
     console.error("[arena:admin] add member:", error.message);
     return res.status(500).json({ error: "Error interno del servidor" });
@@ -239,6 +246,118 @@ router.post("/fields/:fieldId/members", requireAdmin, async (req, res) => {
   }).catch((err) => console.error("[arena:admin] aviso cuenta ligada:", err.message));
 
   return res.status(201).json({ member: { ...data, usuario: userRes.data } });
+});
+
+// ─── POST /arena/admin/fields/:fieldId/owners ─────────────────────────────────
+// Crea la cuenta del dueño (no se auto-registra) y la liga al campo. El
+// password se genera aquí y viaja UNA sola vez en esta respuesta: no se
+// guarda, no se loguea y el dueño está obligado a cambiarlo al entrar.
+// Si el correo ya tiene cuenta solo se liga (nunca se le toca el password).
+router.post("/fields/:fieldId/owners", requireAdmin, async (req, res) => {
+  const fieldId = fieldIdOr400(req, res);
+  if (!fieldId) return;
+
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!EMAIL.test(email) || email.length > 200) {
+    return res.status(400).json({ error: "El correo del dueño no es válido." });
+  }
+
+  const [fieldRes, existenteRes] = await Promise.all([
+    supabase.from("fields").select("id, nombre").eq("id", fieldId).maybeSingle(),
+    supabase.from("users").select("id, nombre, alias, email").ilike("email", email).maybeSingle(),
+  ]);
+  if (fieldRes.error || existenteRes.error) {
+    console.error("[arena:admin] owners lookup:", (fieldRes.error || existenteRes.error).message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!fieldRes.data) return res.status(404).json({ error: "Campo no encontrado" });
+
+  let usuario = existenteRes.data;
+  let password = null;
+
+  if (!usuario) {
+    password = generarPasswordTemporal();
+    const { data: creado, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      app_metadata: { must_change_password: true },
+    });
+    if (authError || !creado?.user) {
+      // El correo puede existir en auth sin fila en public.users todavía.
+      const yaExiste = /already|exist|registered/i.test(authError?.message || "");
+      console.error("[arena:admin] crear dueño:", authError?.message || "sin usuario");
+      return res.status(yaExiste ? 409 : 500).json({
+        error: yaExiste
+          ? "Ese correo ya tiene cuenta. Pídele que inicie sesión una vez y lígalo buscándolo arriba."
+          : "No se pudo crear la cuenta.",
+      });
+    }
+    // La fila pública la crea el trigger de auth.users; el upsert la asegura
+    // porque `arena_field_members.user_id` apunta a `public.users`.
+    const { error: filaError } = await supabase
+      .from("users")
+      .upsert({ id: creado.user.id, email }, { onConflict: "id" });
+    if (filaError) {
+      console.error("[arena:admin] fila users del dueño:", filaError.message);
+      return res.status(500).json({
+        error: "La cuenta se creó pero no se pudo ligar al campo. Búscala arriba y lígala.",
+      });
+    }
+    usuario = { id: creado.user.id, nombre: null, alias: null, email };
+  }
+
+  const { data: member, error } = await ligarDueno(fieldId, usuario.id, req.adminUser.id);
+  if (error) {
+    console.error("[arena:admin] ligar dueño:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+
+  avisoCuentaLigada({
+    email,
+    userId: usuario.id,
+    fieldId,
+    fieldNombre: fieldRes.data.nombre,
+  }).catch((err) => console.error("[arena:admin] aviso cuenta ligada:", err.message));
+
+  return res.status(201).json({
+    member: { ...member, usuario },
+    password,
+    creada: Boolean(password),
+  });
+});
+
+// ─── POST /arena/admin/fields/:fieldId/owners/:userId/reset-password ──────────
+// Regenera el password temporal. Solo de dueños ligados a ESE campo.
+router.post("/fields/:fieldId/owners/:userId/reset-password", requireAdmin, async (req, res) => {
+  const fieldId = fieldIdOr400(req, res);
+  if (!fieldId) return;
+  const userId = String(req.params.userId || "").trim();
+  if (!UUID.test(userId)) return res.status(400).json({ error: "Usuario inválido" });
+
+  const { data: member, error: memberError } = await supabase
+    .from("arena_field_members")
+    .select("user_id")
+    .eq("field_id", fieldId)
+    .eq("user_id", userId)
+    .eq("status", "activo")
+    .maybeSingle();
+  if (memberError) {
+    console.error("[arena:admin] reset lookup:", memberError.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!member) return res.status(404).json({ error: "Ese usuario no administra este campo." });
+
+  const password = generarPasswordTemporal();
+  const { error } = await supabase.auth.admin.updateUserById(userId, {
+    password,
+    app_metadata: { must_change_password: true },
+  });
+  if (error) {
+    console.error("[arena:admin] reset password:", error.message);
+    return res.status(500).json({ error: "No se pudo cambiar el password." });
+  }
+  return res.json({ password });
 });
 
 router.delete("/fields/:fieldId/members/:userId", requireAdmin, async (req, res) => {

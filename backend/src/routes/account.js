@@ -1,6 +1,30 @@
 const express = require("express");
+const supabase = require("../lib/supabase");
+const { requireAuth } = require("../middleware/requireAuth");
 
 const router = express.Router();
+
+// ─── POST /account/password ───────────────────────────────────────────────────
+// Cambia el password del propio usuario y baja la bandera
+// `must_change_password` que puso el admin al crear la cuenta de dueño.
+// El cambio y la bandera van juntos a propósito: así nadie puede quitarse el
+// aviso sin cambiar de verdad el password temporal.
+router.post("/password", requireAuth, async (req, res) => {
+  const password = String(req.body?.password || "");
+  if (password.length < 8 || password.length > 72) {
+    return res.status(400).json({ error: "El password debe tener entre 8 y 72 caracteres." });
+  }
+
+  const { error } = await supabase.auth.admin.updateUserById(req.authUser.id, {
+    password,
+    app_metadata: { must_change_password: false },
+  });
+  if (error) {
+    console.error("[account] password:", error.message);
+    return res.status(500).json({ error: "No se pudo cambiar el password." });
+  }
+  return res.json({ ok: true });
+});
 
 router.post("/delete-request", async (req, res) => {
   try {
