@@ -9,6 +9,7 @@ import {
   type ArenaItem,
   type ArenaOpenDay,
 } from '@/lib/arena-api'
+import { cantidadDe } from '@/lib/arena-cart'
 import { fechaCorta, fechaLarga, hoyMexico, sumaDias } from '@/components/arena/fechas'
 import { MoneyText, formatCentavos } from '@/components/arena/MoneyText'
 
@@ -30,13 +31,6 @@ const UNIDAD: Record<string, string> = {
 }
 
 type Paso = 1 | 2 | 3
-
-/** Cantidad con la que se cobra un concepto, con las mismas reglas que la BD. */
-function cantidadDe(item: ArenaItem, elegida: number, jugadores: number): number {
-  if (item.unidad === 'por_reserva') return 1
-  if (item.unidad === 'por_persona') return item.es_base ? jugadores : Math.min(elegida, jugadores)
-  return Math.max(elegida, 1)
-}
 
 export function ReservarClient({
   slug,
