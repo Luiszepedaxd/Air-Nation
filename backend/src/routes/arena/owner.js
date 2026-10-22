@@ -1,13 +1,11 @@
 const express = require("express");
-const multer = require("multer");
 const supabase = require("../../lib/supabase");
 const { requireAuth } = require("../../middleware/requireAuth");
 const { requireFieldMember, UUID } = require("../../middleware/requireFieldMember");
 const { dayKey } = require("../../services/joulie/time");
 const { parseHorarioJson } = require("../../lib/arena/horario");
 const { arenaPublicUrl } = require("../../lib/arena/config");
-const { inspectImageUpload } = require("../../lib/imageUpload");
-const { uploadToCloudflare } = require("../../services/cloudflare");
+const { subirFoto } = require("../../lib/arena/uploadFoto");
 const { sendArenaError } = require("../../lib/arena/errors");
 const {
   crearReserva,
@@ -23,9 +21,6 @@ const router = express.Router();
 const TIPOS = ["paquete", "derecho_campo", "renta", "extra"];
 const UNIDADES = ["por_persona", "por_reserva", "por_unidad"];
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-
-const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-const uploadFoto = multer({ storage: multer.memoryStorage(), limits: { fileSize: IMAGE_MAX_BYTES } });
 
 function err500(res, contexto, error) {
   console.error(`[arena:owner] ${contexto}:`, error.message);
@@ -331,31 +326,7 @@ router.delete("/fields/:fieldId/items/:id", requireFieldMember, async (req, res)
 });
 
 // ─── Fotos ────────────────────────────────────────────────────────────────────
-router.post("/fields/:fieldId/uploads", requireFieldMember, (req, res) => {
-  uploadFoto.single("file")(req, res, async (multerError) => {
-    if (multerError) {
-      if (multerError instanceof multer.MulterError && multerError.code === "LIMIT_FILE_SIZE") {
-        return res.status(400).json({ error: "La foto pesa más de 10 MB. Elige una más liviana." });
-      }
-      return res.status(400).json({ error: multerError.message });
-    }
-    if (!req.file) return res.status(400).json({ error: "No se recibió ninguna foto" });
-
-    const inspected = inspectImageUpload(req.file.buffer, req.file.mimetype, req.file.originalname);
-    if (inspected.error) return res.status(400).json({ error: inspected.error });
-
-    try {
-      const url = await uploadToCloudflare(inspected.buffer, inspected.filename, inspected.mimetype);
-      if (!url || typeof url !== "string") {
-        return res.status(502).json({ error: "No se pudo guardar la foto." });
-      }
-      return res.json({ url });
-    } catch (e) {
-      console.error("[arena:owner] upload:", e.message);
-      return res.status(500).json({ error: "No se pudo guardar la foto." });
-    }
-  });
-});
+router.post("/fields/:fieldId/uploads", requireFieldMember, subirFoto("arena:owner"));
 
 // ─── Horario semanal (el mismo de la ficha del campo) ─────────────────────────
 router.patch("/fields/:fieldId/horario", requireFieldMember, async (req, res) => {

@@ -58,6 +58,16 @@ export async function arenaUploadFoto(fieldId: string, file: File): Promise<stri
   return url
 }
 
+/** Sube una foto de la landing (solo admins) y devuelve su URL pública. */
+export async function arenaUploadFotoAdmin(file: File): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const { url } = await parse<{ url: string }>(
+    await apiFetch('/arena/admin/uploads', { method: 'POST', body: fd })
+  )
+  return url
+}
+
 export function arenaErrorMessage(err: unknown): string {
   if (err instanceof ArenaApiError) return err.detalle ? `${err.message} (${err.detalle})` : err.message
   if (err instanceof Error && err.message) return err.message
@@ -73,6 +83,10 @@ export type ArenaUnidad = 'por_persona' | 'por_reserva' | 'por_unidad'
 export type ArenaSettings = {
   field_id: string
   activo: boolean
+  destacado?: boolean
+  orden_landing?: number
+  fotos_landing?: string[]
+  resumen_landing?: string | null
   plan: ArenaPlan
   comision_pct: number
   anticipacion_min_horas: number
@@ -315,8 +329,23 @@ export type ArenaFichaPublica = {
     anticipacion_min_horas: number
     anticipacion_max_dias: number
     reservas_habilitadas: boolean
+    /** Galería que administra /admin/arena/landing. */
+    fotos_landing: string[]
   }
   items: ArenaItem[]
+}
+
+/** Bloque de la landing /arena (hero, banner o promo). */
+export type ArenaLandingMedia = {
+  id: string
+  slot: 'hero' | 'banner' | 'promo'
+  url: string
+  titulo: string | null
+  subtitulo: string | null
+  cta_label: string | null
+  cta_href: string | null
+  orden: number
+  activo?: boolean
 }
 
 export type ArenaOpenDay = { fecha: string; apertura: string; cierre: string }

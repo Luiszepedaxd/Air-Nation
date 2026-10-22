@@ -1,4 +1,5 @@
 import 'server-only'
+import type { ArenaLandingMedia } from '@/lib/arena-api'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 
 const API_URL = (
@@ -76,5 +77,21 @@ export async function fetchArenaLanding(
   } catch (e) {
     console.error('[arena] landing:', (e as Error).message)
     return VACIO
+  }
+}
+
+/**
+ * Hero, banners y promos activos de la landing. Si el backend no responde la
+ * landing se muestra sin ellos: son decorado, no contenido crítico.
+ */
+export async function fetchArenaLandingMedia(): Promise<ArenaLandingMedia[]> {
+  try {
+    const res = await fetch(`${API_URL}/arena/landing-media`, { cache: 'no-store' })
+    if (!res.ok) return []
+    const { media } = (await res.json()) as { media?: ArenaLandingMedia[] }
+    return media ?? []
+  } catch (e) {
+    console.error('[arena] landing-media:', (e as Error).message)
+    return []
   }
 }

@@ -26,6 +26,8 @@ export function ArenaPaquetes({
   ficha: ArenaFichaPublica
 }) {
   const base = ficha.items.filter((i) => i.es_base)
+  // Galería de /admin/arena/landing; un backend viejo no la manda.
+  const fotosLanding = ficha.arena.fotos_landing ?? []
   if (base.length === 0) return null
 
   return (
@@ -36,6 +38,20 @@ export function ArenaPaquetes({
       <p className="mt-1 text-[13px] text-[#666666]">
         Reserva en línea tu día en {ficha.field.nombre}. Pagas aquí y llegas con tu QR.
       </p>
+
+      {fotosLanding.length > 0 ? (
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {fotosLanding.map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt=""
+              loading="lazy"
+              className="h-[140px] w-[200px] shrink-0 object-cover"
+            />
+          ))}
+        </div>
+      ) : null}
 
       <ul className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {base.map((item) => (

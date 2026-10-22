@@ -6,6 +6,7 @@ const { dayKey } = require("../../services/joulie/time");
 const { avisoCuentaLigada, avisoLiquidacion } = require("../../lib/arena/notify");
 const { sendArenaError } = require("../../lib/arena/errors");
 const { generarPasswordTemporal } = require("../../lib/arena/ownerAccounts");
+const { subirFoto } = require("../../lib/arena/uploadFoto");
 
 const router = express.Router();
 
@@ -379,6 +380,182 @@ router.delete("/fields/:fieldId/members/:userId", requireAdmin, async (req, res)
   }
   if (!data) return res.status(404).json({ error: "Ese usuario no administra este campo." });
   return res.json({ member: data });
+});
+
+// ─── Fotos de la landing ──────────────────────────────────────────────────────
+// Mismo camino de subida que el dueño (Cloudflare Images), pero sin campo.
+router.post("/uploads", requireAdmin, subirFoto("arena:admin"));
+
+const SLOTS = ["hero", "banner", "promo"];
+
+/**
+ * Valida un bloque de la landing. `cta_href` solo relativo o de airnation.online:
+ * un link absoluto a otro dominio en el hero sería un redirect abierto.
+ * @returns {{ row: object } | { error: string }}
+ */
+function parseLandingMedia(body, { partial }) {
+  const row = {};
+  const tiene = (k) => body[k] !== undefined;
+
+  if (!partial || tiene("slot")) {
+    if (!SLOTS.includes(body.slot)) return { error: "El bloque debe ser hero, banner o promo." };
+    row.slot = body.slot;
+  }
+  if (!partial || tiene("url")) {
+    const url = String(body.url ?? "").trim();
+    if (!/^https:\/\/\S+$/i.test(url)) return { error: "La foto debe ser una URL https." };
+    row.url = url;
+  }
+  for (const [key, max] of [["titulo", 120], ["subtitulo", 240], ["cta_label", 40]]) {
+    if (!tiene(key)) continue;
+    const v = body[key] === null ? null : String(body[key]).trim();
+    if (v && v.length > max) return { error: `${key} admite hasta ${max} caracteres.` };
+    row[key] = v || null;
+  }
+  if (tiene("cta_href")) {
+    const href = body.cta_href === null ? null : String(body.cta_href).trim();
+    if (href && !/^\/[^/\\]/.test(href) && !/^https:\/\/([a-z0-9-]+\.)?airnation\.online(\/|$)/i.test(href)) {
+      return { error: "El link debe ser una ruta del sitio (/arena) o de airnation.online." };
+    }
+    row.cta_href = href || null;
+  }
+  if (tiene("activo")) {
+    if (typeof body.activo !== "boolean") return { error: "activo debe ser true o false." };
+    row.activo = body.activo;
+  }
+  if (tiene("orden")) {
+    const n = Number(body.orden);
+    if (!Number.isInteger(n) || n < 0 || n > 9999) return { error: "El orden debe ser un entero." };
+    row.orden = n;
+  }
+  if (partial && Object.keys(row).length === 0) return { error: "No hay nada que actualizar." };
+  return { row };
+}
+
+router.get("/landing-media", requireAdmin, async (req, res) => {
+  const { data, error } = await supabase
+    .from("arena_landing_media")
+    .select("*")
+    .order("slot", { ascending: true })
+    .order("orden", { ascending: true });
+  if (error) {
+    console.error("[arena:admin] landing-media:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  return res.json({ media: data || [] });
+});
+
+router.post("/landing-media", requireAdmin, async (req, res) => {
+  const parsed = parseLandingMedia(req.body || {}, { partial: false });
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const { data, error } = await supabase
+    .from("arena_landing_media")
+    .insert({ ...parsed.row, updated_by: req.adminUser.id })
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] post landing-media:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  return res.status(201).json({ media: data });
+});
+
+router.patch("/landing-media/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!UUID.test(id)) return res.status(400).json({ error: "Bloque inválido" });
+
+  const parsed = parseLandingMedia(req.body || {}, { partial: true });
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+  const { data, error } = await supabase
+    .from("arena_landing_media")
+    .update({ ...parsed.row, updated_by: req.adminUser.id, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] patch landing-media:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!data) return res.status(404).json({ error: "Ese bloque ya no existe." });
+  return res.json({ media: data });
+});
+
+router.delete("/landing-media/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!UUID.test(id)) return res.status(400).json({ error: "Bloque inválido" });
+
+  const { data, error } = await supabase
+    .from("arena_landing_media")
+    .delete()
+    .eq("id", id)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] delete landing-media:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!data) return res.status(404).json({ error: "Ese bloque ya no existe." });
+  return res.json({ eliminado: true });
+});
+
+// ─── PATCH /arena/admin/fields/:fieldId/landing ───────────────────────────────
+// Destacado, orden, galería y resumen del campo en /arena.
+router.patch("/fields/:fieldId/landing", requireAdmin, async (req, res) => {
+  const fieldId = fieldIdOr400(req, res);
+  if (!fieldId) return;
+
+  const body = req.body || {};
+  const row = {};
+
+  if (body.destacado !== undefined) {
+    if (typeof body.destacado !== "boolean") {
+      return res.status(400).json({ error: "destacado debe ser true o false." });
+    }
+    row.destacado = body.destacado;
+  }
+  if (body.orden_landing !== undefined) {
+    const n = Number(body.orden_landing);
+    if (!Number.isInteger(n) || n < 0 || n > 9999) {
+      return res.status(400).json({ error: "El orden debe ser un entero." });
+    }
+    row.orden_landing = n;
+  }
+  if (body.resumen_landing !== undefined) {
+    const v = body.resumen_landing === null ? null : String(body.resumen_landing).trim();
+    if (v && v.length > 280) {
+      return res.status(400).json({ error: "El resumen admite hasta 280 caracteres." });
+    }
+    row.resumen_landing = v || null;
+  }
+  if (body.fotos_landing !== undefined) {
+    if (!Array.isArray(body.fotos_landing)) {
+      return res.status(400).json({ error: "Las fotos deben ser una lista de URLs." });
+    }
+    const fotos = body.fotos_landing.map((x) => String(x ?? "").trim()).filter(Boolean);
+    if (fotos.length > 12) return res.status(400).json({ error: "Hasta 12 fotos por campo." });
+    if (fotos.some((u) => !/^https:\/\//i.test(u))) {
+      return res.status(400).json({ error: "Las fotos deben ser URLs https." });
+    }
+    row.fotos_landing = fotos;
+  }
+  if (Object.keys(row).length === 0) {
+    return res.status(400).json({ error: "No hay nada que actualizar." });
+  }
+
+  const { data, error } = await supabase
+    .from("arena_field_settings")
+    .update(row)
+    .eq("field_id", fieldId)
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] patch landing:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!data) return res.status(404).json({ error: "Este campo no tiene ARENA configurado." });
+  return res.json({ settings: data });
 });
 
 // ─── GET /arena/admin/bookings?field_id&status&desde&hasta ────────────────────

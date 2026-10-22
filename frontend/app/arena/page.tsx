@@ -2,7 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { CampoCard } from '@/app/campos/components/CampoCard'
-import { fetchArenaLanding, type ArenaLandingCard } from '@/lib/arena-landing'
+import type { ArenaLandingMedia } from '@/lib/arena-api'
+import {
+  fetchArenaLanding,
+  fetchArenaLandingMedia,
+  type ArenaLandingCard,
+} from '@/lib/arena-landing'
 import { ArenaFiltros } from './ArenaFiltros'
 
 export const revalidate = 0
@@ -69,12 +74,79 @@ function Tarjeta({ campo }: { campo: ArenaLandingCard }) {
   )
 }
 
+/** Hero de la landing: la foto que subió el admin, si hay. */
+function Hero({ media }: { media: ArenaLandingMedia | undefined }) {
+  return (
+    <header className="relative bg-[#111111] px-4 py-8 md:py-10">
+      {media ? (
+        <img
+          src={media.url}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-50"
+        />
+      ) : null}
+      <div className="relative mx-auto max-w-[1200px] md:px-6">
+        <p className="text-[11px] tracking-[0.2em] text-[#CC4B37]" style={jost}>
+          AIRNATION ARENA
+        </p>
+        <h1 style={jost} className="mt-2 text-[26px] leading-tight text-white md:text-[34px]">
+          {media?.titulo || 'Reserva tu día de airsoft'}
+        </h1>
+        <p className="mt-2 max-w-[560px] text-sm text-[#CCCCCC]" style={lato}>
+          {media?.subtitulo || 'Elige campo, día y paquete. Pagas en línea y llegas con tu QR.'}
+        </p>
+        {media?.cta_href && media.cta_label ? (
+          <Link
+            href={media.cta_href}
+            style={jost}
+            className="mt-4 inline-flex min-h-[44px] items-center justify-center bg-[#CC4B37] px-5 text-[11px] tracking-[0.12em] text-white"
+          >
+            {media.cta_label}
+          </Link>
+        ) : null}
+      </div>
+    </header>
+  )
+}
+
+/** Banners y promos: foto con título y, si trae, su link. */
+function Banner({ media }: { media: ArenaLandingMedia }) {
+  const contenido = (
+    <article className="flex gap-3 border border-solid border-[#EEEEEE] bg-[#FFFFFF]">
+      <img src={media.url} alt="" className="h-[96px] w-[128px] shrink-0 object-cover" />
+      <div className="min-w-0 py-3 pr-3">
+        {media.titulo ? (
+          <p style={jost} className="text-[13px] text-[#111111]">
+            {media.titulo}
+          </p>
+        ) : null}
+        {media.subtitulo ? (
+          <p className="mt-1 text-[12px] text-[#666666]" style={lato}>
+            {media.subtitulo}
+          </p>
+        ) : null}
+        {media.cta_label ? (
+          <p className="mt-2 text-[11px] text-[#CC4B37]" style={jost}>
+            {media.cta_label} →
+          </p>
+        ) : null}
+      </div>
+    </article>
+  )
+  return media.cta_href ? <Link href={media.cta_href}>{contenido}</Link> : contenido
+}
+
 export default async function ArenaLandingPage({
   searchParams,
 }: {
   searchParams: Record<string, string | string[] | undefined>
 }) {
-  const { fields, total, filtros } = await fetchArenaLanding(searchParams)
+  const [{ fields, total, filtros }, media] = await Promise.all([
+    fetchArenaLanding(searchParams),
+    fetchArenaLandingMedia(),
+  ])
+  const hero = media.find((m) => m.slot === 'hero')
+  const banners = media.filter((m) => m.slot !== 'hero')
   const offset = Math.max(Number(searchParams.offset) || 0, 0)
 
   const linkPagina = (nuevoOffset: number) => {
@@ -89,24 +161,20 @@ export default async function ArenaLandingPage({
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#FFFFFF] text-[#111111]">
-      <header className="bg-[#111111] px-4 py-8 md:py-10">
-        <div className="mx-auto max-w-[1200px] md:px-6">
-          <p className="text-[11px] tracking-[0.2em] text-[#CC4B37]" style={jost}>
-            AIRNATION ARENA
-          </p>
-          <h1 style={jost} className="mt-2 text-[26px] leading-tight text-white md:text-[34px]">
-            Reserva tu día de airsoft
-          </h1>
-          <p className="mt-2 max-w-[560px] text-sm text-[#999999]" style={lato}>
-            Elige campo, día y paquete. Pagas en línea y llegas con tu QR.
-          </p>
-        </div>
-      </header>
+      <Hero media={hero} />
 
       <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-4 py-6 md:px-6 md:py-8">
         <Suspense fallback={null}>
           <ArenaFiltros estados={filtros.estados} ciudades={filtros.ciudades} />
         </Suspense>
+
+        {banners.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {banners.map((m) => (
+              <Banner key={m.id} media={m} />
+            ))}
+          </div>
+        ) : null}
 
         {fields.length === 0 ? (
           <p className="py-12 text-center text-sm text-[#666666]" style={lato}>

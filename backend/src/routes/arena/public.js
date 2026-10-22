@@ -65,6 +65,22 @@ async function reservaAutorizada(req, res) {
   return detalle;
 }
 
+// ─── GET /arena/landing-media ────────────────────────────────────────────────
+// Hero, banners y promos activos de la landing. Si la tabla todavía no existe
+// (falta correr supabase/sql/arena_landing.sql) la landing se ve sin banners.
+router.get("/landing-media", async (_req, res) => {
+  const { data, error } = await supabase
+    .from("arena_landing_media")
+    .select("id, slot, url, titulo, subtitulo, cta_label, cta_href, orden")
+    .eq("activo", true)
+    .order("orden", { ascending: true });
+  if (error) {
+    console.error("[arena:public] landing-media:", error.message);
+    return res.json({ media: [] });
+  }
+  return res.json({ media: data || [] });
+});
+
 // ─── GET /arena/fields ───────────────────────────────────────────────────────
 // Catálogo de la landing /arena: campos aprobados con ARENA activo, su precio
 // "desde" y los filtros disponibles. Nunca devuelve CLABE, banco ni contactos
@@ -181,12 +197,19 @@ router.get("/fields/:slug", async (req, res) => {
   }
   if (!field) return res.status(404).json({ error: "Campo no encontrado" });
 
-  const [settingsRes, itemsRes] = await Promise.all([
+  const [settingsRes, landingRes, itemsRes] = await Promise.all([
     supabase
       .from("arena_field_settings")
       .select(
         "activo, politica_cancelacion, cancelacion_horas_limite, anticipacion_min_horas, anticipacion_max_dias"
       )
+      .eq("field_id", field.id)
+      .maybeSingle(),
+    // ponytail: consulta aparte porque estas columnas son nuevas; se puede
+    // juntar con el select de arriba una vez corrido arena_landing.sql.
+    supabase
+      .from("arena_field_settings")
+      .select("fotos_landing")
       .eq("field_id", field.id)
       .maybeSingle(),
     supabase
@@ -209,6 +232,9 @@ router.get("/fields/:slug", async (req, res) => {
       ...settingsRes.data,
       // Sin proveedor configurado ARENA no cobra: el botón RESERVAR se oculta.
       reservas_habilitadas: Boolean(arenaProvider()),
+      fotos_landing: Array.isArray(landingRes.data?.fotos_landing)
+        ? landingRes.data.fotos_landing
+        : [],
     },
     items: itemsRes.data || [],
   });

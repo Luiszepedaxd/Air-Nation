@@ -127,6 +127,13 @@ export function AdminArenaClient() {
             + NUEVO CAMPO
           </Link>
           <Link
+            href="/admin/arena/landing"
+            style={jost}
+            className="inline-flex min-h-[44px] items-center justify-center border border-solid border-[#111111] px-4 text-[10px] text-[#111111] transition-colors hover:border-[#CC4B37] hover:text-[#CC4B37]"
+          >
+            FOTOS DE LA LANDING
+          </Link>
+          <Link
             href="/admin/arena/reservas"
             style={jost}
             className="inline-flex min-h-[44px] items-center justify-center bg-[#111111] px-4 text-[10px] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
