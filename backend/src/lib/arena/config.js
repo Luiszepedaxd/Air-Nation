@@ -16,15 +16,25 @@ function arenaPublicUrl() {
   return raw.replace(/\/+$/, "");
 }
 
-/** El proveedor de prueba nunca debe cobrar en producción. */
+/**
+ * El mock en producción solo con permiso explícito (ARENA_MOCK_EN_PRODUCCION=true),
+ * para probar el flujo completo antes de conectar el proveedor real.
+ */
+function mockBloqueado() {
+  return (
+    process.env.NODE_ENV === "production" &&
+    String(process.env.ARENA_MOCK_EN_PRODUCCION || "").trim().toLowerCase() !== "true"
+  );
+}
+
 function assertArenaConfig() {
-  if (arenaProvider() === "mock" && process.env.NODE_ENV === "production") {
+  if (arenaProvider() === "mock" && mockBloqueado()) {
     console.error(
       "[arena] ARENA_PAYMENT_PROVIDER=mock no puede correr con NODE_ENV=production. " +
-        "Deja la variable vacía o conecta el proveedor real."
+        "Deja la variable vacía, conecta el proveedor real o pon ARENA_MOCK_EN_PRODUCCION=true."
     );
     process.exit(1);
   }
 }
 
-module.exports = { PROVEEDORES, arenaProvider, arenaPublicUrl, assertArenaConfig };
+module.exports = { PROVEEDORES, arenaProvider, mockBloqueado, arenaPublicUrl, assertArenaConfig };

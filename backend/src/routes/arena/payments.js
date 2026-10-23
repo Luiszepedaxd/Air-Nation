@@ -1,6 +1,6 @@
 const express = require("express");
 const supabase = require("../../lib/supabase");
-const { arenaProvider } = require("../../lib/arena/config");
+const { arenaProvider, mockBloqueado } = require("../../lib/arena/config");
 const { providerByName } = require("../../lib/arena/payments");
 const { leerReserva } = require("../../lib/arena/bookings");
 const { reembolsar } = require("../../lib/arena/refunds");
@@ -176,12 +176,12 @@ router.post("/webhook/:provider", async (req, res) => {
 });
 
 // ─── POST /arena/payments/mock/:paymentId/complete?result=ok|fail&t=TOKEN ─────
-// Solo con el proveedor de prueba y nunca en producción. Mismo camino que un
+// Solo con el proveedor de prueba (en producción, solo con ARENA_MOCK_EN_PRODUCCION=true). Mismo camino que un
 // webhook pagado (`aplicarPago`), sin firma: lo que autoriza es el token de
 // acceso que devuelve el checkout — el del pago (carrito) o el de la reserva.
 // El secreto del webhook nunca sale al navegador, y aquí no hace falta.
 router.post("/mock/:paymentId/complete", async (req, res) => {
-  if (arenaProvider() !== "mock" || process.env.NODE_ENV === "production") {
+  if (arenaProvider() !== "mock" || mockBloqueado()) {
     return res.status(404).json({ error: "Ruta no encontrada" });
   }
 
