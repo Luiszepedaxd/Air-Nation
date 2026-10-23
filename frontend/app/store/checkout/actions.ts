@@ -1,5 +1,6 @@
 'use server'
 
+import { randomUUID } from 'crypto'
 import { createDashboardSupabaseServerClient } from '@/app/dashboard/supabase-server'
 import { createAnonSupabaseClient } from '@/lib/supabase-anon'
 import { revalidatePath } from 'next/cache'
@@ -86,32 +87,29 @@ export async function createOrder(
   const descuento_monto = Math.round(subtotal * (descuento_pct / 100))
   const total_con_envio = subtotal - descuento_monto + costo_envio
 
-  const { data: order, error: orderError } = await supabase
-    .from('store_orders')
-    .insert({
-      order_number,
-      user_id,
-      guest_email: user_id ? null : input.direccion.email,
-      guest_nombre: user_id ? null : input.direccion.nombre,
-      direccion_envio: input.direccion,
-      metodo_pago: input.metodo_pago,
-      descuento_pct,
-      subtotal,
-      descuento_monto,
-      costo_envio,
-      cp_destino: input.direccion.cp,
-      total: total_con_envio,
-      status_interno: 'nueva',
-    })
-    .select('id')
-    .single()
+  // Tras 04_privadas_admin_rls: insert permitido pero .select() no devuelve filas a no-admin.
+  const orderId = randomUUID()
+  const { error: orderError } = await supabase.from('store_orders').insert({
+    id: orderId,
+    order_number,
+    user_id,
+    guest_email: user_id ? null : input.direccion.email,
+    guest_nombre: user_id ? null : input.direccion.nombre,
+    direccion_envio: input.direccion,
+    metodo_pago: input.metodo_pago,
+    descuento_pct,
+    subtotal,
+    descuento_monto,
+    costo_envio,
+    cp_destino: input.direccion.cp,
+    total: total_con_envio,
+    status_interno: 'nueva',
+  })
 
-  if (orderError || !order) {
+  if (orderError) {
     console.error('[checkout] crear orden:', orderError?.message)
     return { error: 'Error al crear la orden. Intenta de nuevo.' }
   }
-
-  const orderId = (order as { id: string }).id
 
   const orderItems = input.items.map((item) => ({
     order_id: orderId,

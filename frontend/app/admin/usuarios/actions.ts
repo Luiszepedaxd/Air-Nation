@@ -5,19 +5,38 @@ import { createAdminClient, createAdminSupabaseServerClient } from '../supabase-
 
 const VALID_ROLES = ['player', 'admin', 'field_owner'] as const
 
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://air-nation-production.up.railway.app/api/v1'
+).replace(/\/$/, '')
+
 export async function updateUserRole(userId: string, newRole: string) {
   if (!VALID_ROLES.includes(newRole as (typeof VALID_ROLES)[number])) {
     return { error: 'Rol inválido' }
   }
 
-  const supabase = createAdminClient()
-  const { error } = await supabase
-    .from('users')
-    .update({ app_role: newRole })
-    .eq('id', userId)
+  const authClient = createAdminSupabaseServerClient()
+  const {
+    data: { session },
+  } = await authClient.auth.getSession()
+  if (!session?.access_token) {
+    return { error: 'No autenticado' }
+  }
 
-  if (error) {
-    return { error: error.message }
+  const res = await fetch(
+    `${API_URL}/admin/users/${encodeURIComponent(userId)}/role`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ app_role: newRole }),
+    }
+  )
+  const body = (await res.json().catch(() => ({}))) as { error?: string }
+  if (!res.ok) {
+    return { error: body.error || `Error ${res.status}` }
   }
 
   revalidatePath('/admin/usuarios')

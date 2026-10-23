@@ -1,25 +1,15 @@
 const supabase = require("../lib/supabase");
+const { verifySupabaseUser } = require("./verifySupabaseUser");
 
 /**
- * Requiere header Authorization: Bearer <JWT de Supabase>
- * y que el usuario tenga app_role = 'admin' en la tabla users.
+ * Requiere JWT válido y app_role = 'admin' en users.
  */
 async function requireAdmin(req, res, next) {
-  const authHeader = req.headers.authorization || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-
-  if (!token) {
+  const user = req.authUser || (await verifySupabaseUser(req));
+  if (!user) {
     return res.status(401).json({ error: "No autorizado" });
   }
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return res.status(401).json({ error: "Token inválido o expirado" });
-  }
+  req.authUser = user;
 
   const { data: profile, error: profileError } = await supabase
     .from("users")

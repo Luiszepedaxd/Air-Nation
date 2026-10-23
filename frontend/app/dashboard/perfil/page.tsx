@@ -9,6 +9,7 @@ import type { PlayerPostRow, PublicReplicaRow } from '@/app/u/[id]/types'
 import { type MisEquipoItem } from './MisEquiposSection'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
 import { PerfilTabsClient } from './PerfilTabsClient'
+import { fetchMiUsuarioPrivado } from '@/lib/supabase/private-user'
 
 export default async function PerfilPage({
   searchParams,
@@ -23,13 +24,9 @@ export default async function PerfilPage({
   if (!authUser) redirect('/login')
 
   // ── Block 1: user row (needed for team_id, isAdmin, props) ────────────
-  const { data: row, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', authUser.id)
-    .maybeSingle()
+  const { row, error: privErr } = await fetchMiUsuarioPrivado(supabase)
 
-  if (error || !row) redirect('/login')
+  if (privErr || !row) redirect('/login')
 
   const isAdmin = row.app_role === 'admin'
 

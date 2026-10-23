@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireAdmin } = require("../middleware/requireAdmin");
 const router = express.Router();
 
 // GET /api/v1/docs — listar documentos oficiales por autoridad
@@ -13,7 +14,7 @@ router.get("/", (req, res) => {
 });
 
 // POST /api/v1/docs — subir documento oficial (admin only)
-router.post("/", (req, res) => {
+router.post("/", requireAdmin, (req, res) => {
   const { title, authority, file_url } = req.body;
   if (!title || !authority || !file_url) {
     return res.status(400).json({ error: "Título, autoridad y URL del archivo son requeridos" });

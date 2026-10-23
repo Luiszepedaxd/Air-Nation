@@ -53,7 +53,6 @@ export function ReportModal({
     setSubmitting(true)
     setError(null)
     const result = await submitReport({
-      reporter_id: reporterId,
       target_type: targetType,
       target_id: targetId,
       reason,

@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { createAdminClient, createAdminSupabaseServerClient } from '../supabase-server'
+import { fetchAdminUsuariosPrivados } from '@/lib/supabase/private-user'
 import UsersTable, { type User } from './UsersTable'
 
 const jostHeading = {
@@ -15,14 +16,11 @@ export default async function AdminUsuariosPage() {
   const {
     data: { user: sessionUser },
   } = await sessionClient.auth.getUser()
-
-  const [{ data, error }, { data: authData }] = await Promise.all([
-    supabase
-      .from('users')
-      .select('id, nombre, alias, email, ciudad, rol, app_role, member_number, created_at')
-      .order('created_at', { ascending: false }),
+  const [{ rows: privateRows, error }, { data: authData }] = await Promise.all([
+    fetchAdminUsuariosPrivados(sessionClient),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
   ])
+  const data = privateRows
 
   // Mapa id → providers desde auth.users app_metadata
   const providersMap = new Map<string, string[]>()

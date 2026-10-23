@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase'
+
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
   'https://air-nation-production.up.railway.app/api/v1'
@@ -12,7 +14,6 @@ export type ReportReason =
   | 'other'
 
 export type ReportPayload = {
-  reporter_id: string
   target_type: ReportTargetType
   target_id: string
   reason: ReportReason
@@ -23,11 +24,21 @@ export async function submitReport(
   payload: ReportPayload
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (!token) {
+      return { ok: false, error: 'Inicia sesión para reportar' }
+    }
+
     const res = await fetch(`${API_URL}/reports`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        reporter_id: payload.reporter_id,
         target_type: payload.target_type,
         target_id: payload.target_id,
         reason: payload.reason,

@@ -1,7 +1,4 @@
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ||
-  'https://air-nation-production.up.railway.app/api/v1'
-).replace(/\/$/, '')
+import { apiFetch } from '@/lib/apiFetch'
 
 export async function notifyTeamJoinRequest(
   teamId: string,
@@ -12,11 +9,10 @@ export async function notifyTeamJoinRequest(
   }
 ): Promise<void> {
   try {
-    await fetch(
-      `${API_URL}/teams/${encodeURIComponent(teamId)}/notify-join-request`,
+    await apiFetch(
+      `/teams/${encodeURIComponent(teamId)}/notify-join-request`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }
     )

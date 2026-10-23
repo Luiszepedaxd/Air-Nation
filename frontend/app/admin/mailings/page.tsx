@@ -1,7 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { redirect } from 'next/navigation'
-import { createAdminClient } from '../supabase-server'
+import { createAdminClient, createAdminSupabaseServerClient } from '../supabase-server'
+import { fetchAdminUsuariosPrivados } from '@/lib/supabase/private-user'
 import { requireAppAdminUserId } from '../require-app-admin'
 import MailingsClient from './MailingsClient'
 
@@ -38,13 +39,10 @@ export default async function MailingsPage() {
   if (!adminId) redirect('/admin')
 
   const db = createAdminClient()
+  const sessionClient = createAdminSupabaseServerClient()
+  const { rows: privateRows } = await fetchAdminUsuariosPrivados(sessionClient)
 
-  const { data: profileRows } = await db
-    .from('users')
-    .select('id, email, alias, nombre, avatar_url, created_at')
-    .order('created_at', { ascending: false })
-
-  const profiles = (profileRows ?? []) as ProfileRow[]
+  const profiles = (privateRows ?? []) as ProfileRow[]
 
   const { data: authData } = await db.auth.admin.listUsers({ perPage: 1000 })
   const authMap = new Map<string, string | null>()

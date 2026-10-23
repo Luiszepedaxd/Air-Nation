@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { apiFetch } from '@/lib/apiFetch'
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
@@ -109,17 +110,10 @@ export function SearchBar({ className = '' }: { className?: string }) {
   const logSearch = useCallback(async (q: string, resultsCount: number) => {
     if (q.length < 2) return
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const userId = session?.user?.id ?? null
-      const params = new URLSearchParams({ q })
-      if (userId) params.set('user_id', userId)
-      params.set('results_count', String(resultsCount))
-      await fetch(`${API_URL}/search/log`, {
+      await apiFetch('/search/log', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: q,
-          user_id: userId,
           results_count: resultsCount,
         }),
       })

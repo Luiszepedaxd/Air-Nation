@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
+import { fetchVerificarCredencial } from '@/lib/supabase/private-user'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -37,9 +38,9 @@ type VerifyUserRow = {
   avatar_url: string | null
   foto_credencial_url: string | null
   credencial_nombre_completo: string | null
-  credencial_fecha_nacimiento: string | null
+  mayor_de_edad: boolean | null
   member_number: string | number | null
-  created_at: string
+  created_at: string | null
   team_id: string | null
   teams: { nombre: string } | { nombre: string }[] | null
 }
@@ -47,34 +48,36 @@ type VerifyUserRow = {
 async function fetchVerifyUser(id: string): Promise<VerifyUserRow | null> {
   const supabase = createPublicSupabaseClient()
 
-  const { data: row, error } = await supabase
-    .from('users')
-    .select('id, nombre, alias, ciudad, rol, avatar_url, foto_credencial_url, credencial_nombre_completo, credencial_fecha_nacimiento, member_number, created_at, team_id')
-    .eq('id', id)
-    .maybeSingle()
+  const { row, error } = await fetchVerificarCredencial(supabase, id)
 
   if (error) {
-    console.error('[verify] users query error:', {
-      id,
-      message: error.message,
-      code: error.code,
-      details: error.details,
-    })
+    console.error('[verify] verificar_credencial error:', { id, message: error })
     return null
   }
   if (!row) return null
 
+  const { data: publicRow } = await supabase
+    .from('users')
+    .select('ciudad, rol, created_at')
+    .eq('id', id)
+    .maybeSingle()
+
   let teams: { nombre: string } | null = null
-  if ((row as any).team_id) {
+  if (row.team_id) {
     const { data: team } = await supabase
       .from('teams')
       .select('nombre')
-      .eq('id', (row as any).team_id)
+      .eq('id', row.team_id)
       .maybeSingle()
     if (team) teams = team
   }
 
-  return { ...row, teams } as VerifyUserRow
+  return {
+    ...row,
+    ...((publicRow as { ciudad?: string | null; rol?: string | null; created_at?: string | null }) ??
+      {}),
+    teams,
+  } as VerifyUserRow
 }
 
 function teamNombreFromRow(row: VerifyUserRow): string | null {
@@ -108,18 +111,6 @@ function formatDesde(iso: string) {
       'DIC',
     ]
     return `${meses[d.getMonth()]} ${d.getFullYear()}`
-  } catch {
-    return ''
-  }
-}
-
-function formatFechaNac(iso: string | null) {
-  if (!iso) return ''
-  try {
-    const d = new Date(iso + 'T00:00:00')
-    const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
-    const dd = String(d.getDate()).padStart(2, '0')
-    return `${dd} · ${meses[d.getMonth()]} · ${d.getFullYear()}`
   } catch {
     return ''
   }
@@ -260,8 +251,8 @@ export default async function VerifyPlayerPage({
   ).toUpperCase()
   const ciudadTrim = row.ciudad?.trim() || ''
   const memberDisplay = formatMemberNo(row.member_number)
-  const desdeText = formatDesde(row.created_at)
-  const fechaNacFormatted = formatFechaNac(row.credencial_fecha_nacimiento)
+  const desdeText = row.created_at ? formatDesde(row.created_at) : ''
+  const mayorDeEdad = row.mayor_de_edad === true
 
   return (
     <div className="min-h-screen min-w-[375px] bg-[#F4F4F4] px-6 py-6">
@@ -359,9 +350,9 @@ export default async function VerifyPlayerPage({
           <p style={lato} className="mt-4 text-[12px] text-[#666666]">
             DESDE: {desdeText}
           </p>
-          {fechaNacFormatted ? (
+          {row.mayor_de_edad != null ? (
             <p style={lato} className="mt-2 text-[12px] text-[#666666]">
-              FECHA DE NACIMIENTO: {fechaNacFormatted}
+              MAYOR DE EDAD: {mayorDeEdad ? 'SÍ' : 'NO'}
             </p>
           ) : null}
         </section>
