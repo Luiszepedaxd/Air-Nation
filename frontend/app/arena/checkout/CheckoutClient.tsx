@@ -53,8 +53,8 @@ type Revision = {
  */
 export function CheckoutClient({ contacto }: { contacto: { nombre: string; email: string } | null }) {
   const { cart, listo, quitar } = useArenaCart()
-  const [nombre, setNombre] = useState(contacto?.nombre ?? '')
-  const [email, setEmail] = useState(contacto?.email ?? '')
+  const [nombre, setNombre] = useState('')
+  const [email, setEmail] = useState('')
   const [telefono, setTelefono] = useState('')
   const [acepta, setAcepta] = useState(false)
   // Tarjeta de prueba: vive solo en esta pantalla. Nunca se manda al backend
@@ -340,7 +340,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
                   id="c-tarjeta"
                   inputMode="numeric"
                   autoComplete="cc-number"
-                  placeholder="4242 4242 4242 4242"
+                  placeholder="0000 0000 0000 0000"
                   className={inputClass}
                   value={tarjeta.numero}
                   onChange={(e) => setTarjeta({ ...tarjeta, numero: enGruposDe4(e.target.value) })}
