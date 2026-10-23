@@ -7,6 +7,7 @@ const { reembolsar } = require("../../lib/arena/refunds");
 const { sendArenaError } = require("../../lib/arena/errors");
 const { UUID } = require("../../middleware/requireFieldMember");
 const notify = require("../../lib/arena/notify");
+const { tokenAbrePago } = require("../../lib/arena/tokens");
 
 const router = express.Router();
 
@@ -174,9 +175,11 @@ router.post("/webhook/:provider", async (req, res) => {
   }
 });
 
-// ─── POST /arena/payments/mock/:paymentId/complete?result=ok|fail ─────────────
-// Solo con el proveedor de prueba y nunca en producción. El id del pago es el
-// que identifica la operación: no hace falta firma.
+// ─── POST /arena/payments/mock/:paymentId/complete?result=ok|fail&t=TOKEN ─────
+// Solo con el proveedor de prueba y nunca en producción. Mismo camino que un
+// webhook pagado (`aplicarPago`), sin firma: lo que autoriza es el token de
+// acceso que devuelve el checkout — el del pago (carrito) o el de la reserva.
+// El secreto del webhook nunca sale al navegador, y aquí no hace falta.
 router.post("/mock/:paymentId/complete", async (req, res) => {
   if (arenaProvider() !== "mock" || process.env.NODE_ENV === "production") {
     return res.status(404).json({ error: "Ruta no encontrada" });
@@ -184,6 +187,7 @@ router.post("/mock/:paymentId/complete", async (req, res) => {
 
   const id = String(req.params.paymentId || "").trim();
   if (!UUID.test(id)) return res.status(400).json({ error: "Pago inválido" });
+  const token = String(req.query.t || req.body?.t || "");
 
   const resultado = String(req.query.result || "ok").toLowerCase();
   if (!["ok", "fail"].includes(resultado)) {
@@ -201,6 +205,15 @@ router.post("/mock/:paymentId/complete", async (req, res) => {
     return res.status(500).json({ error: "Error interno del servidor" });
   }
   if (!pago) return res.status(404).json({ error: "No encontramos ese pago." });
+
+  // Token equivocado: 404, igual que un pago inexistente.
+  const { data: reservas } = await supabase
+    .from("arena_bookings")
+    .select("access_token")
+    .or([`payment_id.eq.${pago.id}`, ...(pago.booking_id ? [`id.eq.${pago.booking_id}`] : [])].join(","));
+  if (!tokenAbrePago(token, { pago, reservas: reservas || [] })) {
+    return res.status(404).json({ error: "No encontramos ese pago." });
+  }
 
   try {
     const r = await aplicarPago(pago, resultado === "ok" ? "pagado" : "fallido", {

@@ -114,15 +114,7 @@ function rating(valor: number | string | null): number {
 }
 
 /** Tarjeta del marketplace: lo distintivo es la tira de próximos días. */
-function CampoCardArena({
-  campo,
-  fecha,
-  reservasHabilitadas,
-}: {
-  campo: ArenaCampoCard
-  fecha: string
-  reservasHabilitadas: boolean
-}) {
+function CampoCardArena({ campo, fecha }: { campo: ArenaCampoCard; fecha: string }) {
   const dias = campo.proximos_dias ?? []
   const foto = campo.foto_portada_url
     ? cfImageDeliveryUrl(campo.foto_portada_url, { width: 600, quality: 75, fit: 'cover' })
@@ -234,11 +226,9 @@ function CampoCardArena({
           </span>
           <span
             style={jost}
-            className={`inline-flex min-h-[40px] items-center px-[14px] text-[13px] tracking-[0.04em] ${
-              reservasHabilitadas ? 'bg-[#CC4B37] text-[#FFFFFF]' : 'border border-solid border-[#EEEEEE] text-[#666666]'
-            }`}
+            className="inline-flex min-h-[40px] items-center bg-[#CC4B37] px-[14px] text-[13px] tracking-[0.04em] text-[#FFFFFF]"
           >
-            {reservasHabilitadas ? 'RESERVAR' : 'PRÓXIMAMENTE'}
+            RESERVAR
           </span>
         </div>
       </div>
@@ -575,12 +565,7 @@ export function MarketplaceClient({
             >
               {data.campos.length > 0 ? (
                 data.campos.map((c) => (
-                  <CampoCardArena
-                    key={c.field_id}
-                    campo={c}
-                    fecha={fecha}
-                    reservasHabilitadas={data.reservas_habilitadas}
-                  />
+                  <CampoCardArena key={c.field_id} campo={c} fecha={fecha} />
                 ))
               ) : (
                 <div

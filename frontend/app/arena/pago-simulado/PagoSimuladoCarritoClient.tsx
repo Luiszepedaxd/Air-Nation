@@ -49,7 +49,10 @@ export function PagoSimuladoCarritoClient({
     setError('')
     setOcupado(true)
     try {
-      await arenaSend('POST', `/payments/mock/${paymentId}/complete?result=${resultado}`)
+      await arenaSend(
+        'POST',
+        `/payments/mock/${paymentId}/complete?result=${resultado}&t=${encodeURIComponent(token)}`
+      )
       window.location.href = volver
     } catch (err) {
       setError(arenaErrorMessage(err))

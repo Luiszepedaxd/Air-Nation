@@ -42,7 +42,11 @@ export function PagoSimuladoClient({ codigo }: { codigo: string }) {
     setError('')
     setOcupado(true)
     try {
-      await arenaSend('POST', `/payments/mock/${reserva.pago_pendiente.id}/complete?result=${resultado}`)
+      // El token del link es lo que autoriza la aprobación de prueba.
+      await arenaSend(
+        'POST',
+        `/payments/mock/${reserva.pago_pendiente.id}/complete?result=${resultado}&t=${encodeURIComponent(token)}`
+      )
       window.location.href = volver
     } catch (err) {
       setError(arenaErrorMessage(err))

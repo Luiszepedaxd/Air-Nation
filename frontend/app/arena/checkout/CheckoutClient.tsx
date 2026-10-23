@@ -48,6 +48,9 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
   const [email, setEmail] = useState(contacto?.email ?? '')
   const [telefono, setTelefono] = useState('')
   const [acepta, setAcepta] = useState(false)
+  // Tarjeta de prueba: vive solo en esta pantalla. Nunca se manda al backend
+  // ni se guarda — el cobro es simulado.
+  const [tarjeta, setTarjeta] = useState({ numero: '', venc: '', cvv: '', nombre: '' })
   const [error, setError] = useState('')
   const [reservaMala, setReservaMala] = useState<number | null>(null)
   const [pagando, setPagando] = useState(false)
@@ -146,6 +149,9 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
     setReservaMala(null)
     if (!nombre.trim()) return setError('Escribe el nombre de quien reserva.')
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Revisa el correo: ahí te llegan los QR.')
+    if (!tarjeta.numero.trim() || !tarjeta.venc.trim() || !tarjeta.cvv.trim() || !tarjeta.nombre.trim()) {
+      return setError('Completa los datos de la tarjeta de prueba.')
+    }
     if (!acepta) return setError('Para pagar necesitas aceptar la política de cancelación y los términos.')
     if (rev.invalidas.size > 0) {
       return setError('Hay reservas que ya no se pueden pagar. Edítalas o quítalas para continuar.')
@@ -162,9 +168,15 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
         contacto: { nombre: nombre.trim(), email: email.trim(), telefono: telefono.trim() || null },
         acepta_politica: true,
       })
+      // Modo prueba: el pago se aprueba en el mismo flujo del webhook (confirma
+      // las reservas y manda el correo con los QR). Si falla, la confirmación
+      // ya sabe mostrar el pago pendiente.
+      await arenaSend(
+        'POST',
+        `/payments/mock/${r.payment_id}/complete?result=ok&t=${encodeURIComponent(r.access_token)}`
+      ).catch(() => {})
       // El carrito se vacía en la confirmación, cuando el pago ya está hecho.
-      window.location.href =
-        r.checkout_url || `/arena/confirmacion?p=${r.payment_id}&t=${r.access_token}`
+      window.location.href = `/arena/confirmacion?p=${r.payment_id}&t=${r.access_token}`
     } catch (err) {
       setReservaMala(err instanceof ArenaApiError ? err.reservaIndex ?? null : null)
       setError(arenaErrorMessage(err))
@@ -298,17 +310,70 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
             <p className="mb-3.5 text-[14px] text-[#666666]">
               Tienes 15 minutos para completar el pago una vez que continúes.
             </p>
-            <div className="flex items-start gap-3 border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-3.5">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="mt-0.5 shrink-0">
-                <rect x="5" y="10.5" width="14" height="10" stroke="currentColor" strokeWidth="1.8" />
-                <path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" stroke="currentColor" strokeWidth="1.8" />
-              </svg>
-              <p className="m-0 text-[14px]">
-                <b className="mb-0.5 block text-[15px]">Pago seguro</b>
-                Te llevamos a la página del procesador para pagar con tarjeta de crédito o débito.
-                AirNation no guarda los datos de tu tarjeta.
-              </p>
+            <p
+              style={jost}
+              className="mb-3.5 inline-block bg-[#FFF3CD] px-2 py-1 text-[10px] tracking-[0.12em] text-[#856404]"
+            >
+              Modo prueba: no se cobra
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="c-tarjeta" className="mb-1 block text-[14px] font-bold">
+                  Número de tarjeta
+                </label>
+                <input
+                  id="c-tarjeta"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="4242 4242 4242 4242"
+                  className={inputClass}
+                  value={tarjeta.numero}
+                  onChange={(e) => setTarjeta({ ...tarjeta, numero: e.target.value })}
+                />
+              </div>
+              <div>
+                <label htmlFor="c-venc" className="mb-1 block text-[14px] font-bold">
+                  Vencimiento
+                </label>
+                <input
+                  id="c-venc"
+                  autoComplete="off"
+                  placeholder="MM/AA"
+                  className={inputClass}
+                  value={tarjeta.venc}
+                  onChange={(e) => setTarjeta({ ...tarjeta, venc: e.target.value })}
+                />
+              </div>
+              <div>
+                <label htmlFor="c-cvv" className="mb-1 block text-[14px] font-bold">
+                  CVV
+                </label>
+                <input
+                  id="c-cvv"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="123"
+                  className={inputClass}
+                  value={tarjeta.cvv}
+                  onChange={(e) => setTarjeta({ ...tarjeta, cvv: e.target.value })}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="c-titular" className="mb-1 block text-[14px] font-bold">
+                  Nombre en la tarjeta
+                </label>
+                <input
+                  id="c-titular"
+                  autoComplete="off"
+                  className={inputClass}
+                  value={tarjeta.nombre}
+                  onChange={(e) => setTarjeta({ ...tarjeta, nombre: e.target.value })}
+                />
+              </div>
             </div>
+            <p className="mt-2 text-[13px] text-[#666666]">
+              Cualquier dato sirve. La tarjeta no sale de esta pantalla: no se manda ni se guarda.
+            </p>
             <label className="mt-3.5 flex items-start gap-2.5 text-[14px]">
               <input
                 type="checkbox"

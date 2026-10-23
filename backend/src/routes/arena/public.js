@@ -1,4 +1,3 @@
-const crypto = require("node:crypto");
 const express = require("express");
 const supabase = require("../../lib/supabase");
 const { requireAuth } = require("../../middleware/requireAuth");
@@ -22,18 +21,13 @@ const {
 const notify = require("../../lib/arena/notify");
 const { parseMarketplaceQuery, parseCarrito } = require("../../lib/arena/marketplace");
 const { dayHours } = require("../../lib/arena/horario");
+const { comparaToken } = require("../../lib/arena/tokens");
 const { dayKey } = require("../../services/joulie/time");
 
 const router = express.Router();
 
 const CODIGO = /^AR-[0-9A-Z]{6}$/;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-
-function comparaToken(a, b) {
-  const x = Buffer.from(String(a || ""));
-  const y = Buffer.from(String(b || ""));
-  return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
-}
 
 const QR_VISIBLE = ["confirmada", "completada", "no_show"];
 

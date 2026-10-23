@@ -120,7 +120,6 @@ export function DetalleClient({
   const items = ficha.items
   const base = useMemo(() => items.filter((i) => i.es_base), [items])
   const extras = useMemo(() => items.filter((i) => i.tipo === 'renta' || i.tipo === 'extra'), [items])
-  const habilitado = ficha.arena.reservas_habilitadas
 
   /** Pestañas solo si hay paquetes de más de una disciplina. */
   const disciplinas = useMemo(
@@ -540,12 +539,7 @@ export function DetalleClient({
         ) : null}
 
         <div className="grid gap-2">
-          {!habilitado ? (
-            <p className="border border-solid border-[#EEEEEE] bg-[#F4F4F4] p-3 text-[13px] text-[#666666]">
-              Reservas próximamente. Este campo ya está en ARENA, pero el pago en línea todavía
-              no está abierto.
-            </p>
-          ) : editando != null ? (
+          {editando != null ? (
             <>
               <button
                 type="button"
