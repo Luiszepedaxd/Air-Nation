@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import type { ArenaFichaPublica } from '@/lib/arena-api'
-import { AgregarAlCarrito } from '@/components/arena/AgregarAlCarrito'
 import { formatCentavos } from '@/components/arena/MoneyText'
 
 const jost = {
@@ -95,22 +94,15 @@ export function ArenaPaquetes({
                   {item.max_jugadores ? `Hasta ${item.max_jugadores}` : ''}
                 </p>
               ) : null}
-              <div className="mt-auto flex flex-col gap-2">
+              {/* La reserva se arma en /arena/[slug]: ahí está el calendario. */}
+              <div className="mt-auto">
                 <Link
-                  href={`/campos/${slug}/reservar?item=${item.id}`}
+                  href={`/arena/${slug}`}
                   style={jost}
-                  className="inline-flex min-h-[44px] items-center justify-center bg-[#111111] px-4 text-[11px] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center bg-[#111111] px-4 text-[11px] tracking-[0.12em] text-[#FFFFFF] transition-colors hover:bg-[#CC4B37]"
                 >
                   RESERVAR
                 </Link>
-                <AgregarAlCarrito
-                  campo={{
-                    field_id: ficha.field.id,
-                    slug,
-                    nombre: ficha.field.nombre,
-                  }}
-                  item={item}
-                />
               </div>
             </div>
           </li>

@@ -391,7 +391,9 @@ export default function BottomNav() {
       </nav>
 
       {/* Bottom Nav — mobile (5 ítems: HOME, OPERADOR, MENSAJES, CAMPOS, ARSENAL) */}
+      {/* data-bottom-nav: las barras fijas de ARENA se montan arriba de esta. */}
       <nav
+        data-bottom-nav
         className={`fixed bottom-0 inset-x-0 lg:hidden ${
           glass
             ? 'z-[320] border-t border-white/25 [&_svg_path]:stroke-white [&_svg_circle]:stroke-white [&_.is-active_svg_path]:stroke-an-accent [&_.is-active_svg_circle]:stroke-an-accent'

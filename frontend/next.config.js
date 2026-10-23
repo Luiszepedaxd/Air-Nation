@@ -7,6 +7,12 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // La reserva por pasos se fue: ahora se hace en el detalle del marketplace.
+      {
+        source: '/campos/:slug/reservar',
+        destination: '/arena/:slug',
+        permanent: true,
+      },
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'airnation.online' }],

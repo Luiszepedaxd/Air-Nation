@@ -295,7 +295,7 @@ export default async function CampoPublicPage({
       />
       <CampoHero
         field={field}
-        reservarHref={arenaAbierto ? `/campos/${params.slug}/reservar` : null}
+        reservarHref={arenaAbierto ? `/arena/${params.slug}` : null}
       />
       {arenaAbierto && arenaFicha ? (
         <ArenaPaquetes slug={params.slug} ficha={arenaFicha} />
