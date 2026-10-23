@@ -33,8 +33,6 @@ export const api = {
 
   users: {
     get: (id: string) => request<{ user: any }>(`/users/${id}`),
-    register: (data: { username: string; email: string; team_id?: string }) =>
-      request<{ user: any }>("/users/register", { method: "POST", body: JSON.stringify(data) }),
   },
 
   admin: {

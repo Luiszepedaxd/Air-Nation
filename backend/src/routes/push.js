@@ -1,18 +1,11 @@
 const express = require('express')
-const { createClient } = require('@supabase/supabase-js')
+const supabase = require('../lib/supabase')
 const router = express.Router()
-function getServiceClient() {
-return createClient(
-process.env.SUPABASE_URL,
-process.env.SUPABASE_SERVICE_KEY
-)
-}
 // Middleware: verifica el JWT de Supabase y extrae el user_id
 async function requireAuth(req, res, next) {
 const auth = req.headers.authorization || ''
 const token = auth.replace('Bearer ', '').trim()
 if (!token) return res.status(401).json({ error: 'No autorizado' })
-const supabase = getServiceClient()
 const { data: { user }, error } = await supabase.auth.getUser(token)
 if (error || !user) return res.status(401).json({ error: 'Token inválido' })
 req.userId = user.id
@@ -25,7 +18,6 @@ const { endpoint, p256dh, auth, userAgent } = req.body
 if (!endpoint || !p256dh || !auth) {
 return res.status(400).json({ error: 'Faltan datos de suscripción' })
 }
-const supabase = getServiceClient()
 const { error } = await supabase
 .from('push_subscriptions')
 .upsert(
@@ -49,7 +41,6 @@ res.json({ ok: true })
 router.delete('/unsubscribe', requireAuth, async (req, res) => {
 const { endpoint } = req.body
 if (!endpoint) return res.status(400).json({ error: 'Falta endpoint' })
-const supabase = getServiceClient()
 const { error } = await supabase
 .from('push_subscriptions')
 .delete()
@@ -87,7 +78,6 @@ router.post('/fcm/register', requireAuth, async (req, res) => {
   if (!['android', 'ios'].includes(platform)) {
     return res.status(400).json({ error: 'Platform debe ser android o ios' })
   }
-  const supabase = getServiceClient()
   const { error } = await supabase
     .from('fcm_tokens')
     .upsert(
@@ -132,7 +122,6 @@ router.post('/fcm/register', requireAuth, async (req, res) => {
 router.delete('/fcm/unregister', requireAuth, async (req, res) => {
   const { token } = req.body
   if (!token) return res.status(400).json({ error: 'Falta token' })
-  const supabase = getServiceClient()
   const { error } = await supabase
     .from('fcm_tokens')
     .delete()

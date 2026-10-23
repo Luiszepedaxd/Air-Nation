@@ -2,8 +2,6 @@ const express = require("express");
 const supabase = require("../lib/supabase");
 const { requireAdmin } = require("../middleware/requireAdmin");
 const { requireAuth } = require("../middleware/requireAuth");
-const { ipRateLimit } = require("../lib/arena/rateLimit");
-
 const router = express.Router();
 
 const VALID_ROLES = new Set([
@@ -75,8 +73,6 @@ router.get("/search", requireAdmin, async (req, res) => {
 const PUBLIC_USER_SELECT =
   "id, alias, nombre, ciudad, rol, avatar_url, foto_portada_url, bio, instagram, tiktok, youtube, facebook, member_number, created_at, perfil_publico, team_id";
 
-const registerRateLimit = ipRateLimit(8);
-
 // GET /api/v1/users/:id — perfil público (sin credencial ni email)
 router.get("/:id", async (req, res) => {
   try {
@@ -100,17 +96,6 @@ router.get("/:id", async (req, res) => {
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
-});
-
-// POST /api/v1/users/register — legacy; registro real vía Supabase Auth en el cliente
-router.post("/register", registerRateLimit, (req, res) => {
-  const { username, email } = req.body || {};
-  if (!username || !email) {
-    return res.status(400).json({ error: "Username y email requeridos" });
-  }
-  return res.status(410).json({
-    error: "Usa el registro en la app (Supabase Auth). Este endpoint ya no crea cuentas.",
-  });
 });
 
 /**

@@ -1,5 +1,5 @@
 const webpush = require('web-push')
-const { createClient } = require('@supabase/supabase-js')
+const supabase = require('./supabase')
 
 // ── Firebase Admin (FCM) ─────────────────────────────────────────────────────
 let firebaseApp = null
@@ -26,19 +26,11 @@ function getFirebaseApp() {
   }
 }
 
-function getServiceClient() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
-}
-
 // ── FCM: enviar a tokens nativos ─────────────────────────────────────────────
 async function sendFcmToUser(userId, payload) {
   const app = getFirebaseApp()
   if (!app) return
 
-  const supabase = getServiceClient()
   const { data: tokens, error } = await supabase
     .from('fcm_tokens')
     .select('id, token, platform')
@@ -114,7 +106,6 @@ async function sendWebPushToUser(userId, payload) {
 
   webpush.setVapidDetails(subject, publicKey, privateKey)
 
-  const supabase = getServiceClient()
   const { data: subs, error } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth')

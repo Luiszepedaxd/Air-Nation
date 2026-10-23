@@ -5,7 +5,6 @@ const PUBLIC_ROUTES = [
   { method: "GET", re: /^\/teams\/[0-9a-f-]{36}$/i },
   { method: "GET", re: /^\/replicas\/[^/]+$/ },
   { method: "GET", re: /^\/users\/[0-9a-f-]{36}$/i },
-  { method: "POST", re: /^\/users\/register$/ },
   { method: "GET", re: /^\/docs$/ },
   { method: "POST", re: /^\/feedback$/ },
   { method: "POST", re: /^\/ranking\/solicitudes$/ },

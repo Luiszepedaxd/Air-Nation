@@ -64,8 +64,7 @@ Base URL: `http://localhost:4000/api/v1`
 | GET | `/teams` | Listar equipos |
 | GET | `/teams/:id` | Detalle equipo |
 | POST | `/teams` | Crear equipo |
-| GET | `/users/:id` | Perfil usuario |
-| POST | `/users/register` | Registrar usuario |
+| GET | `/users/:id` | Perfil público (registro vía Supabase Auth en el cliente) |
 | GET | `/replicas/:serial` | Buscar réplica por serie |
 | POST | `/replicas` | Registrar réplica |
 | PATCH | `/replicas/:id/transfer` | Transferir réplica |

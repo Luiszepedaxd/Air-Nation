@@ -27,6 +27,10 @@
 5. **`reportada_robada` en `arsenal`**  
    No existe en el repo; `PATCH /replicas/:id/report` registra en `user_reports` vía service role.
 
+## Registro de usuarios
+
+No hay clientes en el repo que llamen `POST /api/v1/users/register` (Capacitor/Android usa la misma web + Supabase Auth en `/register`). El endpoint fue eliminado; `frontend/lib/api.ts` ya no lo expone.
+
 ## API auth (Hallazgo 2)
 
 Middleware: `backend/src/middleware/apiAuthGate.js`. Test: `npm test` → `apiAuthGate.test.js`.
