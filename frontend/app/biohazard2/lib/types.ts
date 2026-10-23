@@ -174,6 +174,7 @@ export type ProductorConfig = {
 }
 
 export type SponsorLogo = {
+  id?: string
   nombre: string
   logo_url: string
   link: string

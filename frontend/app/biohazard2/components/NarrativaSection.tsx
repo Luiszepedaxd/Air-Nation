@@ -1,8 +1,9 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import type { NarrativaConfig } from '../lib/types'
+import type { NarrativaBloque, NarrativaConfig } from '../lib/types'
 import { BH2_HEADER_STYLE } from '../lib/theme'
+import { CarruselFade } from './CarruselFade'
 
 export function NarrativaSection({ config }: { config: NarrativaConfig }) {
   const bloques = (config.bloques ?? []).filter((b) => b && (b.titulo?.trim() || b.texto?.trim()))
@@ -40,38 +41,59 @@ export function NarrativaSection({ config }: { config: NarrativaConfig }) {
         ) : null}
 
         {bloques.length > 0 ? (
-          <div className="mt-12 grid gap-4 md:grid-cols-3 md:gap-6">
-            {bloques.map((bloque, i) => (
-              <motion.article
-                key={`${bloque.titulo}-${i}`}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                className="border border-[#E5E0DA] bg-white p-5 md:p-6"
-                style={{ borderRadius: 2 }}
-              >
-                {bloque.titulo?.trim() ? (
-                  <p
-                    className="inline-block border border-[#CC4B37]/50 px-2 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-[#CC4B37]"
-                    style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
-                  >
-                    {bloque.titulo.trim()}
-                  </p>
-                ) : null}
-                {bloque.texto?.trim() ? (
-                  <p
-                    className="mt-4 text-sm leading-relaxed text-[#333333] md:text-base"
-                    style={{ fontFamily: 'Lato, sans-serif' }}
-                  >
-                    {bloque.texto.trim()}
-                  </p>
-                ) : null}
-              </motion.article>
-            ))}
-          </div>
+          <>
+            <div className="mt-10 md:hidden">
+              <CarruselFade fade="#F5F3EF">
+                {bloques.map((bloque, i) => (
+                  <div key={`${bloque.titulo}-${i}`} className="w-[86%] shrink-0 snap-center">
+                    <Expediente bloque={bloque} index={i} />
+                  </div>
+                ))}
+              </CarruselFade>
+              {bloques.length > 1 ? (
+                <p
+                  className="mt-3 text-center text-[0.55rem] tracking-[0.3em] text-[#999]"
+                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
+                >
+                  DESLIZA
+                </p>
+              ) : null}
+            </div>
+            <div className="mt-12 hidden gap-6 md:grid md:grid-cols-3">
+              {bloques.map((bloque, i) => (
+                <Expediente key={`${bloque.titulo}-${i}`} bloque={bloque} index={i} />
+              ))}
+            </div>
+          </>
         ) : null}
       </div>
     </section>
+  )
+}
+
+function Expediente({ bloque, index }: { bloque: NarrativaBloque; index: number }) {
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      className="h-full border border-[#E5E0DA] bg-white p-5 md:p-6"
+      style={{ borderRadius: 2 }}
+    >
+      {bloque.titulo?.trim() ? (
+        <p
+          className="inline-block border border-[#CC4B37]/50 px-2 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-[#CC4B37]"
+          style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
+        >
+          {bloque.titulo.trim()}
+        </p>
+      ) : null}
+      {bloque.texto?.trim() ? (
+        <p className="mt-4 text-sm leading-relaxed text-[#333333] md:text-base" style={{ fontFamily: 'Lato, sans-serif' }}>
+          {bloque.texto.trim()}
+        </p>
+      ) : null}
+    </motion.article>
   )
 }

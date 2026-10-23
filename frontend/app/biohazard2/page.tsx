@@ -109,10 +109,10 @@ export default async function Biohazard2Page() {
     ...(offers.length > 0 ? { offers } : {}),
   }
 
-  const visibleBlocks = blocks.filter((b) => b.activo)
+  const visibleBlocks = blocks.filter((b) => b.activo && b.slug !== 'productor')
 
   return (
-    <div className="min-h-screen min-w-[375px] bg-[#F5F3EF] text-[#111111]">
+    <div className="min-h-screen overflow-x-hidden bg-[#F5F3EF] text-[#111111]">
       <LandingNav hasSession={hasSession} />
       <script
         type="application/ld+json"

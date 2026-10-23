@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { SedeConfig } from '../lib/types'
 import { BH2_HEADER_STYLE } from '../lib/theme'
@@ -11,6 +11,8 @@ export function SedeSection({ config }: { config: SedeConfig }) {
   )
   const [activeIndex, setActiveIndex] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const touchX = useRef(0)
+  const swiped = useRef(false)
   const titulo = config.titulo?.trim() || ''
   const descripcion = config.descripcion?.trim() || ''
   const direccion = config.direccion?.trim() || ''
@@ -46,7 +48,25 @@ export function SedeSection({ config }: { config: SedeConfig }) {
                   type="button"
                   className="relative h-[60vh] w-full cursor-zoom-in overflow-hidden bg-white md:h-[70vh]"
                   style={{ borderRadius: 2 }}
-                  onClick={() => setLightboxOpen(true)}
+                  onClick={() => {
+                    if (swiped.current) {
+                      swiped.current = false
+                      return
+                    }
+                    setLightboxOpen(true)
+                  }}
+                  onTouchStart={(e) => {
+                    touchX.current = e.touches[0].clientX
+                    swiped.current = false
+                  }}
+                  onTouchEnd={(e) => {
+                    if (imagenesArr.length < 2) return
+                    const delta = touchX.current - e.changedTouches[0].clientX
+                    if (Math.abs(delta) < 40) return
+                    swiped.current = true
+                    if (delta > 0) goNext()
+                    else goPrev()
+                  }}
                   aria-label="Ampliar foto"
                 >
                   <AnimatePresence mode="wait">

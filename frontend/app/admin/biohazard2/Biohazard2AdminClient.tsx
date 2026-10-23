@@ -30,6 +30,12 @@ import { MediaUploadInput } from '@/app/admin/operacionkursk2/components/MediaUp
 import { ImageUploadInput } from '@/app/admin/operacionkursk2/components/ImageUploadInput'
 import { VideoUploadInput } from '@/app/admin/operacionkursk2/components/VideoUploadInput'
 import type { Biohazard2Slug, GaleriaImagen, VideoItem } from '@/app/biohazard2/lib/types'
+import {
+  buildLogosFromCatalog,
+  selectedIdsFromLogos,
+  type CatalogSponsor,
+  type SponsorLogoEntry,
+} from '@/app/biohazard2/lib/sponsors'
 import { BH2_SLUGS } from '@/app/biohazard2/lib/types'
 import { datetimeLocalToIsoCancun } from '@/app/biohazard2/lib/fechas'
 import { httpUrlOk, linkOk } from '@/app/biohazard2/lib/enlaces'
@@ -70,7 +76,7 @@ const SECTIONS: SectionDef[] = [
   { slug: 'inscripcion', label: 'Inscripción', descripcion: 'Ventanas de precio y CTA de registro.' },
   { slug: 'cronograma', label: 'Cronograma', descripcion: 'Hitos por día (sábado / domingo).' },
   { slug: 'reglamento', label: 'Reglamento', descripcion: 'Reglas del evento.' },
-  { slug: 'productor', label: 'Productor', descripcion: 'SPEAR Airsoft Productions: logo, descripción y redes.' },
+  { slug: 'productor', label: 'Productor', descripcion: 'No se muestra en la landing. El sitio http queda como organizer del evento.' },
   { slug: 'sponsors', label: 'Sponsors', descripcion: 'Selección desde catálogo global.' },
   { slug: 'galeria', label: 'Galería', descripcion: 'Imágenes del evento.' },
   { slug: 'videos', label: 'Videos', descripcion: 'Videos del evento.' },
@@ -181,26 +187,6 @@ function isoToDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-type CatalogSponsor = { id: string; nombre: string; logo_url: string; link: string }
-type SponsorLogoEntry = { nombre: string; logo_url: string; link: string }
-
-function buildLogosFromCatalog(catalog: CatalogSponsor[], selectedIds: Set<string>): SponsorLogoEntry[] {
-  return catalog.filter((s) => selectedIds.has(s.id)).map((s) => ({ nombre: s.nombre, logo_url: s.logo_url, link: s.link }))
-}
-
-function selectedIdsFromLogos(logos: SponsorLogoEntry[], catalog: CatalogSponsor[]): Set<string> {
-  const selected = new Set<string>()
-  for (const logo of logos) {
-    const match = catalog.find(
-      (c) =>
-        (logo.logo_url && c.logo_url && c.logo_url.trim() === logo.logo_url.trim()) ||
-        c.nombre.trim().toLowerCase() === logo.nombre.trim().toLowerCase()
-    )
-    if (match) selected.add(match.id)
-  }
-  return selected
-}
-
 function SponsorsCatalogPicker({
   logos,
   eyebrow,
@@ -273,10 +259,14 @@ function SponsorsCatalogPicker({
                   <div className="flex h-8 w-16 items-center justify-center bg-[#F4F4F4] text-[10px] text-[#AAAAAA]">Sin logo</div>
                 )}
                 <span className="text-sm text-[#111111]">{sponsor.nombre}</span>
+                {sponsor.link ? <span className="ml-auto text-[11px] text-[#AAAAAA]">{sponsor.link}</span> : null}
               </label>
             ))}
           </div>
         )}
+        {!loading && catalog.length > 0 && logos.length === 0 ? (
+          <p className="mt-3 text-[11px] text-[#AAAAAA]">Ningún sponsor seleccionado para esta landing.</p>
+        ) : null}
       </div>
     </div>
   )
@@ -824,7 +814,12 @@ export function Biohazard2AdminClient({ initialBlocks }: { initialBlocks: Biohaz
           </div>
         )
       case 'sponsors': {
-        const logos = asRecords(cfg(slug).logos).map((l) => ({ nombre: strOf(l, 'nombre'), logo_url: strOf(l, 'logo_url'), link: strOf(l, 'link') }))
+        const logos = asRecords(cfg(slug).logos).map((l) => ({
+          id: strOf(l, 'id') || undefined,
+          nombre: strOf(l, 'nombre'),
+          logo_url: strOf(l, 'logo_url'),
+          link: strOf(l, 'link'),
+        }))
         return (
           <SponsorsCatalogPicker
             logos={logos}

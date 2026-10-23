@@ -107,7 +107,7 @@ export function HeroSection({ config }: { config: HeroConfig }) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="text-[0.62rem] tracking-[0.35em] text-[#F2B705] sm:text-[0.7rem]"
+          className="max-w-full break-words text-[0.62rem] tracking-[0.22em] text-[#F2B705] sm:tracking-[0.35em] sm:text-[0.7rem]"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
         >
           {eyebrow}

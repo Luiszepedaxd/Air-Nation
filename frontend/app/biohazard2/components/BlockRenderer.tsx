@@ -9,7 +9,6 @@ import { SedeSection } from './SedeSection'
 import { InscripcionSection } from './InscripcionSection'
 import { CronogramaSection } from './CronogramaSection'
 import { ReglamentoSection } from './ReglamentoSection'
-import { ProductorSection } from './ProductorSection'
 import { SponsorsSection } from './SponsorsSection'
 import { GaleriaSection } from './GaleriaSection'
 import { VideosSection } from './VideosSection'
@@ -26,7 +25,6 @@ import type {
   InscripcionConfig,
   CronogramaConfig,
   ReglamentoConfig,
-  ProductorConfig,
   SponsorsConfig,
   GaleriaConfig,
   VideosConfig,
@@ -56,7 +54,7 @@ export function BlockRenderer({ block }: { block: Biohazard2Block }) {
     case 'reglamento':
       return <ReglamentoSection config={(block.config as ReglamentoConfig) ?? {}} />
     case 'productor':
-      return <ProductorSection config={(block.config as ProductorConfig) ?? {}} />
+      return null
     case 'sponsors':
       return <SponsorsSection config={(block.config as SponsorsConfig) ?? {}} />
     case 'galeria':

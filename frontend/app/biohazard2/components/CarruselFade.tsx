@@ -49,7 +49,8 @@ export function CarruselFade({
       />
       <div
         ref={scrollRef}
-        className={`flex snap-x snap-mandatory gap-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+        className={`flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {children}
       </div>

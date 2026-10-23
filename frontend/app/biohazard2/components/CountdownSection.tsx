@@ -115,7 +115,7 @@ export function CountdownSection({ config }: { config: CountdownConfig }) {
             transition={{ duration: 0.8 }}
             className={`mt-12 md:mt-16 ${listo ? '' : 'invisible'}`}
           >
-            <div className="flex flex-nowrap items-center justify-center gap-1.5 sm:gap-3 md:gap-8">
+            <div className="flex max-w-full flex-nowrap items-center justify-center gap-1 sm:gap-3 md:gap-8">
               <Unit value={daysStr} label="DÍAS" />
               <Separator pulse={pulse} />
               <Unit value={pad(time.hours)} label="HRS" />
@@ -138,7 +138,7 @@ function Unit({ value, label }: { value: string; label: string }) {
         {value.split('').map((char, i) => (
           <span
             key={`${label}-dig-${i}`}
-            className="inline-flex h-12 w-7 items-center justify-center border border-[#E5E0DA] bg-[#FFFFFF] text-xl text-[#111111] shadow-inner sm:h-14 sm:w-9 sm:text-2xl md:h-28 md:w-20 md:text-6xl lg:h-32 lg:w-24 lg:text-7xl"
+            className="inline-flex h-10 w-5 items-center justify-center border border-[#E5E0DA] bg-[#FFFFFF] text-base text-[#111111] shadow-inner sm:h-14 sm:w-9 sm:text-2xl md:h-28 md:w-20 md:text-6xl lg:h-32 lg:w-24 lg:text-7xl"
             style={{
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               fontWeight: 700,
@@ -150,7 +150,7 @@ function Unit({ value, label }: { value: string; label: string }) {
         ))}
       </div>
       <p
-        className="mt-2 text-[0.55rem] tracking-[0.4em] text-[#666666] md:mt-3 md:text-[0.65rem]"
+        className="mt-2 text-[0.55rem] tracking-[0.18em] text-[#666666] sm:tracking-[0.4em] md:mt-3 md:text-[0.65rem]"
         style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
       >
         {label}

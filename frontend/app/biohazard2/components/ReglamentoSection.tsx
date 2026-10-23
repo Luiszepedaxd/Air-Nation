@@ -63,7 +63,7 @@ export function ReglamentoSection({ config }: { config: ReglamentoConfig }) {
               ))}
             </div>
             <div className="relative border-t border-[#D4C9A8]/50 px-6 py-3 pl-[80px] md:px-10 md:pl-[100px]">
-              <p className="text-[9px] uppercase tracking-[0.2em] text-[#8b7e57] md:text-[10px]" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+              <p className="break-words text-[9px] uppercase tracking-[0.12em] text-[#8b7e57] sm:tracking-[0.2em] md:text-[10px]" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
                 {piePagina} · pág 01 / 01
               </p>
             </div>

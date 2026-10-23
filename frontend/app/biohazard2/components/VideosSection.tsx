@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { usePausaVideoFueraDeVista } from '../hooks/usePausaVideoFueraDeVista'
 import type { VideosConfig, VideoItem } from '../lib/types'
+import { CarruselFade } from './CarruselFade'
 
 export function VideosSection({ config }: { config: VideosConfig }) {
   const videos = (config.videos ?? []).filter((v) => typeof v.url === 'string' && v.url.trim())
@@ -40,15 +41,32 @@ export function VideosSection({ config }: { config: VideosConfig }) {
           </h2>
         </motion.div>
 
-        <div
-          className={`grid gap-4 md:gap-6 ${
-            videos.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'
-          }`}
-        >
-          {videos.map((v, i) => (
-            <VideoCard key={`${v.url}-${i}`} video={v} index={i} />
-          ))}
-        </div>
+        {videos.length === 1 ? (
+          <VideoCard video={videos[0]} index={0} />
+        ) : (
+          <>
+            <div className="md:hidden">
+              <CarruselFade fade="#F5F3EF">
+                {videos.map((v, i) => (
+                  <div key={`${v.url}-${i}`} className="w-[88%] shrink-0 snap-center">
+                    <VideoCard video={v} index={i} />
+                  </div>
+                ))}
+              </CarruselFade>
+              <p
+                className="mt-3 text-center text-[0.55rem] tracking-[0.3em] text-[#999]"
+                style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
+              >
+                DESLIZA
+              </p>
+            </div>
+            <div className="hidden gap-6 md:grid md:grid-cols-2">
+              {videos.map((v, i) => (
+                <VideoCard key={`${v.url}-${i}`} video={v} index={i} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   )

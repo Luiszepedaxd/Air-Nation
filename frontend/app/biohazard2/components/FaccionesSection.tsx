@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { FaccionBH2, FaccionesConfig } from '../lib/types'
 import { BH2_COLORS, BH2_HEADER_STYLE } from '../lib/theme'
@@ -47,22 +48,28 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
           ) : null}
         </motion.div>
 
-        {vs ? (
-          <VsLayout facciones={facciones} />
-        ) : facciones.length >= 3 ? (
-          <CarruselFade fade={BH2_COLORS.jungle}>
-            {facciones.map((f, i) => (
-              <div key={`${f.id || f.nombre}-${i}`} className="min-w-[80%] shrink-0 snap-start md:min-w-[32%]">
-                <FaccionCard faccion={f} index={i} />
-              </div>
-            ))}
-          </CarruselFade>
-        ) : (
-          // ponytail: una sola facción se centra; el sello VS es solo para exactamente dos.
-          <div className="mx-auto max-w-md">
-            <FaccionCard faccion={facciones[0]} index={0} />
-          </div>
-        )}
+        <div className="md:hidden">
+          <FaccionesMobile facciones={facciones} />
+        </div>
+
+        <div className="hidden md:block">
+          {vs ? (
+            <VsLayout facciones={facciones} />
+          ) : facciones.length >= 3 ? (
+            <CarruselFade fade={BH2_COLORS.jungle}>
+              {facciones.map((f, i) => (
+                <div key={`${f.id || f.nombre}-${i}`} className="w-[32%] shrink-0 snap-start">
+                  <FaccionCard faccion={f} index={i} />
+                </div>
+              ))}
+            </CarruselFade>
+          ) : (
+            // ponytail: una sola facción se centra; el sello VS es solo para exactamente dos.
+            <div className="mx-auto max-w-md">
+              <FaccionCard faccion={facciones[0]} index={0} />
+            </div>
+          )}
+        </div>
 
         {nota ? (
           <p className="mx-auto mt-10 max-w-2xl text-center text-sm text-white/60" style={{ fontFamily: 'Lato, sans-serif' }}>
@@ -76,9 +83,9 @@ export function FaccionesSection({ config }: { config: FaccionesConfig }) {
 
 function VsLayout({ facciones }: { facciones: FaccionBH2[] }) {
   return (
-    <div className="relative grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 md:gap-16">
+    <div className="relative grid grid-cols-2 items-stretch gap-16">
       <FaccionCard faccion={facciones[0]} index={0} />
-      <div className="flex justify-center md:absolute md:left-1/2 md:top-1/2 md:z-10 md:-translate-x-1/2 md:-translate-y-1/2">
+      <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
         <span
           className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CC4B37] text-lg text-white"
           style={{ fontFamily: 'Jost, sans-serif', fontWeight: 900 }}
@@ -87,6 +94,75 @@ function VsLayout({ facciones }: { facciones: FaccionBH2[] }) {
         </span>
       </div>
       <FaccionCard faccion={facciones[1]} index={1} />
+    </div>
+  )
+}
+
+function FaccionesMobile({ facciones }: { facciones: FaccionBH2[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const onScroll = () => {
+      const first = el.children[0] as HTMLElement | undefined
+      const slideW = first?.offsetWidth ?? el.clientWidth
+      const idx = Math.round(el.scrollLeft / Math.max(slideW + 12, 1))
+      setActive(Math.min(facciones.length - 1, Math.max(0, idx)))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [facciones.length])
+
+  function irA(i: number) {
+    const el = ref.current
+    const child = el?.children[i] as HTMLElement | undefined
+    if (!el || !child) return
+    const left = child.offsetLeft - (el.clientWidth - child.offsetWidth) / 2
+    el.scrollTo({ left, behavior: 'smooth' })
+  }
+
+  return (
+    <div>
+      <div
+        ref={ref}
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {facciones.map((f, i) => (
+          <div key={`${f.id || f.nombre}-${i}`} className="w-[88%] shrink-0 snap-center">
+            <FaccionCard faccion={f} index={i} />
+          </div>
+        ))}
+      </div>
+      {facciones.length > 1 ? (
+        <>
+          <div className="mt-4 flex items-center justify-center gap-2">
+            {facciones.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => irA(i)}
+                aria-label={`Facción ${i + 1}`}
+                className="h-2 border-0 p-0"
+                style={{
+                  width: i === active ? 20 : 8,
+                  borderRadius: 4,
+                  background: i === active ? '#CC4B37' : 'rgba(255,255,255,0.35)',
+                }}
+              />
+            ))}
+          </div>
+          <p
+            className="mt-2 text-center text-[0.55rem] tracking-[0.3em] text-white/45"
+            style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
+          >
+            DESLIZA
+          </p>
+        </>
+      ) : null}
     </div>
   )
 }
@@ -177,7 +253,7 @@ function FaccionCard({ faccion, index }: { faccion: FaccionBH2; index: number })
         {whatsapp ? (
           agotada ? (
             <span
-              className="mt-auto inline-flex cursor-not-allowed items-center justify-center bg-[#333] px-4 py-2.5 text-center text-[0.6rem] uppercase tracking-[0.12em] text-white/40"
+              className="mt-auto inline-flex w-full cursor-not-allowed items-center justify-center whitespace-normal bg-[#333] px-4 py-2.5 text-center text-[0.6rem] uppercase leading-snug tracking-[0.12em] text-white/40"
               style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700, borderRadius: 2 }}
             >
               {cta}
@@ -187,7 +263,7 @@ function FaccionCard({ faccion, index }: { faccion: FaccionBH2; index: number })
               href={whatsapp}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-auto inline-flex items-center justify-center bg-[#25D366] px-4 py-2.5 text-center text-[0.6rem] uppercase tracking-[0.12em] text-white transition-opacity hover:opacity-90"
+              className="mt-auto inline-flex w-full items-center justify-center whitespace-normal bg-[#25D366] px-4 py-2.5 text-center text-[0.6rem] uppercase leading-snug tracking-[0.12em] text-white transition-opacity hover:opacity-90"
               style={{ fontFamily: 'Jost, sans-serif', fontWeight: 700, borderRadius: 2 }}
             >
               {cta}

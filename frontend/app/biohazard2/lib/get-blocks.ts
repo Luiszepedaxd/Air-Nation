@@ -1,5 +1,6 @@
 import { createPublicSupabaseClient } from '@/app/u/supabase-public'
-import type { Biohazard2Block, Biohazard2Slug } from './types'
+import { logosParaLanding, type CatalogSponsor } from './sponsors'
+import type { Biohazard2Block, Biohazard2Slug, SponsorsConfig } from './types'
 
 function normalizeConfig(raw: unknown): unknown {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
@@ -28,11 +29,46 @@ export async function getBiohazard2Blocks(): Promise<Biohazard2Block[]> {
     orden: unknown
   }[]
 
-  return rows.map((r) => ({
-    id: String(r.id),
-    slug: r.slug as Biohazard2Slug,
-    config: normalizeConfig(r.config),
-    activo: Boolean(r.activo),
-    orden: Number(r.orden ?? 0),
+  const catalog = rows.some((r) => r.slug === 'sponsors')
+    ? await catalogoSponsorsActivos(supabase)
+    : null
+
+  return rows.map((r) => {
+    const config = normalizeConfig(r.config)
+    return {
+      id: String(r.id),
+      slug: r.slug as Biohazard2Slug,
+      config:
+        r.slug === 'sponsors'
+          ? {
+              ...(config as SponsorsConfig),
+              logos: logosParaLanding((config as SponsorsConfig).logos, catalog),
+            }
+          : config,
+      activo: Boolean(r.activo),
+      orden: Number(r.orden ?? 0),
+    }
+  })
+}
+
+async function catalogoSponsorsActivos(
+  supabase: ReturnType<typeof createPublicSupabaseClient>
+): Promise<CatalogSponsor[] | null> {
+  const { data, error } = await supabase
+    .from('sponsors')
+    .select('id, nombre, logo_url, link')
+    .eq('activo', true)
+    .order('orden', { ascending: true })
+
+  if (error) {
+    console.error('[biohazard2] sponsors', error.message)
+    return null
+  }
+
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    nombre: String(row.nombre ?? ''),
+    logo_url: String(row.logo_url ?? ''),
+    link: String(row.link ?? ''),
   }))
 }

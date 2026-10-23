@@ -61,11 +61,19 @@ export function MisionSection({ config }: { config: MisionConfig }) {
             <div className="mt-10 md:hidden">
               <CarruselFade fade={BH2_COLORS.jungle}>
                 {objetivos.map((obj, i) => (
-                  <div key={`${obj.codigo}-${i}`} className="min-w-[80%] shrink-0 snap-start">
+                  <div key={`${obj.codigo}-${i}`} className="w-[82%] shrink-0 snap-center">
                     <ObjetivoCard obj={obj} index={i} />
                   </div>
                 ))}
               </CarruselFade>
+              {objetivos.length > 1 ? (
+                <p
+                  className="mt-3 text-center text-[0.55rem] tracking-[0.3em] text-white/45"
+                  style={{ fontFamily: 'Jost, sans-serif', fontWeight: 600 }}
+                >
+                  DESLIZA
+                </p>
+              ) : null}
             </div>
           </>
         ) : null}

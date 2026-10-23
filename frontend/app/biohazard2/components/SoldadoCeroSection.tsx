@@ -97,10 +97,10 @@ export function SoldadoCeroSection({ config }: { config: SoldadoCeroConfig }) {
             <dl className="mt-6">
               {datos.map((d, i) => (
                 <div key={`${d.label}-${i}`} className="flex items-baseline justify-between gap-4 border-b border-dotted border-white/25 py-2">
-                  <dt className="text-[0.62rem] uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+                  <dt className="max-w-[46%] shrink-0 break-words text-[0.62rem] uppercase tracking-[0.14em] text-white/45" style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
                     {d.label?.trim()}
                   </dt>
-                  <dd className="text-right text-sm text-white" style={{ fontFamily: 'Lato, sans-serif' }}>
+                  <dd className="min-w-0 break-words text-right text-sm text-white" style={{ fontFamily: 'Lato, sans-serif' }}>
                     {d.valor?.trim()}
                   </dd>
                 </div>

@@ -88,7 +88,7 @@ export function GaleriaSection({ config }: { config: GaleriaConfig }) {
             {/* Mobile: carrusel horizontal */}
             <div className="md:hidden">
               <div
-                className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 {imagenes.map((img, i) => (
