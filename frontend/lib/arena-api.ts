@@ -79,6 +79,18 @@ export function arenaErrorMessage(err: unknown): string {
 export type ArenaPlan = 'free' | 'premium' | 'pro'
 export type ArenaItemTipo = 'paquete' | 'derecho_campo' | 'renta' | 'extra'
 export type ArenaUnidad = 'por_persona' | 'por_reserva' | 'por_unidad'
+export type ArenaDisciplina = 'airsoft' | 'gotcha' | 'gelsoft'
+export type ArenaTerreno = 'bosque' | 'cqb' | 'urbano' | 'mixto' | 'desierto'
+export type ArenaOrden = 'recomendados' | 'precio_asc' | 'precio_desc' | 'rating'
+
+export const ARENA_DISCIPLINAS: ArenaDisciplina[] = ['airsoft', 'gotcha', 'gelsoft']
+export const ARENA_TERRENOS: { id: ArenaTerreno; label: string }[] = [
+  { id: 'bosque', label: 'Bosque' },
+  { id: 'cqb', label: 'CQB / interior' },
+  { id: 'urbano', label: 'Urbano' },
+  { id: 'mixto', label: 'Mixto' },
+  { id: 'desierto', label: 'Cantera / desierto' },
+]
 
 export type ArenaSettings = {
   field_id: string
@@ -93,6 +105,9 @@ export type ArenaSettings = {
   anticipacion_max_dias: number
   cancelacion_horas_limite: number
   politica_cancelacion: string | null
+  disciplinas: ArenaDisciplina[]
+  terrenos: ArenaTerreno[]
+  edad_minima: number | null
   email_avisos: string | null
   telefono_avisos: string | null
   banco: string | null
@@ -110,12 +125,46 @@ export type ArenaItem = {
   incluye: string[]
   precio_centavos: number
   unidad: ArenaUnidad
+  /** null = el concepto aplica a todas las disciplinas del campo. */
+  disciplina: ArenaDisciplina | null
+  duracion_min: number | null
   min_jugadores: number | null
   max_jugadores: number | null
   max_por_reserva: number | null
   fotos_urls: string[]
   activo: boolean
   orden: number
+}
+
+/** Una tarjeta del marketplace, tal como la devuelve `arena_marketplace`. */
+export type ArenaCampoCard = {
+  field_id: string
+  slug: string
+  nombre: string
+  ciudad: string | null
+  estado: string | null
+  foto_portada_url: string | null
+  logo_url: string | null
+  promedio_rating: number | string | null
+  resenas_count: number
+  disciplinas: ArenaDisciplina[]
+  terrenos: ArenaTerreno[]
+  edad_minima: number | null
+  desde_centavos: number
+  desde_unidad: ArenaUnidad
+  tiene_renta: boolean
+  /** Próximos días con reserva (hasta 6), `YYYY-MM-DD`. */
+  proximos_dias: string[]
+  destacado: boolean
+}
+
+export type ArenaMarketplace = {
+  campos: ArenaCampoCard[]
+  total: number
+  filtros: { estados: string[] }
+  reservas_habilitadas: boolean
+  /** Hoy en America/Mexico_City, como lo ve el servidor. */
+  hoy: string
 }
 
 export type ArenaBlackout = {
@@ -311,15 +360,27 @@ export type ArenaCheckinPreview = {
   hoy: string
 }
 
+export type ArenaResena = {
+  alias: string
+  rating: number
+  comentario: string | null
+  fecha: string
+}
+
 export type ArenaFichaPublica = {
   field: {
     id: string
     nombre: string
     slug: string
     ciudad: string | null
+    estado: string | null
     direccion: string | null
     maps_url: string | null
     foto_portada_url: string | null
+    galeria_urls: string[]
+    logo_url: string | null
+    descripcion: string | null
+    promedio_rating: number | string | null
     horarios_json: unknown
   }
   arena: {
@@ -328,11 +389,45 @@ export type ArenaFichaPublica = {
     cancelacion_horas_limite: number
     anticipacion_min_horas: number
     anticipacion_max_dias: number
+    disciplinas: ArenaDisciplina[]
+    terrenos: ArenaTerreno[]
+    edad_minima: number | null
     reservas_habilitadas: boolean
     /** Galería que administra /admin/arena/landing. */
     fotos_landing: string[]
   }
   items: ArenaItem[]
+  resenas: ArenaResena[]
+}
+
+/** Confirmación de un pago del carrito: `GET /arena/checkout/:paymentId?t=`. */
+export type ArenaCheckoutConfirmacion = {
+  status: 'creado' | 'pendiente' | 'pagado' | 'fallido' | 'reembolsado'
+  payment_id: string
+  total_centavos: number
+  checkout_url: string | null
+  contacto_email: string | null
+  reservas: {
+    codigo: string
+    access_token: string
+    fecha: string
+    num_jugadores: number
+    status: ArenaBookingStatus
+    pago_status: ArenaPagoStatus
+    total_centavos: number
+    items: { nombre: string; cantidad: number; subtotal_centavos: number }[]
+    campo: {
+      id: string
+      nombre: string
+      slug: string
+      ciudad: string | null
+      direccion: string | null
+      maps_url: string | null
+      apertura: string | null
+      cierre: string | null
+    } | null
+    qr_url?: string
+  }[]
 }
 
 /** Bloque de la landing /arena (hero, banner o promo). */

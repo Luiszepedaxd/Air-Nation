@@ -42,3 +42,44 @@ export function sumaDias(fecha: string, dias: number): string {
   const t = new Date(Date.UTC(y, m - 1, d + dias))
   return t.toISOString().slice(0, 10)
 }
+
+/** Piezas de una fecha para la tira de días: "sáb", "24", "oct". */
+export function dowCorto(fecha: string): string {
+  return fmt(fecha, { weekday: 'short' }).replace('.', '')
+}
+
+export function mesCorto(fecha: string): string {
+  return fmt(fecha, { month: 'short' }).replace('.', '')
+}
+
+export function diaNumero(fecha: string): string {
+  return fmt(fecha, { day: 'numeric' })
+}
+
+/** "sábado 24 de octubre" (sin año: la reserva siempre es cercana). */
+export function fechaMedia(fecha: string): string {
+  return fmt(fecha, { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+/** Mayúscula inicial, para textos que empiezan con la fecha. */
+export function conMayuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+/** "09:00:00" → "9 am"; "17:30" → "5:30 pm". */
+export function horaCorta(hora: string | null | undefined): string {
+  if (!hora) return ''
+  const [hh, mm] = String(hora).split(':').map(Number)
+  if (!Number.isFinite(hh)) return String(hora)
+  const ap = hh >= 12 ? 'pm' : 'am'
+  const h12 = ((hh + 11) % 12) + 1
+  return mm ? `${h12}:${String(mm).padStart(2, '0')} ${ap}` : `${h12} ${ap}`
+}
+
+/** 180 → "3 h"; 90 → "1.5 h"; 45 → "45 min". */
+export function duracionCorta(minutos: number | null | undefined): string {
+  if (!minutos) return ''
+  if (minutos < 60) return `${minutos} min`
+  const horas = minutos / 60
+  return `${Number.isInteger(horas) ? horas : horas.toFixed(1).replace('.0', '')} h`
+}

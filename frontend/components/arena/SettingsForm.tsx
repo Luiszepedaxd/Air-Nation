@@ -1,7 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { arenaErrorMessage, arenaSend, type ArenaSettings } from '@/lib/arena-api'
+import {
+  ARENA_DISCIPLINAS,
+  ARENA_TERRENOS,
+  arenaErrorMessage,
+  arenaSend,
+  type ArenaDisciplina,
+  type ArenaSettings,
+  type ArenaTerreno,
+} from '@/lib/arena-api'
 
 const jost = {
   fontFamily: "'Jost', sans-serif",
@@ -28,6 +36,9 @@ export function SettingsForm({
   onSaved?: (s: ArenaSettings) => void
 }) {
   const [v, setV] = useState({
+    disciplinas: settings.disciplinas ?? [],
+    terrenos: settings.terrenos ?? [],
+    edad_minima: settings.edad_minima != null ? String(settings.edad_minima) : '',
     anticipacion_min_horas: String(settings.anticipacion_min_horas),
     anticipacion_max_dias: String(settings.anticipacion_max_dias),
     cancelacion_horas_limite: String(settings.cancelacion_horas_limite),
@@ -41,7 +52,18 @@ export function SettingsForm({
   const [estado, setEstado] = useState<'' | 'guardando' | 'ok'>('')
   const [error, setError] = useState('')
 
-  const set = (k: keyof typeof v, value: string) => setV((prev) => ({ ...prev, [k]: value }))
+  const set = <K extends keyof typeof v>(k: K, value: (typeof v)[K]) =>
+    setV((prev) => ({ ...prev, [k]: value }))
+
+  /** Las disciplinas y los terrenos son listas: se prenden y apagan. */
+  const alternar = <T extends string>(k: 'disciplinas' | 'terrenos', valor: T) =>
+    setV((prev) => {
+      const lista = prev[k] as T[]
+      return {
+        ...prev,
+        [k]: lista.includes(valor) ? lista.filter((x) => x !== valor) : [...lista, valor],
+      }
+    })
 
   const guardar = async () => {
     setError('')
@@ -51,6 +73,9 @@ export function SettingsForm({
         'PATCH',
         `/owner/fields/${fieldId}/settings`,
         {
+          disciplinas: v.disciplinas,
+          terrenos: v.terrenos,
+          edad_minima: v.edad_minima.trim() === '' ? null : Number(v.edad_minima),
           anticipacion_min_horas: Number(v.anticipacion_min_horas),
           anticipacion_max_dias: Number(v.anticipacion_max_dias),
           cancelacion_horas_limite: Number(v.cancelacion_horas_limite),
@@ -72,6 +97,53 @@ export function SettingsForm({
 
   return (
     <div className="flex max-w-[640px] flex-col gap-5" style={lato}>
+      <section className="flex flex-col gap-3">
+        <p style={jost} className="text-[12px] text-[#111111]">
+          Qué se juega aquí
+        </p>
+        <p className="text-[12px] text-[#999999]">
+          Con esto el campo aparece en los filtros de /arena.
+        </p>
+        <fieldset className="flex flex-wrap gap-x-4 gap-y-2">
+          <legend className="mb-1 text-[12px] text-[#666666]">Disciplinas</legend>
+          {ARENA_DISCIPLINAS.map((d) => (
+            <label key={d} className="flex min-h-[36px] items-center gap-2 text-[13px] capitalize text-[#111111]">
+              <input
+                type="checkbox"
+                className="h-[18px] w-[18px] accent-[#CC4B37]"
+                checked={(v.disciplinas as ArenaDisciplina[]).includes(d)}
+                onChange={() => alternar('disciplinas', d)}
+              />
+              {d}
+            </label>
+          ))}
+        </fieldset>
+        <fieldset className="flex flex-wrap gap-x-4 gap-y-2">
+          <legend className="mb-1 text-[12px] text-[#666666]">Terreno</legend>
+          {ARENA_TERRENOS.map((t) => (
+            <label key={t.id} className="flex min-h-[36px] items-center gap-2 text-[13px] text-[#111111]">
+              <input
+                type="checkbox"
+                className="h-[18px] w-[18px] accent-[#CC4B37]"
+                checked={(v.terrenos as ArenaTerreno[]).includes(t.id)}
+                onChange={() => alternar('terrenos', t.id)}
+              />
+              {t.label}
+            </label>
+          ))}
+        </fieldset>
+        <label className="flex max-w-[220px] flex-col gap-1 text-[12px] text-[#666666]">
+          Edad mínima (vacío = sin mínimo)
+          <input
+            className={inputClass}
+            inputMode="numeric"
+            value={v.edad_minima}
+            onChange={(e) => set('edad_minima', e.target.value)}
+            placeholder="12"
+          />
+        </label>
+      </section>
+
       <section className="flex flex-col gap-3">
         <p style={jost} className="text-[12px] text-[#111111]">
           Política de cancelación
