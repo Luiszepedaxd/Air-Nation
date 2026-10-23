@@ -45,6 +45,22 @@ function firstRow<T>(data: T | T[] | null): T | null {
   return Array.isArray(data) ? data[0] ?? null : data
 }
 
+function registroTime(value: string | null | undefined): number {
+  const t = value ? Date.parse(value) : Number.NaN
+  return Number.isFinite(t) ? t : Number.NEGATIVE_INFINITY
+}
+
+/** Newest created_at first. Missing or invalid dates go last. */
+export function compareRegistroDesc(
+  a: { created_at?: string | null },
+  b: { created_at?: string | null }
+): number {
+  const av = registroTime(a.created_at)
+  const bv = registroTime(b.created_at)
+  if (av === bv) return 0
+  return bv - av
+}
+
 export async function fetchMiUsuarioPrivado(
   supabase: SupabaseClient
 ): Promise<{ row: MiUsuarioPrivadoRow | null; error: string | null }> {
@@ -58,8 +74,14 @@ export async function fetchAdminUsuariosPrivados(
 ): Promise<{ rows: MiUsuarioPrivadoRow[]; error: string | null }> {
   const { data, error } = await supabase.rpc('admin_usuarios_privados')
   if (error) return { rows: [], error: error.message }
-  const rows = Array.isArray(data) ? data : data ? [data as MiUsuarioPrivadoRow] : []
-  return { rows: rows as MiUsuarioPrivadoRow[], error: null }
+  const rows = (
+    Array.isArray(data) ? data : data ? [data] : []
+  ) as MiUsuarioPrivadoRow[]
+  // ponytail: RPC has no ORDER BY and its SQL is not in this repo, so the full
+  // payload is sorted here (same rows the admin already loaded). Upgrade: ORDER BY
+  // created_at DESC inside admin_usuarios_privados, then delete this sort.
+  rows.sort(compareRegistroDesc)
+  return { rows, error: null }
 }
 
 export async function fetchVerificarCredencial(
