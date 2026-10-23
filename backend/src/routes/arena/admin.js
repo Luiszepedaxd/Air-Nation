@@ -6,6 +6,7 @@ const { dayKey } = require("../../services/joulie/time");
 const { avisoCuentaLigada, avisoLiquidacion } = require("../../lib/arena/notify");
 const { sendArenaError } = require("../../lib/arena/errors");
 const { generarPasswordTemporal } = require("../../lib/arena/ownerAccounts");
+const { revisarCampoDemo, pagosBorrables } = require("../../lib/arena/demo");
 const { subirFoto } = require("../../lib/arena/uploadFoto");
 
 const router = express.Router();
@@ -111,7 +112,7 @@ router.get("/fields/:fieldId", requireAdmin, async (req, res) => {
 
   const { data: field, error } = await supabase
     .from("fields")
-    .select("id, nombre, slug, ciudad, status, horarios_json")
+    .select("id, nombre, slug, ciudad, status, es_prueba, horarios_json")
     .eq("id", fieldId)
     .maybeSingle();
   if (error) {
@@ -190,6 +191,153 @@ router.patch("/fields/:fieldId/pause", requireAdmin, async (req, res) => {
   }
   if (!data) return res.status(404).json({ error: "Este campo no tiene ARENA configurado." });
   return res.json({ settings: data });
+});
+
+// ─── Campos DEMO ──────────────────────────────────────────────────────────────
+// Tres acciones destructivas que SOLO existen para los campos de prueba
+// (fields.es_prueba = true). Cada una vuelve a leer la bandera en la BD antes
+// de tocar nada: el id que manda el navegador no decide nada.
+
+/** Lee el campo y corta con 404/409 si no es de prueba. Devuelve null si cortó. */
+async function campoDemoOrFail(req, res) {
+  const fieldId = fieldIdOr400(req, res);
+  if (!fieldId) return null;
+
+  const { data: field, error } = await supabase
+    .from("fields")
+    .select("id, nombre, es_prueba")
+    .eq("id", fieldId)
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] demo field:", error.message);
+    res.status(500).json({ error: "Error interno del servidor" });
+    return null;
+  }
+  const corte = revisarCampoDemo(field);
+  if (corte) {
+    res.status(corte.status).json({ error: corte.error });
+    return null;
+  }
+  return field;
+}
+
+/**
+ * Borra reservas, pagos, conceptos cobrados y liquidaciones de un campo demo.
+ * Un pago de carrito solo se borra si TODAS sus reservas son de campos de
+ * prueba; si mezcla con un campo real se queda tal cual.
+ *
+ * ponytail: son cuatro DELETE sueltos, no una transacción. Si quieres que sea
+ * atómico, va una función SQL en arena_marketplace_extra.sql; para datos de
+ * demostración, volver a correr "limpiar" termina el trabajo.
+ */
+async function limpiarReservasDemo(fieldId) {
+  const reservasRes = await supabase
+    .from("arena_bookings")
+    .select("id, payment_id")
+    .eq("field_id", fieldId);
+  if (reservasRes.error) return { error: reservasRes.error.message };
+
+  const reservas = reservasRes.data || [];
+  const pagosCandidatos = [...new Set(reservas.map((r) => r.payment_id).filter(Boolean))];
+
+  // ¿Alguno de esos pagos cubre además reservas de un campo que NO es de prueba?
+  let pagosABorrar = [];
+  if (pagosCandidatos.length) {
+    const hermanasRes = await supabase
+      .from("arena_bookings")
+      .select("payment_id, field_id")
+      .in("payment_id", pagosCandidatos);
+    if (hermanasRes.error) return { error: hermanasRes.error.message };
+
+    const hermanas = hermanasRes.data || [];
+    const fieldIds = [...new Set(hermanas.map((b) => b.field_id))];
+    const camposRes = await supabase.from("fields").select("id, es_prueba").in("id", fieldIds);
+    if (camposRes.error) return { error: camposRes.error.message };
+    const dePrueba = new Map((camposRes.data || []).map((f) => [f.id, f.es_prueba === true]));
+
+    pagosABorrar = pagosBorrables(
+      hermanas.map((b) => ({ payment_id: b.payment_id, es_prueba: dePrueba.get(b.field_id) === true }))
+    );
+  }
+
+  // Las liquidaciones primero: arena_bookings.payout_id se pone en NULL solo.
+  const payoutsRes = await supabase.from("arena_payouts").delete().eq("field_id", fieldId);
+  if (payoutsRes.error) return { error: payoutsRes.error.message };
+
+  // Borrar la reserva arrastra sus arena_booking_items y el pago de una sola
+  // reserva (arena_payments.booking_id es ON DELETE CASCADE). El check-in vive
+  // en columnas de la propia reserva, así que se va con ella.
+  const bookingsRes = await supabase.from("arena_bookings").delete().eq("field_id", fieldId);
+  if (bookingsRes.error) return { error: bookingsRes.error.message };
+
+  // Los pagos de carrito quedan huérfanos (booking_id NULL): esos van aparte.
+  if (pagosABorrar.length) {
+    const pagosRes = await supabase.from("arena_payments").delete().in("id", pagosABorrar);
+    if (pagosRes.error) return { error: pagosRes.error.message };
+  }
+
+  return {
+    reservas: reservas.length,
+    pagos: pagosABorrar.length,
+    pagos_conservados: pagosCandidatos.length - pagosABorrar.length,
+  };
+}
+
+// PATCH /arena/admin/demo/fields/:fieldId/ocultar — apaga ARENA del campo demo.
+router.patch("/demo/fields/:fieldId/ocultar", requireAdmin, async (req, res) => {
+  const field = await campoDemoOrFail(req, res);
+  if (!field) return;
+
+  const { data, error } = await supabase
+    .from("arena_field_settings")
+    .update({ activo: false })
+    .eq("field_id", field.id)
+    .select("*")
+    .maybeSingle();
+  if (error) {
+    console.error("[arena:admin] demo ocultar:", error.message);
+    return res.status(500).json({ error: "Error interno del servidor" });
+  }
+  if (!data) return res.status(404).json({ error: "Este campo no tiene ARENA configurado." });
+  return res.json({ settings: data });
+});
+
+// POST /arena/admin/demo/fields/:fieldId/limpiar-reservas
+router.post("/demo/fields/:fieldId/limpiar-reservas", requireAdmin, async (req, res) => {
+  const field = await campoDemoOrFail(req, res);
+  if (!field) return;
+
+  const r = await limpiarReservasDemo(field.id);
+  if (r.error) {
+    console.error("[arena:admin] demo limpiar:", r.error);
+    return res.status(500).json({ error: "No se pudieron borrar las reservas demo." });
+  }
+  return res.json(r);
+});
+
+// DELETE /arena/admin/demo/fields/:fieldId — borra el campo demo completo.
+router.delete("/demo/fields/:fieldId", requireAdmin, async (req, res) => {
+  const field = await campoDemoOrFail(req, res);
+  if (!field) return;
+
+  // arena_bookings y arena_payouts apuntan a fields con ON DELETE RESTRICT:
+  // sin limpiarlas primero, el DELETE del campo falla.
+  const limpieza = await limpiarReservasDemo(field.id);
+  if (limpieza.error) {
+    console.error("[arena:admin] demo borrar (limpieza):", limpieza.error);
+    return res.status(500).json({ error: "No se pudieron borrar las reservas del campo demo." });
+  }
+
+  // El resto (settings, items, miembros, días cerrados) cae por CASCADE.
+  const { error } = await supabase.from("fields").delete().eq("id", field.id);
+  if (error) {
+    console.error("[arena:admin] demo borrar:", error.message);
+    return res.status(409).json({
+      error:
+        "No se pudo borrar el campo: todavía tiene algo colgando (eventos, reseñas o solicitudes). Bórralos desde /admin/campos.",
+    });
+  }
+  return res.json({ borrado: field.id, nombre: field.nombre, ...limpieza });
 });
 
 // ─── Miembros (cuentas que administran el campo) ──────────────────────────────

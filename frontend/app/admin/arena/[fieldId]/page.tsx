@@ -19,6 +19,7 @@ type FieldRow = {
   slug: string | null
   ciudad: string | null
   status: string | null
+  es_prueba: boolean | null
   horarios_json: unknown
 }
 
@@ -73,6 +74,7 @@ export default async function AdminArenaFieldPage({
           slug: String(field.slug ?? ''),
           ciudad: field.ciudad ?? null,
           status: String(field.status ?? ''),
+          es_prueba: field.es_prueba === true,
           horarios_json: field.horarios_json ?? null,
         }}
       />

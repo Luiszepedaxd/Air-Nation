@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/apiFetch'
 import {
@@ -42,6 +43,7 @@ type FieldHeader = {
   slug: string
   ciudad: string | null
   status: string
+  es_prueba: boolean
   horarios_json: unknown
 }
 
@@ -371,6 +373,127 @@ function Duenos({ fieldId }: { fieldId: string }) {
   )
 }
 
+/**
+ * Acciones de un campo DEMO. Solo se pinta cuando `es_prueba` es true, y el
+ * backend vuelve a comprobarlo: esto es comodidad, no la barrera.
+ */
+function AccionesDemo({ field }: { field: FieldHeader }) {
+  const router = useRouter()
+  const [ocupado, setOcupado] = useState<'ocultar' | 'limpiar' | 'borrar' | null>(null)
+  const [mensaje, setMensaje] = useState('')
+  const [error, setError] = useState('')
+
+  const correr = async (
+    accion: 'ocultar' | 'limpiar' | 'borrar',
+    pregunta: string,
+    hacer: () => Promise<string>
+  ) => {
+    if (!window.confirm(pregunta)) return
+    setError('')
+    setMensaje('')
+    setOcupado(accion)
+    try {
+      setMensaje(await hacer())
+    } catch (e) {
+      setError(arenaErrorMessage(e))
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  const btn =
+    'min-h-[44px] border border-solid px-4 text-[11px] tracking-[0.12em] disabled:opacity-50'
+
+  return (
+    <div className="mt-8 border border-solid border-[#CC4B37] p-4">
+      <h2 style={jost} className="text-[13px] tracking-[0.12em] text-[#CC4B37]">
+        CAMPO DE PRUEBA
+      </h2>
+      <p className="mt-1 text-[13px] text-[#666666]">
+        Este campo está marcado como de prueba: no sale en /arena ni en el directorio.
+        Estas tres acciones solo funcionan con campos de prueba.
+      </p>
+
+      <div className="mt-4 flex flex-wrap gap-2" style={jost}>
+        <button
+          type="button"
+          disabled={ocupado !== null}
+          className={`${btn} border-[#EEEEEE] bg-[#F4F4F4] text-[#111111]`}
+          onClick={() =>
+            correr(
+              'ocultar',
+              `¿Apagar ARENA en "${field.nombre}"? Deja de aceptar reservas nuevas; las que ya existen se respetan.`,
+              async () => {
+                await arenaSend('PATCH', `/admin/demo/fields/${field.id}/ocultar`)
+                router.refresh()
+                return 'ARENA apagado: el campo ya no acepta reservas.'
+              }
+            )
+          }
+        >
+          {ocupado === 'ocultar' ? 'APAGANDO…' : 'APAGAR ARENA'}
+        </button>
+
+        <button
+          type="button"
+          disabled={ocupado !== null}
+          className={`${btn} border-[#EEEEEE] bg-[#F4F4F4] text-[#111111]`}
+          onClick={() =>
+            correr(
+              'limpiar',
+              `¿Borrar TODAS las reservas, pagos y liquidaciones de "${field.nombre}"? No se puede deshacer.`,
+              async () => {
+                const r = await arenaSend<{ reservas: number; pagos: number; pagos_conservados: number }>(
+                  'POST',
+                  `/admin/demo/fields/${field.id}/limpiar-reservas`
+                )
+                router.refresh()
+                return `Se borraron ${r.reservas} reservas y ${r.pagos} pagos.${
+                  r.pagos_conservados
+                    ? ` Se conservaron ${r.pagos_conservados} pagos que también cubren campos reales.`
+                    : ''
+                }`
+              }
+            )
+          }
+        >
+          {ocupado === 'limpiar' ? 'LIMPIANDO…' : 'LIMPIAR RESERVAS DEMO'}
+        </button>
+
+        <button
+          type="button"
+          disabled={ocupado !== null}
+          className={`${btn} border-[#CC4B37] bg-[#CC4B37] text-[#FFFFFF]`}
+          onClick={() =>
+            correr(
+              'borrar',
+              `¿Borrar el campo "${field.nombre}" y todo lo suyo (catálogo, horario, reservas y pagos)? No se puede deshacer.`,
+              async () => {
+                await arenaSend('DELETE', `/admin/demo/fields/${field.id}`)
+                router.replace('/admin/arena')
+                return 'Campo borrado.'
+              }
+            )
+          }
+        >
+          {ocupado === 'borrar' ? 'BORRANDO…' : 'BORRAR CAMPO DEMO'}
+        </button>
+      </div>
+
+      {mensaje ? (
+        <p className="mt-3 text-[13px] text-[#2F7D4F]" role="status">
+          {mensaje}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mt-3 text-[13px] text-[#CC4B37]" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 export function AdminArenaFieldClient({ field }: { field: FieldHeader }) {
   const [tab, setTab] = useState<Tab>('config')
   const [settings, setSettings] = useState<ArenaSettings | null>(null)
@@ -455,6 +578,8 @@ export function AdminArenaFieldClient({ field }: { field: FieldHeader }) {
           </p>
         ) : null}
       </div>
+
+      {field.es_prueba ? <AccionesDemo field={field} /> : null}
     </div>
   )
 }
