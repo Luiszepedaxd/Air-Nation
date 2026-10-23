@@ -223,6 +223,21 @@ export function DetalleClient({
     (i.min_jugadores == null || jugadores >= i.min_jugadores) &&
     (i.max_jugadores == null || jugadores <= i.max_jugadores)
 
+  // Elegir un paquete ajusta el grupo a su rango en vez de bloquearlo.
+  const elegirBase = (p: ArenaItem) => {
+    const n = Math.min(p.max_jugadores ?? 60, Math.max(p.min_jugadores ?? 1, jugadores))
+    if (n !== jugadores) {
+      setJugadores(n)
+      setExtrasSel((prev) => {
+        const next = { ...prev }
+        for (const i of items) if (i.unidad === 'por_persona' && next[i.id] > n) next[i.id] = n
+        return next
+      })
+    }
+    setBaseId(p.id)
+    setError('')
+  }
+
   const topeExtra = (i: ArenaItem) =>
     i.unidad === 'por_persona' ? jugadores : i.unidad === 'por_reserva' ? 1 : i.max_por_reserva ?? 20
 
@@ -437,11 +452,7 @@ export function DetalleClient({
                     name="paquete"
                     className="mt-[3px] h-4 w-4 accent-[#CC4B37]"
                     checked={baseId === p.id}
-                    disabled={!ok}
-                    onChange={() => {
-                      setBaseId(p.id)
-                      setError('')
-                    }}
+                    onChange={() => elegirBase(p)}
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block font-bold">{p.nombre}</span>
@@ -731,13 +742,11 @@ export function DetalleClient({
                     <button
                       type="button"
                       onClick={() => {
-                        setBaseId(p.id)
-                        setError('')
+                        elegirBase(p)
                         document
                           .getElementById('reservar')
                           ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }}
-                      disabled={!cabe(p)}
                       style={jost}
                       className={`mt-1 inline-flex min-h-[36px] items-center self-start px-4 text-[12px] tracking-[0.04em] disabled:opacity-45 ${
                         baseId === p.id
