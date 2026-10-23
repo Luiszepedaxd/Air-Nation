@@ -11,14 +11,14 @@ export async function generateMetadata({
   params: { slug: string }
 }): Promise<Metadata> {
   const ficha = await fetchArenaFicha(params.slug)
-  if (!ficha) return { title: 'Reservar campo — AirNation ARENA' }
+  if (!ficha) return { title: { absolute: 'Reservar campo — AirNation ARENA' } }
   const { nombre, ciudad } = ficha.field
   const titulo = `Reserva en ${nombre}${ciudad ? `, ${ciudad}` : ''} | AirNation ARENA`
   const descripcion =
     ficha.field.descripcion?.slice(0, 160) ||
     `Reserva en línea tu día en ${nombre}: elige día y paquete, paga y llega con tu QR.`
   return {
-    title: titulo,
+    title: { absolute: titulo },
     description: descripcion,
     alternates: { canonical: `https://www.airnation.online/arena/${params.slug}` },
     openGraph: {

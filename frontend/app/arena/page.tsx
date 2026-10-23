@@ -12,7 +12,8 @@ const ARENA_DESCRIPTION =
   'Reserva en línea tu día de airsoft, gotcha o gelsoft en México: elige campo y día, paga una sola vez y llega con tu QR. Precios desde, días disponibles y cancelación clara.'
 
 export const metadata: Metadata = {
-  title: 'Reserva campos de airsoft y gotcha en México | AirNation ARENA',
+  // `absolute`: el layout raíz agrega "| AirNation" y aquí ya va en el título.
+  title: { absolute: 'Reserva campos de airsoft y gotcha en México | AirNation ARENA' },
   description: ARENA_DESCRIPTION,
   // Canonical sin filtros: las combinaciones de filtros no se indexan aparte.
   alternates: { canonical: 'https://www.airnation.online/arena' },
