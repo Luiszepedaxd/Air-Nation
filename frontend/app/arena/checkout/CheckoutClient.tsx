@@ -23,8 +23,17 @@ const jost = {
 
 const lato = { fontFamily: "'Lato', sans-serif" } as const
 
+// Mismas clases que el checkout de la tienda (app/store/checkout). En móvil el
+// campo va a 16px para que iOS no haga zoom al enfocarlo.
 const inputClass =
-  'h-11 w-full border border-solid border-[#CCCCCC] bg-[#FFFFFF] px-3 text-[16px] text-[#111111] outline-none focus:border-[#111111]'
+  'w-full border border-solid border-[#E4E4E4] bg-[#FFFFFF] px-3 py-2.5 text-[16px] text-[#111111] outline-none placeholder-[#AAAAAA] focus:border-[#111111] sm:text-[13px]'
+
+const labelClass = 'mb-1 block text-[10px] font-extrabold uppercase tracking-[0.1em] text-[#888888]'
+
+const soloDigitos = (valor: string, max: number) => valor.replace(/\D/g, '').slice(0, max)
+
+/** "4242424242424242" → "4242 4242 4242 4242". */
+const enGruposDe4 = (valor: string) => soloDigitos(valor, 19).replace(/(\d{4})(?=\d)/g, '$1 ')
 
 type Revision = {
   /** Avisos por reserva: precio actualizado, concepto fuera o día cerrado. */
@@ -50,7 +59,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
   const [acepta, setAcepta] = useState(false)
   // Tarjeta de prueba: vive solo en esta pantalla. Nunca se manda al backend
   // ni se guarda — el cobro es simulado.
-  const [tarjeta, setTarjeta] = useState({ numero: '', venc: '', cvv: '', nombre: '' })
+  const [tarjeta, setTarjeta] = useState({ numero: '', mes: '', anio: '', cvc: '', nombre: '' })
   const [error, setError] = useState('')
   const [reservaMala, setReservaMala] = useState<number | null>(null)
   const [pagando, setPagando] = useState(false)
@@ -149,9 +158,15 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
     setReservaMala(null)
     if (!nombre.trim()) return setError('Escribe el nombre de quien reserva.')
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Revisa el correo: ahí te llegan los QR.')
-    if (!tarjeta.numero.trim() || !tarjeta.venc.trim() || !tarjeta.cvv.trim() || !tarjeta.nombre.trim()) {
-      return setError('Completa los datos de la tarjeta de prueba.')
+    // Cualquier número sirve (el cobro es simulado): solo revisamos que los
+    // campos estén completos y con la forma de una tarjeta.
+    if (soloDigitos(tarjeta.numero, 19).length < 13) {
+      return setError('Escribe los 16 dígitos de la tarjeta.')
     }
+    if (!/^(0[1-9]|1[0-2])$/.test(tarjeta.mes)) return setError('El mes va de 01 a 12.')
+    if (tarjeta.anio.length !== 2) return setError('Escribe el año con dos dígitos (AA).')
+    if (tarjeta.cvc.length < 3) return setError('El CVC trae 3 dígitos (4 en American Express).')
+    if (!tarjeta.nombre.trim()) return setError('Escribe el nombre que viene en la tarjeta.')
     if (!acepta) return setError('Para pagar necesitas aceptar la política de cancelación y los términos.')
     if (rev.invalidas.size > 0) {
       return setError('Hay reservas que ya no se pueden pagar. Edítalas o quítalas para continuar.')
@@ -260,7 +275,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
             ) : null}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label htmlFor="c-nombre" className="mb-1 block text-[14px] font-bold">
+                <label htmlFor="c-nombre" className={labelClass}>
                   Nombre de quien reserva
                 </label>
                 <input
@@ -272,7 +287,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
                 />
               </div>
               <div>
-                <label htmlFor="c-email" className="mb-1 block text-[14px] font-bold">
+                <label htmlFor="c-email" className={labelClass}>
                   Correo
                 </label>
                 <input
@@ -286,7 +301,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
                 />
               </div>
               <div>
-                <label htmlFor="c-tel" className="mb-1 block text-[14px] font-bold">
+                <label htmlFor="c-tel" className={labelClass}>
                   Celular
                 </label>
                 <input
@@ -316,63 +331,84 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
             >
               Modo prueba: no se cobra
             </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label htmlFor="c-tarjeta" className="mb-1 block text-[14px] font-bold">
+                <label htmlFor="c-tarjeta" className={labelClass}>
                   Número de tarjeta
                 </label>
                 <input
                   id="c-tarjeta"
                   inputMode="numeric"
-                  autoComplete="off"
+                  autoComplete="cc-number"
                   placeholder="4242 4242 4242 4242"
                   className={inputClass}
                   value={tarjeta.numero}
-                  onChange={(e) => setTarjeta({ ...tarjeta, numero: e.target.value })}
+                  onChange={(e) => setTarjeta({ ...tarjeta, numero: enGruposDe4(e.target.value) })}
                 />
               </div>
-              <div>
-                <label htmlFor="c-venc" className="mb-1 block text-[14px] font-bold">
-                  Vencimiento
-                </label>
-                <input
-                  id="c-venc"
-                  autoComplete="off"
-                  placeholder="MM/AA"
-                  className={inputClass}
-                  value={tarjeta.venc}
-                  onChange={(e) => setTarjeta({ ...tarjeta, venc: e.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="c-cvv" className="mb-1 block text-[14px] font-bold">
-                  CVV
-                </label>
-                <input
-                  id="c-cvv"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="123"
-                  className={inputClass}
-                  value={tarjeta.cvv}
-                  onChange={(e) => setTarjeta({ ...tarjeta, cvv: e.target.value })}
-                />
+              <div className="grid grid-cols-3 gap-3 sm:col-span-2">
+                <div>
+                  <label htmlFor="c-mes" className={labelClass}>
+                    Mes (MM)
+                  </label>
+                  <input
+                    id="c-mes"
+                    inputMode="numeric"
+                    autoComplete="cc-exp-month"
+                    placeholder="MM"
+                    maxLength={2}
+                    className={inputClass}
+                    value={tarjeta.mes}
+                    onChange={(e) => setTarjeta({ ...tarjeta, mes: soloDigitos(e.target.value, 2) })}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="c-anio" className={labelClass}>
+                    Año (AA)
+                  </label>
+                  <input
+                    id="c-anio"
+                    inputMode="numeric"
+                    autoComplete="cc-exp-year"
+                    placeholder="AA"
+                    maxLength={2}
+                    className={inputClass}
+                    value={tarjeta.anio}
+                    onChange={(e) => setTarjeta({ ...tarjeta, anio: soloDigitos(e.target.value, 2) })}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="c-cvc" className={labelClass}>
+                    CVC
+                  </label>
+                  <input
+                    id="c-cvc"
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
+                    placeholder="123"
+                    maxLength={4}
+                    className={inputClass}
+                    value={tarjeta.cvc}
+                    onChange={(e) => setTarjeta({ ...tarjeta, cvc: soloDigitos(e.target.value, 4) })}
+                  />
+                </div>
               </div>
               <div className="sm:col-span-2">
-                <label htmlFor="c-titular" className="mb-1 block text-[14px] font-bold">
+                <label htmlFor="c-titular" className={labelClass}>
                   Nombre en la tarjeta
                 </label>
                 <input
                   id="c-titular"
-                  autoComplete="off"
+                  autoComplete="cc-name"
+                  placeholder="Como aparece en la tarjeta"
                   className={inputClass}
                   value={tarjeta.nombre}
                   onChange={(e) => setTarjeta({ ...tarjeta, nombre: e.target.value })}
                 />
               </div>
             </div>
-            <p className="mt-2 text-[13px] text-[#666666]">
-              Cualquier dato sirve. La tarjeta no sale de esta pantalla: no se manda ni se guarda.
+            <p className="mt-2 text-[12px] text-[#999999]">
+              Cualquier tarjeta sirve. Los datos no salen de esta pantalla: no se mandan ni se guardan.
             </p>
             <label className="mt-3.5 flex items-start gap-2.5 text-[14px]">
               <input
@@ -395,18 +431,21 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
               </span>
             </label>
             {error ? (
-              <p role="alert" className="mt-3 text-[14px] font-bold text-[#CC4B37]">
-                {error}
-              </p>
+              <div role="alert" className="mt-3 border border-solid border-[#CC4B37] bg-[#FFF5F4] px-4 py-3">
+                <p className="text-[12px] text-[#CC4B37]">{error}</p>
+              </div>
             ) : null}
             <button
               type="submit"
               disabled={pagando}
               style={jost}
-              className="mt-3 min-h-[44px] w-full bg-[#CC4B37] px-4 text-[14px] tracking-[0.04em] text-[#FFFFFF] disabled:opacity-45"
+              className="mt-3 min-h-[44px] w-full bg-[#CC4B37] py-4 text-[13px] tracking-[0.04em] text-[#FFFFFF] transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              Pagar {formatCentavos(total, false)}
+              {pagando ? 'Procesando pago…' : `Pagar ${formatCentavos(total, false)} →`}
             </button>
+            <p className="mt-2 text-center text-[10px] text-[#999999]">
+              Pago de prueba: no se hace ningún cargo real a tu tarjeta.
+            </p>
           </section>
         </form>
 
