@@ -93,7 +93,9 @@ router.get("/", async (req, res) => {
 
     const { data, error, count } = await supabase
       .from("teams")
-      .select("*", { count: "exact" })
+      .select("id, nombre, ciudad, estado, slug, logo_url, status", {
+        count: "exact",
+      })
       .range(from, to);
 
     if (error) {
@@ -118,7 +120,7 @@ const UUID_RE =
  * POST /api/v1/teams/:teamId/notify-join-request
  * Notifica por email al founder del equipo (Resend).
  */
-router.post("/:teamId/notify-join-request", async (req, res) => {
+router.post("/:teamId/notify-join-request", requireAuth, async (req, res) => {
   try {
     const teamId = req.params.teamId;
     if (!UUID_RE.test(teamId)) {
@@ -240,7 +242,7 @@ router.get("/:id", async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("teams")
-      .select("*")
+      .select("id, nombre, ciudad, estado, slug, logo_url, status")
       .eq("id", req.params.id)
       .maybeSingle();
 

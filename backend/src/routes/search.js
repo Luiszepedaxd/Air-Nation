@@ -13,7 +13,7 @@ const RESULTS_PER_CATEGORY = 3
 router.get('/', async (req, res) => {
   try {
     const raw = (req.query.q ?? '').toString().replace(/[%_]/g, '').trim()
-    const userId = req.query.user_id?.toString() ?? null
+    const userId = req.authUser?.id ?? null
 
     if (raw.length < 2) {
       return res.json({
@@ -119,15 +119,16 @@ router.get('/', async (req, res) => {
 
 router.post('/log', async (req, res) => {
   try {
-    const { query, user_id, results_count } = req.body
+    const { query, results_count } = req.body
     if (!query || typeof query !== 'string' || query.trim().length < 2) {
       return res.status(400).json({ error: 'query inválida' })
     }
+    const userId = req.authUser?.id ?? null
     await supabase
       .from('search_logs')
       .insert({
         query: query.trim().toLowerCase(),
-        user_id: user_id ?? null,
+        user_id: userId,
         results_count: typeof results_count === 'number' ? results_count : 0,
       })
     return res.json({ ok: true })

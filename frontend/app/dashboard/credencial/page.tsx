@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createDashboardSupabaseServerClient } from '../supabase-server'
+import { fetchMiUsuarioPrivado } from '@/lib/supabase/private-user'
 import { CredencialClient } from '@/components/credential/CredencialClient'
 import type { CredentialUserData } from '@/components/credential/CredentialCard'
 
@@ -37,13 +38,7 @@ export default async function CredencialPage() {
     redirect('/login')
   }
 
-  const { data: row, error } = await supabase
-    .from('users')
-    .select(
-      'id, nombre, alias, ciudad, rol, avatar_url, foto_credencial_url, credencial_nombre_completo, credencial_fecha_nacimiento, member_number, created_at'
-    )
-    .eq('id', session.user.id)
-    .maybeSingle()
+  const { row, error } = await fetchMiUsuarioPrivado(supabase)
 
   if (error || !row) {
     redirect('/dashboard')

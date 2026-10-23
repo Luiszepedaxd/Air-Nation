@@ -21,6 +21,7 @@ const reportsRouter = require("./routes/reports");
 const accountRouter = require("./routes/account");
 const adminMailRouter = require("./routes/admin-mail");
 const adminFotosRouter = require("./routes/admin-fotos");
+const adminUsersRouter = require("./routes/admin-users");
 const pushRouter = require("./routes/push");
 const stripeRouter = require("./routes/stripe");
 const credencialesRouter = require("./routes/credenciales");
@@ -28,6 +29,7 @@ const searchRouter = require('./routes/search')
 const tournamentsRouter = require("./routes/tournaments");
 const joulieRouter = require("./routes/joulie");
 const arenaRouter = require("./routes/arena");
+const { apiAuthGate } = require("./middleware/apiAuthGate");
 const { iniciarJobIndexNow } = require("./jobs/indexnow");
 
 const app = express();
@@ -44,10 +46,6 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
-
-// Subidas multipart: montar ANTES de express.json (límite por defecto ~100kb) para no
-// interferir con cuerpos grandes en /upload/video. Ver también BODY_PARSER_LIMIT.
-app.use("/api/v1/upload", uploadRouter);
 
 // Stripe webhook necesita raw body para verificar firma. DEBE ir antes de express.json().
 app.post(
@@ -69,6 +67,12 @@ app.post(
     arenaRouter.handle(req, res, next);
   }
 );
+
+// JWT Supabase en todas las rutas /api/v1 (allowlist explícita en apiAuthGate).
+app.use("/api/v1", apiAuthGate);
+
+// Multipart antes de express.json (multer lee el body).
+app.use("/api/v1/upload", uploadRouter);
 
 // Por defecto 100mb (Railway: puedes fijar BODY_PARSER_LIMIT=100mb en variables)
 const bodyParserLimit = process.env.BODY_PARSER_LIMIT || "100mb";
@@ -93,6 +97,7 @@ app.use("/api/v1/reports", reportsRouter);
 app.use("/api/v1/account", accountRouter);
 app.use("/api/v1/admin", adminMailRouter);
 app.use("/api/v1/admin", adminFotosRouter);
+app.use("/api/v1/admin/users", adminUsersRouter);
 app.use("/api/v1/push", pushRouter);
 app.use("/api/v1/stripe", stripeRouter);
 app.use("/api/v1/credencial", credencialesRouter);

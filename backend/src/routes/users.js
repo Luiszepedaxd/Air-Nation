@@ -2,6 +2,7 @@ const express = require("express");
 const supabase = require("../lib/supabase");
 const { requireAdmin } = require("../middleware/requireAdmin");
 const { requireAuth } = require("../middleware/requireAuth");
+const { ipRateLimit } = require("../lib/arena/rateLimit");
 
 const router = express.Router();
 
@@ -71,15 +72,45 @@ router.get("/search", requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/v1/users/:id
-router.get("/:id", (req, res) => res.json({ user: null, id: req.params.id }));
+const PUBLIC_USER_SELECT =
+  "id, alias, nombre, ciudad, rol, avatar_url, foto_portada_url, bio, instagram, tiktok, youtube, facebook, member_number, created_at, perfil_publico, team_id";
 
-// POST /api/v1/users/register
-router.post("/register", (req, res) => {
-  const { username, email, team_id } = req.body;
-  if (!username || !email) return res.status(400).json({ error: "Username y email requeridos" });
-  // TODO: crear usuario en Supabase Auth + tabla users
-  res.status(201).json({ message: "Usuario registrado", user: { username, email } });
+const registerRateLimit = ipRateLimit(8);
+
+// GET /api/v1/users/:id — perfil público (sin credencial ni email)
+router.get("/:id", async (req, res) => {
+  try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: "id inválido" });
+    }
+    const { data, error } = await supabase
+      .from("users")
+      .select(PUBLIC_USER_SELECT)
+      .eq("id", req.params.id)
+      .maybeSingle();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+    if (!data) {
+      return res.status(404).json({ error: "Usuario no encontrado", id: req.params.id });
+    }
+
+    return res.json({ user: data, id: req.params.id });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/v1/users/register — legacy; registro real vía Supabase Auth en el cliente
+router.post("/register", registerRateLimit, (req, res) => {
+  const { username, email } = req.body || {};
+  if (!username || !email) {
+    return res.status(400).json({ error: "Username y email requeridos" });
+  }
+  return res.status(410).json({
+    error: "Usa el registro en la app (Supabase Auth). Este endpoint ya no crea cuentas.",
+  });
 });
 
 /**
@@ -139,6 +170,9 @@ router.patch("/:id", requireAuth, async (req, res) => {
         return res.status(400).json({ error: "foto_portada_url debe ser string o null" });
       }
       updates.foto_portada_url = body.foto_portada_url;
+    }
+    if (body.app_role !== undefined || body.email !== undefined || body.member_number !== undefined) {
+      return res.status(403).json({ error: "No puedes modificar campos restringidos" });
     }
     if (body.foto_credencial_url !== undefined) {
       if (body.foto_credencial_url !== null && typeof body.foto_credencial_url !== "string") {

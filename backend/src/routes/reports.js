@@ -37,9 +37,7 @@ const UUID_RE =
 router.post("/", async (req, res) => {
   try {
     const body = req.body || {};
-
-    const reporterId =
-      typeof body.reporter_id === "string" ? body.reporter_id.trim() : "";
+    const reporterId = req.authUser?.id || "";
     const targetType =
       typeof body.target_type === "string" ? body.target_type.trim() : "";
     const targetId =
