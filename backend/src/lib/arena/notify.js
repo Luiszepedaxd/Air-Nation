@@ -7,6 +7,7 @@ const supabase = require("../supabase");
 const { sendPushToUser } = require("../push");
 const { arenaPublicUrl } = require("./config");
 const { qrAdjuntoInline } = require("./qr");
+const { scriptJsonLd } = require("./markup");
 
 function escapeHtml(str) {
   if (typeof str !== "string") return "";
@@ -19,8 +20,8 @@ function escapeHtml(str) {
 }
 
 /** Marco común de los correos de ARENA. `cuerpo` ya viene escapado. */
-function plantilla({ titulo, cuerpo, ctaHref, ctaLabel }) {
-  return `
+function plantilla({ titulo, cuerpo, ctaHref, ctaLabel, marcado = "" }) {
+  return `${marcado}
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#ffffff;">
       <div style="margin-bottom:24px;">
         <span style="font-weight:900;font-size:20px;letter-spacing:3px;text-transform:uppercase;color:#111111;">
@@ -263,6 +264,7 @@ async function avisoPagoAprobado(detalles, pago = null) {
           ${politicas.map((t) => `<p style="font-size:13px;color:#666666;">${escapeHtml(t)}</p>`).join("")}`,
         ctaHref: href,
         ctaLabel: varias ? "VER MIS RESERVAS" : "VER MI RESERVA",
+        marcado: scriptJsonLd(lista),
       }),
       attachments: adjuntos,
     }),
