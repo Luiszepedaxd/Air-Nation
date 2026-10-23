@@ -268,7 +268,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
             {!contacto ? (
               <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 bg-[#F4F4F4] px-3 py-2.5 text-[14px]">
                 <span>¿Tienes cuenta de AirNation? Tus reservas quedan en tu perfil.</span>
-                <Link href="/login?next=/arena/checkout" className="font-bold underline">
+                <Link href="/login?next=/arena/checkout" className="font-bold text-[#111111] underline">
                   Iniciar sesión
                 </Link>
               </div>
@@ -410,7 +410,7 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
             <p className="mt-2 text-[12px] text-[#999999]">
               Cualquier tarjeta sirve. Los datos no salen de esta pantalla: no se mandan ni se guardan.
             </p>
-            <label className="mt-3.5 flex items-start gap-2.5 text-[14px]">
+            <label className="mt-3.5 flex items-start gap-2.5 text-[14px] text-[#444444]">
               <input
                 type="checkbox"
                 className="mt-0.5 h-[18px] w-[18px] shrink-0 accent-[#CC4B37]"
@@ -420,11 +420,11 @@ export function CheckoutClient({ contacto }: { contacto: { nombre: string; email
               <span>
                 Acepto la política de cancelación de cada campo (reembolso del 100% si cancelo con al
                 menos {rev.horasCancelacion} h de anticipación a la apertura), los{' '}
-                <Link href="/terminos" className="font-bold underline">
+                <Link href="/terminos" className="font-bold text-[#111111] underline">
                   Términos
                 </Link>{' '}
                 y el{' '}
-                <Link href="/privacidad" className="font-bold underline">
+                <Link href="/privacidad" className="font-bold text-[#111111] underline">
                   Aviso de Privacidad
                 </Link>
                 .
