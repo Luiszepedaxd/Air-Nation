@@ -5,7 +5,7 @@ const { requireAuth } = require("../../middleware/requireAuth");
 const { optionalAuth } = require("../../middleware/optionalAuth");
 const { UUID } = require("../../middleware/requireFieldMember");
 const { arenaProvider } = require("../../lib/arena/config");
-const { sendArenaError } = require("../../lib/arena/errors");
+const { arenaError, sendArenaError } = require("../../lib/arena/errors");
 const { ipRateLimit } = require("../../lib/arena/rateLimit");
 const { checkinUrl, qrPng } = require("../../lib/arena/qr");
 const { reembolsar } = require("../../lib/arena/refunds");
@@ -90,10 +90,16 @@ router.get("/marketplace", async (req, res) => {
     supabase.from("arena_field_settings").select("field_id").eq("activo", true),
     supabase.from("fields").select("id, estado, es_prueba").eq("status", "aprobado"),
   ]);
-  if (rpc.error) return sendArenaError(res, rpc.error, "arena_marketplace");
+  if (rpc.error) {
+    console.error("[arena:public] marketplace rpc:", rpc.error.message);
+    const mapped = arenaError(rpc.error);
+    return res.status(mapped.status).json(
+      mapped.status === 500 ? { error: "Error interno del servidor", code: "marketplace_rpc" } : mapped.body
+    );
+  }
   if (settingsRes.error || camposRes.error) {
-    console.error("[arena:public] marketplace:", (settingsRes.error || camposRes.error).message);
-    return res.status(500).json({ error: "Error interno del servidor" });
+    console.error("[arena:public] marketplace catálogo:", (settingsRes.error || camposRes.error).message);
+    return res.status(500).json({ error: "Error interno del servidor", code: "marketplace_catalogo" });
   }
 
   const conArena = new Set((settingsRes.data || []).map((s) => s.field_id));
@@ -169,6 +175,13 @@ router.get("/fields/:slug", async (req, res) => {
       .limit(6),
   ]);
 
+  // Un error de lectura no puede parecer "ARENA inactivo": sería un 404 falso.
+  for (const [etiqueta, r] of [["settings", settingsRes], ["items", itemsRes], ["resenas", reviewsRes]]) {
+    if (r.error) {
+      console.error(`[arena:public] ficha ${etiqueta}:`, r.error.message);
+      return res.status(500).json({ error: "Error interno del servidor", code: `ficha_${etiqueta}` });
+    }
+  }
   if (!settingsRes.data || !settingsRes.data.activo) {
     return res.status(404).json({ error: "Este campo no acepta reservas en línea.", code: "arena_inactivo" });
   }
