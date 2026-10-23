@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import {
+  ARENA_DISCIPLINAS,
   arenaErrorMessage,
   arenaSend,
+  type ArenaDisciplina,
   type ArenaItem,
   type ArenaItemTipo,
   type ArenaUnidad,
@@ -36,6 +38,8 @@ const inputClass =
 
 type Estado = {
   tipo: ArenaItemTipo
+  disciplina: ArenaDisciplina | ''
+  duracion_min: string
   nombre: string
   descripcion: string
   incluye: string
@@ -52,6 +56,8 @@ type Estado = {
 function desdeItem(item: ArenaItem | null): Estado {
   return {
     tipo: item?.tipo ?? 'paquete',
+    disciplina: item?.disciplina ?? '',
+    duracion_min: item?.duracion_min != null ? String(item.duracion_min) : '',
     nombre: item?.nombre ?? '',
     descripcion: item?.descripcion ?? '',
     incluye: (item?.incluye ?? []).join('\n'),
@@ -102,6 +108,8 @@ export function ItemForm({
     const num = (s: string) => (s.trim() === '' ? null : Number(s))
     const body = {
       tipo: v.tipo,
+      disciplina: v.disciplina || null,
+      duracion_min: v.duracion_min.trim() === '' ? null : Number(v.duracion_min),
       nombre: v.nombre.trim(),
       descripcion: v.descripcion.trim() || null,
       incluye: v.incluye
@@ -218,6 +226,34 @@ export function ItemForm({
               </option>
             ))}
           </select>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-[12px] text-[#666666]">
+          Disciplina
+          <select
+            className={inputClass}
+            value={v.disciplina}
+            onChange={(e) => set('disciplina', e.target.value as ArenaDisciplina | '')}
+          >
+            <option value="">Todas</option>
+            {ARENA_DISCIPLINAS.map((d) => (
+              <option key={d} value={d} className="capitalize">
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-[#666666]">
+          Duración en minutos (15 a 1440)
+          <input
+            className={inputClass}
+            inputMode="numeric"
+            value={v.duracion_min}
+            onChange={(e) => set('duracion_min', e.target.value)}
+            placeholder="180"
+          />
         </label>
       </div>
 

@@ -9,12 +9,21 @@ export class ArenaApiError extends Error {
   code?: string
   detalle?: string
   status: number
-  constructor(message: string, status: number, code?: string, detalle?: string) {
+  /** Qué reserva del carrito falló (0 = la primera), si el backend lo dijo. */
+  reservaIndex?: number
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    detalle?: string,
+    reservaIndex?: number
+  ) {
     super(message)
     this.name = 'ArenaApiError'
     this.status = status
     this.code = code
     this.detalle = detalle
+    this.reservaIndex = reservaIndex
   }
 }
 
@@ -25,7 +34,8 @@ async function parse<T>(res: Response): Promise<T> {
       typeof json.error === 'string' ? json.error : `Error ${res.status}`,
       res.status,
       typeof json.code === 'string' ? json.code : undefined,
-      typeof json.detalle === 'string' ? json.detalle : undefined
+      typeof json.detalle === 'string' ? json.detalle : undefined,
+      typeof json.reserva_index === 'number' ? json.reserva_index : undefined
     )
   }
   return json as T
