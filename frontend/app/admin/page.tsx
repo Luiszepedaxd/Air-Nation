@@ -175,6 +175,13 @@ export default function AdminHomePage() {
           >
             Op. Virus 3
           </Link>
+          <Link
+            href="/admin/biohazard2"
+            className="inline-flex min-h-11 items-center bg-[#CC4B37] px-4 py-2.5 text-[0.65rem] uppercase tracking-[0.12em] text-[#FFFFFF] transition-colors hover:opacity-90 md:min-h-0"
+            style={{ ...latoBody, borderRadius: 2, fontWeight: 700 }}
+          >
+            Biohazard 2
+          </Link>
         </div>
       </section>
     </div>
