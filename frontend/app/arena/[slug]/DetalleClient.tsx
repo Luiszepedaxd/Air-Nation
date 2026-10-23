@@ -698,7 +698,9 @@ export function DetalleClient({
                   ))}
                 </div>
               ) : null}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* En lg entra el panel de 380 px y la columna de contenido se
+                  queda corta para dos paquetes: vuelven a una sola hasta xl. */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 {paquetes.map((p) => (
                   <article
                     key={p.id}

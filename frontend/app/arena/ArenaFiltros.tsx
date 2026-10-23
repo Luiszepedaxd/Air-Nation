@@ -182,7 +182,7 @@ export function ArenaFiltros({
           </label>
         </Grupo>
 
-        <div className="sticky bottom-0 border-t border-solid border-[#EEEEEE] bg-[#FFFFFF] py-3 pb-4 lg:hidden">
+        <div className="sticky bottom-0 border-t border-solid border-[#EEEEEE] bg-[#FFFFFF] py-3 pb-[max(1rem,env(safe-area-inset-bottom))] lg:hidden">
           <button
             type="button"
             onClick={onClose}

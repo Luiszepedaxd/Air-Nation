@@ -153,7 +153,7 @@ export function CarritoDrawer() {
         </div>
 
         {cart.length > 0 ? (
-          <div className="grid gap-2.5 border-t border-solid border-[#EEEEEE] p-4">
+          <div className="grid gap-2.5 border-t border-solid border-[#EEEEEE] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="flex items-baseline justify-between">
               <b style={{ fontFamily: "'Jost', sans-serif", fontWeight: 700 }}>
                 Total ({cart.length} {cart.length === 1 ? 'reserva' : 'reservas'})
