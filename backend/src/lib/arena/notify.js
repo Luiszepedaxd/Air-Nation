@@ -6,7 +6,7 @@
 const supabase = require("../supabase");
 const { sendPushToUser } = require("../push");
 const { arenaPublicUrl } = require("./config");
-const { qrPng } = require("./qr");
+const { qrAdjuntoInline } = require("./qr");
 
 function escapeHtml(str) {
   if (typeof str !== "string") return "";
@@ -218,15 +218,10 @@ async function avisoPagoAprobado(detalles, pago = null) {
   const adjuntos = [];
   const bloques = [];
   for (const d of lista) {
-    const cid = `qr-${d.booking.codigo}`;
     let qrHtml = `<p style="font-size:13px;color:#999999;">Abre tu reserva para ver el QR.</p>`;
     try {
-      const png = await qrPng(d.booking.qr_token, 600);
-      adjuntos.push({
-        filename: `${d.booking.codigo}.png`,
-        content: png.toString("base64"),
-        content_id: cid,
-      });
+      const { cid, adjunto } = await qrAdjuntoInline(d.booking.codigo, d.booking.qr_token, 600);
+      adjuntos.push(adjunto);
       qrHtml = `<img src="cid:${cid}" alt="Código QR de la reserva ${escapeHtml(d.booking.codigo)}" width="200" height="200" style="display:block;margin:8px 0 4px;" />`;
     } catch (err) {
       console.error("[arena:mail] qr:", err.message);
