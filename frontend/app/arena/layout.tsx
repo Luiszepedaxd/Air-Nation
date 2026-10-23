@@ -8,9 +8,12 @@ export default function ArenaLayout({ children }: { children: React.ReactNode })
   return (
     <AppShell>
       <ArenaCartProvider>
-        <ArenaHeader />
-        {children}
-        <CarritoDrawer />
+        {/* Color base oscuro: el texto sin color propio heredaba uno casi blanco. */}
+        <div className="text-[#111111]">
+          <ArenaHeader />
+          {children}
+          <CarritoDrawer />
+        </div>
       </ArenaCartProvider>
     </AppShell>
   )
