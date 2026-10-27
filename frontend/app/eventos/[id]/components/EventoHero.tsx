@@ -1,6 +1,7 @@
 import { formatEventoRango, disciplinaLabel } from '../../lib/format-evento-fecha'
 import { CalendarioPlaceholderIcon } from '../../lib/calendar-placeholder'
 import { EventoCtaPrincipal } from './EventoCtaPrincipal'
+import { EventoShareButton } from './EventoShareButton'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -11,6 +12,7 @@ function tipoBadge(tipo: string | null) {
 }
 
 export function EventoHero({
+  eventId,
   title,
   fecha,
   fecha_fin,
@@ -18,7 +20,9 @@ export function EventoHero({
   tipo,
   disciplina,
   urlExterna,
+  ciudad,
 }: {
+  eventId: string
   title: string
   fecha: string
   fecha_fin?: string | null
@@ -26,6 +30,7 @@ export function EventoHero({
   tipo: string | null
   disciplina: string | null
   urlExterna: string | null
+  ciudad?: string | null
 }) {
   const fechaTxt = formatEventoRango(fecha, fecha_fin)
   const disc = disciplinaLabel(disciplina)
@@ -71,6 +76,11 @@ export function EventoHero({
             {fechaTxt}
           </p>
         ) : null}
+        <EventoShareButton
+          eventId={eventId}
+          title={`¡Ven a ${title} en AirNation!`}
+          text={`${[fechaTxt, ciudad?.trim()].filter(Boolean).join(' · ')}. Únete en AirNation`}
+        />
       </div>
       <EventoCtaPrincipal urlExterna={urlExterna} />
     </div>

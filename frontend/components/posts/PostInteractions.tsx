@@ -322,6 +322,7 @@ export function PostActions({
   currentUserAvatar,
   shareUrl,
   shareTitle,
+  shareText,
   postHref,
   initialLikeCount,
   initialCommentCount,
@@ -335,6 +336,7 @@ export function PostActions({
   currentUserAvatar: string | null
   shareUrl: string
   shareTitle: string
+  shareText?: string
   postHref: string
   initialLikeCount?: number
   initialCommentCount?: number
@@ -389,7 +391,7 @@ export function PostActions({
   }
 
   const handleShare = async () => {
-    if ((await sharePost(shareUrl, shareTitle)) === 'copied') {
+    if ((await sharePost(shareUrl, shareTitle, shareText)) === 'copied') {
       setCopying(true)
       setTimeout(() => setCopying(false), 2000)
     }

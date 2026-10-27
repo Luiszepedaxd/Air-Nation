@@ -10,6 +10,15 @@ import { EventoTabs } from './components/EventoTabs'
 
 export const revalidate = 0
 
+const SITE = 'https://www.airnation.online'
+const OG_DEFAULT = `${SITE}/og-default.jpg`
+
+/** Solo https absoluto: WhatsApp/Twitter ignoran relativos y http. */
+function absoluteHttps(value: unknown): string | null {
+  const url = typeof value === 'string' ? value.trim() : ''
+  return url.startsWith('https://') ? url : null
+}
+
 function normalizeFieldsEmbed(raw: unknown): {
   nombre: string | null
   slug: string | null
@@ -132,7 +141,7 @@ export async function generateMetadata({
 
   const fMeta = normalizeFieldsEmbed(row.fields)
   const imagenOg =
-    row.imagen_url?.trim() || fMeta.foto_portada_url?.trim() || null
+    absoluteHttps(row.imagen_url) || absoluteHttps(fMeta.foto_portada_url) || OG_DEFAULT
   const localidad =
     fMeta.ciudad?.trim() || row.sede_ciudad?.trim() || 'México'
 
@@ -141,20 +150,30 @@ export async function generateMetadata({
     row.descripcion?.trim() ||
     `Evento de airsoft${fechaTxt ? ` el ${fechaTxt}` : ''} — AirNation`
 
+  const seoTitle = `${row.title} — Airsoft en ${localidad} | AirNation`
+  const url = `${SITE}/eventos/${id}`
+  // Copy invitacional para redes: el SEO largo se queda en <title>.
+  const ogTitle = `¡Ven a ${row.title} en AirNation!`
+  const ogDesc = `${[fechaTxt, localidad].filter(Boolean).join(' · ')}. Únete en AirNation`
+
   return {
-    title: `${row.title} — Airsoft en ${localidad} | AirNation`,
+    title: seoTitle,
     description: desc.slice(0, 160),
-    alternates: {
-      canonical: `https://www.airnation.online/eventos/${id}`,
-    },
+    alternates: { canonical: url },
     openGraph: {
-      title: `${row.title} — Airsoft en ${localidad} | AirNation`,
-      description: desc.slice(0, 160),
-      url: `https://www.airnation.online/eventos/${id}`,
+      title: ogTitle,
+      description: ogDesc,
+      url,
+      siteName: 'AirNation',
+      locale: 'es_MX',
       type: 'website',
-      images: imagenOg
-        ? [{ url: imagenOg, width: 1200, height: 630 }]
-        : [{ url: 'https://www.airnation.online/og-default.jpg', width: 1200, height: 630 }],
+      images: [{ url: imagenOg, width: 1200, height: 630, alt: ogTitle }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description: ogDesc,
+      images: [imagenOg],
     },
   }
 }
@@ -422,6 +441,7 @@ export default async function EventoDetailPage({
         }}
       />
       <EventoHero
+        eventId={id}
         title={row.title}
         fecha={row.fecha}
         fecha_fin={row.fecha_fin}
@@ -429,6 +449,7 @@ export default async function EventoDetailPage({
         tipo={row.tipo}
         disciplina={row.disciplina}
         urlExterna={row.url_externa}
+        ciudad={f.ciudad ?? row.sede_ciudad}
       />
       <EventoTabs
         eventId={id}

@@ -2087,7 +2087,8 @@ function EventCard({
           currentUserAlias={currentUserAlias}
           currentUserAvatar={currentUserAvatar}
           shareUrl={`/eventos/${item.id}`}
-          shareTitle={item.title}
+          shareTitle={`¡Ven a ${item.title} en AirNation!`}
+          shareText={`${[formatEventDate(item.fecha), sub].filter(Boolean).join(' · ')}. Únete en AirNation`}
           postHref={`/eventos/${item.id}`}
         />
       </div>
@@ -3566,7 +3567,8 @@ function EventosTab({
                 currentUserAlias={currentUserAlias}
                 currentUserAvatar={currentUserAvatar}
                 shareUrl={`/eventos/${item.id}`}
-                shareTitle={item.title}
+                shareTitle={`¡Ven a ${item.title} en AirNation!`}
+                shareText={`${[formatEventDate(item.fecha), item.field_ciudad].filter(Boolean).join(' · ')}. Únete en AirNation`}
                 postHref={`/eventos/${item.id}`}
               />
             </div>
