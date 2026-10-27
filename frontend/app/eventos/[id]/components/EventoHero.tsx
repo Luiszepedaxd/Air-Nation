@@ -2,6 +2,7 @@ import { formatEventoRango, disciplinaLabel } from '../../lib/format-evento-fech
 import { CalendarioPlaceholderIcon } from '../../lib/calendar-placeholder'
 import { EventoCtaPrincipal } from './EventoCtaPrincipal'
 import { EventoShareButton } from './EventoShareButton'
+import { AbrirEnAppCta } from './AbrirEnAppCta'
 
 const jost = { fontFamily: "'Jost', sans-serif" } as const
 
@@ -81,6 +82,7 @@ export function EventoHero({
           title={`¡Ven a ${title} en AirNation!`}
           text={`${[fechaTxt, ciudad?.trim()].filter(Boolean).join(' · ')}. Únete en AirNation`}
         />
+        <AbrirEnAppCta eventId={eventId} />
       </div>
       <EventoCtaPrincipal urlExterna={urlExterna} />
     </div>

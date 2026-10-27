@@ -8,7 +8,24 @@
           "/auth/callback",
           "/auth/callback*",
           "/reset-password",
-          "/reset-password*"
+          "/reset-password*",
+          "/eventos",
+          "/eventos/*",
+          "/reel",
+          "/reel/*",
+          "/u",
+          "/u/*",
+          "/equipos",
+          "/equipos/*",
+          "/campos",
+          "/campos/*",
+          "/marketplace",
+          "/marketplace/*",
+          "/replicas",
+          "/replicas/*",
+          "/dashboard",
+          "/dashboard/*",
+          "/welcome"
         ]
       }
     ]

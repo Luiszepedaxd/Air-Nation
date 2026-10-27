@@ -95,36 +95,55 @@ export default function CapacitorBridge() {
           }
         })
 
-        // Deep link handler global (confirmación de email, etc.)
+        // Deep link handler: auth callback (exchange) + rutas de contenido → WebView
         urlHandler = await App.addListener('appUrlOpen', async (event) => {
           const url = event.url ?? ''
           const isCallback =
             url.startsWith('airnation://auth/callback') ||
             /^https:\/\/(www\.)?airnation\.online\/auth\/callback/.test(url)
-          if (!isCallback) return
 
-          try {
-            const urlObj = new URL(url)
-            const code = urlObj.searchParams.get('code')
-            if (!code) return
+          if (isCallback) {
+            try {
+              const urlObj = new URL(url)
+              const code = urlObj.searchParams.get('code')
+              if (!code) return
 
-            const { supabase } = await import('@/lib/supabase')
-            const { error } = await supabase.auth.exchangeCodeForSession(code)
-            if (error) {
-              console.error('[deeplink] exchange error:', error.message)
-              return
+              const { supabase } = await import('@/lib/supabase')
+              const { error } = await supabase.auth.exchangeCodeForSession(code)
+              if (error) {
+                console.error('[deeplink] exchange error:', error.message)
+                return
+              }
+
+              const { data: { user } } = await supabase.auth.getUser()
+              if (user) {
+                const { data: profile } = await supabase
+                  .from('users').select('alias').eq('id', user.id).single()
+                window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
+              } else {
+                window.location.href = '/dashboard'
+              }
+            } catch (err) {
+              console.error('[deeplink] error:', err)
             }
+            return
+          }
 
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-              const { data: profile } = await supabase
-                .from('users').select('alias').eq('id', user.id).single()
-              window.location.href = !profile?.alias ? '/onboarding' : '/dashboard'
-            } else {
-              window.location.href = '/dashboard'
+          // https://www.airnation.online/... o airnation://... → pathname en WebView
+          try {
+            let target: string | null = null
+            if (/^https:\/\/(www\.)?airnation\.online(\/|$)/.test(url)) {
+              const u = new URL(url)
+              target = u.pathname + u.search + u.hash
+            } else if (url.startsWith('airnation://')) {
+              const rest = url.slice('airnation://'.length)
+              target = '/' + rest.replace(/^\/+/, '')
+            }
+            if (target && target !== '/') {
+              window.location.href = target
             }
           } catch (err) {
-            console.error('[deeplink] error:', err)
+            console.error('[deeplink] navigate error:', err)
           }
         })
 
