@@ -33,15 +33,6 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/auth/callback" />
                 <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/reset-password" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/eventos" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/reel" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/u" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/equipos" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/campos" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/marketplace" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/replicas" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/dashboard" />
-                <data android:scheme="https" android:host="www.airnation.online" android:pathPrefix="/welcome" />
             </intent-filter>
         </activity>
 
