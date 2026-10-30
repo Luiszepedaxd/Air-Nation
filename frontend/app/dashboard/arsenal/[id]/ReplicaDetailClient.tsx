@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
@@ -62,6 +62,14 @@ export function ReplicaDetailClient({
     descripcion: initialReplica.descripcion ?? '',
     serial: initialReplica.serial ?? '',
   })
+
+  // El sheet fixed quedaba recortado por #dashboard-scroll-root y la nav
+  // (mismo z-50) tapaba Guardar. Al abrir, volver arriba para que el
+  // formulario empiece en su propio scroll, no a mitad de la ficha.
+  useEffect(() => {
+    if (!showEdit) return
+    document.getElementById('dashboard-scroll-root')?.scrollTo({ top: 0 })
+  }, [showEdit])
 
   const handleSaveEdit = async () => {
     if (!editForm.nombre.trim()) { setEditError('El nombre es obligatorio.'); return }
@@ -186,6 +194,111 @@ export function ReplicaDetailClient({
 
   const inputClass = 'w-full border border-[#EEEEEE] bg-[#F4F4F4] px-3 py-3 text-sm text-[#111111] placeholder:text-[#AAAAAA] focus:border-[#CC4B37] focus:outline-none'
   const labelClass = 'mb-2 block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#999999]'
+
+  // Vista propia, no bottom sheet: el scroll es el de #dashboard-scroll-root,
+  // que ya reserva la nav y la safe area. Así Cancelar/Guardar quedan en el
+  // flujo y no rebotan debajo de la barra.
+  if (showEdit) {
+    return (
+      <main className="min-h-full min-w-[375px] bg-[#FFFFFF]">
+        <div className="mx-auto max-w-[480px] px-4 py-6">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 style={jost} className="text-[18px] font-extrabold uppercase text-[#111111]">Editar réplica</h2>
+            <button type="button" onClick={() => !editing && setShowEdit(false)} className="text-[#999999] hover:text-[#111111]" aria-label="Cerrar">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            <div>
+              <label className={labelClass} style={jost}>Nombre / Modelo *</label>
+              <input type="text" className={inputClass} value={editForm.nombre} maxLength={80}
+                onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} />
+            </div>
+
+            <div>
+              <label className={labelClass} style={jost}>Sistema de arma *</label>
+              <div className="grid grid-cols-2 gap-2">
+                {SISTEMAS.map(s => (
+                  <button key={s} type="button" style={jost}
+                    onClick={() => setEditForm(f => ({ ...f, sistema: s }))}
+                    className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${editForm.sistema === s ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass} style={jost}>Mecanismo *</label>
+              <div className="flex flex-wrap gap-2">
+                {MECANISMOS.map(m => (
+                  <button key={m} type="button" style={jost}
+                    onClick={() => setEditForm(f => ({ ...f, mecanismo: m }))}
+                    className={`border px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${editForm.mecanismo === m ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass} style={jost}>Condición *</label>
+              <div className="flex gap-2">
+                {(['stock', 'upgrades'] as const).map(c => (
+                  <button key={c} type="button" style={jost}
+                    onClick={() => setEditForm(f => ({ ...f, condicion: c }))}
+                    className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${editForm.condicion === c ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
+                    {c === 'stock' ? 'Stock' : 'Con upgrades'}
+                  </button>
+                ))}
+              </div>
+              {editForm.condicion === 'upgrades' && (
+                <textarea className={`${inputClass} mt-2 resize-none`} rows={3}
+                  placeholder="Describe los upgrades: motor, hopup, inner barrel..."
+                  value={editForm.upgrades} maxLength={300}
+                  onChange={e => setEditForm(f => ({ ...f, upgrades: e.target.value }))} />
+              )}
+            </div>
+
+            <div>
+              <label className={labelClass} style={jost}>
+                Número de serie <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional — verifica la réplica)</span>
+              </label>
+              <input type="text" className={inputClass} value={editForm.serial} maxLength={40}
+                onChange={e => setEditForm(f => ({ ...f, serial: e.target.value }))} />
+            </div>
+
+            <div>
+              <label className={labelClass} style={jost}>Descripción</label>
+              <textarea className={`${inputClass} resize-none`} rows={3} maxLength={300}
+                value={editForm.descripcion}
+                onChange={e => setEditForm(f => ({ ...f, descripcion: e.target.value }))} />
+            </div>
+
+            {editError && (
+              <p style={lato} className="text-[12px] text-[#CC4B37]">{editError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setShowEdit(false)} disabled={editing}
+                style={jost}
+                className="flex-1 border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase text-[#666666] disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="button" onClick={() => void handleSaveEdit()} disabled={editing}
+                style={jost}
+                className="flex-1 bg-[#CC4B37] py-3 text-[11px] font-extrabold uppercase text-white disabled:opacity-50">
+                {editing ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen min-w-[375px] bg-[#FFFFFF] pb-28 md:pb-10">
@@ -417,108 +530,6 @@ export function ReplicaDetailClient({
         )}
 
       </div>
-
-      {showEdit && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center" onClick={() => !editing && setShowEdit(false)}>
-          <div className="bg-white w-full max-w-[480px] max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="px-4 py-6">
-              <div className="mb-6 flex items-center justify-between">
-                <h2 style={jost} className="text-[18px] font-extrabold uppercase text-[#111111]">Editar réplica</h2>
-                <button type="button" onClick={() => !editing && setShowEdit(false)} className="text-[#999999] hover:text-[#111111]">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-5">
-                <div>
-                  <label className={labelClass} style={jost}>Nombre / Modelo *</label>
-                  <input type="text" className={inputClass} value={editForm.nombre} maxLength={80}
-                    onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} />
-                </div>
-
-                <div>
-                  <label className={labelClass} style={jost}>Sistema de arma *</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {SISTEMAS.map(s => (
-                      <button key={s} type="button" style={jost}
-                        onClick={() => setEditForm(f => ({ ...f, sistema: s }))}
-                        className={`border px-3 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-left transition-colors ${editForm.sistema === s ? 'border-[#CC4B37] bg-[#FFF5F4] text-[#CC4B37]' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className={labelClass} style={jost}>Mecanismo *</label>
-                  <div className="flex flex-wrap gap-2">
-                    {MECANISMOS.map(m => (
-                      <button key={m} type="button" style={jost}
-                        onClick={() => setEditForm(f => ({ ...f, mecanismo: m }))}
-                        className={`border px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${editForm.mecanismo === m ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
-                        {m}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className={labelClass} style={jost}>Condición *</label>
-                  <div className="flex gap-2">
-                    {(['stock', 'upgrades'] as const).map(c => (
-                      <button key={c} type="button" style={jost}
-                        onClick={() => setEditForm(f => ({ ...f, condicion: c }))}
-                        className={`flex-1 border py-2.5 text-[10px] font-extrabold uppercase tracking-wide transition-colors ${editForm.condicion === c ? 'border-[#CC4B37] bg-[#CC4B37] text-white' : 'border-[#EEEEEE] bg-[#F4F4F4] text-[#666666]'}`}>
-                        {c === 'stock' ? 'Stock' : 'Con upgrades'}
-                      </button>
-                    ))}
-                  </div>
-                  {editForm.condicion === 'upgrades' && (
-                    <textarea className={`${inputClass} mt-2 resize-none`} rows={3}
-                      placeholder="Describe los upgrades: motor, hopup, inner barrel..."
-                      value={editForm.upgrades} maxLength={300}
-                      onChange={e => setEditForm(f => ({ ...f, upgrades: e.target.value }))} />
-                  )}
-                </div>
-
-                <div>
-                  <label className={labelClass} style={jost}>
-                    Número de serie <span className="text-[#AAAAAA] normal-case font-normal tracking-normal">(opcional — verifica la réplica)</span>
-                  </label>
-                  <input type="text" className={inputClass} value={editForm.serial} maxLength={40}
-                    onChange={e => setEditForm(f => ({ ...f, serial: e.target.value }))} />
-                </div>
-
-                <div>
-                  <label className={labelClass} style={jost}>Descripción</label>
-                  <textarea className={`${inputClass} resize-none`} rows={3} maxLength={300}
-                    value={editForm.descripcion}
-                    onChange={e => setEditForm(f => ({ ...f, descripcion: e.target.value }))} />
-                </div>
-
-                {editError && (
-                  <p style={lato} className="text-[12px] text-[#CC4B37]">{editError}</p>
-                )}
-
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setShowEdit(false)} disabled={editing}
-                    style={jost}
-                    className="flex-1 border border-[#EEEEEE] py-3 text-[11px] font-extrabold uppercase text-[#666666] disabled:opacity-50">
-                    Cancelar
-                  </button>
-                  <button type="button" onClick={() => void handleSaveEdit()} disabled={editing}
-                    style={jost}
-                    className="flex-1 bg-[#CC4B37] py-3 text-[11px] font-extrabold uppercase text-white disabled:opacity-50">
-                    {editing ? 'Guardando…' : 'Guardar cambios'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   )
 }
