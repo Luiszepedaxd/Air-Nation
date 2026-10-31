@@ -15,7 +15,17 @@ export default async function AppShell({
   const userId = user?.id
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-[#F4F4F4]">
+    <div
+      className="h-[100dvh] flex flex-col bg-[#F4F4F4]"
+      // Inset superior del shell (status bar). Único punto donde se aplica:
+      // MobileHeader no renderiza en rutas raíz (/dashboard/perfil, /campos…)
+      // y sin esto sus tabs sticky quedan debajo del reloj en Android 15+,
+      // donde el WebView es edge-to-edge a la fuerza y StatusBar
+      // overlaysWebView:false ya no tiene efecto. NO duplicarlo por pantalla.
+      // var(--safe-area-inset-top) la inyecta Capacitor; env() la expone el
+      // WebView 140+. Son el mismo valor, max() no suma. 0 en iOS/Android ≤14.
+      style={{ paddingTop: 'max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px))' }}
+    >
       <MobileHeader />
       <div
         id="dashboard-scroll-root"
