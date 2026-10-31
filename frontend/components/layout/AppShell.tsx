@@ -16,7 +16,10 @@ export default async function AppShell({
 
   return (
     <div
-      className="h-[100dvh] flex flex-col bg-[#F4F4F4]"
+      // Shell en blanco para que la franja del inset superior (status bar)
+      // se vea blanca como cuando el padding vivía en MobileHeader. El gris
+      // de fondo va en el scroll root, que cubre todo lo de abajo.
+      className="h-[100dvh] flex flex-col bg-[#FFFFFF]"
       // Inset superior del shell (status bar). Único punto donde se aplica:
       // MobileHeader no renderiza en rutas raíz (/dashboard/perfil, /campos…)
       // y sin esto sus tabs sticky quedan debajo del reloj en Android 15+,
@@ -29,7 +32,7 @@ export default async function AppShell({
       <MobileHeader />
       <div
         id="dashboard-scroll-root"
-        className="flex-1 overflow-y-auto lg:pb-0 lg:pt-16"
+        className="flex-1 overflow-y-auto bg-[#F4F4F4] lg:pb-0 lg:pt-16"
         style={{
           paddingBottom: 'max(calc(3.5rem + env(safe-area-inset-bottom)), calc(3.5rem + 12px))',
           overscrollBehavior: 'contain',
