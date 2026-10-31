@@ -35,7 +35,15 @@ export default async function AppShell({
         className="flex-1 overflow-y-auto bg-[#F4F4F4] lg:pb-0 lg:pt-16"
         style={{
           paddingBottom: 'max(calc(3.5rem + env(safe-area-inset-bottom)), calc(3.5rem + 12px))',
-          overscrollBehavior: 'contain',
+          // 'none', no 'contain': contain solo corta el scroll chaining, el
+          // rubber-band local de iOS sigue. Al rebotar en el tope, el contenido
+          // baja y deja ver el gris de este scroller bajo la franja blanca del
+          // inset, y las tabs sticky top-0 (perfil) viajan con él — sticky no
+          // sube de su posición estática con scrollTop negativo. 'none' mata el
+          // rebote y sigue conteniendo el chaining.
+          // ponytail: iOS <16 no soporta overscroll-behavior (mínimo del
+          // proyecto: iOS 15) — ahí sigue rebotando como hasta ahora.
+          overscrollBehavior: 'none',
         }}
       >
         <BetaBanner />
